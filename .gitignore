@@ -5,3 +5,5 @@ venv/
 node_modules/
 yarn.lock
 __pycache__/
+docker 
+.xlsx
