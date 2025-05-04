@@ -1,9 +1,9 @@
 import * as React from "react";
-import DashboardIcon from "@mui/icons-material/Dashboard";
+
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
+
 import NewspaperIcon from "@mui/icons-material/Newspaper";
-import ContactsIcon from "@mui/icons-material/Contacts";
+
 import { Outlet, useNavigate } from "react-router-dom";
 import { AppProvider } from "@toolpad/core/react-router-dom";
 import { createTheme } from "@mui/material/styles";
@@ -14,11 +14,6 @@ import * as agentService from "./services/agentService";
 import * as productService from "./services/productService";
 import * as customerService from "./services/customerService";
 import * as orderService from "./services/orderService";
-import Box from "@mui/material/Box";
-import CampaignIcon from "@mui/icons-material/Campaign";
-import ScheduleIcon from "@mui/icons-material/Schedule";
-import LeaderboardIcon from "@mui/icons-material/Leaderboard";
-import AnalyticsIcon from "@mui/icons-material/Analytics";
 
 const NAVIGATION: Navigation = [
   {
@@ -64,7 +59,7 @@ const NAVIGATION: Navigation = [
   // },
 
 ];
-const logo = <img src={logoMidPng} className="logo" alt="" />;
+const logo = <img  className="logo" alt="" />;
 const BRANDING = {
   title: "Audit IQ",
   logo,
