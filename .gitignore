@@ -6,4 +6,17 @@ node_modules/
 yarn.lock
 __pycache__/
 docker 
-.xlsx
+*.xlsx
+# Additional environment files
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Additional Python environments
+.venv
+env/
+ENV/
