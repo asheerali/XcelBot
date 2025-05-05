@@ -5,7 +5,9 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import NewspaperIcon from "@mui/icons-material/Newspaper";
 
 import { Outlet, useNavigate } from "react-router-dom";
-import { AppProvider } from "@toolpad/core/react-router-dom";
+// import { AppProvider } from "@toolpad/core/react-router-dom";
+import { AppProvider } from '@toolpad/core';
+
 import { createTheme } from "@mui/material/styles";
 import logoMidPng from "./assets/it-logo-mid.png";
 import { Session, type Navigation } from "@toolpad/core/AppProvider";
@@ -26,14 +28,12 @@ const NAVIGATION: Navigation = [
     segment: "manage-reports",
     icon: <NewspaperIcon />,
   },
-  
+
   {
     title: "Setup",
     segment: "manage-reports",
     icon: <NewspaperIcon />,
   },
-  
-
 
   // {
   //   title: "Advance",
@@ -57,9 +57,8 @@ const NAVIGATION: Navigation = [
   //     },
   //   ],
   // },
-
 ];
-const logo = <img  className="logo" alt="" />;
+const logo = <img className="logo" alt="" />;
 const BRANDING = {
   title: "Audit IQ",
   logo,

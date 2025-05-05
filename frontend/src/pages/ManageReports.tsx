@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Box,
   Paper,
@@ -24,18 +24,18 @@ import {
   ChipProps,
   InputAdornment,
   Breadcrumbs,
-  SelectChangeEvent
-} from '@mui/material';
+  SelectChangeEvent,
+} from "@mui/material";
 
 // Material UI Icons
-import SearchIcon from '@mui/icons-material/Search';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import FirstPageIcon from '@mui/icons-material/FirstPage';
-import LastPageIcon from '@mui/icons-material/LastPage';
-import ComputerIcon from '@mui/icons-material/Computer';
+import SearchIcon from "@mui/icons-material/Search";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import FirstPageIcon from "@mui/icons-material/FirstPage";
+import LastPageIcon from "@mui/icons-material/LastPage";
+import ComputerIcon from "@mui/icons-material/Computer";
 
 // Define the Report type
 interface Report {
@@ -45,159 +45,165 @@ interface Report {
   location: string;
   date: string;
   submittedBy: string;
-  status: 'Completed' | 'In Progress' | 'Pending Review';
+  status: "Completed" | "In Progress" | "Pending Review";
   score: string;
 }
 
 // Sample data for demonstration
 const SAMPLE_REPORTS: Report[] = [
-  { 
-    id: '6874129', 
-    company: 'ztech', 
-    reportName: 'Construction Safety Audit', 
-    location: 'xyz', 
-    date: '23, Apr 2025', 
-    submittedBy: 'asheer ali', 
-    status: 'Completed', 
-    score: '100%' 
+  {
+    id: "6874129",
+    company: "ztech",
+    reportName: "Construction Safety Audit",
+    location: "xyz",
+    date: "23, Apr 2025",
+    submittedBy: "asheer ali",
+    status: "Completed",
+    score: "100%",
   },
-  { 
-    id: '6872961', 
-    company: 'ztech', 
-    reportName: 'Food Safety & Hygiene Checklist', 
-    location: 'My Site', 
-    date: '23, Apr 2025', 
-    submittedBy: 'asheer ali', 
-    status: 'In Progress', 
-    score: '98.42%' 
+  {
+    id: "6872961",
+    company: "ztech",
+    reportName: "Food Safety & Hygiene Checklist",
+    location: "My Site",
+    date: "23, Apr 2025",
+    submittedBy: "asheer ali",
+    status: "In Progress",
+    score: "98.42%",
   },
-  { 
-    id: '6872345', 
-    company: 'techco', 
-    reportName: 'Electrical Safety Inspection', 
-    location: 'Main Office', 
-    date: '22, Apr 2025', 
-    submittedBy: 'john doe', 
-    status: 'Completed', 
-    score: '95.3%' 
+  {
+    id: "6872345",
+    company: "techco",
+    reportName: "Electrical Safety Inspection",
+    location: "Main Office",
+    date: "22, Apr 2025",
+    submittedBy: "john doe",
+    status: "Completed",
+    score: "95.3%",
   },
-  { 
-    id: '6871987', 
-    company: 'buildcorp', 
-    reportName: 'Environmental Compliance', 
-    location: 'Site B', 
-    date: '21, Apr 2025', 
-    submittedBy: 'sara khan', 
-    status: 'Pending Review', 
-    score: '89.1%' 
+  {
+    id: "6871987",
+    company: "buildcorp",
+    reportName: "Environmental Compliance",
+    location: "Site B",
+    date: "21, Apr 2025",
+    submittedBy: "sara khan",
+    status: "Pending Review",
+    score: "89.1%",
   },
-  { 
-    id: '6871234', 
-    company: 'ztech', 
-    reportName: 'Fire Safety Assessment', 
-    location: 'Building C', 
-    date: '20, Apr 2025', 
-    submittedBy: 'mike ross', 
-    status: 'Completed', 
-    score: '97.8%' 
+  {
+    id: "6871234",
+    company: "ztech",
+    reportName: "Fire Safety Assessment",
+    location: "Building C",
+    date: "20, Apr 2025",
+    submittedBy: "mike ross",
+    status: "Completed",
+    score: "97.8%",
   },
-  { 
-    id: '6870891', 
-    company: 'techco', 
-    reportName: 'Equipment Maintenance', 
-    location: 'Workshop', 
-    date: '19, Apr 2025', 
-    submittedBy: 'linda chen', 
-    status: 'In Progress', 
-    score: '76.5%' 
+  {
+    id: "6870891",
+    company: "techco",
+    reportName: "Equipment Maintenance",
+    location: "Workshop",
+    date: "19, Apr 2025",
+    submittedBy: "linda chen",
+    status: "In Progress",
+    score: "76.5%",
   },
-  { 
-    id: '6870456', 
-    company: 'buildcorp', 
-    reportName: 'OSHA Compliance Check', 
-    location: 'Site A', 
-    date: '18, Apr 2025', 
-    submittedBy: 'robert smith', 
-    status: 'Completed', 
-    score: '92.7%' 
+  {
+    id: "6870456",
+    company: "buildcorp",
+    reportName: "OSHA Compliance Check",
+    location: "Site A",
+    date: "18, Apr 2025",
+    submittedBy: "robert smith",
+    status: "Completed",
+    score: "92.7%",
   },
-  { 
-    id: '6870123', 
-    company: 'ztech', 
-    reportName: 'Quality Assurance', 
-    location: 'Production Line', 
-    date: '17, Apr 2025', 
-    submittedBy: 'amina patel', 
-    status: 'Completed', 
-    score: '99.1%' 
+  {
+    id: "6870123",
+    company: "ztech",
+    reportName: "Quality Assurance",
+    location: "Production Line",
+    date: "17, Apr 2025",
+    submittedBy: "amina patel",
+    status: "Completed",
+    score: "99.1%",
   },
-  { 
-    id: '6869876', 
-    company: 'techco', 
-    reportName: 'Hazardous Materials', 
-    location: 'Storage Facility', 
-    date: '16, Apr 2025', 
-    submittedBy: 'james wilson', 
-    status: 'Pending Review', 
-    score: '84.3%' 
+  {
+    id: "6869876",
+    company: "techco",
+    reportName: "Hazardous Materials",
+    location: "Storage Facility",
+    date: "16, Apr 2025",
+    submittedBy: "james wilson",
+    status: "Pending Review",
+    score: "84.3%",
   },
-  { 
-    id: '6869543', 
-    company: 'buildcorp', 
-    reportName: 'Worker Safety Training', 
-    location: 'Training Center', 
-    date: '15, Apr 2025', 
-    submittedBy: 'kayla nguyen', 
-    status: 'In Progress', 
-    score: '91.8%' 
+  {
+    id: "6869543",
+    company: "buildcorp",
+    reportName: "Worker Safety Training",
+    location: "Training Center",
+    date: "15, Apr 2025",
+    submittedBy: "kayla nguyen",
+    status: "In Progress",
+    score: "91.8%",
   },
-  { 
-    id: '6869210', 
-    company: 'ztech', 
-    reportName: 'Ergonomics Assessment', 
-    location: 'Office Space', 
-    date: '14, Apr 2025', 
-    submittedBy: 'david lee', 
-    status: 'Completed', 
-    score: '96.5%' 
-  }
+  {
+    id: "6869210",
+    company: "ztech",
+    reportName: "Ergonomics Assessment",
+    location: "Office Space",
+    date: "14, Apr 2025",
+    submittedBy: "david lee",
+    status: "Completed",
+    score: "96.5%",
+  },
 ];
 
-const companies = ['All', 'ztech', 'techco', 'buildcorp'];
+const companies = ["All", "ztech", "techco", "buildcorp"];
 const dateRanges = [
-  '28, Mar 2025 - 27, Apr 2025',
-  '28, Feb 2025 - 27, Mar 2025',
-  '28, Jan 2025 - 27, Feb 2025'
+  "28, Mar 2025 - 27, Apr 2025",
+  "28, Feb 2025 - 27, Mar 2025",
+  "28, Jan 2025 - 27, Feb 2025",
 ];
 
 export default function ManageReports() {
   const [tab, setTab] = useState<number>(0);
   const [page, setPage] = useState<number>(0);
   const [rowsPerPage, setRowsPerPage] = useState<number>(10);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedCompany, setSelectedCompany] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedCompany, setSelectedCompany] = useState<string>("All");
   const [dateRange, setDateRange] = useState<string>(dateRanges[0]);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   // Filter reports based on search, company, and date
   const filteredReports = SAMPLE_REPORTS.filter((report) => {
     // Filter by search query
-    const matchesSearch = 
+    const matchesSearch =
       report.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       report.reportName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       report.submittedBy.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     // Filter by company
-    const matchesCompany = selectedCompany === 'All' || report.company === selectedCompany;
-    
+    const matchesCompany =
+      selectedCompany === "All" || report.company === selectedCompany;
+
     return matchesSearch && matchesCompany;
   });
 
-  const handleChangePage = (event: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => {
+  const handleChangePage = (
+    event: React.MouseEvent<HTMLButtonElement> | null,
+    newPage: number
+  ) => {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
@@ -226,23 +232,23 @@ export default function ManageReports() {
     setDateRange(event.target.value);
   };
 
-  const getStatusChip = (status: Report['status']) => {
-    let color: ChipProps['color'] = 'default';
-    
-    switch(status) {
-      case 'Completed':
-        color = 'success';
+  const getStatusChip = (status: Report["status"]) => {
+    let color: ChipProps["color"] = "default";
+
+    switch (status) {
+      case "Completed":
+        color = "success";
         break;
-      case 'In Progress':
-        color = 'warning';
+      case "In Progress":
+        color = "warning";
         break;
-      case 'Pending Review':
-        color = 'info';
+      case "Pending Review":
+        color = "info";
         break;
       default:
-        color = 'default';
+        color = "default";
     }
-    
+
     return <Chip label={status} color={color} size="small" />;
   };
 
@@ -255,21 +261,23 @@ export default function ManageReports() {
       </Breadcrumbs>
 
       {/* Filters and Controls */}
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          flexDirection: { xs: 'column', sm: 'row' }, 
-          gap: 2, 
-          mb: 3, 
-          flexWrap: 'wrap',
-          alignItems: 'center'
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", sm: "row" },
+          gap: 2,
+          mb: 3,
+          flexWrap: "wrap",
+          alignItems: "center",
         }}
       >
         <TextField
           placeholder="Search"
           size="small"
           value={searchQuery}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setSearchQuery(e.target.value)
+          }
           sx={{ minWidth: 200 }}
           InputProps={{
             startAdornment: (
@@ -289,7 +297,9 @@ export default function ManageReports() {
             onChange={handleCompanyChange}
           >
             {companies.map((company) => (
-              <MenuItem key={company} value={company}>{company}</MenuItem>
+              <MenuItem key={company} value={company}>
+                {company}
+              </MenuItem>
             ))}
           </Select>
         </FormControl>
@@ -303,13 +313,15 @@ export default function ManageReports() {
             onChange={handleDateRangeChange}
           >
             {dateRanges.map((range) => (
-              <MenuItem key={range} value={range}>{range}</MenuItem>
+              <MenuItem key={range} value={range}>
+                {range}
+              </MenuItem>
             ))}
           </Select>
         </FormControl>
 
-        <Button 
-          variant="outlined" 
+        <Button
+          variant="outlined"
           startIcon={<FilterListIcon />}
           onClick={handleOpenMenu}
           sx={{ ml: { xs: 0, sm: 2 } }}
@@ -328,17 +340,28 @@ export default function ManageReports() {
           <MenuItem onClick={handleAddFilter}>Location</MenuItem>
         </Menu>
 
-        <Box sx={{ ml: { xs: 0, sm: 'auto' }, mt: { xs: 2, sm: 0 }, display: 'flex', gap: 1 }}>
+        <Box
+          sx={{
+            ml: { xs: 0, sm: "auto" },
+            mt: { xs: 2, sm: 0 },
+            display: "flex",
+            gap: 1,
+          }}
+        >
           <Button variant="outlined" startIcon={<ComputerIcon />} size="small">
             Learn
           </Button>
-          <Button variant="outlined" size="small">Today</Button>
-          <Button variant="contained" size="small">Last 30 days</Button>
+          <Button variant="outlined" size="small">
+            Today
+          </Button>
+          <Button variant="contained" size="small">
+            Last 30 days
+          </Button>
         </Box>
       </Box>
 
       {/* Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
         <Tabs value={tab} onChange={handleTabChange}>
           <Tab label="Reports" />
           <Tab label="Archive/Delete" />
@@ -349,19 +372,38 @@ export default function ManageReports() {
       <Paper elevation={1}>
         <TableContainer>
           <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Report Ref</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Company/Dept</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Report Name</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Location</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Date</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Submitted by</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Status</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Score</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}></TableCell>
-            </TableRow>
-          </TableHead>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: "bold", whiteSpace: "nowrap" }}>
+                  Report Ref
+                </TableCell>
+                <TableCell sx={{ fontWeight: "bold", whiteSpace: "nowrap" }}>
+                  Company/Dept
+                </TableCell>
+                <TableCell sx={{ fontWeight: "bold", whiteSpace: "nowrap" }}>
+                  Report Name
+                </TableCell>
+                <TableCell sx={{ fontWeight: "bold", whiteSpace: "nowrap" }}>
+                  Location
+                </TableCell>
+                <TableCell sx={{ fontWeight: "bold", whiteSpace: "nowrap" }}>
+                  Date
+                </TableCell>
+                <TableCell sx={{ fontWeight: "bold", whiteSpace: "nowrap" }}>
+                  Submitted by
+                </TableCell>
+                <TableCell sx={{ fontWeight: "bold", whiteSpace: "nowrap" }}>
+                  Status
+                </TableCell>
+                <TableCell sx={{ fontWeight: "bold", whiteSpace: "nowrap" }}>
+                  Score
+                </TableCell>
+                <TableCell
+                  align="right"
+                  sx={{ fontWeight: "bold", whiteSpace: "nowrap" }}
+                ></TableCell>
+              </TableRow>
+            </TableHead>
             <TableBody>
               {filteredReports
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
@@ -396,21 +438,25 @@ export default function ManageReports() {
         </TableContainer>
 
         {/* Pagination */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          px: 2, 
-          py: 1.5,
-          borderTop: '1px solid #e0e0e0'
-        }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            px: 2,
+            py: 1.5,
+            borderTop: "1px solid #e0e0e0",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center" }}>
             <Typography variant="body2" sx={{ mr: 2 }}>
               Number of items per page
             </Typography>
             <Select
               value={rowsPerPage.toString()}
-              onChange={(e: SelectChangeEvent) => setRowsPerPage(parseInt(e.target.value, 10))}
+              onChange={(e: SelectChangeEvent) =>
+                setRowsPerPage(parseInt(e.target.value, 10))
+              }
               size="small"
               sx={{ width: 80 }}
             >
@@ -419,39 +465,48 @@ export default function ManageReports() {
               <MenuItem value="25">25</MenuItem>
             </Select>
           </Box>
-          
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+
+          <Box sx={{ display: "flex", alignItems: "center" }}>
             <Typography variant="body2" sx={{ mr: 2 }}>
-              {page * rowsPerPage + 1} to {Math.min((page + 1) * rowsPerPage, filteredReports.length)} of {filteredReports.length}
+              {page * rowsPerPage + 1} to{" "}
+              {Math.min((page + 1) * rowsPerPage, filteredReports.length)} of{" "}
+              {filteredReports.length}
             </Typography>
-            <IconButton 
-              size="small" 
-              onClick={() => setPage(0)} 
+            <IconButton
+              size="small"
+              onClick={() => setPage(0)}
               disabled={page === 0}
             >
               <FirstPageIcon fontSize="small" />
             </IconButton>
-            <IconButton 
-              size="small" 
-              onClick={() => setPage(page - 1)} 
+            <IconButton
+              size="small"
+              onClick={() => setPage(page - 1)}
               disabled={page === 0}
             >
               <ChevronLeftIcon fontSize="small" />
             </IconButton>
             <Typography variant="body2" sx={{ mx: 1 }}>
-              Page {page + 1} of {Math.max(1, Math.ceil(filteredReports.length / rowsPerPage))}
+              Page {page + 1} of{" "}
+              {Math.max(1, Math.ceil(filteredReports.length / rowsPerPage))}
             </Typography>
-            <IconButton 
-              size="small" 
-              onClick={() => setPage(page + 1)} 
-              disabled={page >= Math.ceil(filteredReports.length / rowsPerPage) - 1}
+            <IconButton
+              size="small"
+              onClick={() => setPage(page + 1)}
+              disabled={
+                page >= Math.ceil(filteredReports.length / rowsPerPage) - 1
+              }
             >
               <ChevronRightIcon fontSize="small" />
             </IconButton>
-            <IconButton 
-              size="small" 
-              onClick={() => setPage(Math.ceil(filteredReports.length / rowsPerPage) - 1)} 
-              disabled={page >= Math.ceil(filteredReports.length / rowsPerPage) - 1}
+            <IconButton
+              size="small"
+              onClick={() =>
+                setPage(Math.ceil(filteredReports.length / rowsPerPage) - 1)
+              }
+              disabled={
+                page >= Math.ceil(filteredReports.length / rowsPerPage) - 1
+              }
             >
               <LastPageIcon fontSize="small" />
             </IconButton>
