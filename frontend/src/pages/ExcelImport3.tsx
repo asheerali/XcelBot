@@ -25,22 +25,24 @@ import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import TextField from '@mui/material/TextField';
+import Accordion from '@mui/material/Accordion';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
-// API base URLs - update to match your backend URL
+// API base URL - update to match your backend URL
 const API_URL = 'http://localhost:8000/api/excel/upload';
-const FILTER_API_URL = 'http://localhost:8000/api/excel/filter';
 
 // Main Component
 export function ExcelImport() {
-  // Initial data structure
+  // Initial dummy data structure
   const initialTableData = {
-    table1: [], // Percentage Table (1P, Catering, DD, GH, In-House, UB)
-    table2: [], // In-House Table (1P, In-House, Catering, DD, GH, UB)
-    table3: [], // WOW Table (1P, In-House, Catering, DD, GH, UB, 3P, 1P/3P)
-    table5: [], // Category summary
-    locations: [], // List of available locations
-    dateRanges: [] // List of available dates
+    table1: [], // Raw Data table (1P, Catering, DD, GH, In-House, UB, Sales)
+    table2: [], // Percentage Table (1P, Catering, DD, GH, In-House, UB)
+    table3: [], // In-House Table (1P, In-House, Catering, DD, GH, UB)
+    table4: [], // WOW Table (1P, In-House, Catering, DD, GH, UB, 3P, 1P/3P)
+    table5: [], // Legacy table (unused but kept for API compatibility)
+    locations: [] // List of available locations
   };
   
   const [file, setFile] = useState(null);
@@ -52,26 +54,22 @@ export function ExcelImport() {
   const [viewMode, setViewMode] = useState('tabs'); // 'tabs', 'combined', or 'row'
   const [showTutorial, setShowTutorial] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState('');
+  const [locationData, setLocationData] = useState({});
   const [processedSuccessfully, setProcessedSuccessfully] = useState(false);
-  
-  // Date filter states
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [dateRangeType, setDateRangeType] = useState('');
-  const [availableDateRanges, setAvailableDateRanges] = useState([]);
-  const [customDateRange, setCustomDateRange] = useState(false);
+  // New state to toggle showing formula details
+  const [showFormulas, setShowFormulas] = useState(false);
   
   // Define columns for each table type
   const getTableColumns = (tableIndex) => {
     switch (tableIndex) {
-      case 0: // Percentage Table (table1)
-        return ['Week', '1P', 'Catering', 'DD', 'GH', 'In-House', 'UB', 'Grand Total'];
-      case 1: // In-House Table (table2)
+      case 0: // Raw Data
+        return ['Week', '1P', 'Catering', 'DD', 'GH', 'In-House', 'UB', 'Sales'];
+      case 1: // Percentage Table
+        return ['Week', '1P', 'Catering', 'DD', 'GH', 'In-House', 'UB'];
+      case 2: // In-House Table
         return ['Week', '1P', 'In-House', 'Catering', 'DD', 'GH', 'UB'];
-      case 2: // WOW Table (table3)
+      case 3: // WOW Table
         return ['Week', '1P', 'In-House', 'Catering', 'DD', 'GH', 'UB', '3P', '1P/3P'];
-      case 3: // Category summary (table5)
-        return ['Sales_Category', 'Amount', 'Transactions', '% of Total', 'Avg Transaction'];
       default:
         return [];
     }
@@ -79,40 +77,48 @@ export function ExcelImport() {
 
   // Table tab labels
   const tableLabels = [
+    "Raw Data Table",
     "Percentage Table",
     "In-House Table",
-    "Week-over-Week (WOW)",
-    "Category Summary"
+    "Week-over-Week (WOW)"
   ];
 
   // Table descriptions for tooltips
   const tableDescriptions = [
+    "Shows raw sales numbers for each category. The Sales column is the sum of all categories.",
     "Shows week-over-week percentage changes for each category. Positive values are good!",
     "Shows each category as a percentage of In-House sales.",
-    "Week-over-Week data with 3P (Third-Party) totals and 1P to 3P ratio.",
-    "Summarizes sales by category with totals and percentages."
+    "Week-over-Week data with 3P (Third-Party) totals and 1P to 3P ratio."
   ];
 
-  // Update available date ranges when data changes
+  // Debug helper to display object structure
+  const debugObject = (obj) => {
+    try {
+      return JSON.stringify(obj, null, 2);
+    } catch (e) {
+      return "Error stringifying object";
+    }
+  };
+
+  // Show formula details in console after data is loaded
   useEffect(() => {
-    if (tableData && tableData.dateRanges && tableData.dateRanges.length > 0) {
-      setAvailableDateRanges(tableData.dateRanges);
+    if (tableData.table1 && tableData.table1.length > 0) {
+      console.log('Table 1 Data with Formula Details:');
+      console.log(tableData.table1);
       
-      // Set default date range if not already set
-      if (!dateRangeType && tableData.dateRanges.length > 0) {
-        setDateRangeType(tableData.dateRanges[0]);
+      // Extract formula details from the first row
+      const firstRow = tableData.table1[0];
+      const formulaFields = Object.keys(firstRow).filter(key => key.endsWith('_formula'));
+      
+      if (formulaFields.length > 0) {
+        console.log('Excel Formulas Applied:');
+        formulaFields.forEach(field => {
+          const baseField = field.replace('_formula', '');
+          console.log(`${baseField}: ${firstRow[field]}`);
+        });
       }
     }
-  }, [tableData.dateRanges]);
-
-  // Effect to handle custom date range selection
-  useEffect(() => {
-    if (dateRangeType === 'Custom Date Range') {
-      setCustomDateRange(true);
-    } else {
-      setCustomDateRange(false);
-    }
-  }, [dateRangeType]);
+  }, [tableData.table1]);
 
   // Function to toggle between view modes
   const toggleViewMode = () => {
@@ -123,101 +129,18 @@ export function ExcelImport() {
     });
   };
 
+  // Toggle showing formula details
+  const toggleFormulas = () => {
+    setShowFormulas(!showFormulas);
+  };
+
   // Handle location change
   const handleLocationChange = (event) => {
     setSelectedLocation(event.target.value);
     
-    // Apply filters with new location
-    handleApplyFilters(event.target.value, dateRangeType);
-  };
-
-  // Handle date range type change
-  const handleDateRangeChange = (event) => {
-    setDateRangeType(event.target.value);
-    
-    // Apply filters with new date range
-    handleApplyFilters(selectedLocation, event.target.value);
-  };
-
-  // Apply filters
-  const handleApplyFilters = (location = selectedLocation, dateRange = dateRangeType) => {
-    if (!file && !processedSuccessfully) {
-      setError('Please upload a file first.');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      // Format dates correctly for API
-      let formattedStartDate = null;
-      let formattedEndDate = null;
-      
-      if (dateRange === 'Custom Date Range' && startDate) {
-        // Ensure date is in YYYY-MM-DD format for the backend
-        formattedStartDate = startDate;
-      }
-      
-      if (dateRange === 'Custom Date Range' && endDate) {
-        // Ensure date is in YYYY-MM-DD format for the backend
-        formattedEndDate = endDate;
-      }
-      
-      // Prepare filter data
-      const filterData = {
-        fileName: fileName,
-        fileContent: null, // We'll reuse the already uploaded file on the server
-        startDate: formattedStartDate,
-        endDate: formattedEndDate,
-        location: location || null,
-        dateRangeType: dateRange
-      };
-      
-      console.log('Sending filter request:', filterData);
-      
-      // Call filter API
-      axios.post(FILTER_API_URL, filterData)
-        .then(response => {
-          // Update table data with filtered data
-          if (response.data) {
-            setTableData(response.data);
-            setProcessedSuccessfully(true);
-            setError(''); // Clear any previous errors
-          } else {
-            throw new Error('Invalid response data');
-          }
-        })
-        .catch(err => {
-          console.error('Filter error:', err);
-          
-          let errorMessage = 'Error filtering data';
-          if (axios.isAxiosError(err)) {
-            if (err.response) {
-              // Get detailed error message if available
-              const detail = err.response.data?.detail;
-              errorMessage = `Server error: ${detail || err.response.status}`;
-              
-              // Special handling for common errors
-              if (detail && detail.includes('isinf')) {
-                errorMessage = 'Backend error: Please update the backend code to use numpy.isinf instead of pandas.isinf';
-              } else if (err.response.status === 404) {
-                errorMessage = 'API endpoint not found. Is the server running?';
-              }
-            } else if (err.request) {
-              errorMessage = 'No response from server. Please check if the backend is running.';
-            }
-          }
-          
-          setError(errorMessage);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-      
-    } catch (err) {
-      console.error('Filter error:', err);
-      setError('Error applying filters: ' + (err.message || 'Unknown error'));
-      setLoading(false);
+    // If we have data for this location, update the tables
+    if (event.target.value in locationData) {
+      setTableData(locationData[event.target.value]);
     }
   };
 
@@ -240,15 +163,6 @@ export function ExcelImport() {
   // Handle tab changes
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
-  };
-
-  // Handle date input changes
-  const handleStartDateChange = (event) => {
-    setStartDate(event.target.value);
-  };
-
-  const handleEndDateChange = (event) => {
-    setEndDate(event.target.value);
   };
 
   // Convert file to base64
@@ -283,20 +197,30 @@ export function ExcelImport() {
     }
     
     return (
-      <Typography component="span" style={{ color, fontWeight: 'bold' }}>
-        {typeof value === 'string' && value.includes('%') ? value : `${numValue.toFixed(2)}%`}
+      <Typography component="span" style={{ color, fontWeight: 'normal' }}>
+        {numValue.toFixed(2)}%
       </Typography>
     );
   };
 
-  // Custom render function for currency values
-  const renderCurrencyValue = (value) => {
-    if (value === null || value === undefined || value === '####') {
+  // Custom render function for numeric values
+  const renderNumericValue = (value, column) => {
+    // For Week column, just return as number without $ formatting
+    if (column === 'Week') {
+      return value;
+    }
+    
+    if (value === null || value === undefined) {
       return <span>####</span>;
     }
     
-    // If value is already a formatted currency string with $ and commas
-    if (typeof value === 'string' && value.includes('$')) {
+    // If the value is the string '####', return it as is
+    if (value === '####') {
+      return <span>####</span>;
+    }
+    
+    // If value is already a string with commas, just return it
+    if (typeof value === 'string' && value.includes(',')) {
       return value;
     }
     
@@ -306,38 +230,63 @@ export function ExcelImport() {
       return value;
     }
     
-    // Format as currency
-    return `$${numValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    // Format as currency for dollar values in Raw Data table (except Week column)
+    if (activeTab === 0 && column !== 'Week') {
+      return `$${numValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    
+    // Format with commas for thousands
+    return numValue.toLocaleString();
+  };
+
+  // Show formula details for a value
+  const renderFormulaDetails = (row, column) => {
+    // Only show formula details if showFormulas is true and we have formula data
+    if (!showFormulas || !row[`${column}_formula`]) {
+      return null;
+    }
+    
+    return (
+      <div style={{ 
+        fontSize: '0.7rem', 
+        color: '#666', 
+        marginTop: '3px',
+        fontFamily: 'monospace',
+        backgroundColor: '#f9f9f9',
+        padding: '2px',
+        borderRadius: '2px'
+      }}>
+        <div><strong>Formula:</strong> {row[`${column}_formula`]}</div>
+        {row[`${column}_originalValue`] !== undefined && (
+          <div><strong>Original:</strong> {row[`${column}_originalValue`]}</div>
+        )}
+        {row[`${column}_computedValue`] !== undefined && (
+          <div><strong>Computed:</strong> {row[`${column}_computedValue`]}</div>
+        )}
+      </div>
+    );
   };
 
   // Determine if a value should be rendered as percentage
-  const isPercentageColumn = (columnName, tableIndex) => {
+  const isPercentageColumn = (columnName, tableType) => {
     // Week column is never a percentage
-    if (columnName === 'Week' || columnName === 'Sales_Category' || 
-        columnName === 'Amount' || columnName === 'Transactions' || 
-        columnName === 'Avg Transaction') {
-      return false;
+    if (columnName === 'Week') return false;
+    
+    // For tables that mostly contain percentages
+    if (tableType === 'percentages') {
+      return true; // All columns except Week are percentages
     }
     
-    // For specific tables
-    if (tableIndex === 0 || tableIndex === 1 || tableIndex === 2) {
-      return true; // All columns except Week are percentages in these tables
+    if (tableType === 'wow') {
+      return true; // All columns except Week are percentages
     }
     
-    // For category summary table
-    if (tableIndex === 3 && columnName === '% of Total') {
-      return true;
+    // For the In-House table (table3)
+    if (activeTab === 2) {
+      return true; // All columns except Week are percentages
     }
     
-    return false;
-  };
-
-  // Determine if a value should be rendered as currency
-  const isCurrencyColumn = (columnName, tableIndex) => {
-    if (tableIndex === 3) { // Category summary table
-      return columnName === 'Amount' || columnName === 'Avg Transaction';
-    }
-    
+    // For the raw data table (table1), no columns are percentages
     return false;
   };
 
@@ -350,7 +299,6 @@ export function ExcelImport() {
 
     try {
       setLoading(true);
-      setError(''); // Clear any previous errors
       
       // Convert file to base64
       const base64File = await toBase64(file);
@@ -361,28 +309,65 @@ export function ExcelImport() {
         fileName: fileName,
         fileContent: base64Content
       });
+
+      console.log('API Response:', response.data);
       
+      // Detailed debug logging of Table 1 data
+      if (response.data && response.data.table1) {
+        console.log('Table 1 Data:', debugObject(response.data.table1));
+        console.log('First row of Table 1:', debugObject(response.data.table1[0]));
+        
+        // Log formula fields if they exist
+        const firstRow = response.data.table1[0];
+        const formulaFields = Object.keys(firstRow).filter(key => key.endsWith('_formula'));
+        
+        if (formulaFields.length > 0) {
+          console.log('Excel Formulas Found:');
+          formulaFields.forEach(field => {
+            const baseField = field.replace('_formula', '');
+            console.log(`${baseField}: ${firstRow[field]}`);
+          });
+        } else {
+          console.log('No formula fields found in the data');
+        }
+      }
+
       // Update table data with response
       if (response.data) {
         setTableData(response.data);
-        setProcessedSuccessfully(true);
+        setProcessedSuccessfully(true); // Mark as successfully processed
         
-        // Set location if available
+        // Store locations
         if (response.data.locations && response.data.locations.length > 0) {
+          // Set the first location as selected by default
           setSelectedLocation(response.data.locations[0]);
+          
+          // Create a data object for each location
+          const locData = {};
+          response.data.locations.forEach(location => {
+            locData[location] = {
+              table1: response.data.table1 || [],
+              table2: response.data.table2 || [],
+              table3: response.data.table3 || [],
+              table4: response.data.table4 || [],
+              table5: response.data.table5 || [],
+              locations: response.data.locations || []
+            };
+          });
+          
+          setLocationData(locData);
         }
         
-        // Set date ranges if available
-        if (response.data.dateRanges && response.data.dateRanges.length > 0) {
-          setAvailableDateRanges(response.data.dateRanges);
-          setDateRangeType(response.data.dateRanges[0]);
-        }
+        setError('');
         
         // Show tutorial on first successful upload
         if (!localStorage.getItem('tutorialShown')) {
           setShowTutorial(true);
           localStorage.setItem('tutorialShown', 'true');
         }
+        
+        // Log success message
+        console.log('File processed successfully!');
       } else {
         throw new Error('Invalid response data');
       }
@@ -394,32 +379,87 @@ export function ExcelImport() {
       
       if (axios.isAxiosError(err)) {
         if (err.response) {
-          // Get detailed error message if available
-          const detail = err.response.data?.detail;
-          errorMessage = `Server error: ${detail || err.response.status}`;
-          
-          // Special handling for common errors
-          if (detail && detail.includes('isinf')) {
-            errorMessage = 'Backend error: Please update the backend code to use numpy.isinf instead of pandas.isinf';
-          } else if (err.response.status === 404) {
+          errorMessage = `Server error: ${err.response.status}`;
+          if (err.response.status === 404) {
             errorMessage = 'API endpoint not found. Is the server running?';
-          } else if (detail) {
-            // Try to extract a more meaningful message
-            if (detail.includes('Column')) {
-              errorMessage = `File format error: ${detail}`;
-            } else {
-              errorMessage = `Processing error: ${detail}`;
-            }
+          }
+          // Log response data if available
+          if (err.response.data) {
+            console.error('Response data:', err.response.data);
           }
         } else if (err.request) {
-          errorMessage = 'No response from server. Please check if the backend is running.';
+          errorMessage = 'No response from server. Is the server running?';
         }
-      } else if (err.message) {
-        errorMessage = `Error: ${err.message}`;
       }
       
       setError(errorMessage);
-      setProcessedSuccessfully(false);
+      
+      // For development/testing: Create mock data for UI testing
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Creating mock data for development testing...');
+        
+        // Example of how you might create mock data for testing
+        const mockData = {
+          table1: Array(17).fill(0).map((_, i) => ({
+            'Week': i + 1,
+            '1P': Math.random() > 0.3 ? Math.floor(Math.random() * 50000) : '####',
+            'Catering': Math.random() > 0.3 ? Math.floor(Math.random() * 50000) : '####',
+            'DD': Math.random() > 0.3 ? Math.floor(Math.random() * 50000) : '####',
+            'GH': Math.random() > 0.3 ? Math.floor(Math.random() * 50000) : '####',
+            'In-House': Math.random() > 0.3 ? Math.floor(Math.random() * 100000) : '####',
+            'UB': Math.random() > 0.3 ? Math.floor(Math.random() * 50000) : '####',
+            'Sales': Math.random() > 0.3 ? Math.floor(Math.random() * 200000) : '####',
+          })),
+          
+          table2: Array(17).fill(0).map((_, i) => ({
+            'Week': i + 1,
+            '1P': Math.random() > 0.3 ? (Math.random() * 20 - 10).toFixed(2) : '####',
+            'Catering': Math.random() > 0.3 ? (Math.random() * 20 - 10).toFixed(2) : '####',
+            'DD': Math.random() > 0.3 ? (Math.random() * 20 - 10).toFixed(2) : '####',
+            'GH': Math.random() > 0.3 ? (Math.random() * 20 - 10).toFixed(2) : '####',
+            'In-House': Math.random() > 0.3 ? (Math.random() * 20 - 10).toFixed(2) : '####',
+            'UB': Math.random() > 0.3 ? (Math.random() * 20 - 10).toFixed(2) : '####',
+          })),
+          
+          table3: Array(17).fill(0).map((_, i) => ({
+            'Week': i + 1,
+            '1P': Math.random() > 0.3 ? (Math.random() * 10).toFixed(2) : '####',
+            'In-House': Math.random() > 0.3 ? (Math.random() * 80 + 20).toFixed(2) : '####',
+            'Catering': Math.random() > 0.3 ? (Math.random() * 30).toFixed(2) : '####',
+            'DD': Math.random() > 0.3 ? (Math.random() * 5).toFixed(2) : '####',
+            'GH': Math.random() > 0.3 ? (Math.random() * 20).toFixed(2) : '####',
+            'UB': Math.random() > 0.3 ? (Math.random() * 15).toFixed(2) : '####',
+          })),
+          
+          table4: Array(17).fill(0).map((_, i) => ({
+            'Week': i + 1,
+            '1P': Math.random() > 0.3 ? (Math.random() * 10 - 5).toFixed(2) : '####',
+            'In-House': Math.random() > 0.3 ? (Math.random() * 10 - 5).toFixed(2) : '####',
+            'Catering': Math.random() > 0.3 ? (Math.random() * 10 - 5).toFixed(2) : '####',
+            'DD': Math.random() > 0.3 ? (Math.random() * 2 - 1).toFixed(2) : '####',
+            'GH': Math.random() > 0.3 ? (Math.random() * 8 - 4).toFixed(2) : '####',
+            'UB': Math.random() > 0.3 ? (Math.random() * 6 - 3).toFixed(2) : '####',
+            '3P': Math.random() > 0.3 ? (Math.random() * 10 - 5).toFixed(2) : '####',
+            '1P/3P': Math.random() > 0.3 ? (Math.random() * 10 - 5).toFixed(2) : '####',
+          })),
+          
+          table5: [],
+          locations: ['Midtown East', 'Downtown', 'Uptown']
+        };
+        
+        // Uncomment this to use mock data for testing UI
+        setTableData(mockData);
+        setProcessedSuccessfully(true);
+        setSelectedLocation('Midtown East');
+        
+        // Create location data
+        const mockLocationData = {};
+        mockData.locations.forEach(location => {
+          mockLocationData[location] = { ...mockData };
+        });
+        setLocationData(mockLocationData);
+      }
+      
     } finally {
       setLoading(false);
     }
@@ -427,50 +467,52 @@ export function ExcelImport() {
 
   // Create a single table component that can be reused
   const RenderDataTable = ({ tableIndex, compact = false, veryCompact = false }) => {
-    // Use table5 for category summary (index 3), otherwise use the right table based on index
-    // We skip table4 (raw data) as requested
-    const tableKey = tableIndex === 3 ? 'table5' : `table${tableIndex + 1}`;
+    const tableKey = `table${tableIndex + 1}`;
     const data = tableData[tableKey] || [];
+    
+    console.log(`Rendering table ${tableKey} with ${data.length} rows`);
+    if (data.length > 0) {
+      console.log(`First row: ${debugObject(data[0])}`);
+    }
     
     // Get the columns for this table type
     const columns = getTableColumns(tableIndex);
     
+    // Determine table type for special formatting
+    let tableType = 'regular';
+    if (tableIndex === 1) tableType = 'percentages';
+    if (tableIndex === 3) tableType = 'wow';
+    
     // Get background color for header cells based on table type
     const getHeaderColor = (column, tableIndex) => {
-      // First column (Week or Sales_Category) is always light gray
-      if (column === 'Week' || column === 'Sales_Category') return '#f5f5f5';
+      // First column (Week) is always light gray
+      if (column === 'Week') return '#f5f5f5';
       
       switch (tableIndex) {
-        case 0: // Percentage Table - orange/red headers
+        case 0: // Raw Data - red headers
+          return '#ffcccc';
+        case 1: // Percentage Table - orange/red headers
           return '#ffddcc';
-        case 1: // In-House Table - blue headers
+        case 2: // In-House Table - blue headers
           return '#ccddff';
-        case 2: // WOW Table - orange headers
+        case 3: // WOW Table - orange headers
           return '#ffeecc';
-        case 3: // Category Summary - green headers
-          return '#ccffdd';
         default:
           return '#e0e0e0';
       }
     };
     
     // Helper function to render cell value correctly
-    const renderCellValue = (columnName, value, tableIndex) => {
-      // Special handling for specific columns
-      if (columnName === 'Week' || columnName === 'Sales_Category') {
-        return value; // Just display as is
+    const renderCellValue = (columnName, value, row, tableType) => {
+      // Special handling for Week column
+      if (columnName === 'Week') {
+        return value; // Just display the week number as is
       }
       
-      if (isPercentageColumn(columnName, tableIndex)) {
+      if (isPercentageColumn(columnName, tableType)) {
         return renderPercentValue(value);
-      } else if (isCurrencyColumn(columnName, tableIndex)) {
-        return renderCurrencyValue(value);
-      } else if (columnName === 'Grand Total') {
-        return value; // Display as is, it's already formatted
-      } else if (columnName === 'Transactions') {
-        return value; // Display as is
       } else {
-        return value;
+        return renderNumericValue(value, columnName);
       }
     };
     
@@ -487,6 +529,16 @@ export function ExcelImport() {
             <Typography variant={veryCompact ? "subtitle1" : "h6"}>{tableLabels[tableIndex]}</Typography>
             
             <Box display="flex" alignItems="center">
+              {tableIndex === 0 && (
+                <Button 
+                  size="small" 
+                  color="secondary" 
+                  onClick={toggleFormulas}
+                  sx={{ mr: 1 }}
+                >
+                  {showFormulas ? 'Hide Formulas' : 'Show Formulas'}
+                </Button>
+              )}
               <Tooltip title={tableDescriptions[tableIndex]}>
                 <IconButton size="small">
                   <InfoIcon fontSize="small" />
@@ -529,9 +581,9 @@ export function ExcelImport() {
               </TableRow>
             </TableHead>
             <TableBody>
+              {/* If no data, show empty rows with the structure */}
               {data.length === 0 ? (
-                // Show empty rows when no data
-                Array(tableIndex === 3 ? 7 : 17).fill(0).map((_, rowIndex) => (
+                Array(17).fill(0).map((_, rowIndex) => (
                   <TableRow key={rowIndex}>
                     {columns.map((column, colIndex) => (
                       <TableCell 
@@ -548,14 +600,12 @@ export function ExcelImport() {
                           maxWidth: veryCompact ? '60px' : 'none'
                         }}
                       >
-                        {column === 'Week' ? (rowIndex + 1) : 
-                         column === 'Sales_Category' ? 'Category' : '####'}
+                        {column === 'Week' ? (rowIndex + 1) : '####'}
                       </TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : (
-                // Show actual data
                 data.map((row, index) => (
                   <TableRow 
                     key={index} 
@@ -583,7 +633,11 @@ export function ExcelImport() {
                             maxWidth: veryCompact ? '60px' : 'none'
                           }}
                         >
-                          {renderCellValue(column, value, tableIndex)}
+                          <div>
+                            {renderCellValue(column, value, row, tableType)}
+                          </div>
+                          {/* Only render formula details in the Raw Data tab and when showFormulas is true */}
+                          {tableIndex === 0 && renderFormulaDetails(row, column)}
                         </TableCell>
                       );
                     })}
@@ -623,7 +677,7 @@ export function ExcelImport() {
               <Typography variant="h6" mb={2}>All Tables View - Side by Side</Typography>
               <Grid container spacing={1}>
                 {[0, 1, 2, 3].map(tableIndex => (
-                  <Grid item xs={12} sm={6} lg={3} key={tableIndex}>
+                  <Grid item xs={3} key={tableIndex}>
                     <RenderDataTable tableIndex={tableIndex} veryCompact={true} />
                   </Grid>
                 ))}
@@ -648,14 +702,14 @@ export function ExcelImport() {
         </Paper>
       );
     } else {
-      // Row view - all tables in a single row for wider screens
+      // Row view - all tables in a single row
       return (
         <Paper sx={{ width: '100%', p: 2 }}>
           <Typography variant="h5" mb={2}>All Tables View - Side by Side</Typography>
           
           <Grid container spacing={1}>
             {[0, 1, 2, 3].map(tableIndex => (
-              <Grid item xs={12} sm={6} lg={3} key={tableIndex}>
+              <Grid item xs={3} key={tableIndex}>
                 <RenderDataTable tableIndex={tableIndex} veryCompact={true} />
               </Grid>
             ))}
@@ -698,31 +752,53 @@ export function ExcelImport() {
       >
         <Typography variant="subtitle1" gutterBottom>Welcome to the Sales Analyzer!</Typography>
         <Typography variant="body2">
+          • <strong>Raw Data Table</strong>: Shows actual sales numbers<br />
           • <strong>Percentage Table</strong>: Shows week-over-week changes<br />
           • <strong>In-House Table</strong>: Categories as % of In-House sales<br />
           • <strong>WOW Table</strong>: Includes 3P totals and 1P/3P ratio<br />
-          • <strong>Category Summary</strong>: Overall sales by category<br />
           <br />
-          Use the date filter to analyze specific time periods!
+          Click "Show Formulas" to view the Excel formulas being applied to your data!
         </Typography>
       </Alert>
     </Snackbar>
   );
 
+  // Debug Data Display (only visible in development)
+  const renderDebugInfo = () => {
+    if (process.env.NODE_ENV !== 'development') return null;
+    
+    return (
+      <Accordion sx={{ mt: 4 }}>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography>Debug Information</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Box component="pre" sx={{ 
+            fontSize: '0.75rem', 
+            p: 2, 
+            backgroundColor: '#f5f5f5', 
+            borderRadius: 1,
+            maxHeight: '400px',
+            overflow: 'auto'
+          }}>
+            {debugObject(tableData)}
+          </Box>
+        </AccordionDetails>
+      </Accordion>
+    );
+  };
+
   return (
     <>
-      <Box mb={4}>
-        <Typography variant="h4" gutterBottom>
-          Sales Analysis Dashboard
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          Upload an Excel file to analyze sales data across different categories
+      <Box mb={5}>
+        <Typography variant="h4">
+          Excel Import & Sales Analysis
         </Typography>
       </Box>
 
       <Card sx={{ p: 3, mb: 4 }}>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} md={4}>
             <input
               type="file"
               id="excel-upload"
@@ -734,7 +810,6 @@ export function ExcelImport() {
               <Button
                 variant="contained"
                 component="span"
-                fullWidth
               >
                 Choose Excel File
               </Button>
@@ -746,58 +821,9 @@ export function ExcelImport() {
             )}
           </Grid>
           
-          {/* Date Range Selector */}
-          <Grid item xs={12} md={3}>
-            <FormControl fullWidth>
-              <InputLabel id="date-range-select-label">Date Range</InputLabel>
-              <Select
-                labelId="date-range-select-label"
-                id="date-range-select"
-                value={dateRangeType}
-                label="Date Range"
-                onChange={handleDateRangeChange}
-                disabled={availableDateRanges.length === 0}
-              >
-                {availableDateRanges.map((range) => (
-                  <MenuItem key={range} value={range}>{range}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          
-          {/* Conditional rendering of custom date range inputs */}
-          {customDateRange && (
-            <>
-              <Grid item xs={12} md={3}>
-                <TextField
-                  label="Start Date"
-                  type="date"
-                  value={startDate}
-                  onChange={handleStartDateChange}
-                  fullWidth
-                  InputLabelProps={{
-                    shrink: true,
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField
-                  label="End Date"
-                  type="date"
-                  value={endDate}
-                  onChange={handleEndDateChange}
-                  fullWidth
-                  InputLabelProps={{
-                    shrink: true,
-                  }}
-                />
-              </Grid>
-            </>
-          )}
-          
           {/* Location Selector - only show if we have locations */}
           {tableData.locations && tableData.locations.length > 0 && (
-            <Grid item xs={12} md={customDateRange ? 3 : 3}>
+            <Grid item xs={12} md={3}>
               <FormControl fullWidth>
                 <InputLabel id="location-select-label">Location</InputLabel>
                 <Select
@@ -807,7 +833,6 @@ export function ExcelImport() {
                   label="Location"
                   onChange={handleLocationChange}
                 >
-                  <MenuItem value="">All Locations</MenuItem>
                   {tableData.locations.map((location) => (
                     <MenuItem key={location} value={location}>{location}</MenuItem>
                   ))}
@@ -816,36 +841,21 @@ export function ExcelImport() {
             </Grid>
           )}
           
-          {/* Apply Filters and Upload Buttons */}
-          <Grid item xs={12} md={customDateRange ? 3 : (tableData.locations && tableData.locations.length > 0 ? 3 : 6)} 
-                sx={{ display: 'flex', gap: 2 }}>
-            {customDateRange && (
-              <Button
-                variant="contained"
-                color="secondary"
-                onClick={() => handleApplyFilters()}
-                disabled={!startDate || !endDate || loading}
-                sx={{ flex: 1 }}
-              >
-                Apply Dates
-              </Button>
-            )}
+          <Grid item xs={12} md={tableData.locations && tableData.locations.length > 0 ? 5 : 8} 
+                sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, gap: 2 }}>
             <Button
               variant="outlined"
               color="primary"
               onClick={toggleViewMode}
-              sx={{ flex: 1 }}
-              disabled={loading}
             >
-              {viewMode === 'tabs' ? 'View Stacked' : 
-               viewMode === 'combined' ? 'View Side-by-Side' : 'View Tabbed'}
+              {viewMode === 'tabs' ? 'View Stacked Tables' : 
+               viewMode === 'combined' ? 'View Side-by-Side Tables' : 'View Tabbed Tables'}
             </Button>
             <Button
               variant="contained"
               color="primary"
               onClick={handleUpload}
               disabled={!file || loading}
-              sx={{ flex: 1 }}
             >
               {loading ? <CircularProgress size={24} /> : 'Upload & Process'}
             </Button>
@@ -862,8 +872,8 @@ export function ExcelImport() {
       {renderContent()}
       {renderTutorial()}
       {renderSuccessMessage()}
+      {renderDebugInfo()}
     </>
   );
 }
-
 export default ExcelImport;
