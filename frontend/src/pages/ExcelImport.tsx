@@ -141,7 +141,7 @@ export function ExcelImport() {
 
   // Apply filters
   const handleApplyFilters = (location = selectedLocation, dateRange = dateRangeType) => {
-    if (!file && !processedSuccessfully) {
+    if (!processedSuccessfully && !file) {
       setError('Please upload a file first.');
       return;
     }

@@ -8,6 +8,7 @@ import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 import numpy as np
+
 # Initialize FastAPI app
 app = FastAPI()
 
@@ -32,6 +33,13 @@ class ExcelUploadRequest(BaseModel):
     endDate: Optional[str] = None    # Optional date filter end
     location: Optional[str] = None   # Optional location filter
 
+class ExcelFilterRequest(BaseModel):
+    fileName: str  # Name of the previously uploaded file
+    fileContent: Optional[str] = None  # Optional base64 content if re-uploading
+    startDate: Optional[str] = None  # Date filter start
+    endDate: Optional[str] = None    # Date filter end
+    location: Optional[str] = None   # Location filter
+    dateRangeType: Optional[str] = None  # Type of date range (e.g., "Last 7 Days")
 
 class ExcelUploadResponse(BaseModel):
     table1: List[Dict[str, Any]]
@@ -291,33 +299,53 @@ def generate_date_ranges(df):
     if 'Date' not in df.columns:
         return []
     
-    # Get min and max dates
-    min_date = df['Date'].min()
-    max_date = df['Date'].max()
-    
-    # Generate monthly ranges
-    date_ranges = []
-    
-    # Last 7 days
-    date_ranges.append("Last 7 Days")
-    
-    # Last 30 days
-    date_ranges.append("Last 30 Days")
-    
-    # This month
-    date_ranges.append(f"This Month ({min_date.strftime('%B %Y')})")
-    
-    # Last month
-    last_month = min_date - timedelta(days=30)
-    date_ranges.append(f"Last Month ({last_month.strftime('%B %Y')})")
-    
-    # Last 3 months
-    date_ranges.append("Last 3 Months")
-    
-    # Custom (encourages custom date range selection)
-    date_ranges.append("Custom Date Range")
-    
-    return date_ranges
+    try:
+        # Get min and max dates, with error handling
+        min_date = df['Date'].min()
+        max_date = df['Date'].max()
+        
+        # Check if min_date is valid (not NaT)
+        if pd.isna(min_date):
+            # Use current date if min_date is NaT
+            min_date = pd.Timestamp.now()
+            print("Warning: Min date was NaT, using current date instead")
+        
+        # Generate monthly ranges
+        date_ranges = []
+        
+        # Last 7 days
+        date_ranges.append("Last 7 Days")
+        
+        # Last 30 days
+        date_ranges.append("Last 30 Days")
+        
+        # This month
+        # Use try-except to handle potential strftime errors
+        try:
+            date_ranges.append(f"This Month ({min_date.strftime('%B %Y')})")
+        except Exception as e:
+            print(f"Error formatting 'This Month': {e}")
+            date_ranges.append("This Month")
+        
+        # Last month
+        try:
+            last_month = min_date - pd.Timedelta(days=30)
+            date_ranges.append(f"Last Month ({last_month.strftime('%B %Y')})")
+        except Exception as e:
+            print(f"Error formatting 'Last Month': {e}")
+            date_ranges.append("Last Month")
+        
+        # Last 3 months
+        date_ranges.append("Last 3 Months")
+        
+        # Custom (encourages custom date range selection)
+        date_ranges.append("Custom Date Range")
+        
+        return date_ranges
+    except Exception as e:
+        print(f"Error generating date ranges: {e}")
+        # Return basic date ranges if there was an error
+        return ["Last 7 Days", "Last 30 Days", "This Month", "Last Month", "Last 3 Months", "Custom Date Range"]
 
 
 def process_excel_file(file_data: io.BytesIO, start_date=None, end_date=None, location=None) -> Dict[str, List[Dict[str, Any]]]:
@@ -350,23 +378,49 @@ def process_excel_file(file_data: io.BytesIO, start_date=None, end_date=None, lo
         
         # Apply date filters if provided
         if start_date and 'Date' in df.columns:
-            start_date = pd.to_datetime(start_date)
-            df = df[df['Date'] >= start_date]
+            try:
+                start_date = pd.to_datetime(start_date)
+                df = df[df['Date'] >= start_date]
+            except Exception as e:
+                print(f"Error applying start date filter: {e}")
         
         if end_date and 'Date' in df.columns:
-            end_date = pd.to_datetime(end_date)
-            df = df[df['Date'] <= end_date]
+            try:
+                end_date = pd.to_datetime(end_date)
+                df = df[df['Date'] <= end_date]
+            except Exception as e:
+                print(f"Error applying end date filter: {e}")
         
         # Apply location filter if provided
-        if location and 'Location' in df.columns:
-            df = df[df['Location'] == location]
+        if location and location != "" and 'Location' in df.columns:
+            print(f"Filtering by location: '{location}'")
+            # Debug log unique locations
+            unique_locations = df['Location'].unique()
+            print(f"Available locations: {unique_locations}")
+            
+            # Apply location filter with case-insensitive comparison
+            try:
+                df = df[df['Location'].str.lower() == location.lower()]
+                print(f"After location filter, {len(df)} rows remain")
+            except Exception as e:
+                print(f"Error during location filtering: {e}")
+                # If there's an error, don't apply the filter
         
         # Extract week information
         if 'Week' not in df.columns:
             if 'Date' in df.columns:
-                df['Week'] = df['Date'].dt.isocalendar().week
+                # Handle potential NaT values in the Date column
+                try:
+                    df['Week'] = df['Date'].dt.isocalendar().week
+                except Exception as e:
+                    print(f"Error extracting week from Date: {e}")
+                    df['Week'] = 1
             elif 'Sent Date' in df.columns:
-                df['Week'] = df['Sent Date'].dt.isocalendar().week
+                try:
+                    df['Week'] = df['Sent Date'].dt.isocalendar().week
+                except Exception as e:
+                    print(f"Error extracting week from Sent Date: {e}")
+                    df['Week'] = 1
             else:
                 df['Week'] = 1
         
@@ -383,10 +437,27 @@ def process_excel_file(file_data: io.BytesIO, start_date=None, end_date=None, lo
         locations = []
         if 'Location' in df.columns:
             locations = df['Location'].unique().tolist()
+            # Filter out None or NaN values
+            locations = [loc for loc in locations if loc is not None and not pd.isna(loc)]
         
         # Get available date ranges
         date_ranges = generate_date_ranges(df)
         
+        # Check if dataframe is empty after filtering
+        if len(df) == 0:
+            print("Warning: DataFrame is empty after applying filters!")
+            # Return empty tables
+            result = {
+                "table1": [],
+                "table2": [],
+                "table3": [],
+                "table4": [],
+                "table5": [],
+                "locations": locations,
+                "dateRanges": date_ranges
+            }
+            return result
+            
         # Calculate all tables
         # TABLE 1: Raw Data Table
         table1_data = calculate_raw_data_table(df)
@@ -425,6 +496,13 @@ def process_excel_file(file_data: io.BytesIO, start_date=None, end_date=None, lo
         raise
 
 
+# Add this test endpoint to verify FastAPI routing
+@app.get("/api/test")
+async def test_endpoint():
+    return {"status": "ok", "message": "Test endpoint is working"}
+
+
+# Upload endpoint
 @app.post("/api/excel/upload", response_model=ExcelUploadResponse)
 async def upload_excel(request: ExcelUploadRequest = Body(...)):
     """
@@ -445,7 +523,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         with open(file_path, "wb") as f:
             f.write(file_content)
         
-        print('inside upload_excel')
+        print('Processing uploaded file:', request.fileName)
         
         # Process Excel file with optional filters
         result = process_excel_file(
@@ -479,6 +557,113 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
 
+# Filter endpoint
+@app.post("/api/excel/filter", response_model=ExcelUploadResponse)
+async def filter_excel_data(request: ExcelFilterRequest = Body(...)):
+    """
+    Endpoint to filter previously processed Excel data by date range and location.
+    """
+    try:
+        print(f"Received filter request for file: {request.fileName}")
+        print(f"Date range type: {request.dateRangeType}")
+        print(f"Location: {request.location}")
+        
+        # Check if we have the file in the uploads directory
+        file_path = None
+        for filename in os.listdir(UPLOAD_DIR):
+            if request.fileName in filename:  # Changed to search for partial filename match
+                file_path = os.path.join(UPLOAD_DIR, filename)
+                print(f"Found matching file: {filename}")
+                break
+        
+        # If not found, check if fileContent is provided
+        if not file_path and not request.fileContent:
+            print(f"File not found in uploads directory: {request.fileName}")
+            print(f"Files in directory: {os.listdir(UPLOAD_DIR)}")
+            raise HTTPException(
+                status_code=404, 
+                detail=f"File not found: {request.fileName}. Please upload the file again."
+            )
+        
+        # If fileContent is provided, use that instead
+        if request.fileContent:
+            # Decode base64 file content
+            file_content = base64.b64decode(request.fileContent)
+            excel_data = io.BytesIO(file_content)
+        else:
+            # Read the file from disk
+            with open(file_path, "rb") as f:
+                file_content = f.read()
+            excel_data = io.BytesIO(file_content)
+        
+        # Handle date range types
+        start_date = request.startDate
+        end_date = request.endDate
+        
+        if request.dateRangeType and not (request.startDate and request.endDate):
+            # Calculate date range based on type
+            now = datetime.now()
+            
+            if request.dateRangeType == "Last 7 Days":
+                start_date = (now - timedelta(days=7)).strftime("%Y-%m-%d")
+                end_date = now.strftime("%Y-%m-%d")
+            
+            elif request.dateRangeType == "Last 30 Days":
+                start_date = (now - timedelta(days=30)).strftime("%Y-%m-%d")
+                end_date = now.strftime("%Y-%m-%d")
+            
+            elif "This Month" in request.dateRangeType:
+                start_date = now.replace(day=1).strftime("%Y-%m-%d")
+                end_date = now.strftime("%Y-%m-%d")
+                
+            elif "Last Month" in request.dateRangeType:
+                last_month = now.replace(day=1) - timedelta(days=1)
+                start_date = last_month.replace(day=1).strftime("%Y-%m-%d")
+                end_date = last_month.strftime("%Y-%m-%d")
+                
+            elif request.dateRangeType == "Last 3 Months":
+                start_date = (now - timedelta(days=90)).strftime("%Y-%m-%d")
+                end_date = now.strftime("%Y-%m-%d")
+                
+            print(f"Using date range: {start_date} to {end_date} based on type: {request.dateRangeType}")
+        
+        # Process Excel file with filters
+        result = process_excel_file(
+            excel_data, 
+            start_date=start_date,
+            end_date=end_date,
+            location=request.location
+        )
+        
+        # Ensure each table exists in the result, even if empty
+        for table in ['table1', 'table2', 'table3', 'table4', 'table5']:
+            if table not in result:
+                result[table] = []
+        
+        if 'locations' not in result:
+            result['locations'] = []
+            
+        if 'dateRanges' not in result:
+            result['dateRanges'] = []
+        
+        # Return the properly structured response
+        return ExcelUploadResponse(**result)
+        
+    except Exception as e:
+        # Log the full exception for debugging
+        import traceback
+        print(f"Error filtering data: {str(e)}")
+        print(traceback.format_exc())
+        
+        # Return a more specific error message
+        error_message = str(e)
+        if "NaTType does not support strftime" in error_message:
+            error_message = "Date formatting error. This usually happens with invalid date values in your data."
+        
+        # Raise HTTP exception
+        raise HTTPException(status_code=500, detail=f"Error filtering data: {error_message}")
+
+
 # Health check endpoint
 @app.get("/api/health")
 async def health_check():
@@ -487,4 +672,4 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
