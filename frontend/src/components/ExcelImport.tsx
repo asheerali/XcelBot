@@ -19,9 +19,10 @@ import SalesCharts from './graphs/SalesCharts';
 import DeliveryPercentageChart from './graphs/DeliveryPercentageChart';
 import InHousePercentageChart from './graphs/InHousePercentageChart'; // Import the new In-House chart
 import CateringPercentageChart from './graphs/CateringPercentageChart';
-import FirstPartyPercentageChart from './graphs/FirstPartyPercentageChart';
+import FirstPartyPercentageChart from './graphs/PercentageFirstThirdPartyChart';
 import TotalSalesChart from './graphs/TotalSalesChart';
 import WowTrendsChart from './graphs/WowTrendsChart';
+import PercentageFirstThirdPartyChart from './graphs/PercentageFirstThirdPartyChart';
 // API base URLs - update to match your backend URL
 const API_URL = 'http://localhost:8000/api/excel/upload';
 const FILTER_API_URL = 'http://localhost:8000/api/excel/filter';
@@ -430,93 +431,108 @@ export function ExcelImport() {
         </Typography>
       </Box>
 
-      <Card sx={{ p: 3, mb: 4 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={3}>
-            <input
-              type="file"
-              id="excel-upload"
-              accept=".xlsx, .xls"
-              style={{ display: 'none' }}
-              onChange={handleFileChange}
-            />
-            <label htmlFor="excel-upload">
-              <Button
-                variant="contained"
-                component="span"
-                fullWidth
-              >
-                Choose Excel File
-              </Button>
-            </label>
-            {fileName && (
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                Selected file: {fileName}
-              </Typography>
-            )}
-          </Grid>
-          
-          {/* Filter Section Component */}
-          <FilterSection 
-            dateRangeType={dateRangeType}
-            availableDateRanges={availableDateRanges}
-            onDateRangeChange={handleDateRangeChange}
-            customDateRange={customDateRange}
-            startDate={startDate}
-            endDate={endDate}
-            onStartDateChange={handleStartDateChange}
-            onEndDateChange={handleEndDateChange}
-            locations={tableData.locations}
-            selectedLocation={selectedLocation}
-            onLocationChange={handleLocationChange}
-            onApplyFilters={() => handleApplyFilters()}
-          />
-          
-          {/* Upload Button */}
-          <Grid item xs={12} md={customDateRange ? 3 : (tableData.locations && tableData.locations.length > 0 ? 3 : 6)} 
-                sx={{ display: 'flex', gap: 2 }}>
-            <Button
-              variant="outlined"
-              color="primary"
-              onClick={toggleViewMode}
-              sx={{ flex: 1 }}
-              disabled={loading}
-            >
-              {viewMode === 'tabs' ? 'View Stacked' : 
-               viewMode === 'combined' ? 'View Side-by-Side' : 'View Tabbed'}
-            </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleUpload}
-              disabled={!file || loading}
-              sx={{ flex: 1 }}
-            >
-              {loading ? <CircularProgress size={24} /> : 'Upload & Process'}
-            </Button>
-          </Grid>
-          
-          {/* Charts Toggle Button */}
-          {dataProcessed && (
-            <Grid item xs={12} md={3}>
-              <Button
-                variant="outlined"
-                color="secondary"
-                onClick={toggleChartsView}
-                fullWidth
-              >
-                {showCharts ? 'Hide Charts' : 'Show Charts'}
-              </Button>
-            </Grid>
-          )}
-        </Grid>
-        
-        {error && (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {error}
-          </Alert>
-        )}
-      </Card>
+     {/* Excel Upload Card */}
+<Card sx={{ p: 3, mb: 4 }}>
+  <Grid container spacing={2}>
+    {/* Top row with file selection, view toggle, and upload buttons */}
+    <Grid item container xs={12} spacing={2} alignItems="center">
+      {/* File Upload Section */}
+      <Grid item xs={12} sm={4}>
+        <input
+          type="file"
+          id="excel-upload"
+          accept=".xlsx, .xls"
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+        />
+        <label htmlFor="excel-upload" style={{ width: '100%' }}>
+          <Button
+            variant="contained"
+            component="span"
+            fullWidth
+          >
+            Choose Excel File
+          </Button>
+        </label>
+      </Grid>
+      
+      {/* View Mode Button */}
+      <Grid item xs={12} sm={4}>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={toggleViewMode}
+          fullWidth
+          disabled={loading}
+        >
+          {viewMode === 'tabs' ? 'View Stacked' : 
+           viewMode === 'combined' ? 'View Side-by-Side' : 'View Tabbed'}
+        </Button>
+      </Grid>
+      
+      {/* Upload Button */}
+      <Grid item xs={12} sm={4}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleUpload}
+          disabled={!file || loading}
+          fullWidth
+        >
+          {loading ? <CircularProgress size={24} /> : 'Upload & Process'}
+        </Button>
+      </Grid>
+    </Grid>
+    
+    {/* File name display */}
+    {fileName && (
+      <Grid item xs={12}>
+        <Typography variant="body2">
+          Selected file: {fileName}
+        </Typography>
+      </Grid>
+    )}
+    
+    {/* Second row with filters */}
+    <Grid item xs={12} sx={{ mt: 1 }}>
+      <FilterSection 
+        dateRangeType={dateRangeType}
+        availableDateRanges={availableDateRanges}
+        onDateRangeChange={handleDateRangeChange}
+        customDateRange={customDateRange}
+        startDate={startDate}
+        endDate={endDate}
+        onStartDateChange={handleStartDateChange}
+        onEndDateChange={handleEndDateChange}
+        locations={tableData.locations}
+        selectedLocation={selectedLocation}
+        onLocationChange={handleLocationChange}
+        onApplyFilters={() => handleApplyFilters()}
+      />
+    </Grid>
+    
+    {/* Charts Toggle Button */}
+    {dataProcessed && (
+      <Grid item xs={12} sm={4} sx={{ mt: 2 }}>
+        <Button
+          variant="outlined"
+          color="secondary"
+          onClick={toggleChartsView}
+          fullWidth
+        >
+          {showCharts ? 'Hide Charts' : 'Show Charts'}
+        </Button>
+      </Grid>
+    )}
+  </Grid>
+  
+  {/* Error Alert */}
+  {error && (
+    <Alert severity="error" sx={{ mt: 2 }}>
+      {error}
+    </Alert>
+  )}
+</Card>
 
       {/* CHART COMPONENT WITH FIXED DISPLAY PERSISTENCE */}
       {dataProcessed && showCharts && (
@@ -565,11 +581,8 @@ export function ExcelImport() {
       {/* Add Catering Percentage Chart after the In-House Percentage Chart */}
       {dataProcessed && tableData.table1 && tableData.table1.length > 0 && (
         <CateringPercentageChart tableData={tableData} />
-      )}{/* Add First Party Percentage Chart after the Catering Percentage Chart */}
-      {dataProcessed && tableData.table1 && tableData.table1.length > 0 && (
-        <FirstPartyPercentageChart tableData={tableData} />
       )}
-
+      
      
 
       {/* Add Total Sales Chart before other percentage charts */}
@@ -581,6 +594,11 @@ export function ExcelImport() {
       {dataProcessed && tableData.table4 && tableData.table4.length > 0 && (
         <WowTrendsChart tableData={tableData} />
       )}
+      {/* Add First/Third Party Comparison Chart (Percentage Chart) */}
+        {/* {dataProcessed && tableData.table1 && tableData.table1.length > 0 && tableData.table4 && tableData.table4.length > 0 && (
+          <PercentageFirstThirdPartyChart tableData={tableData} />
+        )} */}
+
       {renderTutorial()}
       {renderSuccessMessage()}
     </>
