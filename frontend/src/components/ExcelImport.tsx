@@ -19,6 +19,8 @@ import SalesCharts from './graphs/SalesCharts';
 import DeliveryPercentageChart from './graphs/DeliveryPercentageChart';
 import InHousePercentageChart from './graphs/InHousePercentageChart'; // Import the new In-House chart
 import CateringPercentageChart from './graphs/CateringPercentageChart';
+import FirstPartyPercentageChart from './graphs/FirstPartyPercentageChart';
+import TotalSalesChart from './graphs/TotalSalesChart';
 // API base URLs - update to match your backend URL
 const API_URL = 'http://localhost:8000/api/excel/upload';
 const FILTER_API_URL = 'http://localhost:8000/api/excel/filter';
@@ -562,7 +564,19 @@ export function ExcelImport() {
       {/* Add Catering Percentage Chart after the In-House Percentage Chart */}
       {dataProcessed && tableData.table1 && tableData.table1.length > 0 && (
         <CateringPercentageChart tableData={tableData} />
+      )}{/* Add First Party Percentage Chart after the Catering Percentage Chart */}
+      {dataProcessed && tableData.table1 && tableData.table1.length > 0 && (
+        <FirstPartyPercentageChart tableData={tableData} />
       )}
+
+     
+
+      {/* Add Total Sales Chart before other percentage charts */}
+      {dataProcessed && tableData.table1 && tableData.table1.length > 0 && (
+        <TotalSalesChart tableData={tableData} />
+      )}
+
+     
       {renderTutorial()}
       {renderSuccessMessage()}
     </>
