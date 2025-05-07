@@ -6,3 +6,8 @@ backend/
 ├── table_calculator.py  # Table calculation functions
 ├── utils.py             # Utility functions
 └── uploads/             # Directory for uploaded files
+
+Frontend main components 
+ExcelImport.tsx - Main component with file upload logic
+FilterSection.tsx - Filter controls for date and location
+TableDisplay.tsx - Table rendering with different view modes

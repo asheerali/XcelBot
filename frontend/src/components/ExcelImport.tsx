@@ -419,97 +419,77 @@ export function ExcelImport() {
 
   // Main render function
   return (
-    <div style={containerStyle}>
-      <div style={headerStyle}>
-        <h1 style={headerTitleStyle}>
-          Sales Analysis Dashboard
-        </h1>
-        <p style={headerSubtitleStyle}>
-          Upload an Excel file to analyze sales data across different categories
-        </p>
-      </div>
-
-      <div style={cardStyle}>
-        <div style={gridContainerStyle}>
-          <div style={responsiveGridItemStyle}>
-            <input
-              type="file"
-              id="excel-upload"
-              accept=".xlsx, .xls"
-              style={{ display: 'none' }}
-              onChange={handleFileChange}
-            />
-            <label htmlFor="excel-upload">
-              <button
-                style={buttonStyle}
-                onClick={() => document.getElementById('excel-upload').click()}
-              >
-                Choose Excel File
-              </button>
-            </label>
-            {fileName && (
-              <div style={fileNameStyle}>
-                Selected file: {fileName}
-              </div>
-            )}
-          </div>
-          
-          {/* Filter Section Component */}
-          <FilterSection 
-            dateRangeType={dateRangeType}
-            availableDateRanges={availableDateRanges}
-            onDateRangeChange={handleDateRangeChange}
-            customDateRange={customDateRange}
-            startDate={startDate}
-            endDate={endDate}
-            onStartDateChange={handleStartDateChange}
-            onEndDateChange={handleEndDateChange}
-            locations={tableData.locations}
-            selectedLocation={selectedLocation}
-            onLocationChange={handleLocationChange}
-            onApplyFilters={() => handleApplyFilters()}
-          />
-          
-          {/* Upload Button */}
-          <div style={{
-            ...responsiveGridItemStyle,
+    <div style={{ padding: 16 }}>
+      <div style={{ background: '#fff', borderRadius: 8, padding: 16 }}>
+        {/* wrap upload controls + toggle + process into one flex row */}
+        <div
+          style={{
             display: 'flex',
-            gap: '8px'
-          }}>
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: '8px',
+            marginBottom: '16px',
+          }}
+        >
+          {/* Choose Excel File */}
+          <input
+            type="file"
+            id="excel-upload"
+            accept=".xlsx, .xls"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+          <label htmlFor="excel-upload">
             <button
-              style={outlinedButtonStyle}
-              onClick={toggleViewMode}
-              disabled={loading}
+              style={{ padding: '8px 16px', background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4 }}
+              onClick={() => document.getElementById('excel-upload')?.click()}
             >
-              {viewMode === 'tabs' ? 'View Stacked' : 
-               viewMode === 'combined' ? 'View Side-by-Side' : 'View Tabbed'}
+              Choose Excel File
             </button>
-            <button
-              style={buttonStyle}
-              onClick={handleUpload}
-              disabled={!file || loading}
-            >
-              {loading ? (
-                <div style={loadingStyle}>
-                  <div style={{
-                    width: '20px',
-                    height: '20px',
-                    border: '3px solid rgba(255,255,255,0.3)',
-                    borderRadius: '50%',
-                    borderTopColor: 'white',
-                    animation: 'spin 1s linear infinite'
-                  }}></div>
-                </div>
-              ) : 'Upload & Process'}
-            </button>
-          </div>
+          </label>
+          {/* show file name inline, if any */}
+          {fileName && <span style={{ fontSize: '0.9em' }}>Selected: {fileName}</span>}
+  
+          {/* View Stacked / Side-by-Side / Tabbed */}
+          <button
+            style={{ padding: '8px 16px', background: '#fff', color: '#1976d2', border: '1px solid #1976d2', borderRadius: 4 }}
+            onClick={toggleViewMode}
+            disabled={loading}
+          >
+            {viewMode === 'tabs'
+              ? 'View Stacked'
+              : viewMode === 'combined'
+              ? 'View Side-by-Side'
+              : 'View Tabbed'}
+          </button>
+  
+          {/* Upload & Process */}
+          <button
+            style={{ padding: '8px 16px', background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4 }}
+            onClick={handleUpload}
+            disabled={!file || loading}
+          >
+            {loading ? 'Uploading…' : 'Upload & Process'}
+          </button>
         </div>
-        
-        {error && (
-          <div style={errorStyle}>
-            {error}
-          </div>
-        )}
+  
+        {/* then your filters exactly as before */}
+        <FilterSection
+          dateRangeType={dateRangeType}
+          availableDateRanges={availableDateRanges}
+          onDateRangeChange={handleDateRangeChange}
+          customDateRange={customDateRange}
+          startDate={startDate}
+          endDate={endDate}
+          onStartDateChange={handleStartDateChange}
+          onEndDateChange={handleEndDateChange}
+          locations={tableData.locations}
+          selectedLocation={selectedLocation}
+          onLocationChange={handleLocationChange}
+          onApplyFilters={handleApplyFilters}
+        />
+  
+        {error && <div style={{ marginTop: 16, color: 'red' }}>{error}</div>}
       </div>
 
       {/* Sales Charts - Always display when data is available */}
