@@ -11,12 +11,13 @@ import Grid from '@mui/material/Grid';
 import Snackbar from '@mui/material/Snackbar';
 import { SelectChangeEvent } from '@mui/material/Select';
 import Divider from '@mui/material/Divider';
-import Paper from '@mui/material/Paper';
 
 // Import components
 import FilterSection from './FilterSection';
 import TableDisplay from './TableDisplay';
-import SalesCharts from './SalesCharts';
+import SalesCharts from './graphs/SalesCharts';
+import DeliveryPercentageChart from './graphs/DeliveryPercentageChart';
+import InHousePercentageChart from './graphs/InHousePercentageChart'; // Import the new In-House chart
 
 // API base URLs - update to match your backend URL
 const API_URL = 'http://localhost:8000/api/excel/upload';
@@ -516,7 +517,7 @@ export function ExcelImport() {
 
       {/* CHART COMPONENT WITH FIXED DISPLAY PERSISTENCE */}
       {dataProcessed && showCharts && (
-        <Paper 
+        <Card 
           elevation={2} 
           sx={{ 
             mb: 4, 
@@ -538,7 +539,7 @@ export function ExcelImport() {
               selectedLocation={selectedLocation}
             />
           </div>
-        </Paper>
+        </Card>
       )}
 
       {/* Table Display Component */}
@@ -548,6 +549,16 @@ export function ExcelImport() {
         activeTab={activeTab}
         onTabChange={handleTabChange}
       />
+
+      {/* Add Delivery Percentage Chart after the table display */}
+      {dataProcessed && tableData.table1 && tableData.table1.length > 0 && (
+        <DeliveryPercentageChart tableData={tableData} />
+      )}
+
+      {/* Add In-House Percentage Chart after the Delivery Percentage Chart */}
+      {dataProcessed && tableData.table1 && tableData.table1.length > 0 && (
+        <InHousePercentageChart tableData={tableData} />
+      )}
 
       {renderTutorial()}
       {renderSuccessMessage()}

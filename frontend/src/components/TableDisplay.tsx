@@ -16,13 +16,32 @@ import IconButton from '@mui/material/IconButton';
 import InfoIcon from '@mui/icons-material/Info';
 import Tooltip from '@mui/material/Tooltip';
 
+interface TableData {
+  [key: string]: any[];
+}
+
+interface TableDisplayProps {
+  tableData: TableData;
+  viewMode: string;
+  activeTab: number;
+  onTabChange: (event: React.SyntheticEvent, newValue: number) => void;
+}
+
+interface TableInfo {
+  index: number;
+  label: string;
+  description: string;
+  columns: string[];
+  key: string;
+}
+
 /**
  * Table Display Component
  * Renders data tables in different view modes
  */
-const TableDisplay = ({ tableData, viewMode, activeTab, onTabChange }) => {
+const TableDisplay: React.FC<TableDisplayProps> = ({ tableData, viewMode, activeTab, onTabChange }) => {
   // Define table properties
-  const tableProps = [
+  const tableProps: TableInfo[] = [
     {
       index: 0,
       label: "Percentage Table",
@@ -54,7 +73,7 @@ const TableDisplay = ({ tableData, viewMode, activeTab, onTabChange }) => {
   ];
 
   // Custom render function for percentage values
-  const renderPercentValue = (value) => {
+  const renderPercentValue = (value: any): JSX.Element | string => {
     if (value === null || value === undefined || value === '####') {
       return <span>####</span>;
     }
@@ -84,9 +103,9 @@ const TableDisplay = ({ tableData, viewMode, activeTab, onTabChange }) => {
   };
 
   // Custom render function for currency values
-  const renderCurrencyValue = (value) => {
+  const renderCurrencyValue = (value: any): string => {
     if (value === null || value === undefined || value === '####') {
-      return <span>####</span>;
+      return '####';
     }
     
     // If value is already a formatted currency string with $ and commas
@@ -105,7 +124,7 @@ const TableDisplay = ({ tableData, viewMode, activeTab, onTabChange }) => {
   };
 
   // Determine if a value should be rendered as percentage
-  const isPercentageColumn = (columnName, tableIndex) => {
+  const isPercentageColumn = (columnName: string, tableIndex: number): boolean => {
     // Week column is never a percentage
     if (columnName === 'Week' || columnName === 'Sales_Category' || 
         columnName === 'Amount' || columnName === 'Transactions' || 
@@ -127,7 +146,7 @@ const TableDisplay = ({ tableData, viewMode, activeTab, onTabChange }) => {
   };
 
   // Determine if a value should be rendered as currency
-  const isCurrencyColumn = (columnName, tableIndex) => {
+  const isCurrencyColumn = (columnName: string, tableIndex: number): boolean => {
     if (tableIndex === 3) { // Category summary table
       return columnName === 'Amount' || columnName === 'Avg Transaction';
     }
@@ -136,7 +155,7 @@ const TableDisplay = ({ tableData, viewMode, activeTab, onTabChange }) => {
   };
 
   // Get background color for header cells based on table type
-  const getHeaderColor = (column, tableIndex) => {
+  const getHeaderColor = (column: string, tableIndex: number): string => {
     // First column (Week or Sales_Category) is always light gray
     if (column === 'Week' || column === 'Sales_Category') return '#f5f5f5';
     
@@ -155,7 +174,7 @@ const TableDisplay = ({ tableData, viewMode, activeTab, onTabChange }) => {
   };
   
   // Helper function to render cell value correctly
-  const renderCellValue = (columnName, value, tableIndex) => {
+  const renderCellValue = (columnName: string, value: any, tableIndex: number): JSX.Element | string => {
     // Special handling for specific columns
     if (columnName === 'Week' || columnName === 'Sales_Category') {
       return value; // Just display as is
@@ -174,8 +193,26 @@ const TableDisplay = ({ tableData, viewMode, activeTab, onTabChange }) => {
     }
   };
 
+  interface RenderDataTableProps {
+    tableIndex: number;
+    data: any[];
+    columns: string[];
+    label: string;
+    description: string;
+    compact?: boolean;
+    veryCompact?: boolean;
+  }
+
   // Component to render a single data table
-  const RenderDataTable = ({ tableIndex, data, columns, label, description, compact = false, veryCompact = false }) => {
+  const RenderDataTable: React.FC<RenderDataTableProps> = ({ 
+    tableIndex, 
+    data, 
+    columns, 
+    label, 
+    description, 
+    compact = false, 
+    veryCompact = false 
+  }) => {
     return (
       <Card sx={{ 
         width: '100%', 

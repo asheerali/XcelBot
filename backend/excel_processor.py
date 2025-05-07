@@ -52,7 +52,7 @@ def generate_date_ranges(df):
         date_ranges = []
         
         # Last 7 days
-        date_ranges.append("Last 7 Days")
+        # date_ranges.append("Last 7 Days")
         
         # Last 30 days
         date_ranges.append("Last 30 Days")

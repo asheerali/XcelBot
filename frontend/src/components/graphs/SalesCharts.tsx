@@ -110,7 +110,7 @@ const SalesCharts = ({ fileName, dateRangeType, selectedLocation }) => {
           <p style={{ margin: 0, fontWeight: 'bold' }}>{`${label}`}</p>
           {payload.map((entry, index) => (
             <p key={index} style={{ margin: 0, color: entry.color }}>
-              {`${entry.name}: $${entry.value.toLocaleString(undefined, {
+              {`${entry.name}: $${parseFloat(entry.value).toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
               })}`}
@@ -209,6 +209,7 @@ const SalesCharts = ({ fileName, dateRangeType, selectedLocation }) => {
           <Bar dataKey="doordash" stackId="a" fill="#7F4BFF" name="DoorDash" />
           <Bar dataKey="grubhub" stackId="a" fill="#4BFF9F" name="GrubHub" />
           <Bar dataKey="uber" stackId="a" fill="#FFC04B" name="UberEats" />
+          <Bar dataKey="firstParty" stackId="a" fill="#FF9F4B" name="First Party" />
         </BarChart>
       </ResponsiveContainer>
     );
@@ -218,7 +219,7 @@ const SalesCharts = ({ fileName, dateRangeType, selectedLocation }) => {
   const getChartTitle = () => {
     if (!dateRangeType) return "Sales by Week";
     
-    if (dateRangeType.includes("7 Days")) return "Sales - Last 7 Days";
+    // if (dateRangeType.includes("7 Days")) return "Sales - Last 7 Days";
     if (dateRangeType.includes("30 Days")) return "Sales - Last 30 Days";
     if (dateRangeType.includes("Month")) return "Sales by Week - Monthly View";
     if (dateRangeType.includes("Custom")) return "Sales - Custom Period";
@@ -230,9 +231,10 @@ const SalesCharts = ({ fileName, dateRangeType, selectedLocation }) => {
   const getDayOfWeekTitle = () => {
     if (!dateRangeType) return "Sales by Day of Week";
     
-    if (dateRangeType.includes("7 Days")) return "Daily Sales - Last 7 Days";
+    // if (dateRangeType.includes("7 Days")) return "Daily Sales - Last 7 Days";s
     if (dateRangeType.includes("30 Days")) return "Average Sales by Day of Week - Last 30 Days";
     if (dateRangeType.includes("Month")) return "Average Sales by Day of Week - Monthly";
+    if (dateRangeType.includes("3 Months")) return "Total Sales by Day of Week - Last 3 Months";
     
     return "Sales by Day of Week";
   };
@@ -410,5 +412,4 @@ const SalesCharts = ({ fileName, dateRangeType, selectedLocation }) => {
     </Box>
   );
 };
-
 export default SalesCharts;
