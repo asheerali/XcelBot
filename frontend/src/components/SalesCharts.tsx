@@ -1,223 +1,137 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
 import { 
   BarChart, 
   Bar, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  ResponsiveContainer
+  ResponsiveContainer,
+  Tooltip,
+  Legend
 } from 'recharts';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
 
-const SalesCharts = (props) => {
-  // Add safe default handling
-  const { tableData } = props || {};
-  const safeTableData = tableData || {};
-  const table1 = safeTableData.table1 || [];
+const API_URL = 'http://localhost:8000/api/excel/analytics';
+
+const SalesCharts = ({ fileName, dateRangeType, selectedLocation }) => {
+  // State for analytics data
+  const [analyticsData, setAnalyticsData] = useState({
+    salesByWeek: [],
+    salesByDayOfWeek: [],
+    salesByTimeOfDay: [],
+    salesByCategory: []
+  });
   
-  // Helper function to parse currency values
-  const parseCurrencyValue = (value) => {
-    if (!value || value === '####') return 0;
-    if (typeof value === 'string' && value.includes('$')) {
-      return parseFloat(value.replace('$', '').replace(/,/g, ''));
-    }
-    return parseFloat(value);
-  };
+  // State for loading, error, and fetch status
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [hasFetched, setHasFetched] = useState(false);
   
-  // Process data for sales by day chart
-  const processSalesByDayData = () => {
-    // Generate a series of days (similar to your example)
-    const days = ['Feb 10', 'Feb 11', 'Feb 12', 'Feb 13', 'Feb 14', 'Feb 15', 'Feb 16'];
-    
-    // If we have actual data from table1, use it to generate daily sales
-    if (table1 && table1.length > 0) {
-      return days.map((day, index) => {
-        try {
-          // Randomize values based on real data to simulate daily values
-          const weekIdx = Math.min(index % table1.length, table1.length - 1);
-          const weekData = table1[weekIdx] || {};
-          const multiplier = index === 1 || index === 3 ? 1 : 0.3; // Make Feb 11 and Feb 13 higher
-          
-          const total = parseCurrencyValue(weekData['Grand Total'] || 0) * multiplier;
-          
-          return {
-            day,
-            value: total || (index === 1 ? 2500 : index === 3 ? 1500 : 500) // Fallback values
-          };
-        } catch (error) {
-          // Return fallback data if any error occurs
-          return {
-            day,
-            value: index === 1 ? 2500 : index === 3 ? 1500 : 500
-          };
-        }
-      });
+  // Memoized fetch function to prevent unnecessary re-renders
+  const fetchAnalyticsData = useCallback(async () => {
+    if (!fileName) {
+      setError('No file selected. Please upload a file first.');
+      return;
     }
     
-    // Default data if no real data available
-    return [
-      { day: 'Feb 10', value: 500 },
-      { day: 'Feb 11', value: 2500 },
-      { day: 'Feb 12', value: 500 },
-      { day: 'Feb 13', value: 1500 },
-      { day: 'Feb 14', value: 500 },
-      { day: 'Feb 15', value: 0 },
-      { day: 'Feb 16', value: 0 }
-    ];
-  };
-  
-  // Process data for sales by day of week chart
-  const processDayOfWeekData = () => {
-    const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    
-    // If we have actual data from table1, use it to generate day of week data
-    if (table1 && table1.length > 0) {
-      return daysOfWeek.map((day, index) => {
-        try {
-          // Use real data to create realistic distribution
-          const multiplier = index === 1 ? 1 : index === 3 ? 0.6 : 0.2;
-          let value = 0;
-          
-          // Get average of all weeks
-          if (table1.length > 0) {
-            const avgTotal = table1.reduce((sum, row) => {
-              const rowData = row || {};
-              return sum + parseCurrencyValue(rowData['Grand Total'] || 0);
-            }, 0) / table1.length;
-            
-            value = avgTotal * multiplier;
-          }
-          
-          return {
-            day,
-            value: value || (index === 1 ? 2500 : index === 3 ? 1500 : 500) // Fallback values
-          };
-        } catch (error) {
-          // Return fallback data if any error occurs
-          return {
-            day,
-            value: index === 1 ? 2500 : index === 3 ? 1500 : 500
-          };
-        }
-      });
-    }
-    
-    // Default data if no real data available
-    return [
-      { day: 'Mon', value: 500 },
-      { day: 'Tue', value: 2500 },
-      { day: 'Wed', value: 500 },
-      { day: 'Thu', value: 1500 },
-      { day: 'Fri', value: 500 },
-      { day: 'Sat', value: 0 },
-      { day: 'Sun', value: 0 }
-    ];
-  };
-  
-  // Process data for time of day chart
-  const processTimeOfDayData = () => {
-    const hoursOfDay = ['4 AM', '6 AM', '8 AM', '10 AM', '12 PM', '2 PM', '4 PM', '6 PM', '8 PM', '10 PM', '12 AM', '2 AM'];
-    
-    // If we have actual data, simulate time of day distribution
-    if (table1 && table1.length > 0) {
-      try {
-        return hoursOfDay.map((hour, index) => {
-          let multiplier = 0.1;
-          
-          // Lunch and dinner peak times
-          if (index === 4) multiplier = 0.4; // 12 PM
-          else if (index === 5) multiplier = 1; // 2 PM
-          else if (index === 6) multiplier = 0.5; // 4 PM
-          else if (index === 7) multiplier = 0.3; // 6 PM
-          
-          // Get average total from real data
-          let value = 0;
-          if (table1.length > 0) {
-            const avgTotal = table1.reduce((sum, row) => {
-              const rowData = row || {};
-              return sum + parseCurrencyValue(rowData['Grand Total'] || 0);
-            }, 0) / table1.length;
-            
-            value = avgTotal * multiplier;
-          }
-          
-          return {
-            hour,
-            value: value || ((index === 5) ? 2000 : (index === 4 || index === 6) ? 1000 : 500) // Fallback values
-          };
-        });
-      } catch (error) {
-        // Fall back to default data if any error occurs
-        return getDefaultTimeOfDayData();
+    try {
+      setLoading(true);
+      setError('');
+      
+      // Prepare request payload
+      const payload = {
+        fileName: fileName,
+        dateRangeType: dateRangeType,
+        location: selectedLocation
+      };
+      
+      console.log('Fetching analytics with payload:', payload);
+      
+      // Make API call to backend
+      const response = await axios.post(API_URL, payload);
+      
+      // Process the response
+      if (response.data) {
+        console.log('Received analytics data:', response.data);
+        setAnalyticsData(response.data);
+        setHasFetched(true);
+      } else {
+        throw new Error('Invalid response data');
       }
+    } catch (err) {
+      console.error('Error fetching analytics:', err);
+      
+      let errorMessage = 'Error fetching analytics data';
+      
+      if (axios.isAxiosError(err)) {
+        if (err.response) {
+          const detail = err.response.data?.detail;
+          errorMessage = `Server error: ${detail || err.response.status}`;
+        } else if (err.request) {
+          errorMessage = 'No response from server. Please check if the backend is running.';
+        }
+      } else if (err.message) {
+        errorMessage = `Error: ${err.message}`;
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
-    
-    // Return default data
-    return getDefaultTimeOfDayData();
+  }, [fileName, dateRangeType, selectedLocation]);
+  
+  // Fetch analytics data when component mounts or when filters change
+  useEffect(() => {
+    if (fileName) {
+      console.log('SalesCharts - Fetching data with:', { fileName, dateRangeType, selectedLocation });
+      fetchAnalyticsData();
+    }
+  }, [fetchAnalyticsData]);
+  
+  // Custom tooltip formatter
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div style={{
+          backgroundColor: '#fff',
+          border: '1px solid #ccc',
+          padding: '10px',
+          borderRadius: '5px',
+          boxShadow: '0 2px 5px rgba(0,0,0,0.15)'
+        }}>
+          <p style={{ margin: 0, fontWeight: 'bold' }}>{`${label}`}</p>
+          {payload.map((entry, index) => (
+            <p key={index} style={{ margin: 0, color: entry.color }}>
+              {`${entry.name}: $${entry.value.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })}`}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
   };
   
-  // Default time of day data function
-  const getDefaultTimeOfDayData = () => [
-    { hour: '4 AM', value: 0 },
-    { hour: '6 AM', value: 0 },
-    { hour: '8 AM', value: 0 },
-    { hour: '10 AM', value: 500 },
-    { hour: '12 PM', value: 1000 },
-    { hour: '2 PM', value: 2000 },
-    { hour: '4 PM', value: 1000 },
-    { hour: '6 PM', value: 500 },
-    { hour: '8 PM', value: 300 },
-    { hour: '10 PM', value: 0 },
-    { hour: '12 AM', value: 0 },
-    { hour: '2 AM', value: 0 }
-  ];
+  // Format currency for axis labels
+  const formatCurrency = (value) => {
+    if (value >= 1000) {
+      return `$${(value / 1000).toFixed(1)}k`;
+    }
+    return `$${value}`;
+  };
   
-  // Safely prepare chart data
-  let salesByDayData = [];
-  let dayOfWeekData = [];
-  let timeOfDayData = [];
-  
-  try {
-    salesByDayData = processSalesByDayData();
-  } catch (error) {
-    console.error("Error processing sales by day data:", error);
-    // Use fallback data
-    salesByDayData = [
-      { day: 'Feb 10', value: 500 },
-      { day: 'Feb 11', value: 2500 },
-      { day: 'Feb 12', value: 500 },
-      { day: 'Feb 13', value: 1500 },
-      { day: 'Feb 14', value: 500 },
-      { day: 'Feb 15', value: 0 },
-      { day: 'Feb 16', value: 0 }
-    ];
-  }
-  
-  try {
-    dayOfWeekData = processDayOfWeekData();
-  } catch (error) {
-    console.error("Error processing day of week data:", error);
-    // Use fallback data
-    dayOfWeekData = [
-      { day: 'Mon', value: 500 },
-      { day: 'Tue', value: 2500 },
-      { day: 'Wed', value: 500 },
-      { day: 'Thu', value: 1500 },
-      { day: 'Fri', value: 500 },
-      { day: 'Sat', value: 0 },
-      { day: 'Sun', value: 0 }
-    ];
-  }
-  
-  try {
-    timeOfDayData = processTimeOfDayData();
-  } catch (error) {
-    console.error("Error processing time of day data:", error);
-    // Use fallback data
-    timeOfDayData = getDefaultTimeOfDayData();
-  }
-  
-  // Render custom Recharts bar chart
-  const renderSimpleBarChart = (data, dataKey, label, xKey = 'day', height = 150) => {
+  // Render bar chart
+  const renderBarChart = (data, dataKey, valueKey, label, height = 250) => {
     // Safety check - make sure data is an array
     const safeData = Array.isArray(data) ? data : [];
     
@@ -226,29 +140,30 @@ const SalesCharts = (props) => {
         <BarChart
           data={safeData}
           margin={{
-            top: 10,
-            right: 5,
-            left: 5,
-            bottom: 5,
+            top: 20,
+            right: 30,
+            left: 20,
+            bottom: 20,
           }}
         >
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis 
-            dataKey={xKey}
-            tickSize={0}
-            axisLine={false}
+            dataKey={dataKey}
+            tickSize={5}
+            axisLine={{ stroke: '#E0E0E0' }}
             tick={{ fontSize: 12 }}
           />
           <YAxis
-            tickCount={4}
+            tickCount={5}
             tick={{ fontSize: 12 }}
-            tickFormatter={(value) => `$${value}`}
-            domain={[0, 'dataMax + 500']}
-            axisLine={false}
+            tickFormatter={formatCurrency}
+            domain={[0, 'auto']}
+            axisLine={{ stroke: '#E0E0E0' }}
           />
+          <Tooltip content={<CustomTooltip />} />
           <Bar 
-            dataKey="value" 
-            fill="#FF4B4B" 
+            dataKey={valueKey} 
+            fill="#4B79FF" 
             name={label}
             radius={[4, 4, 0, 0]}
           />
@@ -257,25 +172,93 @@ const SalesCharts = (props) => {
     );
   };
   
-  // Define styles
+  // Render stacked bar chart for categories
+  const renderStackedBarChart = (data, height = 300) => {
+    // Safety check - make sure data is an array
+    const safeData = Array.isArray(data) ? data : [];
+    
+    return (
+      <ResponsiveContainer width="100%" height={height}>
+        <BarChart
+          data={safeData}
+          margin={{
+            top: 20,
+            right: 30,
+            left: 20,
+            bottom: 20,
+          }}
+        >
+          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+          <XAxis 
+            dataKey="week"
+            tickSize={5}
+            axisLine={{ stroke: '#E0E0E0' }}
+            tick={{ fontSize: 12 }}
+          />
+          <YAxis
+            tickCount={5}
+            tick={{ fontSize: 12 }}
+            tickFormatter={formatCurrency}
+            domain={[0, 'auto']}
+            axisLine={{ stroke: '#E0E0E0' }}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend />
+          <Bar dataKey="inHouse" stackId="a" fill="#4B79FF" name="In-House" />
+          <Bar dataKey="catering" stackId="a" fill="#FF4B4B" name="Catering" />
+          <Bar dataKey="doordash" stackId="a" fill="#7F4BFF" name="DoorDash" />
+          <Bar dataKey="grubhub" stackId="a" fill="#4BFF9F" name="GrubHub" />
+          <Bar dataKey="uber" stackId="a" fill="#FFC04B" name="UberEats" />
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  };
+  
+  // Dynamic chart title based on date range
+  const getChartTitle = () => {
+    if (!dateRangeType) return "Sales by Week";
+    
+    if (dateRangeType.includes("7 Days")) return "Sales - Last 7 Days";
+    if (dateRangeType.includes("30 Days")) return "Sales - Last 30 Days";
+    if (dateRangeType.includes("Month")) return "Sales by Week - Monthly View";
+    if (dateRangeType.includes("Custom")) return "Sales - Custom Period";
+    
+    return "Sales by Week";
+  };
+  
+  // Title for day of week chart based on date range
+  const getDayOfWeekTitle = () => {
+    if (!dateRangeType) return "Sales by Day of Week";
+    
+    if (dateRangeType.includes("7 Days")) return "Daily Sales - Last 7 Days";
+    if (dateRangeType.includes("30 Days")) return "Average Sales by Day of Week - Last 30 Days";
+    if (dateRangeType.includes("Month")) return "Average Sales by Day of Week - Monthly";
+    
+    return "Sales by Day of Week";
+  };
+  
+  // Style definitions
   const chartContainerStyle = {
-    marginBottom: '32px', 
-    marginTop: '16px'
+    margin: 0,
+    padding: 0
   };
   
   const chartCardStyle = {
-    padding: '16px', 
     marginBottom: '24px', 
-    backgroundColor: 'white', 
-    borderRadius: '4px',
+    borderRadius: '8px',
     boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)'
   };
   
   const chartHeaderStyle = {
-    marginBottom: '8px', 
-    fontSize: '16px', 
-    fontWeight: 500,
-    marginTop: 0
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottom: '1px solid #eee',
+    padding: '16px 20px'
+  };
+  
+  const chartContentStyle = {
+    padding: '20px'
   };
   
   const chartRowStyle = {
@@ -284,63 +267,147 @@ const SalesCharts = (props) => {
     margin: '-12px'
   };
   
-  // Define column styles with safe detection of window
-  let chartColumnStyle = {
+  const chartColumnStyle = {
     flex: '1 1 100%', 
-    maxWidth: '50%', 
+    minWidth: '300px',
     padding: '12px',
     boxSizing: 'border-box'
   };
   
-  // Safely determine if we need to adjust for mobile
-  try {
-    if (typeof window !== 'undefined') {
-      const mediaQuery = window.matchMedia('(max-width: 768px)');
-      if (mediaQuery.matches) {
-        chartColumnStyle = {
-          ...chartColumnStyle,
-          maxWidth: '100%'
-        };
-      }
-    }
-  } catch (error) {
-    console.error("Error handling media query:", error);
-    // Fallback to desktop sizing
+  // If there's no file uploaded yet
+  if (!fileName) {
+    return (
+      <Box sx={chartContainerStyle}>
+        <Alert severity="info">
+          Please upload and process an Excel file to view sales analytics.
+        </Alert>
+      </Box>
+    );
   }
   
+  // If data is loading
+  if (loading) {
+    return (
+      <Box sx={chartContainerStyle} display="flex" justifyContent="center" alignItems="center" height="200px">
+        <CircularProgress />
+        <Typography variant="body1" sx={{ ml: 2 }}>Loading sales analytics...</Typography>
+      </Box>
+    );
+  }
+  
+  // If there's an error
+  if (error) {
+    return (
+      <Box sx={chartContainerStyle}>
+        <Alert 
+          severity="error" 
+          action={
+            <Button color="inherit" size="small" onClick={fetchAnalyticsData}>
+              <RefreshIcon fontSize="small" sx={{ mr: 1 }} />
+              Retry
+            </Button>
+          }
+        >
+          {error}
+        </Alert>
+      </Box>
+    );
+  }
+  
+  // If no data has been fetched yet or empty data was returned
+  if (!hasFetched || 
+      (analyticsData.salesByWeek.length === 0 && 
+       analyticsData.salesByDayOfWeek.length === 0)) {
+    return (
+      <Box sx={chartContainerStyle}>
+        <Alert severity="info">
+          No sales data available for the selected filters. Try adjusting your filters or uploading a different file.
+        </Alert>
+      </Box>
+    );
+  }
+  
+  // Render the charts with data
   return (
-    <div style={chartContainerStyle}>
-      {/* Sales by Day Chart */}
-      <div style={chartCardStyle}>
-        <h6 style={chartHeaderStyle}>
-          Sales by day
-        </h6>
-        {renderSimpleBarChart(salesByDayData, 'value', 'Sales')}
-      </div>
+    <Box sx={chartContainerStyle} className="sales-charts-root">
+      {/* Sales by Week Chart */}
+      <Card sx={chartCardStyle}>
+        <Box sx={chartHeaderStyle}>
+          <Typography variant="h6" fontWeight={600} color="#333">
+            {getChartTitle()}
+          </Typography>
+          <Button 
+            size="small" 
+            onClick={fetchAnalyticsData}
+            startIcon={<RefreshIcon />}
+          >
+            Refresh
+          </Button>
+        </Box>
+        <CardContent sx={chartContentStyle}>
+          {analyticsData.salesByWeek.length > 0 ? (
+            renderBarChart(analyticsData.salesByWeek, 'week', 'value', 'Sales', 300)
+          ) : (
+            <Typography color="text.secondary">No weekly data available</Typography>
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* Stacked Categories Chart */}
+      <Card sx={chartCardStyle}>
+        <Box sx={chartHeaderStyle}>
+          <Typography variant="h6" fontWeight={600} color="#333">
+            Sales by Category
+          </Typography>
+        </Box>
+        <CardContent sx={chartContentStyle}>
+          {analyticsData.salesByCategory.length > 0 ? (
+            renderStackedBarChart(analyticsData.salesByCategory, 350)
+          ) : (
+            <Typography color="text.secondary">No category data available</Typography>
+          )}
+        </CardContent>
+      </Card>
       
       {/* Two-column layout for day of week and time of day */}
-      <div style={chartRowStyle}>
+      <Box sx={chartRowStyle}>
         {/* Day of Week Chart */}
-        <div style={chartColumnStyle}>
-          <div style={chartCardStyle}>
-            <h6 style={chartHeaderStyle}>
-              Day of week (totals)
-            </h6>
-            {renderSimpleBarChart(dayOfWeekData, 'value', 'Sales')}
-          </div>
-        </div>
+        <Box sx={{...chartColumnStyle, flex: '1 1 50%'}}>
+          <Card sx={chartCardStyle}>
+            <Box sx={chartHeaderStyle}>
+              <Typography variant="h6" fontWeight={600} color="#333">
+                {getDayOfWeekTitle()}
+              </Typography>
+            </Box>
+            <CardContent sx={chartContentStyle}>
+              {analyticsData.salesByDayOfWeek.length > 0 ? (
+                renderBarChart(analyticsData.salesByDayOfWeek, 'day', 'value', 'Sales')
+              ) : (
+                <Typography color="text.secondary">No day of week data available</Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Box>
         
         {/* Time of Day Chart */}
-        <div style={chartColumnStyle}>
-          <div style={chartCardStyle}>
-            <h6 style={chartHeaderStyle}>
-              Time of day (totals)
-            </h6>
-            {renderSimpleBarChart(timeOfDayData, 'value', 'Sales', 'hour')}
-          </div>
-        </div>
-      </div>
-    </div>
+        <Box sx={{...chartColumnStyle, flex: '1 1 50%'}}>
+          <Card sx={chartCardStyle}>
+            <Box sx={chartHeaderStyle}>
+              <Typography variant="h6" fontWeight={600} color="#333">
+                Sales by Time of Day
+              </Typography>
+            </Box>
+            <CardContent sx={chartContentStyle}>
+              {analyticsData.salesByTimeOfDay.length > 0 ? (
+                renderBarChart(analyticsData.salesByTimeOfDay, 'hour', 'value', 'Sales')
+              ) : (
+                <Typography color="text.secondary">No time of day data available</Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 

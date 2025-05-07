@@ -25,3 +25,10 @@ class ExcelUploadResponse(BaseModel):
     table5: List[Dict[str, Any]]
     locations: List[str] = []
     dateRanges: List[str] = []
+
+# New model for Sales Analytics response
+class SalesAnalyticsResponse(BaseModel):
+    salesByWeek: List[Dict[str, Any]]
+    salesByDayOfWeek: List[Dict[str, Any]]
+    salesByTimeOfDay: List[Dict[str, Any]]
+    salesByCategory: List[Dict[str, Any]]

@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+import Grid from '@mui/material/Grid';
+import Snackbar from '@mui/material/Snackbar';
+import { SelectChangeEvent } from '@mui/material/Select';
+import Divider from '@mui/material/Divider';
+import Paper from '@mui/material/Paper';
+
 // Import components
 import FilterSection from './FilterSection';
 import TableDisplay from './TableDisplay';
@@ -10,40 +22,54 @@ import SalesCharts from './SalesCharts';
 const API_URL = 'http://localhost:8000/api/excel/upload';
 const FILTER_API_URL = 'http://localhost:8000/api/excel/filter';
 
-/**
- * ExcelImport Component
- * Handles file upload, filtering, and display of tables and charts
- */
+// Define types
+interface TableData {
+  table1: any[];
+  table2: any[];
+  table3: any[];
+  table5: any[];
+  locations: string[];
+  dateRanges: string[];
+  [key: string]: any;
+}
+
+// Main Component
 export function ExcelImport() {
   // Initial data structure
-  const initialTableData = {
-    table1: [], // Raw Data Table
-    table2: [], // Percentage Table
-    table3: [], // In-House Table
-    table4: [], // WOW Table
+  const initialTableData: TableData = {
+    table1: [], // Percentage Table (1P, Catering, DD, GH, In-House, UB)
+    table2: [], // In-House Table (1P, In-House, Catering, DD, GH, UB)
+    table3: [], // WOW Table (1P, In-House, Catering, DD, GH, UB, 3P, 1P/3P)
     table5: [], // Category summary
     locations: [], // List of available locations
     dateRanges: [] // List of available dates
   };
   
-  // State variables
-  const [file, setFile] = useState(null);
-  const [fileName, setFileName] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState(0);
-  const [tableData, setTableData] = useState(initialTableData);
-  const [viewMode, setViewMode] = useState('tabs'); // 'tabs', 'combined', or 'row'
-  const [showTutorial, setShowTutorial] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState('');
-  const [processedSuccessfully, setProcessedSuccessfully] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [fileName, setFileName] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<number>(0);
+  const [tableData, setTableData] = useState<TableData>(initialTableData);
+  const [viewMode, setViewMode] = useState<string>('tabs'); // 'tabs', 'combined', or 'row'
+  const [showTutorial, setShowTutorial] = useState<boolean>(false);
+  const [selectedLocation, setSelectedLocation] = useState<string>('');
+  
+  // Separate states for notification and data processing
+  const [showSuccessNotification, setShowSuccessNotification] = useState<boolean>(false);
+  const [dataProcessed, setDataProcessed] = useState<boolean>(false);
+  
+  const [showCharts, setShowCharts] = useState<boolean>(false);
+  
+  // State to force chart re-render
+  const [chartKey, setChartKey] = useState<number>(0);
   
   // Date filter states
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [dateRangeType, setDateRangeType] = useState('');
-  const [availableDateRanges, setAvailableDateRanges] = useState([]);
-  const [customDateRange, setCustomDateRange] = useState(false);
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [dateRangeType, setDateRangeType] = useState<string>('');
+  const [availableDateRanges, setAvailableDateRanges] = useState<string[]>([]);
+  const [customDateRange, setCustomDateRange] = useState<boolean>(false);
   
   // Update available date ranges when data changes
   useEffect(() => {
@@ -75,25 +101,55 @@ export function ExcelImport() {
     });
   };
 
+  // Toggle charts view
+  const toggleChartsView = () => {
+    const newShowCharts = !showCharts;
+    setShowCharts(newShowCharts);
+    
+    // Force re-render of chart component when showing
+    if (newShowCharts) {
+      setChartKey(prevKey => prevKey + 1);
+    }
+    
+    // Store preference in localStorage
+    try {
+      localStorage.setItem('showCharts', newShowCharts ? 'true' : 'false');
+    } catch (e) {
+      console.error('Could not save chart preference to localStorage:', e);
+    }
+  };
+
   // Handle location change
-  const handleLocationChange = (event) => {
-    setSelectedLocation(event.target.value);
+  const handleLocationChange = (event: SelectChangeEvent) => {
+    const newLocation = event.target.value;
+    setSelectedLocation(newLocation);
     
     // Apply filters with new location
-    handleApplyFilters(event.target.value, dateRangeType);
+    handleApplyFilters(newLocation, dateRangeType);
+    
+    // Force re-render of chart component when filters change
+    if (showCharts) {
+      setChartKey(prevKey => prevKey + 1);
+    }
   };
 
   // Handle date range type change
-  const handleDateRangeChange = (event) => {
-    setDateRangeType(event.target.value);
+  const handleDateRangeChange = (event: SelectChangeEvent) => {
+    const newDateRange = event.target.value;
+    setDateRangeType(newDateRange);
     
     // Apply filters with new date range
-    handleApplyFilters(selectedLocation, event.target.value);
+    handleApplyFilters(selectedLocation, newDateRange);
+    
+    // Force re-render of chart component when filters change
+    if (showCharts) {
+      setChartKey(prevKey => prevKey + 1);
+    }
   };
 
   // Apply filters
   const handleApplyFilters = (location = selectedLocation, dateRange = dateRangeType) => {
-    if (!processedSuccessfully && !file) {
+    if (!dataProcessed && !file) {
       setError('Please upload a file first.');
       return;
     }
@@ -102,8 +158,8 @@ export function ExcelImport() {
       setLoading(true);
       
       // Format dates correctly for API
-      let formattedStartDate = null;
-      let formattedEndDate = null;
+      let formattedStartDate: string | null = null;
+      let formattedEndDate: string | null = null;
       
       if (dateRange === 'Custom Date Range' && startDate) {
         // Ensure date is in YYYY-MM-DD format for the backend
@@ -133,8 +189,13 @@ export function ExcelImport() {
           // Update table data with filtered data
           if (response.data) {
             setTableData(response.data);
-            setProcessedSuccessfully(true);
+            setDataProcessed(true);
             setError(''); // Clear any previous errors
+            
+            // Force re-render of chart component when data changes
+            if (showCharts) {
+              setChartKey(prevKey => prevKey + 1);
+            }
           } else {
             throw new Error('Invalid response data');
           }
@@ -166,7 +227,7 @@ export function ExcelImport() {
           setLoading(false);
         });
       
-    } catch (err) {
+    } catch (err: any) {
       console.error('Filter error:', err);
       setError('Error applying filters: ' + (err.message || 'Unknown error'));
       setLoading(false);
@@ -174,7 +235,7 @@ export function ExcelImport() {
   };
 
   // Handle file selection
-  const handleFileChange = (event) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
       if (selectedFile.name.endsWith('.xlsx') || selectedFile.name.endsWith('.xls')) {
@@ -190,24 +251,24 @@ export function ExcelImport() {
   };
 
   // Handle tab changes
-  const handleTabChange = (event, newValue) => {
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
 
   // Handle date input changes
-  const handleStartDateChange = (event) => {
+  const handleStartDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setStartDate(event.target.value);
   };
 
-  const handleEndDateChange = (event) => {
+  const handleEndDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setEndDate(event.target.value);
   };
 
   // Convert file to base64
-  const toBase64 = (file) => new Promise((resolve, reject) => {
+  const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
+    reader.onload = () => resolve(reader.result as string);
     reader.onerror = error => reject(error);
   });
 
@@ -235,7 +296,8 @@ export function ExcelImport() {
       // Update table data with response
       if (response.data) {
         setTableData(response.data);
-        setProcessedSuccessfully(true);
+        setDataProcessed(true);  // Data is processed successfully
+        setShowSuccessNotification(true);  // Show notification
         
         // Set location if available
         if (response.data.locations && response.data.locations.length > 0) {
@@ -253,11 +315,19 @@ export function ExcelImport() {
           setShowTutorial(true);
           localStorage.setItem('tutorialShown', 'true');
         }
+        
+        // Show charts after successful upload based on previous preference
+        const savedPreference = localStorage.getItem('showCharts');
+        if (savedPreference !== 'false') {
+          setShowCharts(true);
+          // Force re-render of chart component
+          setChartKey(prevKey => prevKey + 1);
+        }
       } else {
         throw new Error('Invalid response data');
       }
       
-    } catch (err) {
+    } catch (err: any) {
       console.error('Upload error:', err);
       
       let errorMessage = 'Error processing file';
@@ -289,310 +359,199 @@ export function ExcelImport() {
       }
       
       setError(errorMessage);
-      setProcessedSuccessfully(false);
+      setDataProcessed(false);
     } finally {
       setLoading(false);
     }
   };
 
-  // CSS styles
-  const containerStyle = {
-    padding: '20px'
+  // Handle success notification close without affecting data processing state
+  const handleSuccessNotificationClose = () => {
+    setShowSuccessNotification(false);
+    // But dataProcessed remains true
   };
-  
-  const headerStyle = {
-    marginBottom: '24px'
-  };
-  
-  const headerTitleStyle = {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    marginBottom: '8px'
-  };
-  
-  const headerSubtitleStyle = {
-    fontSize: '16px',
-    color: '#666',
-    marginTop: 0
-  };
-  
-  const cardStyle = {
-    padding: '24px',
-    marginBottom: '32px',
-    backgroundColor: 'white',
-    borderRadius: '4px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)'
-  };
-  
-  const gridContainerStyle = {
-    display: 'flex',
-    flexWrap: 'wrap',
-    margin: '-12px'
-  };
-  
-  const gridItemStyle = {
-    flex: '1 1 100%',
-    maxWidth: '25%',
-    padding: '12px',
-    boxSizing: 'border-box'
-  };
-  
-  const buttonStyle = {
-    display: 'inline-block',
-    padding: '10px 16px',
-    backgroundColor: '#1976d2',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: '500',
-    textAlign: 'center',
-    textDecoration: 'none',
-    width: '100%'
-  };
-  
-  const outlinedButtonStyle = {
-    ...buttonStyle,
-    backgroundColor: 'transparent',
-    color: '#1976d2',
-    border: '1px solid #1976d2'
-  };
-  
-  const fileNameStyle = {
-    fontSize: '14px',
-    marginTop: '8px'
-  };
-  
-  const loadingStyle = {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '24px'
-  };
-  
-  const errorStyle = {
-    backgroundColor: '#ffebee',
-    color: '#c62828',
-    padding: '12px',
-    borderRadius: '4px',
-    marginTop: '16px'
-  };
-  
-  const emptyStateStyle = {
-    padding: '32px',
-    textAlign: 'center',
-    backgroundColor: 'white',
-    borderRadius: '4px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
-    margin: '24px 0'
-  };
-  
-  const emptyStateTitleStyle = {
-    color: '#666',
-    fontWeight: 500,
-    marginTop: 0,
-    marginBottom: '8px'
-  };
-  
-  const emptyStateMessageStyle = {
-    color: '#888',
-    fontSize: '14px',
-    marginTop: 0
-  };
-  
-  // Check if we should adapt to mobile view
-  let responsiveGridItemStyle = {...gridItemStyle};
-  try {
-    if (typeof window !== 'undefined') {
-      const mediaQuery = window.matchMedia('(max-width: 768px)');
-      if (mediaQuery.matches) {
-        responsiveGridItemStyle = {
-          ...responsiveGridItemStyle,
-          maxWidth: '100%'
-        };
-      }
-    }
-  } catch (error) {
-    console.error("Error handling media query:", error);
-  }
 
-  // Main render function
+  // Success notification - decoupled from dataProcessed state
+  const renderSuccessMessage = () => (
+    <Snackbar
+      open={showSuccessNotification}
+      autoHideDuration={5000}
+      onClose={handleSuccessNotificationClose}
+      anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+    >
+      <Alert 
+        onClose={handleSuccessNotificationClose} 
+        severity="success" 
+        sx={{ width: '100%' }}
+      >
+        Excel file processed successfully!
+      </Alert>
+    </Snackbar>
+  );
+
+  // Tutorial snackbar
+  const renderTutorial = () => (
+    <Snackbar
+      open={showTutorial}
+      autoHideDuration={15000}
+      onClose={() => setShowTutorial(false)}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+    >
+      <Alert 
+        onClose={() => setShowTutorial(false)} 
+        severity="info" 
+        sx={{ width: '100%', maxWidth: '500px' }}
+      >
+        <Typography variant="subtitle1" gutterBottom>Welcome to the Sales Analyzer!</Typography>
+        <Typography variant="body2">
+          • <strong>Percentage Table</strong>: Shows week-over-week changes<br />
+          • <strong>In-House Table</strong>: Categories as % of In-House sales<br />
+          • <strong>WOW Table</strong>: Includes 3P totals and 1P/3P ratio<br />
+          • <strong>Category Summary</strong>: Overall sales by category<br />
+          <br />
+          Use the date filter to analyze specific time periods!
+        </Typography>
+      </Alert>
+    </Snackbar>
+  );
+
   return (
-    <div style={{ padding: 16 }}>
-      <div style={{ background: '#fff', borderRadius: 8, padding: 16 }}>
-        {/* wrap upload controls + toggle + process into one flex row */}
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            gap: '8px',
-            marginBottom: '16px',
+    <>
+      <Box mb={4}>
+        <Typography variant="h4" gutterBottom>
+          Sales Analysis Dashboard
+        </Typography>
+        <Typography variant="subtitle1" color="text.secondary">
+          Upload an Excel file to analyze sales data across different categories
+        </Typography>
+      </Box>
+
+      <Card sx={{ p: 3, mb: 4 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={3}>
+            <input
+              type="file"
+              id="excel-upload"
+              accept=".xlsx, .xls"
+              style={{ display: 'none' }}
+              onChange={handleFileChange}
+            />
+            <label htmlFor="excel-upload">
+              <Button
+                variant="contained"
+                component="span"
+                fullWidth
+              >
+                Choose Excel File
+              </Button>
+            </label>
+            {fileName && (
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Selected file: {fileName}
+              </Typography>
+            )}
+          </Grid>
+          
+          {/* Filter Section Component */}
+          <FilterSection 
+            dateRangeType={dateRangeType}
+            availableDateRanges={availableDateRanges}
+            onDateRangeChange={handleDateRangeChange}
+            customDateRange={customDateRange}
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={handleStartDateChange}
+            onEndDateChange={handleEndDateChange}
+            locations={tableData.locations}
+            selectedLocation={selectedLocation}
+            onLocationChange={handleLocationChange}
+            onApplyFilters={() => handleApplyFilters()}
+          />
+          
+          {/* Upload Button */}
+          <Grid item xs={12} md={customDateRange ? 3 : (tableData.locations && tableData.locations.length > 0 ? 3 : 6)} 
+                sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={toggleViewMode}
+              sx={{ flex: 1 }}
+              disabled={loading}
+            >
+              {viewMode === 'tabs' ? 'View Stacked' : 
+               viewMode === 'combined' ? 'View Side-by-Side' : 'View Tabbed'}
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleUpload}
+              disabled={!file || loading}
+              sx={{ flex: 1 }}
+            >
+              {loading ? <CircularProgress size={24} /> : 'Upload & Process'}
+            </Button>
+          </Grid>
+          
+          {/* Charts Toggle Button */}
+          {dataProcessed && (
+            <Grid item xs={12} md={3}>
+              <Button
+                variant="outlined"
+                color="secondary"
+                onClick={toggleChartsView}
+                fullWidth
+              >
+                {showCharts ? 'Hide Charts' : 'Show Charts'}
+              </Button>
+            </Grid>
+          )}
+        </Grid>
+        
+        {error && (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {error}
+          </Alert>
+        )}
+      </Card>
+
+      {/* CHART COMPONENT WITH FIXED DISPLAY PERSISTENCE */}
+      {dataProcessed && showCharts && (
+        <Paper 
+          elevation={2} 
+          sx={{ 
+            mb: 4, 
+            p: 3, 
+            position: 'relative',
+            overflow: 'visible'
           }}
         >
-          {/* Choose Excel File */}
-          <input
-            type="file"
-            id="excel-upload"
-            accept=".xlsx, .xls"
-            style={{ display: 'none' }}
-            onChange={handleFileChange}
-          />
-          <label htmlFor="excel-upload">
-            <button
-              style={{ padding: '8px 16px', background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4 }}
-              onClick={() => document.getElementById('excel-upload')?.click()}
-            >
-              Choose Excel File
-            </button>
-          </label>
-          {/* show file name inline, if any */}
-          {fileName && <span style={{ fontSize: '0.9em' }}>Selected: {fileName}</span>}
-  
-          {/* View Stacked / Side-by-Side / Tabbed */}
-          <button
-            style={{ padding: '8px 16px', background: '#fff', color: '#1976d2', border: '1px solid #1976d2', borderRadius: 4 }}
-            onClick={toggleViewMode}
-            disabled={loading}
-          >
-            {viewMode === 'tabs'
-              ? 'View Stacked'
-              : viewMode === 'combined'
-              ? 'View Side-by-Side'
-              : 'View Tabbed'}
-          </button>
-  
-          {/* Upload & Process */}
-          <button
-            style={{ padding: '8px 16px', background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4 }}
-            onClick={handleUpload}
-            disabled={!file || loading}
-          >
-            {loading ? 'Uploading…' : 'Upload & Process'}
-          </button>
-        </div>
-  
-        {/* then your filters exactly as before */}
-        <FilterSection
-          dateRangeType={dateRangeType}
-          availableDateRanges={availableDateRanges}
-          onDateRangeChange={handleDateRangeChange}
-          customDateRange={customDateRange}
-          startDate={startDate}
-          endDate={endDate}
-          onStartDateChange={handleStartDateChange}
-          onEndDateChange={handleEndDateChange}
-          locations={tableData.locations}
-          selectedLocation={selectedLocation}
-          onLocationChange={handleLocationChange}
-          onApplyFilters={handleApplyFilters}
-        />
-  
-        {error && <div style={{ marginTop: 16, color: 'red' }}>{error}</div>}
-      </div>
-
-      {/* Sales Charts - Always display when data is available */}
-      {processedSuccessfully && (
-        <SalesCharts tableData={tableData} />
-      )}
-
-      {/* Table Display - Always show below charts */}
-      {processedSuccessfully && (
-        <TableDisplay 
-          tableData={tableData}
-          viewMode={viewMode}
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-        />
-      )}
-      
-      {/* Show empty state if not processed yet */}
-      {!processedSuccessfully && (
-        <div style={emptyStateStyle}>
-          <h3 style={emptyStateTitleStyle}>
-            No data available
-          </h3>
-          <p style={emptyStateMessageStyle}>
-            Please upload an Excel file to view charts and tables
-          </p>
-        </div>
-      )}
-      
-      {/* Success and Tutorial Messages (simplified) */}
-      {processedSuccessfully && (
-        <div id="success-message" style={{
-          position: 'fixed',
-          top: '16px',
-          right: '16px',
-          backgroundColor: '#e8f5e9',
-          color: '#2e7d32',
-          padding: '12px 16px',
-          borderRadius: '4px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-          zIndex: 1000,
-          animation: 'fadeOut 0.5s ease 5s forwards'
-        }}>
-          Excel file processed successfully!
-        </div>
-      )}
-      
-      {showTutorial && (
-        <div id="tutorial-message" style={{
-          position: 'fixed',
-          bottom: '16px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          backgroundColor: '#e3f2fd',
-          color: '#0d47a1',
-          padding: '16px',
-          borderRadius: '4px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-          maxWidth: '500px',
-          width: '100%',
-          zIndex: 1000
-        }}>
-          <h4 style={{ marginTop: 0, marginBottom: '8px' }}>Welcome to the Sales Analyzer!</h4>
-          <p style={{ margin: 0, fontSize: '14px' }}>
-            • <strong>Percentage Table</strong>: Shows week-over-week changes<br />
-            • <strong>In-House Table</strong>: Categories as % of In-House sales<br />
-            • <strong>WOW Table</strong>: Includes 3P totals and 1P/3P ratio<br />
-            • <strong>Category Summary</strong>: Overall sales by category<br />
-            <br />
-            Use the date filter to analyze specific time periods!
-          </p>
-          <button
-            onClick={() => setShowTutorial(false)}
-            style={{
-              position: 'absolute',
-              top: '8px',
-              right: '8px',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '16px'
-            }}
-          >
-            ×
-          </button>
-        </div>
-      )}
-      
-      {/* Add keyframe animations for fade effects */}
-      <style>
-        {`
-          @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; visibility: hidden; }
-          }
+          <Typography variant="h5" gutterBottom>
+            Sales Analytics
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
           
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}
-      </style>
-    </div>
+          {/* Using key to force complete remount of the component when filters change */}
+          <div key={`sales-chart-${chartKey}`} style={{ position: 'relative' }}>
+            <SalesCharts 
+              fileName={fileName}
+              dateRangeType={dateRangeType}
+              selectedLocation={selectedLocation}
+            />
+          </div>
+        </Paper>
+      )}
+
+      {/* Table Display Component */}
+      <TableDisplay 
+        tableData={tableData}
+        viewMode={viewMode}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+      />
+
+      {renderTutorial()}
+      {renderSuccessMessage()}
+    </>
   );
 }
 
