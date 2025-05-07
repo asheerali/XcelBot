@@ -8,7 +8,7 @@ import { OverviewAnalyticsView } from './pages/OverviewAnalyticsView';
 import { NotFoundView } from './pages/NotFoundView';
 import { HelmetProvider } from 'react-helmet-async';
 import { ComingSoon } from './pages/ComingSoon';
-import ExcelImport from './pages/ExcelImport';
+import ExcelImport from './components/ExcelImport';
 const router = createBrowserRouter([
   {
     Component: App,

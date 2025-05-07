@@ -1,0 +1,444 @@
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+import Grid from '@mui/material/Grid';
+import Snackbar from '@mui/material/Snackbar';
+
+// Import components
+import FilterSection from './FilterSection';
+import TableDisplay from './TableDisplay';
+
+// API base URLs - update to match your backend URL
+const API_URL = 'http://localhost:8000/api/excel/upload';
+const FILTER_API_URL = 'http://localhost:8000/api/excel/filter';
+
+// Main Component
+export function ExcelImport() {
+  // Initial data structure
+  const initialTableData = {
+    table1: [], // Percentage Table (1P, Catering, DD, GH, In-House, UB)
+    table2: [], // In-House Table (1P, In-House, Catering, DD, GH, UB)
+    table3: [], // WOW Table (1P, In-House, Catering, DD, GH, UB, 3P, 1P/3P)
+    table5: [], // Category summary
+    locations: [], // List of available locations
+    dateRanges: [] // List of available dates
+  };
+  
+  const [file, setFile] = useState(null);
+  const [fileName, setFileName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState(0);
+  const [tableData, setTableData] = useState(initialTableData);
+  const [viewMode, setViewMode] = useState('tabs'); // 'tabs', 'combined', or 'row'
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState('');
+  const [processedSuccessfully, setProcessedSuccessfully] = useState(false);
+  
+  // Date filter states
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [dateRangeType, setDateRangeType] = useState('');
+  const [availableDateRanges, setAvailableDateRanges] = useState([]);
+  const [customDateRange, setCustomDateRange] = useState(false);
+  
+  // Update available date ranges when data changes
+  useEffect(() => {
+    if (tableData && tableData.dateRanges && tableData.dateRanges.length > 0) {
+      setAvailableDateRanges(tableData.dateRanges);
+      
+      // Set default date range if not already set
+      if (!dateRangeType && tableData.dateRanges.length > 0) {
+        setDateRangeType(tableData.dateRanges[0]);
+      }
+    }
+  }, [tableData.dateRanges]);
+
+  // Effect to handle custom date range selection
+  useEffect(() => {
+    if (dateRangeType === 'Custom Date Range') {
+      setCustomDateRange(true);
+    } else {
+      setCustomDateRange(false);
+    }
+  }, [dateRangeType]);
+
+  // Function to toggle between view modes
+  const toggleViewMode = () => {
+    setViewMode(prevMode => {
+      if (prevMode === 'tabs') return 'combined';
+      if (prevMode === 'combined') return 'row';
+      return 'tabs';
+    });
+  };
+
+  // Handle location change
+  const handleLocationChange = (event) => {
+    setSelectedLocation(event.target.value);
+    
+    // Apply filters with new location
+    handleApplyFilters(event.target.value, dateRangeType);
+  };
+
+  // Handle date range type change
+  const handleDateRangeChange = (event) => {
+    setDateRangeType(event.target.value);
+    
+    // Apply filters with new date range
+    handleApplyFilters(selectedLocation, event.target.value);
+  };
+
+  // Apply filters
+  const handleApplyFilters = (location = selectedLocation, dateRange = dateRangeType) => {
+    if (!processedSuccessfully && !file) {
+      setError('Please upload a file first.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Format dates correctly for API
+      let formattedStartDate = null;
+      let formattedEndDate = null;
+      
+      if (dateRange === 'Custom Date Range' && startDate) {
+        // Ensure date is in YYYY-MM-DD format for the backend
+        formattedStartDate = startDate;
+      }
+      
+      if (dateRange === 'Custom Date Range' && endDate) {
+        // Ensure date is in YYYY-MM-DD format for the backend
+        formattedEndDate = endDate;
+      }
+      
+      // Prepare filter data
+      const filterData = {
+        fileName: fileName,
+        fileContent: null, // We'll reuse the already uploaded file on the server
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+        location: location || null,
+        dateRangeType: dateRange
+      };
+      
+      console.log('Sending filter request:', filterData);
+      
+      // Call filter API
+      axios.post(FILTER_API_URL, filterData)
+        .then(response => {
+          // Update table data with filtered data
+          if (response.data) {
+            setTableData(response.data);
+            setProcessedSuccessfully(true);
+            setError(''); // Clear any previous errors
+          } else {
+            throw new Error('Invalid response data');
+          }
+        })
+        .catch(err => {
+          console.error('Filter error:', err);
+          
+          let errorMessage = 'Error filtering data';
+          if (axios.isAxiosError(err)) {
+            if (err.response) {
+              // Get detailed error message if available
+              const detail = err.response.data?.detail;
+              errorMessage = `Server error: ${detail || err.response.status}`;
+              
+              // Special handling for common errors
+              if (detail && detail.includes('isinf')) {
+                errorMessage = 'Backend error: Please update the backend code to use numpy.isinf instead of pandas.isinf';
+              } else if (err.response.status === 404) {
+                errorMessage = 'API endpoint not found. Is the server running?';
+              }
+            } else if (err.request) {
+              errorMessage = 'No response from server. Please check if the backend is running.';
+            }
+          }
+          
+          setError(errorMessage);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+      
+    } catch (err) {
+      console.error('Filter error:', err);
+      setError('Error applying filters: ' + (err.message || 'Unknown error'));
+      setLoading(false);
+    }
+  };
+
+  // Handle file selection
+  const handleFileChange = (event) => {
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+      if (selectedFile.name.endsWith('.xlsx') || selectedFile.name.endsWith('.xls')) {
+        setFile(selectedFile);
+        setFileName(selectedFile.name);
+        setError('');
+      } else {
+        setError('Please select an Excel file (.xlsx or .xls)');
+        setFile(null);
+        setFileName('');
+      }
+    }
+  };
+
+  // Handle tab changes
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
+  // Handle date input changes
+  const handleStartDateChange = (event) => {
+    setStartDate(event.target.value);
+  };
+
+  const handleEndDateChange = (event) => {
+    setEndDate(event.target.value);
+  };
+
+  // Convert file to base64
+  const toBase64 = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+  });
+
+  // Upload and process file
+  const handleUpload = async () => {
+    if (!file) {
+      setError('Please select a file first');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(''); // Clear any previous errors
+      
+      // Convert file to base64
+      const base64File = await toBase64(file);
+      const base64Content = base64File.split(',')[1]; // Remove data:application/... prefix
+      
+      // Send to backend
+      const response = await axios.post(API_URL, {
+        fileName: fileName,
+        fileContent: base64Content
+      });
+      
+      // Update table data with response
+      if (response.data) {
+        setTableData(response.data);
+        setProcessedSuccessfully(true);
+        
+        // Set location if available
+        if (response.data.locations && response.data.locations.length > 0) {
+          setSelectedLocation(response.data.locations[0]);
+        }
+        
+        // Set date ranges if available
+        if (response.data.dateRanges && response.data.dateRanges.length > 0) {
+          setAvailableDateRanges(response.data.dateRanges);
+          setDateRangeType(response.data.dateRanges[0]);
+        }
+        
+        // Show tutorial on first successful upload
+        if (!localStorage.getItem('tutorialShown')) {
+          setShowTutorial(true);
+          localStorage.setItem('tutorialShown', 'true');
+        }
+      } else {
+        throw new Error('Invalid response data');
+      }
+      
+    } catch (err) {
+      console.error('Upload error:', err);
+      
+      let errorMessage = 'Error processing file';
+      
+      if (axios.isAxiosError(err)) {
+        if (err.response) {
+          // Get detailed error message if available
+          const detail = err.response.data?.detail;
+          errorMessage = `Server error: ${detail || err.response.status}`;
+          
+          // Special handling for common errors
+          if (detail && detail.includes('isinf')) {
+            errorMessage = 'Backend error: Please update the backend code to use numpy.isinf instead of pandas.isinf';
+          } else if (err.response.status === 404) {
+            errorMessage = 'API endpoint not found. Is the server running?';
+          } else if (detail) {
+            // Try to extract a more meaningful message
+            if (detail.includes('Column')) {
+              errorMessage = `File format error: ${detail}`;
+            } else {
+              errorMessage = `Processing error: ${detail}`;
+            }
+          }
+        } else if (err.request) {
+          errorMessage = 'No response from server. Please check if the backend is running.';
+        }
+      } else if (err.message) {
+        errorMessage = `Error: ${err.message}`;
+      }
+      
+      setError(errorMessage);
+      setProcessedSuccessfully(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Success snackbar
+  const renderSuccessMessage = () => (
+    <Snackbar
+      open={processedSuccessfully}
+      autoHideDuration={5000}
+      onClose={() => setProcessedSuccessfully(false)}
+      anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+    >
+      <Alert 
+        onClose={() => setProcessedSuccessfully(false)} 
+        severity="success" 
+        sx={{ width: '100%' }}
+      >
+        Excel file processed successfully!
+      </Alert>
+    </Snackbar>
+  );
+
+  // Tutorial snackbar
+  const renderTutorial = () => (
+    <Snackbar
+      open={showTutorial}
+      autoHideDuration={15000}
+      onClose={() => setShowTutorial(false)}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+    >
+      <Alert 
+        onClose={() => setShowTutorial(false)} 
+        severity="info" 
+        sx={{ width: '100%', maxWidth: '500px' }}
+      >
+        <Typography variant="subtitle1" gutterBottom>Welcome to the Sales Analyzer!</Typography>
+        <Typography variant="body2">
+          • <strong>Percentage Table</strong>: Shows week-over-week changes<br />
+          • <strong>In-House Table</strong>: Categories as % of In-House sales<br />
+          • <strong>WOW Table</strong>: Includes 3P totals and 1P/3P ratio<br />
+          • <strong>Category Summary</strong>: Overall sales by category<br />
+          <br />
+          Use the date filter to analyze specific time periods!
+        </Typography>
+      </Alert>
+    </Snackbar>
+  );
+
+  return (
+    <>
+      <Box mb={4}>
+        <Typography variant="h4" gutterBottom>
+          Sales Analysis Dashboard
+        </Typography>
+        <Typography variant="subtitle1" color="text.secondary">
+          Upload an Excel file to analyze sales data across different categories
+        </Typography>
+      </Box>
+
+      <Card sx={{ p: 3, mb: 4 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={3}>
+            <input
+              type="file"
+              id="excel-upload"
+              accept=".xlsx, .xls"
+              style={{ display: 'none' }}
+              onChange={handleFileChange}
+            />
+            <label htmlFor="excel-upload">
+              <Button
+                variant="contained"
+                component="span"
+                fullWidth
+              >
+                Choose Excel File
+              </Button>
+            </label>
+            {fileName && (
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Selected file: {fileName}
+              </Typography>
+            )}
+          </Grid>
+          
+          {/* Filter Section Component */}
+          <FilterSection 
+            dateRangeType={dateRangeType}
+            availableDateRanges={availableDateRanges}
+            onDateRangeChange={handleDateRangeChange}
+            customDateRange={customDateRange}
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={handleStartDateChange}
+            onEndDateChange={handleEndDateChange}
+            locations={tableData.locations}
+            selectedLocation={selectedLocation}
+            onLocationChange={handleLocationChange}
+            onApplyFilters={handleApplyFilters}
+          />
+          
+          {/* Upload Button */}
+          <Grid item xs={12} md={customDateRange ? 3 : (tableData.locations && tableData.locations.length > 0 ? 3 : 6)} 
+                sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={toggleViewMode}
+              sx={{ flex: 1 }}
+              disabled={loading}
+            >
+              {viewMode === 'tabs' ? 'View Stacked' : 
+               viewMode === 'combined' ? 'View Side-by-Side' : 'View Tabbed'}
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleUpload}
+              disabled={!file || loading}
+              sx={{ flex: 1 }}
+            >
+              {loading ? <CircularProgress size={24} /> : 'Upload & Process'}
+            </Button>
+          </Grid>
+        </Grid>
+        
+        {error && (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {error}
+          </Alert>
+        )}
+      </Card>
+
+      {/* Table Display Component */}
+      <TableDisplay 
+        tableData={tableData}
+        viewMode={viewMode}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+      />
+
+      {renderTutorial()}
+      {renderSuccessMessage()}
+    </>
+  );
+}
+
+export default ExcelImport;
