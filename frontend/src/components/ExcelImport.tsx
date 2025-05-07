@@ -21,6 +21,7 @@ import InHousePercentageChart from './graphs/InHousePercentageChart'; // Import 
 import CateringPercentageChart from './graphs/CateringPercentageChart';
 import FirstPartyPercentageChart from './graphs/FirstPartyPercentageChart';
 import TotalSalesChart from './graphs/TotalSalesChart';
+import WowTrendsChart from './graphs/WowTrendsChart';
 // API base URLs - update to match your backend URL
 const API_URL = 'http://localhost:8000/api/excel/upload';
 const FILTER_API_URL = 'http://localhost:8000/api/excel/filter';
@@ -576,7 +577,10 @@ export function ExcelImport() {
         <TotalSalesChart tableData={tableData} />
       )}
 
-     
+      {/* Add WOW Trends Chart after Total Sales Chart */}
+      {dataProcessed && tableData.table4 && tableData.table4.length > 0 && (
+        <WowTrendsChart tableData={tableData} />
+      )}
       {renderTutorial()}
       {renderSuccessMessage()}
     </>
