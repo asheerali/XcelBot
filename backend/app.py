@@ -348,6 +348,8 @@ def generate_date_ranges(df):
         return ["Last 7 Days", "Last 30 Days", "This Month", "Last Month", "Last 3 Months", "Custom Date Range"]
 
 
+# Update these parts of your process_excel_file function
+
 def process_excel_file(file_data: io.BytesIO, start_date=None, end_date=None, location=None) -> Dict[str, List[Dict[str, Any]]]:
     """
     Process the uploaded Excel file and transform the data.
@@ -365,6 +367,13 @@ def process_excel_file(file_data: io.BytesIO, start_date=None, end_date=None, lo
         
         # Reset the file pointer for further operations
         file_data.seek(0)
+        
+        # Store all locations before filtering for later use
+        all_locations = []
+        if 'Location' in df.columns:
+            all_locations = df['Location'].unique().tolist()
+            # Filter out None or NaN values
+            all_locations = [loc for loc in all_locations if loc is not None and not pd.isna(loc)]
         
         # Data cleaning and preparation
         # Convert numeric columns
@@ -390,6 +399,9 @@ def process_excel_file(file_data: io.BytesIO, start_date=None, end_date=None, lo
                 df = df[df['Date'] <= end_date]
             except Exception as e:
                 print(f"Error applying end date filter: {e}")
+        
+        # Make a copy of the original dataframe after date filtering but before location filtering
+        df_before_location = df.copy()
         
         # Apply location filter if provided
         if location and location != "" and 'Location' in df.columns:
@@ -433,12 +445,8 @@ def process_excel_file(file_data: io.BytesIO, start_date=None, end_date=None, lo
         df.to_excel(output_path, index=False)
         print(f"\nProcessed file saved to: {output_path}")
         
-        # Get the list of locations if available
-        locations = []
-        if 'Location' in df.columns:
-            locations = df['Location'].unique().tolist()
-            # Filter out None or NaN values
-            locations = [loc for loc in locations if loc is not None and not pd.isna(loc)]
+        # Keep all locations from before filtering
+        locations = all_locations
         
         # Get available date ranges
         date_ranges = generate_date_ranges(df)
@@ -446,7 +454,7 @@ def process_excel_file(file_data: io.BytesIO, start_date=None, end_date=None, lo
         # Check if dataframe is empty after filtering
         if len(df) == 0:
             print("Warning: DataFrame is empty after applying filters!")
-            # Return empty tables
+            # Return empty tables but include all locations
             result = {
                 "table1": [],
                 "table2": [],
@@ -481,7 +489,7 @@ def process_excel_file(file_data: io.BytesIO, start_date=None, end_date=None, lo
             "table3": table3_data,    # In-House percentages
             "table4": table4_data,    # Week-over-Week table
             "table5": table5_data,    # Category summary
-            "locations": locations,   # List of available locations
+            "locations": locations,   # List of all locations (not just filtered ones)
             "dateRanges": date_ranges # List of available date ranges
         }
         
@@ -494,7 +502,6 @@ def process_excel_file(file_data: io.BytesIO, start_date=None, end_date=None, lo
         print(traceback.format_exc())
         # Re-raise to be caught by the endpoint handler
         raise
-
 
 # Add this test endpoint to verify FastAPI routing
 @app.get("/api/test")
