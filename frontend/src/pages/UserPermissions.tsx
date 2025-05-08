@@ -42,20 +42,18 @@ const MOCK_USERS = [
 
 // Mock permission data - in a real application, this would come from an API
 const MOCK_PERMISSIONS = {
-  1: { uploadExcel: true, viewReports: true, editReports: false },
-  2: { uploadExcel: true, viewReports: true, editReports: true },
-  3: { uploadExcel: false, viewReports: true, editReports: false },
-  4: { uploadExcel: true, viewReports: true, editReports: true },
-  5: { uploadExcel: false, viewReports: true, editReports: false },
+  1: { canUploadExcel: true },
+  2: { canUploadExcel: true },
+  3: { canUploadExcel: false },
+  4: { canUploadExcel: true },
+  5: { canUploadExcel: false },
 };
 
-const UserPermissions: React.FC = () => {
+const ExcelUploadPermissions: React.FC = () => {
   // State for selected user and permissions
   const [selectedUserId, setSelectedUserId] = useState<number | ''>('');
   const [permissions, setPermissions] = useState({
-    uploadExcel: false,
-    viewReports: false,
-    editReports: false,
+    canUploadExcel: false,
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [success, setSuccess] = useState<boolean>(false);
@@ -79,9 +77,7 @@ const UserPermissions: React.FC = () => {
     } else {
       // Default permissions for new users
       setPermissions({
-        uploadExcel: false,
-        viewReports: true,
-        editReports: false,
+        canUploadExcel: false,
       });
     }
   };
@@ -173,31 +169,31 @@ const UserPermissions: React.FC = () => {
           <TableHead>
             <TableRow>
               <TableCell>User</TableCell>
-              <TableCell align="center">Upload Excel</TableCell>
-              <TableCell align="center">View Reports</TableCell>
-              <TableCell align="center">Edit Reports</TableCell>
+              <TableCell>Role</TableCell>
+              <TableCell align="center">Excel Upload Permission</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {Object.entries(allPermissions).map(([userId, userPermissions]) => (
-              <TableRow 
-                key={userId}
-                sx={{ '&:hover': { backgroundColor: '#f5f5f5' } }}
-              >
-                <TableCell component="th" scope="row">
-                  {getUserName(Number(userId))}
-                </TableCell>
-                <TableCell align="center">
-                  {userPermissions.uploadExcel ? '✅' : '❌'}
-                </TableCell>
-                <TableCell align="center">
-                  {userPermissions.viewReports ? '✅' : '❌'}
-                </TableCell>
-                <TableCell align="center">
-                  {userPermissions.editReports ? '✅' : '❌'}
-                </TableCell>
-              </TableRow>
-            ))}
+            {Object.entries(allPermissions).map(([userId, userPermissions]) => {
+              const userInfo = MOCK_USERS.find(u => u.id === Number(userId));
+              return (
+                <TableRow 
+                  key={userId}
+                  sx={{ '&:hover': { backgroundColor: '#f5f5f5' } }}
+                >
+                  <TableCell component="th" scope="row">
+                    {getUserName(Number(userId))}
+                  </TableCell>
+                  <TableCell>{userInfo?.role || 'Unknown'}</TableCell>
+                  <TableCell align="center">
+                    {userPermissions.canUploadExcel ? 
+                      <Typography sx={{ color: 'green', fontWeight: 'bold' }}>✅ Allowed</Typography> : 
+                      <Typography sx={{ color: 'red' }}>❌ Not Allowed</Typography>
+                    }
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </TableContainer>
@@ -207,10 +203,10 @@ const UserPermissions: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
-        User Permissions
+        Excel Upload Permissions
       </Typography>
       <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-        Manage user access to Excel upload and reporting features
+        Manage which users can upload Excel files 
       </Typography>
       
       <Box display="flex" justifyContent="space-between" mb={3}>
@@ -263,7 +259,7 @@ const UserPermissions: React.FC = () => {
                         onClick={handleSavePermissions}
                         disabled={loading}
                       >
-                        {loading ? 'Saving...' : 'Save Permissions'}
+                        {loading ? 'Saving...' : 'Save Permission'}
                       </Button>
                     ) : (
                       <Button
@@ -271,7 +267,7 @@ const UserPermissions: React.FC = () => {
                         startIcon={<EditIcon />}
                         onClick={handleEditToggle}
                       >
-                        Edit Permissions
+                        Edit Permission
                       </Button>
                     )}
                   </>
@@ -290,94 +286,51 @@ const UserPermissions: React.FC = () => {
                 </Grid>
               )}
               
-              {/* Permission Toggles */}
+              {/* Permission Toggle */}
               <Grid item xs={12}>
                 <Divider sx={{ mb: 2 }} />
                 <Typography variant="h6" gutterBottom>
-                  Feature Permissions
+                  Excel Upload Permission
                 </Typography>
                 
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={4}>
+                <Grid container justifyContent="center">
+                  <Grid item xs={12} sm={6}>
                     <Paper 
-                      elevation={1} 
+                      elevation={3} 
                       sx={{ 
-                        p: 2, 
-                        height: '100%',
-                        backgroundColor: permissions.uploadExcel ? '#e3f2fd' : 'white',
-                        borderLeft: permissions.uploadExcel ? '4px solid #2196f3' : '4px solid #e0e0e0'
+                        p: 3, 
+                        textAlign: 'center',
+                        backgroundColor: permissions.canUploadExcel ? '#e3f2fd' : '#ffebee',
+                        borderLeft: permissions.canUploadExcel ? '6px solid #2196f3' : '6px solid #f44336',
+                        transition: 'all 0.3s ease-in-out'
                       }}
                     >
-                      <Typography variant="subtitle1" gutterBottom>Excel Upload</Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Allow user to upload Excel files for sales analysis
+                      <Typography variant="h6" gutterBottom>
+                        {permissions.canUploadExcel ? 
+                          "Excel Upload Permission" : 
+                          "Excel Upload Restricted"}
+                      </Typography>
+                      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                        {permissions.canUploadExcel ?
+                          "This user can upload Excel files " :
+                          "This user cannot upload Excel files  "
+                        }
                       </Typography>
                       <FormControlLabel
                         control={
                           <Switch
-                            checked={permissions.uploadExcel}
-                            onChange={() => isEditing && handlePermissionChange('uploadExcel')}
+                            checked={permissions.canUploadExcel}
+                            onChange={() => isEditing && handlePermissionChange('canUploadExcel')}
                             disabled={!isEditing}
-                            color="primary"
+                            color={permissions.canUploadExcel ? "primary" : "error"}
+                            size="large"
                           />
                         }
-                        label={permissions.uploadExcel ? "Enabled" : "Disabled"}
-                      />
-                    </Paper>
-                  </Grid>
-                  
-                  <Grid item xs={12} sm={4}>
-                    <Paper 
-                      elevation={1} 
-                      sx={{ 
-                        p: 2, 
-                        height: '100%',
-                        backgroundColor: permissions.viewReports ? '#e8f5e9' : 'white',
-                        borderLeft: permissions.viewReports ? '4px solid #4caf50' : '4px solid #e0e0e0'
-                      }}
-                    >
-                      <Typography variant="subtitle1" gutterBottom>View Reports</Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Allow user to view sales analysis reports and charts
-                      </Typography>
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={permissions.viewReports}
-                            onChange={() => isEditing && handlePermissionChange('viewReports')}
-                            disabled={!isEditing}
-                            color="success"
-                          />
+                        label={
+                          <Typography variant="body1" fontWeight="bold">
+                            {permissions.canUploadExcel ? "Allowed" : "Not Allowed"}
+                          </Typography>
                         }
-                        label={permissions.viewReports ? "Enabled" : "Disabled"}
-                      />
-                    </Paper>
-                  </Grid>
-                  
-                  <Grid item xs={12} sm={4}>
-                    <Paper 
-                      elevation={1} 
-                      sx={{ 
-                        p: 2, 
-                        height: '100%',
-                        backgroundColor: permissions.editReports ? '#fff8e1' : 'white',
-                        borderLeft: permissions.editReports ? '4px solid #ff9800' : '4px solid #e0e0e0'
-                      }}
-                    >
-                      <Typography variant="subtitle1" gutterBottom>Edit Reports</Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Allow user to edit and customize reports and data filters
-                      </Typography>
-                      <FormControlLabel
-                        control={
-                          <Switch
-                            checked={permissions.editReports}
-                            onChange={() => isEditing && handlePermissionChange('editReports')}
-                            disabled={!isEditing}
-                            color="warning"
-                          />
-                        }
-                        label={permissions.editReports ? "Enabled" : "Disabled"}
                       />
                     </Paper>
                   </Grid>
@@ -396,11 +349,11 @@ const UserPermissions: React.FC = () => {
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
         <Alert onClose={handleSuccessClose} severity="success" sx={{ width: '100%' }}>
-          Permissions saved successfully!
+          Excel upload permission updated successfully!
         </Alert>
       </Snackbar>
     </Box>
   );
 };
 
-export default UserPermissions;
+export default ExcelUploadPermissions;
