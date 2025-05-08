@@ -18,6 +18,7 @@ export default function Layout() {
     >
       <PageContainer title="" breadcrumbs={[]} >
         <Outlet />
+       
       </PageContainer>
     </DashboardLayout>
   );

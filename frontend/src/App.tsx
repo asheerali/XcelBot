@@ -14,25 +14,34 @@ import * as agentService from "./services/agentService";
 import * as productService from "./services/productService";
 import * as customerService from "./services/customerService";
 import * as orderService from "./services/orderService";
-
+import { HelpCenter } from "./pages/HelpCenter";
 const NAVIGATION: Navigation = [
   {
-    title: "Manage Reports",
+    title: "Dashboard",
     segment: "manage-reports",
     icon: <ShoppingCartIcon />,
   },
   {
-    title: "Setup",
+    title: "Dashboard 2",
     segment: "manage-reports",
     icon: <NewspaperIcon />,
   },
   
   {
-    title: "Setup",
+    title: "dashboard 3",
     segment: "manage-reports",
     icon: <NewspaperIcon />,
   },
-  
+   
+  {
+    title: "HelpCenter",
+    segment: "HelpCenter",
+    icon: <NewspaperIcon />,
+  },{
+    title: "Payments",
+    segment: "Payments",
+    icon: <NewspaperIcon />,
+  },
 
 
   // {
