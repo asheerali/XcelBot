@@ -1,3 +1,4 @@
+// src/components/CustomSidebar.tsx
 import React, { useState } from 'react';
 import {
   Box,
@@ -13,21 +14,36 @@ import {
   IconButton,
   useMediaQuery,
   useTheme,
-  styled
+  styled,
+  CircularProgress
 } from '@mui/material';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
-// Import the same icons you're already using
+// Import your icons
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import NewspaperIcon from '@mui/icons-material/Newspaper';
 import MenuIcon from '@mui/icons-material/Menu';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+
+// Import your typed Redux hooks
+import { useAppDispatch, useAppSelector } from '../typedHooks';
+import { 
+  setExcelFile, 
+  setLoading, 
+  setError, 
+  setTableData 
+} from '../store/excelSlice';
+
+// API URL for Excel upload
+const API_URL = 'http://localhost:8000/api/excel/upload';
 
 const drawerWidth = 260;
 
-// This was causing the error - now it's imported from MUI properly
+// The styled input for hidden file upload
 const VisuallyHiddenInput = styled('input')({
   clip: 'rect(0 0 0 0)',
   clipPath: 'inset(50%)',
@@ -45,28 +61,30 @@ interface NavItem {
   title: string;
   path: string;
   icon: React.ReactNode;
-  action?: 'upload';
 }
 
 interface SidebarProps {
   logo?: React.ReactNode;
   title?: string;
   onSignOut?: () => void;
-  onFileUpload?: (file: File) => void;
 }
 
 const CustomSidebar: React.FC<SidebarProps> = ({ 
   logo, 
   title = 'Audit IQ',
-  onSignOut,
-  onFileUpload
+  onSignOut
 }) => {
   const theme = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
   const [open, setOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  
+  // Get state from Redux
+  const { fileName, loading } = useAppSelector((state) => state.excel);
 
   // Define sidebar navigation based on your existing items
   const navItems: NavItem[] = [
@@ -74,6 +92,11 @@ const CustomSidebar: React.FC<SidebarProps> = ({
       title: 'Dashboard',
       path: '/manage-reports',
       icon: <ShoppingCartIcon />
+    },
+    {
+      title: 'Sales Analysis',
+      path: '/upload',
+      icon: <CloudUploadIcon />
     },
     {
       title: 'Dashboard 2',
@@ -99,13 +122,6 @@ const CustomSidebar: React.FC<SidebarProps> = ({
       title: 'User Permissions',
       path: '/UserPermissions',
       icon: <NewspaperIcon />
-    },
-    // Additional item for file upload functionality
-    {
-      title: 'Upload Excel',
-      path: '/upload',
-      icon: <CloudUploadIcon />,
-      action: 'upload'
     }
   ];
 
@@ -123,10 +139,80 @@ const CustomSidebar: React.FC<SidebarProps> = ({
     }
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Convert file to base64
+  const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
+
+  // Process uploaded Excel file
+  const processExcelFile = async (file: File) => {
+    try {
+      dispatch(setLoading(true));
+      dispatch(setError(null));
+      
+      // Convert file to base64
+      const base64File = await toBase64(file);
+      const base64Content = base64File.split(',')[1]; // Remove data:application/... prefix
+      
+      // Store file info in Redux
+      dispatch(setExcelFile({
+        fileName: file.name,
+        fileContent: base64Content
+      }));
+      
+      // Send to backend
+      const response = await axios.post(API_URL, {
+        fileName: file.name,
+        fileContent: base64Content
+      });
+      
+      // Update table data with response
+      if (response.data) {
+        dispatch(setTableData(response.data));
+        
+        // Navigate to the Excel import page to show the processed data
+        navigate('/upload');
+      } else {
+        throw new Error('Invalid response data');
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+      
+      let errorMessage = 'Error processing file';
+      
+      if (axios.isAxiosError(err)) {
+        if (err.response) {
+          // Get detailed error message if available
+          const detail = err.response.data?.detail;
+          errorMessage = `Server error: ${detail || err.response.status}`;
+        } else if (err.request) {
+          errorMessage = 'No response from server. Please check if the backend is running.';
+        }
+      } else if (err instanceof Error) {
+        errorMessage = `Error: ${err.message}`;
+      }
+      
+      dispatch(setError(errorMessage));
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (files && files.length > 0 && onFileUpload) {
-      onFileUpload(files[0]);
+    if (files && files.length > 0) {
+      const file = files[0];
+      
+      // Process the Excel file
+      await processExcelFile(file);
+      
+      // If you're using this with mobile view, you might want to close the drawer
+      if (isMobile) {
+        setMobileOpen(false);
+      }
     }
   };
 
@@ -135,71 +221,54 @@ const CustomSidebar: React.FC<SidebarProps> = ({
       const isSelected = location.pathname === item.path;
       
       return (
-        <React.Fragment key={item.path}>
-          {item.action === 'upload' ? (
-            <ListItem disablePadding>
-              <Button
-                component="label"
-                variant="outlined"
-                startIcon={item.icon}
-                sx={{ 
-                  m: 1, 
-                  width: 'calc(100% - 16px)',
-                  justifyContent: 'flex-start'
-                }}
-              >
-                {item.title}
-                <VisuallyHiddenInput type="file" onChange={handleFileChange} accept=".xlsx,.xls" />
-              </Button>
-            </ListItem>
-          ) : (
-            <ListItem disablePadding>
-              <ListItemButton
-                component={Link}
-                to={item.path}
-                onClick={() => handleItemClick(item.path)}
-                selected={isSelected}
-                sx={{
-                  minHeight: 48,
-                  justifyContent: open ? 'initial' : 'center',
-                  px: 2.5,
-                  borderRadius: '8px',
-                  mx: 1,
-                  mb: 0.5,
-                  '&.Mui-selected': {
-                    backgroundColor: 'primary.main',
-                    color: 'white',
-                    '&:hover': {
-                      backgroundColor: 'primary.dark',
-                    },
-                    '& .MuiListItemIcon-root': {
-                      color: 'white'
-                    }
-                  }
-                }}
-              >
-                <ListItemIcon
-                  sx={{
-                    minWidth: 0,
-                    mr: open ? 2 : 'auto',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText 
-                  primary={item.title} 
-                  sx={{ 
-                    opacity: open ? 1 : 0,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }} 
-                />
-              </ListItemButton>
-            </ListItem>
-          )}
-        </React.Fragment>
+        <ListItem 
+          key={item.path}
+          disablePadding
+        >
+          <ListItemButton
+            component={Link}
+            to={item.path}
+            onClick={() => handleItemClick(item.path)}
+            selected={isSelected}
+            sx={{
+              minHeight: 48,
+              justifyContent: open ? 'initial' : 'center',
+              px: 2.5,
+              borderRadius: '8px',
+              mx: 1,
+              mb: 0.5,
+              '&.Mui-selected': {
+                backgroundColor: 'primary.main',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'primary.dark',
+                },
+                '& .MuiListItemIcon-root': {
+                  color: 'white'
+                }
+              }
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                minWidth: 0,
+                mr: open ? 2 : 'auto',
+                justifyContent: 'center',
+              }}
+            >
+              {item.icon}
+            </ListItemIcon>
+            <ListItemText 
+              primary={item.title} 
+              sx={{ 
+                opacity: open ? 1 : 0,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }} 
+            />
+          </ListItemButton>
+        </ListItem>
       );
     });
   };
@@ -237,6 +306,46 @@ const CustomSidebar: React.FC<SidebarProps> = ({
             }}
           >
             {title}
+          </Typography>
+        )}
+      </Box>
+      
+      {/* File Upload Button */}
+      <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
+        <input
+          type="file"
+          id="excel-upload"
+          accept=".xlsx, .xls"
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+        />
+        <label htmlFor="excel-upload" style={{ width: '100%' }}>
+          <Button
+            variant="contained"
+            component="span"
+            fullWidth
+            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <UploadFileIcon />}
+            disabled={loading}
+          >
+            {open ? (loading ? 'Processing...' : 'Upload Excel') : ''}
+          </Button>
+        </label>
+        
+        {/* Show file name if a file is selected and drawer is open */}
+        {fileName && open && (
+          <Typography 
+            variant="caption" 
+            component="div" 
+            sx={{ 
+              mt: 1, 
+              textAlign: 'center', 
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: '100%'
+            }}
+          >
+            {fileName}
           </Typography>
         )}
       </Box>
