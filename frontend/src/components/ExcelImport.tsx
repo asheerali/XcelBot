@@ -437,7 +437,7 @@ export function ExcelImport() {
     {/* Top row with file selection, view toggle, and upload buttons */}
     <Grid item container xs={12} spacing={2} alignItems="center">
       {/* File Upload Section */}
-      <Grid item xs={12} sm={4}>
+      {/* <Grid item xs={12} sm={4}>
         <input
           type="file"
           id="excel-upload"
@@ -455,7 +455,7 @@ export function ExcelImport() {
           </Button>
         </label>
       </Grid>
-      
+       */}
       {/* View Mode Button */}
       <Grid item xs={12} sm={4}>
         <Button
