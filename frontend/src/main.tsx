@@ -14,6 +14,7 @@ import { Faq } from './pages/Faq';
 import { ContactUs } from './pages/ContactUs';
 import { ContactTeam } from './pages/ContactTeam';
 import PaymentPage from './pages/PaymentPage';
+import UserPermissions from './pages/UserPermissions';
 const router = createBrowserRouter([
   {
     Component: App,
@@ -55,6 +56,11 @@ const router = createBrowserRouter([
           {
             path: 'Payments',
             Component: PaymentPage,
+         
+          },
+          {
+            path: 'UserPermissions',
+            Component: UserPermissions,
          
           },
          

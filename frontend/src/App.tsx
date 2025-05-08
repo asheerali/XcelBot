@@ -15,6 +15,7 @@ import * as productService from "./services/productService";
 import * as customerService from "./services/customerService";
 import * as orderService from "./services/orderService";
 import { HelpCenter } from "./pages/HelpCenter";
+
 const NAVIGATION: Navigation = [
   {
     title: "Dashboard",
@@ -37,35 +38,21 @@ const NAVIGATION: Navigation = [
     title: "HelpCenter",
     segment: "HelpCenter",
     icon: <NewspaperIcon />,
-  },{
+  }, 
+  {
     title: "Payments",
     segment: "Payments",
     icon: <NewspaperIcon />,
   },
+  {
+    title: "User Permissions",
+    segment: "UserPermissions",
+    icon: <NewspaperIcon />,
+  },
+  
 
 
-  // {
-  //   title: "Advance",
-  //   icon: <ShoppingCartIcon />,
-  //   children: [
-  //     {
-  //       segment: "blogs",
-  //       title: "Permissions",
-  //       icon: <NewspaperIcon />,
-  //     },
 
-  //     {
-  //       segment: "agents",
-  //       title: "Roles and Hierarchies",
-  //       icon: <PeopleAltIcon />,
-  //     },
-  //     {
-  //       segment: "Action Plan Settings",
-  //       title: "Contacts",
-  //       icon: <ContactsIcon />,
-  //     },
-  //   ],
-  // },
 
 ];
 const logo = <img  className="logo" alt="" />;
