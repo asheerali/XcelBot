@@ -475,106 +475,82 @@ const handleUpload = async () => {
 
       {/* Excel Upload Card */}
       <Card sx={{ p: 3, mb: 4 }}>
-        <Grid container spacing={2}>
-          {/* Top row with file selection, view toggle, and upload buttons */}
-          <Grid item container xs={12} spacing={2} alignItems="center">
-            {/* File Upload Section */}
-            <Grid item xs={12} sm={4}>
-              <input
-                type="file"
-                id="excel-upload"
-                accept=".xlsx, .xls"
-                style={{ display: 'none' }}
-                onChange={handleFileChange}
-              />
-              <label htmlFor="excel-upload" style={{ width: '100%' }}>
-                <Button
-                  variant="contained"
-                  component="span"
-                  fullWidth
-                >
-                  Choose Excel File
-                </Button>
-              </label>
-            </Grid>
-            
-            {/* View Mode Button */}
-            <Grid item xs={12} sm={4}>
-              <Button
-                variant="outlined"
-                color="primary"
-                onClick={toggleViewMode}
-                fullWidth
-                disabled={reduxLoading}
-              >
-                {viewMode === 'tabs' ? 'View Stacked' : 
-                 viewMode === 'combined' ? 'View Side-by-Side' : 'View Tabbed'}
-              </Button>
-            </Grid>
-            
-            {/* Upload Button */}
-            <Grid item xs={12} sm={4}>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleUpload}
-                disabled={!file || reduxLoading}
-                fullWidth
-              >
-                {reduxLoading ? <CircularProgress size={24} /> : 'Upload & Process'}
-              </Button>
-            </Grid>
-          </Grid>
-          
-          {/* File name display */}
-          {fileName && (
-            <Grid item xs={12}>
-              <Typography variant="body2">
-                Selected file: {fileName}
-              </Typography>
-            </Grid>
-          )}
-          
-          {/* Second row with filters */}
-          <Grid item xs={12} sx={{ mt: 1 }}>
-            <FilterSection 
-              dateRangeType={dateRangeType}
-              availableDateRanges={availableDateRanges}
-              onDateRangeChange={handleDateRangeChange}
-              customDateRange={customDateRange}
-              startDate={startDate}
-              endDate={endDate}
-              onStartDateChange={handleStartDateChange}
-              onEndDateChange={handleEndDateChange}
-              locations={reduxTableData.locations}
-              selectedLocation={selectedLocation}
-              onLocationChange={handleLocationChange}
-              onApplyFilters={() => handleApplyFilters()}
-            />
-          </Grid>
-          
-          {/* Charts Toggle Button */}
-          {fileProcessed && (
-            <Grid item xs={12} sm={4} sx={{ mt: 2 }}>
-              <Button
-                variant="outlined"
-                color="secondary"
-                onClick={toggleChartsView}
-                fullWidth
-              >
-                {showCharts ? 'Hide Charts' : 'Show Charts'}
-              </Button>
-            </Grid>
-          )}
-        </Grid>
-        
-        {/* Error Alert */}
-        {(error || reduxError) && (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {error || reduxError}
-          </Alert>
+  <Grid container spacing={2}>
+    {/* File name display */}
+    {fileName && (
+      <Grid item xs={12}>
+        <Typography variant="body2">
+          Selected file: {fileName}
+        </Typography>
+      </Grid>
+    )}
+    
+    {/* Filter section */}
+    <Grid item xs={12} sx={{ mt: 1 }}>
+      <FilterSection 
+        dateRangeType={dateRangeType}
+        availableDateRanges={availableDateRanges}
+        onDateRangeChange={handleDateRangeChange}
+        customDateRange={customDateRange}
+        startDate={startDate}
+        endDate={endDate}
+        onStartDateChange={handleStartDateChange}
+        onEndDateChange={handleEndDateChange}
+        locations={reduxTableData.locations}
+        selectedLocation={selectedLocation}
+        onLocationChange={handleLocationChange}
+        onApplyFilters={() => handleApplyFilters()}
+      />
+    </Grid>
+    
+    {/* Buttons Row */}
+    <Grid item container xs={12} spacing={2} sx={{ mt: 1 }}>
+      {/* View mode toggle button */}
+      <Grid item xs={12} sm={6}>
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={toggleViewMode}
+          fullWidth
+          disabled={reduxLoading}
+        >
+          {viewMode === 'tabs' ? 'View Stacked' : 
+           viewMode === 'combined' ? 'View Side-by-Side' : 'View Tabbed'}
+        </Button>
+      </Grid>
+      
+      {/* Charts Toggle Button - conditionally rendered but keeps layout */}
+      <Grid item xs={12} sm={6}>
+        {fileProcessed ? (
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={toggleChartsView}
+            fullWidth
+          >
+            {showCharts ? 'Hide Charts' : 'Show Charts'}
+          </Button>
+        ) : (
+          <Button
+            variant="outlined"
+            color="secondary"
+            disabled
+            fullWidth
+          >
+            Show Charts
+          </Button>
         )}
-      </Card>
+      </Grid>
+    </Grid>
+  </Grid>
+  
+  {/* Error Alert */}
+  {(error || reduxError) && (
+    <Alert severity="error" sx={{ mt: 2 }}>
+      {error || reduxError}
+    </Alert>
+  )}
+</Card>
 
       {/* CHART COMPONENT WITH FIXED DISPLAY PERSISTENCE */}
       {fileProcessed && showCharts && (

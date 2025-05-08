@@ -1,55 +1,22 @@
+// App.tsx
 import * as React from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { AppProvider } from "@toolpad/core/react-router-dom";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
-import { CssBaseline } from "@mui/material";
-import logoMidPng from "./assets/it-logo-mid.png";
-import { Session, type Navigation } from "@toolpad/core/AppProvider";
+import { CssBaseline, Box } from "@mui/material";
+import logoMidPng from "./assets/icon/IG_logo.svg" // Adjust the path as necessary
+import { Session } from "@toolpad/core/AppProvider"; // Keep this for Session type
 import { SessionContext } from "./SessionContext";
 import * as agentService from "./services/agentService";
 import * as productService from "./services/productService";
 import * as customerService from "./services/customerService";
 import * as orderService from "./services/orderService";
 
-// Keep your existing navigation items
-const NAVIGATION: Navigation = [
-  {
-    title: "Dashboard",
-    segment: "manage-reports",
-    icon: <ShoppingCartIcon />,
-  },
-  {
-    title: "Dashboard 2",
-    segment: "manage-reports",
-    icon: <NewspaperIcon />,
-  },
-  {
-    title: "dashboard 3",
-    segment: "manage-reports",
-    icon: <NewspaperIcon />,
-  },
-  {
-    title: "HelpCenter",
-    segment: "HelpCenter",
-    icon: <NewspaperIcon />,
-  },
-  {
-    title: "Payments",
-    segment: "Payments",
-    icon: <NewspaperIcon />,
-  },
-  {
-    title: "User Permissions",
-    segment: "UserPermissions",
-    icon: <NewspaperIcon />,
-  },
-];
+// Import CustomSidebar
+import CustomSidebar from "./components/CustomSidebar";
 
-const logo = <img className="logo" alt="" />;
-const BRANDING = {
-  title: "Audit IQ",
-  logo,
-};
+// Import your specific icons - kept for reference only
+import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+import NewspaperIcon from "@mui/icons-material/Newspaper";
 
 // Create a material UI theme
 const muiTheme = createTheme({
@@ -134,32 +101,14 @@ const muiTheme = createTheme({
   spacing: 8,
 });
 
-// Create the toolpad theme 
-const toolpadTheme = createTheme({
-  cssVariables: {
-    colorSchemeSelector: "data-toolpad-color-scheme",
-  },
-  colorSchemes: { light: true, dark: true },
-  breakpoints: {
-    values: {
-      xs: 0,
-      sm: 600,
-      md: 600,
-      lg: 1408,
-      xl: 1530,
-    },
-  },
-});
-
-// Import your specific icons
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import NewspaperIcon from "@mui/icons-material/Newspaper";
-
 // Initialize services
 agentService.init();
 customerService.init();
 productService.init();
 orderService.init();
+
+// Create a logo component
+const Logo = () => <img src={logoMidPng} alt="Logo" height="30" />;
 
 export default function App() {
   const [session, setSession] = React.useState<Session | null>(null);
@@ -181,19 +130,28 @@ export default function App() {
 
   return (
     <SessionContext.Provider value={sessionContextValue}>
-      {/* Provide the MUI theme first for all your chart components */}
       <ThemeProvider theme={muiTheme}>
         <CssBaseline />
-        {/* Then wrap your AppProvider with the theme it needs */}
-        <AppProvider
-          theme={toolpadTheme}
-          navigation={NAVIGATION}
-          branding={BRANDING}
-          session={session}
-          authentication={{ signIn, signOut }}
-        >
-          <Outlet />
-        </AppProvider>
+        <Box sx={{ display: 'flex', height: '100vh' }}>
+          {/* Use your CustomSidebar here */}
+          <CustomSidebar
+            logo={<Logo />}
+            title="Audit IQ"
+            onSignOut={signOut}
+          />
+          
+          {/* Main content area */}
+          <Box 
+            component="main" 
+            sx={{ 
+              flexGrow: 1, 
+              p: 3,
+              overflow: 'auto'
+            }}
+          >
+            <Outlet />
+          </Box>
+        </Box>
       </ThemeProvider>
     </SessionContext.Provider>
   );

@@ -1,25 +1,19 @@
-import * as React from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { DashboardLayout } from '@toolpad/core/DashboardLayout';
-import { PageContainer } from '@toolpad/core/PageContainer';
-import { AccountPopover } from './components/AccountPopover';
-import { varAlpha } from '../theme/styles';
-import { lightPalette as palette } from '../theme/core/palette';
+// layouts/Dashboard.tsx
+import React from 'react';
+import { Outlet } from 'react-router-dom';
+import { Box, Container } from '@mui/material';
 
-export default function Layout() {
-  // const { session , setSession} = useSession() as TODO;
-  // const location = useLocation() as TODO;
+// If you need any dashboard-specific layout components (like a header), add them here
 
+const Dashboard: React.FC = () => {
   return (
-    <DashboardLayout sx={{ backgroundColor: varAlpha(palette.grey['500Channel'], 0.08) }}
-      slots={{
-        toolbarAccount: AccountPopover
-      } as TODO}
-    >
-      <PageContainer title="" breadcrumbs={[]} >
+    <Container maxWidth="xl" sx={{ mt: 2 }}>
+      {/* If you want any dashboard-specific content, add it here */}
+      <Box sx={{ py: 2 }}>
         <Outlet />
-       
-      </PageContainer>
-    </DashboardLayout>
+      </Box>
+    </Container>
   );
-}
+};
+
+export default Dashboard;
