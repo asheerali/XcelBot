@@ -15,7 +15,7 @@ public
 /build
 /dist
 *.png
-
+.vite
 # misc
 .DS_Store
 .env.local
