@@ -42,7 +42,7 @@ COPY . ./
 VOLUME /app
 
 # ✅ Expose the port React dev server runs on
-EXPOSE 3000
+EXPOSE 5174
 
 # ✅ Start the app using the npm script
 CMD ["npm", "start"]
