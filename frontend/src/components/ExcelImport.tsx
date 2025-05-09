@@ -565,7 +565,7 @@ export function ExcelImport() {
               style={{ display: 'none' }}
               onChange={handleFileChange}
             />
-            <label htmlFor="excel-upload">
+            {/* <label htmlFor="excel-upload">
               <Button
                 variant="contained"
                 component="span"
@@ -574,7 +574,7 @@ export function ExcelImport() {
               >
                 {reduxLoading ? <CircularProgress size={24} /> : 'Choose Excel File'}
               </Button>
-            </label>
+            </label> */}
             {fileName && (
               <Typography variant="body2" sx={{ mt: 1 }}>
                 Selected file: {fileName}

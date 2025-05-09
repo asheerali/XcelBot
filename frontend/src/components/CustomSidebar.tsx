@@ -33,10 +33,6 @@ import PaymentIcon from '@mui/icons-material/Payment';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import BarChartIcon from '@mui/icons-material/BarChart';
-import DescriptionIcon from '@mui/icons-material/Description';
-
-// Import Redux hooks
-import { useAppSelector } from '../typedHooks';
 
 const drawerWidth = 260;
 
@@ -65,11 +61,8 @@ const CustomSidebar: React.FC<SidebarProps> = ({
   
   const [open, setOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
-  
-  // Get state from Redux
-  const { fileName } = useAppSelector((state) => state.excel);
 
-  // Define sidebar navigation based on your existing items
+  // Define sidebar navigation - reordered with Help Center at the end and Payments second to last
   const navItems: NavItem[] = [
     {
       title: 'Upload Excel',
@@ -77,19 +70,29 @@ const CustomSidebar: React.FC<SidebarProps> = ({
       icon: <UploadFileIcon />
     },
     {
-      title: 'Dashboard',
+      title: 'Sales Split',
       path: '/manage-reports',
       icon: <BarChartIcon />
     },
     {
-      title: 'Dashboard 3',
-      path: '/dashboard3',
+      title: 'Financial Dashboard',
+      path: '/Financial',
       icon: <NewspaperIcon />
     },
     {
-      title: 'Help Center',
-      path: '/HelpCenter',
-      icon: <HelpIcon />
+      title: 'Sales Wide',
+      path: '/Saleswide',
+      icon: <NewspaperIcon />
+    },
+    {
+      title: 'Product Mix',
+      path: '/Productmix',
+      icon: <NewspaperIcon />
+    },
+    {
+      title: 'User Permissions',
+      path: '/UserPermissions',
+      icon: <AdminPanelSettingsIcon />
     },
     {
       title: 'Payments',
@@ -97,9 +100,9 @@ const CustomSidebar: React.FC<SidebarProps> = ({
       icon: <PaymentIcon />
     },
     {
-      title: 'User Permissions',
-      path: '/UserPermissions',
-      icon: <AdminPanelSettingsIcon />
+      title: 'Help Center',
+      path: '/HelpCenter',
+      icon: <HelpIcon />
     }
   ];
 
@@ -209,58 +212,6 @@ const CustomSidebar: React.FC<SidebarProps> = ({
     });
   };
 
-  // Create active file component with conditional rendering based on drawer state
-  const ActiveFileComponent = () => {
-    if (!fileName || !open) return null;
-    
-    return (
-      <Box sx={{ 
-        p: 2, 
-        borderBottom: `1px solid ${alpha(theme.palette.divider, 0.7)}`,
-        backgroundColor: alpha(theme.palette.primary.light, 0.05),
-        boxShadow: `inset 0 -1px 3px ${alpha(theme.palette.common.black, 0.05)}`,
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 1
-      }}>
-        <DescriptionIcon 
-          fontSize="small" 
-          color="primary" 
-          sx={{ mt: 0.5 }}
-        />
-        <Box>
-          <Typography 
-            variant="subtitle2" 
-            sx={{ 
-              color: alpha(theme.palette.text.primary, 0.8),
-              fontSize: '0.75rem',
-              lineHeight: 1
-            }}
-          >
-            Active File:
-          </Typography>
-          <Tooltip title={fileName} placement="top" arrow>
-            <Typography
-              variant="body2"
-              component="div"
-              sx={{
-                maxWidth: '100%',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                fontWeight: 500,
-                color: theme.palette.primary.main,
-                fontSize: '0.85rem'
-              }}
-            >
-              {fileName}
-            </Typography>
-          </Tooltip>
-        </Box>
-      </Box>
-    );
-  };
-
   const drawer = (
     <>
       <Box
@@ -322,9 +273,6 @@ const CustomSidebar: React.FC<SidebarProps> = ({
           </Box>
         )}
       </Box>
-      
-      {/* Active File component (only shows when sidebar is open) */}
-      <ActiveFileComponent />
       
       <List sx={{ p: 1, mt: 1 }}>
         {renderNavItems(navItems)}

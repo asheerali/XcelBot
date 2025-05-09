@@ -1,12 +1,12 @@
 // src/pages/ExcelUploadPage.tsx
 import React, { useState, useCallback, useRef } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Card, 
-  CardContent, 
-  Button, 
-  Grid, 
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Button,
+  Grid,
   CircularProgress,
   Alert,
   Paper,
@@ -23,12 +23,15 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  FormHelperText
+  FormHelperText,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-
 // Icons
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
@@ -39,13 +42,11 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import FileOpenIcon from '@mui/icons-material/FileOpen';
 import EditIcon from '@mui/icons-material/Edit';
 import PlaceIcon from '@mui/icons-material/Place';
-
+import DashboardIcon from '@mui/icons-material/Dashboard';
 // Import Redux hooks
 import { useAppDispatch } from '../typedHooks';
-
 // API URL for Excel upload
 const API_URL = 'http://localhost:8000/api/excel/upload';
-
 // Styled component for the drop zone
 const DropZone = styled(Paper)(({ theme }) => ({
   border: `2px dashed ${theme.palette.primary.main}`,
@@ -64,16 +65,32 @@ const DropZone = styled(Paper)(({ theme }) => ({
   },
 }));
 
+// Dashboard label style
+const DashboardLabel = styled(Typography)(({ theme }) => ({
+  fontWeight: 500,
+  marginRight: theme.spacing(1),
+  display: 'flex',
+  alignItems: 'center',
+}));
+
+// Dashboard options
+const DASHBOARD_OPTIONS = [
+  'Sales Split',
+  'Financial Dashboard',
+  'Sales Wide',
+  'Product Mix'
+];
+
 // File status type
 type FileStatus = 'pending' | 'uploading' | 'success' | 'error';
-
-// File info type with location
+// File info type with location and dashboard
 interface FileInfo {
   file: File;
   status: FileStatus;
   error?: string;
   progress: number;
   location: string;
+  dashboard: string; // Added dashboard field
   data?: any; // To store the processed data
 }
 
@@ -85,6 +102,7 @@ const ExcelUploadPage: React.FC = () => {
   const [currentEditingIndex, setCurrentEditingIndex] = useState<number | null>(null);
   const [locationInput, setLocationInput] = useState('');
   const [locationError, setLocationError] = useState('');
+  const [selectedDashboard, setSelectedDashboard] = useState('Sales Split'); // Global dashboard selection
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const navigate = useNavigate();
@@ -106,12 +124,13 @@ const ExcelUploadPage: React.FC = () => {
         return;
       }
       
-      // Add the Excel files to our state
+      // Add the Excel files to our state with current selected dashboard
       const newFiles = excelFiles.map(file => ({
         file,
         status: 'pending' as FileStatus,
         progress: 0,
         location: '', // Empty location initially
+        dashboard: selectedDashboard, // Use the global dashboard selection
       }));
       
       setFiles(prevFiles => [...prevFiles, ...newFiles]);
@@ -152,12 +171,13 @@ const ExcelUploadPage: React.FC = () => {
         return;
       }
       
-      // Add the Excel files to our state
+      // Add the Excel files to our state with current selected dashboard
       const newFiles = excelFiles.map(file => ({
         file,
         status: 'pending' as FileStatus,
         progress: 0,
         location: '', // Empty location initially
+        dashboard: selectedDashboard, // Use the global dashboard selection
       }));
       
       setFiles(prevFiles => [...prevFiles, ...newFiles]);
@@ -177,6 +197,20 @@ const ExcelUploadPage: React.FC = () => {
       }
     }
   }, [files.length]);
+  
+  // Handle global dashboard change
+  const handleDashboardChange = (value: string) => {
+    setSelectedDashboard(value);
+    
+    // Update all pending files to use the new dashboard
+    setFiles(prevFiles => 
+      prevFiles.map(file => 
+        file.status === 'pending' 
+          ? { ...file, dashboard: value } 
+          : file
+      )
+    );
+  };
   
   // Function to convert file to base64
   const toBase64 = (file: File): Promise<string> => {
@@ -227,7 +261,8 @@ const ExcelUploadPage: React.FC = () => {
         payload: {
           fileName: fileInfo.file.name,
           fileContent: base64Content,
-          location: fileInfo.location // Add location to redux state
+          location: fileInfo.location, // Add location to redux state
+          dashboard: fileInfo.dashboard // Add dashboard to redux state
         }
       });
       
@@ -249,11 +284,12 @@ const ExcelUploadPage: React.FC = () => {
         }
       }, 300);
       
-      // Send to backend with location parameter
+      // Send to backend with location and dashboard parameters
       const response = await axios.post(API_URL, {
         fileName: fileInfo.file.name,
         fileContent: base64Content,
-        location: fileInfo.location
+        location: fileInfo.location,
+        dashboard: fileInfo.dashboard
       });
       
       // Clear the progress interval
@@ -266,6 +302,7 @@ const ExcelUploadPage: React.FC = () => {
           payload: {
             fileName: fileInfo.file.name,
             location: fileInfo.location,
+            dashboard: fileInfo.dashboard,
             data: response.data
           }
         });
@@ -347,15 +384,20 @@ const ExcelUploadPage: React.FC = () => {
       }
     }
     
-    // Store all locations in Redux
-    const successfulLocations = files
+    // Store all locations and dashboards in Redux
+    const successfulFiles = files
       .filter(f => f.status === 'success')
-      .map(f => f.location);
+      .map(f => ({ location: f.location, dashboard: f.dashboard }));
     
-    if (successfulLocations.length > 0) {
+    if (successfulFiles.length > 0) {
       dispatch({
         type: 'excel/setLocations',
-        payload: successfulLocations
+        payload: successfulFiles.map(f => f.location)
+      });
+      
+      dispatch({
+        type: 'excel/setDashboards',
+        payload: successfulFiles
       });
     }
     
@@ -372,15 +414,20 @@ const ExcelUploadPage: React.FC = () => {
   
   // View file analysis (navigate to analysis page)
   const viewAnalysis = () => {
-    // Store all locations in Redux before navigating
-    const successfulLocations = files
+    // Store all locations and dashboards in Redux before navigating
+    const successfulFiles = files
       .filter(f => f.status === 'success')
-      .map(f => f.location);
+      .map(f => ({ location: f.location, dashboard: f.dashboard }));
     
-    if (successfulLocations.length > 0) {
+    if (successfulFiles.length > 0) {
       dispatch({
         type: 'excel/setLocations',
-        payload: successfulLocations
+        payload: successfulFiles.map(f => f.location)
+      });
+      
+      dispatch({
+        type: 'excel/setDashboards',
+        payload: successfulFiles
       });
     }
     
@@ -454,7 +501,8 @@ const ExcelUploadPage: React.FC = () => {
         Excel File Upload
       </Typography>
       <Typography variant="subtitle1" color="text.secondary" paragraph>
-        Upload Excel files (.xlsx or .xls), with each file representing a single location
+        Upload Excel files (.xlsx or .xls), with each file representing a single location. 
+        All files will be processed for the selected dashboard.
       </Typography>
       
       <Grid container spacing={3}>
@@ -506,9 +554,31 @@ const ExcelUploadPage: React.FC = () => {
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h6">
-                    Selected Files
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography variant="h6" sx={{ mr: 2 }}>
+                      Selected Files
+                    </Typography>
+                    
+                    {/* Global dashboard selection dropdown */}
+                    <FormControl size="small" sx={{ minWidth: 200 }}>
+                      <InputLabel id="global-dashboard-select">Dashboard</InputLabel>
+                      <Select
+                        labelId="global-dashboard-select"
+                        value={selectedDashboard}
+                        label="Dashboard"
+                        onChange={(e) => handleDashboardChange(e.target.value)}
+                        startAdornment={<DashboardIcon sx={{ mr: 1, ml: -0.5 }} />}
+                      >
+                        {DASHBOARD_OPTIONS.map(option => (
+                          <MenuItem key={option} value={option}>
+                            {option}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                      <FormHelperText>Select dashboard for all files</FormHelperText>
+                    </FormControl>
+                  </Box>
+                  
                   <Box>
                     {pendingCount > 0 && (
                       <Button 
@@ -580,7 +650,7 @@ const ExcelUploadPage: React.FC = () => {
                 
                 <Divider sx={{ mb: 2 }} />
                 
-                {/* File list */}
+                {/* File list with dashboard dropdown */}
                 <List>
                   {files.map((fileInfo, index) => (
                     <React.Fragment key={`${fileInfo.file.name}-${index}`}>
@@ -621,18 +691,33 @@ const ExcelUploadPage: React.FC = () => {
                           )}
                         </ListItemIcon>
                         <ListItemText 
-                          primary={<>
-                            {fileInfo.file.name}
-                            {fileInfo.location && (
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                              <Typography component="span" sx={{ mr: 1 }}>
+                                {fileInfo.file.name}
+                              </Typography>
+                              {fileInfo.location && (
+                                <Chip 
+                                  label={fileInfo.location} 
+                                  size="small" 
+                                  color="primary"
+                                  icon={<PlaceIcon />}
+                                  sx={{ fontSize: '0.75rem' }}
+                                />
+                              )}
+                              
+
+                              
+                              {/* Dashboard chip for all files */}
                               <Chip 
-                                label={fileInfo.location} 
+                                label={fileInfo.dashboard} 
                                 size="small" 
-                                color="primary"
-                                icon={<PlaceIcon />}
-                                sx={{ ml: 1, fontSize: '0.75rem' }}
+                                color="secondary"
+                                icon={<DashboardIcon />}
+                                sx={{ fontSize: '0.75rem' }}
                               />
-                            )}
-                          </>}
+                            </Box>
+                          }
                           secondary={
                             fileInfo.status === 'error' ? fileInfo.error : 
                             fileInfo.status === 'uploading' ? `Uploading... ${fileInfo.progress}%` :

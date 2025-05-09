@@ -10,6 +10,7 @@ interface TableData {
   table5: any[];
   locations: string[];
   dateRanges: string[];
+  fileLocation?: string;
 }
 
 interface FileData {
@@ -72,6 +73,11 @@ export const excelSlice = createSlice({
     setTableData: (state, action: PayloadAction<TableData>) => {
       state.tableData = action.payload;
       state.fileProcessed = true;
+      
+      // Update location from fileLocation if present
+      if (action.payload.fileLocation) {
+        state.location = action.payload.fileLocation;
+      }
     },
     addFileData: (state, action: PayloadAction<{fileName: string; location: string; data: TableData}>) => {
       // Check if file already exists
@@ -101,7 +107,8 @@ export const excelSlice = createSlice({
     },
     setLocations: (state, action: PayloadAction<string[]>) => {
       // Set all locations (without duplicates)
-      state.allLocations = [...new Set([...state.allLocations, ...action.payload])];
+      const newLocations = action.payload.filter(loc => loc && loc.trim() !== '');
+      state.allLocations = [...new Set([...state.allLocations, ...newLocations])];
     },
     selectLocation: (state, action: PayloadAction<string>) => {
       const location = action.payload;
@@ -115,17 +122,8 @@ export const excelSlice = createSlice({
         state.fileName = fileData.fileName;
         state.fileProcessed = true;
       } else {
-        // Clear the table data if no matching file found
-        state.tableData = {
-          table1: [],
-          table2: [],
-          table3: [],
-          table4: [],
-          table5: [],
-          locations: [],
-          dateRanges: []
-        };
-        state.fileProcessed = false;
+        // Don't clear the table data if no matching file found
+        // This allows for filter operations on the existing data
       }
     },
     resetExcelData: (state) => {
