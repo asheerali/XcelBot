@@ -1,5 +1,5 @@
 // src/pages/ExcelUploadPage.tsx
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { 
   Box, 
   Typography, 
@@ -17,7 +17,13 @@ import {
   IconButton,
   Divider,
   Tooltip,
-  Chip
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormHelperText
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
@@ -31,6 +37,8 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FileOpenIcon from '@mui/icons-material/FileOpen';
+import EditIcon from '@mui/icons-material/Edit';
+import PlaceIcon from '@mui/icons-material/Place';
 
 // Import Redux hooks
 import { useAppDispatch } from '../typedHooks';
@@ -59,18 +67,26 @@ const DropZone = styled(Paper)(({ theme }) => ({
 // File status type
 type FileStatus = 'pending' | 'uploading' | 'success' | 'error';
 
-// File info type
+// File info type with location
 interface FileInfo {
   file: File;
   status: FileStatus;
   error?: string;
   progress: number;
+  location: string;
+  data?: any; // To store the processed data
 }
 
 const ExcelUploadPage: React.FC = () => {
   const [files, setFiles] = useState<FileInfo[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
+  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
+  const [currentEditingIndex, setCurrentEditingIndex] = useState<number | null>(null);
+  const [locationInput, setLocationInput] = useState('');
+  const [locationError, setLocationError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   
@@ -94,13 +110,22 @@ const ExcelUploadPage: React.FC = () => {
       const newFiles = excelFiles.map(file => ({
         file,
         status: 'pending' as FileStatus,
-        progress: 0
+        progress: 0,
+        location: '', // Empty location initially
       }));
       
       setFiles(prevFiles => [...prevFiles, ...newFiles]);
       setGeneralError(null);
+      
+      // Open the location dialog for the first file
+      if (newFiles.length > 0) {
+        setCurrentEditingIndex(prevFiles.length);
+        setLocationInput('');
+        setLocationError('');
+        setIsLocationDialogOpen(true);
+      }
     }
-  }, []);
+  }, [files.length]);
   
   // Handle drag over event
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -131,13 +156,27 @@ const ExcelUploadPage: React.FC = () => {
       const newFiles = excelFiles.map(file => ({
         file,
         status: 'pending' as FileStatus,
-        progress: 0
+        progress: 0,
+        location: '', // Empty location initially
       }));
       
       setFiles(prevFiles => [...prevFiles, ...newFiles]);
       setGeneralError(null);
+      
+      // Open the location dialog for the first file
+      if (newFiles.length > 0) {
+        setCurrentEditingIndex(files.length);
+        setLocationInput('');
+        setLocationError('');
+        setIsLocationDialogOpen(true);
+      }
+      
+      // Clear the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
-  }, []);
+  }, [files.length]);
   
   // Function to convert file to base64
   const toBase64 = (file: File): Promise<string> => {
@@ -151,6 +190,21 @@ const ExcelUploadPage: React.FC = () => {
   
   // Upload a single file
   const uploadFile = async (fileInfo: FileInfo, index: number) => {
+    if (!fileInfo.location.trim()) {
+      // Don't upload files without a location
+      setFiles(prevFiles => {
+        const updatedFiles = [...prevFiles];
+        updatedFiles[index] = {
+          ...updatedFiles[index],
+          status: 'error',
+          error: 'Location is required',
+          progress: 0
+        };
+        return updatedFiles;
+      });
+      return false;
+    }
+    
     try {
       // Update status to uploading
       setFiles(prevFiles => {
@@ -172,7 +226,8 @@ const ExcelUploadPage: React.FC = () => {
         type: 'excel/setExcelFile', 
         payload: {
           fileName: fileInfo.file.name,
-          fileContent: base64Content
+          fileContent: base64Content,
+          location: fileInfo.location // Add location to redux state
         }
       });
       
@@ -194,10 +249,11 @@ const ExcelUploadPage: React.FC = () => {
         }
       }, 300);
       
-      // Send to backend
+      // Send to backend with location parameter
       const response = await axios.post(API_URL, {
         fileName: fileInfo.file.name,
-        fileContent: base64Content
+        fileContent: base64Content,
+        location: fileInfo.location
       });
       
       // Clear the progress interval
@@ -205,15 +261,23 @@ const ExcelUploadPage: React.FC = () => {
       
       // Update Redux with the response data
       if (response.data) {
-        dispatch({ type: 'excel/setTableData', payload: response.data });
+        dispatch({ 
+          type: 'excel/addFileData', 
+          payload: {
+            fileName: fileInfo.file.name,
+            location: fileInfo.location,
+            data: response.data
+          }
+        });
         
-        // Update file status to success
+        // Update file status to success and store data
         setFiles(prevFiles => {
           const updatedFiles = [...prevFiles];
           updatedFiles[index] = {
             ...updatedFiles[index],
             status: 'success',
-            progress: 100
+            progress: 100,
+            data: response.data
           };
           return updatedFiles;
         });
@@ -259,6 +323,13 @@ const ExcelUploadPage: React.FC = () => {
   const uploadAllFiles = async () => {
     setGeneralError(null);
     
+    // Check if all files have locations
+    const filesWithoutLocation = files.filter(f => f.status === 'pending' && !f.location.trim());
+    if (filesWithoutLocation.length > 0) {
+      setGeneralError('All files must have a location name before uploading');
+      return;
+    }
+    
     const pendingFiles = files.filter(f => f.status === 'pending');
     if (pendingFiles.length === 0) {
       setGeneralError('No files to upload');
@@ -276,6 +347,18 @@ const ExcelUploadPage: React.FC = () => {
       }
     }
     
+    // Store all locations in Redux
+    const successfulLocations = files
+      .filter(f => f.status === 'success')
+      .map(f => f.location);
+    
+    if (successfulLocations.length > 0) {
+      dispatch({
+        type: 'excel/setLocations',
+        payload: successfulLocations
+      });
+    }
+    
     // Navigate to the analysis page if at least one file was successfully uploaded
     if (successCount > 0) {
       navigate('/manage-reports');
@@ -289,7 +372,71 @@ const ExcelUploadPage: React.FC = () => {
   
   // View file analysis (navigate to analysis page)
   const viewAnalysis = () => {
+    // Store all locations in Redux before navigating
+    const successfulLocations = files
+      .filter(f => f.status === 'success')
+      .map(f => f.location);
+    
+    if (successfulLocations.length > 0) {
+      dispatch({
+        type: 'excel/setLocations',
+        payload: successfulLocations
+      });
+    }
+    
     navigate('/manage-reports');
+  };
+  
+  // Open dialog to edit location
+  const editLocation = (index: number) => {
+    setCurrentEditingIndex(index);
+    setLocationInput(files[index].location);
+    setLocationError('');
+    setIsLocationDialogOpen(true);
+  };
+  
+  // Handle location dialog save
+  const handleLocationSave = () => {
+    if (!locationInput.trim()) {
+      setLocationError('Location name is required');
+      return;
+    }
+    
+    // Check for duplicate locations
+    const isDuplicate = files.some((file, index) => 
+      index !== currentEditingIndex && 
+      file.location.toLowerCase() === locationInput.trim().toLowerCase()
+    );
+    
+    if (isDuplicate) {
+      // setLocationError('Location name must be unique');
+      return;
+    }
+    
+    if (currentEditingIndex !== null) {
+      setFiles(prevFiles => {
+        const updatedFiles = [...prevFiles];
+        updatedFiles[currentEditingIndex] = {
+          ...updatedFiles[currentEditingIndex],
+          location: locationInput.trim()
+        };
+        return updatedFiles;
+      });
+      
+      setIsLocationDialogOpen(false);
+      
+      // If there are more files without locations, open the dialog for the next one
+      const nextFileIndex = files.findIndex((file, index) => 
+        index > currentEditingIndex && !file.location.trim()
+      );
+      
+      if (nextFileIndex !== -1) {
+        setCurrentEditingIndex(nextFileIndex);
+        setLocationInput('');
+        setLocationError('');
+        setIsLocationDialogOpen(true);
+      }
+    }
   };
   
   // Calculate overall status
@@ -298,13 +445,16 @@ const ExcelUploadPage: React.FC = () => {
   const errorCount = files.filter(f => f.status === 'error').length;
   const uploadingCount = files.filter(f => f.status === 'uploading').length;
   
+  // Files without locations
+  const filesWithoutLocationCount = files.filter(f => f.status === 'pending' && !f.location.trim()).length;
+  
   return (
     <Box sx={{ py: 4 }}>
       <Typography variant="h4" gutterBottom>
         Excel File Upload
       </Typography>
       <Typography variant="subtitle1" color="text.secondary" paragraph>
-        Upload Excel files (.xlsx or .xls) to analyze your data
+        Upload Excel files (.xlsx or .xls), with each file representing a single location
       </Typography>
       
       <Grid container spacing={3}>
@@ -316,6 +466,7 @@ const ExcelUploadPage: React.FC = () => {
             accept=".xlsx, .xls"
             style={{ display: 'none' }}
             onChange={handleFileChange}
+            ref={fileInputRef}
             multiple
           />
           <label htmlFor="excel-upload" style={{ width: '100%' }}>
@@ -342,6 +493,9 @@ const ExcelUploadPage: React.FC = () => {
               >
                 Browse Files
               </Button>
+              <Typography variant="caption" align="center" color="text.secondary" sx={{ mt: 2 }}>
+                Each file should represent a single location
+              </Typography>
             </DropZone>
           </label>
         </Grid>
@@ -361,7 +515,7 @@ const ExcelUploadPage: React.FC = () => {
                         variant="contained" 
                         color="primary"
                         onClick={uploadAllFiles}
-                        disabled={uploadingCount > 0}
+                        disabled={uploadingCount > 0 || filesWithoutLocationCount > 0}
                         startIcon={<FileUploadIcon />}
                         sx={{ mr: 1 }}
                       >
@@ -388,6 +542,14 @@ const ExcelUploadPage: React.FC = () => {
                       label={`Pending: ${pendingCount}`} 
                       color="default" 
                       size="small" 
+                    />
+                  )}
+                  {filesWithoutLocationCount > 0 && (
+                    <Chip 
+                      label={`Missing Location: ${filesWithoutLocationCount}`} 
+                      color="warning" 
+                      size="small" 
+                      icon={<PlaceIcon />} 
                     />
                   )}
                   {uploadingCount > 0 && (
@@ -425,9 +587,25 @@ const ExcelUploadPage: React.FC = () => {
                       <ListItem
                         secondaryAction={
                           fileInfo.status !== 'uploading' && (
-                            <IconButton edge="end" aria-label="delete" onClick={() => removeFile(index)}>
-                              <DeleteIcon />
-                            </IconButton>
+                            <>
+                              {fileInfo.status === 'pending' && (
+                                <IconButton 
+                                  edge="end" 
+                                  aria-label="edit location" 
+                                  onClick={() => editLocation(index)}
+                                  sx={{ mr: 1 }}
+                                >
+                                  <EditIcon />
+                                </IconButton>
+                              )}
+                              <IconButton 
+                                edge="end" 
+                                aria-label="delete" 
+                                onClick={() => removeFile(index)}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </>
                           )
                         }
                       >
@@ -443,11 +621,23 @@ const ExcelUploadPage: React.FC = () => {
                           )}
                         </ListItemIcon>
                         <ListItemText 
-                          primary={fileInfo.file.name} 
+                          primary={<>
+                            {fileInfo.file.name}
+                            {fileInfo.location && (
+                              <Chip 
+                                label={fileInfo.location} 
+                                size="small" 
+                                color="primary"
+                                icon={<PlaceIcon />}
+                                sx={{ ml: 1, fontSize: '0.75rem' }}
+                              />
+                            )}
+                          </>}
                           secondary={
                             fileInfo.status === 'error' ? fileInfo.error : 
                             fileInfo.status === 'uploading' ? `Uploading... ${fileInfo.progress}%` :
                             fileInfo.status === 'success' ? 'Upload complete' :
+                            !fileInfo.location ? 'Location name required' :
                             `${(fileInfo.file.size / 1024).toFixed(2)} KB`
                           }
                         />
@@ -470,6 +660,49 @@ const ExcelUploadPage: React.FC = () => {
           </Grid>
         )}
       </Grid>
+      
+      {/* Location Dialog */}
+      <Dialog 
+        open={isLocationDialogOpen} 
+        onClose={() => setIsLocationDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          Enter Location Name
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            Please enter a location name for the file: 
+            {currentEditingIndex !== null && files[currentEditingIndex] && (
+              <strong>{` ${files[currentEditingIndex].file.name}`}</strong>
+            )}
+          </Typography>
+          
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Location Name"
+            fullWidth
+            value={locationInput}
+            onChange={(e) => setLocationInput(e.target.value)}
+            error={!!locationError}
+            variant="outlined"
+            placeholder="e.g., New York, Chicago, Los Angeles"
+          />
+          {locationError && (
+            <FormHelperText error>{locationError}</FormHelperText>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsLocationDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleLocationSave} variant="contained" color="primary">
+            Save
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

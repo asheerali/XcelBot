@@ -6,12 +6,32 @@ import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
+import { SelectChangeEvent } from '@mui/material/Select';
+import { useAppDispatch, useAppSelector } from '../typedHooks';
+import { selectLocation } from '../store/excelSlice';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import PlaceIcon from '@mui/icons-material/Place';
 
 /**
  * Filter Section Component 
  * Handles date range and location filtering
  */
-const FilterSection = ({
+interface FilterSectionProps {
+  dateRangeType: string;
+  availableDateRanges: string[];
+  onDateRangeChange: (event: SelectChangeEvent) => void;
+  customDateRange: boolean;
+  startDate: string;
+  endDate: string;
+  onStartDateChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onEndDateChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  selectedLocation: string;
+  onApplyFilters: () => void;
+}
+
+const FilterSection: React.FC<FilterSectionProps> = ({
   dateRangeType,
   availableDateRanges,
   onDateRangeChange,
@@ -20,18 +40,54 @@ const FilterSection = ({
   endDate,
   onStartDateChange,
   onEndDateChange,
-  locations,
   selectedLocation,
-  onLocationChange,
   onApplyFilters
 }) => {
+  // Get all locations from Redux store
+  const dispatch = useAppDispatch();
+  const { allLocations, files } = useAppSelector((state) => state.excel);
+  
+  // Handle location change
+  const handleLocationChange = (event: SelectChangeEvent) => {
+    const newLocation = event.target.value;
+    dispatch(selectLocation(newLocation));
+    onApplyFilters(); // Apply filters after changing location
+  };
+  
   return (
     <Grid
       container
       spacing={2}
       alignItems="center"
-      wrap="nowrap"           // ← added here
+      wrap="nowrap"
     >
+      {/* Location Selector (Prioritized) */}
+      {allLocations?.length > 0 && (
+        <Grid item xs="auto">
+          <FormControl fullWidth>
+            <InputLabel id="location-select-label">Location</InputLabel>
+            <Select
+              labelId="location-select-label"
+              id="location-select"
+              value={selectedLocation}
+              label="Location"
+              onChange={handleLocationChange}
+            >
+              {allLocations.map((location) => (
+                <MenuItem key={location} value={location}>
+                  <Box display="flex" alignItems="center">
+                    <PlaceIcon fontSize="small" sx={{ mr: 1, color: 'primary.main' }} />
+                    {location}
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+            <Typography variant="caption" color="text.secondary">
+              {files.length} file(s) available
+            </Typography>
+          </FormControl>
+        </Grid>
+      )}
 
       {/* Date Range Block - hidden until ranges exist */}
       {availableDateRanges?.length > 0 && (
@@ -95,30 +151,6 @@ const FilterSection = ({
           )}
         </>
       )}
-
-      {/* Location Selector */}
-      {locations?.length > 0 && (
-        <Grid item xs="auto">
-          <FormControl fullWidth>
-            <InputLabel id="location-select-label">Location</InputLabel>
-            <Select
-              labelId="location-select-label"
-              id="location-select"
-              value={selectedLocation}
-              label="Location"
-              onChange={onLocationChange}
-            >
-              <MenuItem value="">All Locations</MenuItem>
-              {locations.map((location) => (
-                <MenuItem key={location} value={location}>
-                  {location}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Grid>
-      )}
-
     </Grid>
   );
 };

@@ -11,6 +11,11 @@ import Grid from '@mui/material/Grid';
 import Snackbar from '@mui/material/Snackbar';
 import { SelectChangeEvent } from '@mui/material/Select';
 import Divider from '@mui/material/Divider';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import TextField from '@mui/material/TextField';
 
 // Import components
 import FilterSection from './FilterSection';
@@ -30,7 +35,10 @@ import {
   setExcelFile, 
   setLoading, 
   setError, 
-  setTableData 
+  setTableData,
+  addFileData,
+  setLocations,
+  selectLocation
 } from '../store/excelSlice';
 
 // API base URLs - update to match your backend URL
@@ -48,6 +56,12 @@ interface TableData {
   [key: string]: any;
 }
 
+interface FileData {
+  fileName: string;
+  location: string;
+  data: TableData;
+}
+
 // Main Component
 export function ExcelImport() {
   // Get state from Redux
@@ -57,7 +71,9 @@ export function ExcelImport() {
     loading: reduxLoading, 
     error: reduxError, 
     tableData: reduxTableData,
-    fileProcessed
+    fileProcessed,
+    allLocations,
+    files
   } = useAppSelector((state) => state.excel);
   
   const dispatch = useAppDispatch();
@@ -69,6 +85,11 @@ export function ExcelImport() {
   const [viewMode, setViewMode] = useState<string>('tabs'); // 'tabs', 'combined', or 'row'
   const [showTutorial, setShowTutorial] = useState<boolean>(false);
   const [selectedLocation, setSelectedLocation] = useState<string>('');
+  
+  // Location dialog state
+  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState<boolean>(false);
+  const [locationInput, setLocationInput] = useState<string>('');
+  const [locationError, setLocationError] = useState<string>('');
   
   // Separate states for notification
   const [showSuccessNotification, setShowSuccessNotification] = useState<boolean>(false);
@@ -102,12 +123,13 @@ export function ExcelImport() {
         setDateRangeType(reduxTableData.dateRanges[0]);
       }
       
-      // Set location if available
-      if (reduxTableData.locations && reduxTableData.locations.length > 0 && !selectedLocation) {
-        setSelectedLocation(reduxTableData.locations[0]);
+      // Set location if available from redux state
+      if (allLocations && allLocations.length > 0 && !selectedLocation) {
+        setSelectedLocation(allLocations[0]);
+        dispatch(selectLocation(allLocations[0]));
       }
     }
-  }, [reduxTableData, dateRangeType, selectedLocation]);
+  }, [reduxTableData, dateRangeType, selectedLocation, allLocations, dispatch]);
 
   // Effect to handle custom date range selection
   useEffect(() => {
@@ -118,19 +140,13 @@ export function ExcelImport() {
     }
   }, [dateRangeType]);
 
-  // Function to toggle between view modes
-  const toggleViewMode = () => {
-    setViewMode(prevMode => {
-      if (prevMode === 'tabs') return 'combined';
-      if (prevMode === 'combined') return 'row';
-      return 'tabs';
-    });
-  };
-
   // Handle location change
   const handleLocationChange = (event: SelectChangeEvent) => {
     const newLocation = event.target.value;
     setSelectedLocation(newLocation);
+    
+    // Dispatch redux action to select location
+    dispatch(selectLocation(newLocation));
     
     // Apply filters with new location
     handleApplyFilters(newLocation, dateRangeType);
@@ -177,9 +193,20 @@ export function ExcelImport() {
         formattedEndDate = endDate;
       }
       
+      // Get the current file name for the selected location
+      let currentFileName = fileName;
+      
+      // If we have files in the redux store, find the file for this location
+      if (files && files.length > 0) {
+        const fileForLocation = files.find(f => f.location === location);
+        if (fileForLocation) {
+          currentFileName = fileForLocation.fileName;
+        }
+      }
+      
       // Prepare filter data
       const filterData = {
-        fileName: fileName,
+        fileName: currentFileName,
         fileContent: fileContent, // Include file content in case the server needs it
         startDate: formattedStartDate,
         endDate: formattedEndDate,
@@ -247,6 +274,11 @@ export function ExcelImport() {
       if (selectedFile.name.endsWith('.xlsx') || selectedFile.name.endsWith('.xls')) {
         setFile(selectedFile);
         setError('');
+        
+        // Open the location dialog
+        setLocationInput('');
+        setLocationError('');
+        setIsLocationDialogOpen(true);
       } else {
         setError('Please select an Excel file (.xlsx or .xls)');
         setFile(null);
@@ -275,9 +307,30 @@ export function ExcelImport() {
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = error => reject(error);
   });
+  
+  // Handle location dialog save
+  const handleLocationSave = () => {
+    if (!locationInput.trim()) {
+      setLocationError('Location name is required');
+      return;
+    }
+    
+    // Check for duplicate locations
+    if (allLocations && allLocations.some(loc => loc.toLowerCase() === locationInput.trim().toLowerCase())) {
+      setLocationError('Location name must be unique');
+      return;
+    }
+    
+    // Close the dialog and proceed with upload
+    setIsLocationDialogOpen(false);
+    setSelectedLocation(locationInput.trim());
+    
+    // Trigger the upload
+    handleUpload(locationInput.trim());
+  };
 
   // Upload and process file
-  const handleUpload = async () => {
+  const handleUpload = async (locationName?: string) => {
     if (!file) {
       setError('Please select a file first');
       return;
@@ -293,29 +346,53 @@ export function ExcelImport() {
       const base64File = await toBase64(file);
       const base64Content = base64File.split(',')[1]; // Remove data:application/... prefix
       
-      // Use explicit action object 
+      // Use explicit action object with location if provided
       dispatch({ 
         type: 'excel/setExcelFile', 
         payload: {
           fileName: file.name,
-          fileContent: base64Content
+          fileContent: base64Content,
+          location: locationName
         }
       });
       
       // Send to backend
       const response = await axios.post(API_URL, {
         fileName: file.name,
-        fileContent: base64Content
+        fileContent: base64Content,
+        location: locationName // Include location in the request
       });
       
       // Update table data with response
       if (response.data) {
+        // Add file data to Redux store
+        if (locationName) {
+          dispatch({ 
+            type: 'excel/addFileData', 
+            payload: {
+              fileName: file.name,
+              location: locationName,
+              data: response.data
+            }
+          });
+          
+          // Update locations in Redux store
+          dispatch({ 
+            type: 'excel/setLocations', 
+            payload: locationName ? [locationName] : response.data.locations || []
+          });
+        }
+        
         dispatch({ type: 'excel/setTableData', payload: response.data });
         setShowSuccessNotification(true);  // Show notification
         
         // Set location if available
-        if (response.data.locations && response.data.locations.length > 0) {
+        if (locationName) {
+          setSelectedLocation(locationName);
+          dispatch(selectLocation(locationName));
+        } else if (response.data.locations && response.data.locations.length > 0) {
           setSelectedLocation(response.data.locations[0]);
+          dispatch(selectLocation(response.data.locations[0]));
         }
         
         // Set date ranges if available
@@ -423,6 +500,47 @@ export function ExcelImport() {
       </Alert>
     </Snackbar>
   );
+  
+  // Location dialog
+  const renderLocationDialog = () => (
+    <Dialog
+      open={isLocationDialogOpen}
+      onClose={() => setIsLocationDialogOpen(false)}
+      aria-labelledby="location-dialog-title"
+      fullWidth
+      maxWidth="sm"
+    >
+      <DialogTitle id="location-dialog-title">
+        Enter Location Name
+      </DialogTitle>
+      <DialogContent>
+        <Typography variant="body1" paragraph>
+          Please enter a location name for this Excel file. Each file should represent data from a single location.
+        </Typography>
+        <TextField
+          autoFocus
+          margin="dense"
+          id="location"
+          label="Location Name"
+          type="text"
+          fullWidth
+          variant="outlined"
+          value={locationInput}
+          onChange={(e) => setLocationInput(e.target.value)}
+          error={!!locationError}
+          helperText={locationError}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setIsLocationDialogOpen(false)} color="inherit">
+          Cancel
+        </Button>
+        <Button onClick={handleLocationSave} color="primary" variant="contained">
+          Save
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
 
   return (
     <>
@@ -438,11 +556,39 @@ export function ExcelImport() {
       {/* Excel Upload Card */}
       <Card sx={{ p: 3, mb: 4 }}>
         <Grid container spacing={2}>
+          {/* File upload button and location dialog */}
+          <Grid item xs={12} sm={6} md={3}>
+            <input
+              type="file"
+              id="excel-upload"
+              accept=".xlsx, .xls"
+              style={{ display: 'none' }}
+              onChange={handleFileChange}
+            />
+            <label htmlFor="excel-upload">
+              <Button
+                variant="contained"
+                component="span"
+                fullWidth
+                disabled={reduxLoading}
+              >
+                {reduxLoading ? <CircularProgress size={24} /> : 'Choose Excel File'}
+              </Button>
+            </label>
+            {fileName && (
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Selected file: {fileName}
+              </Typography>
+            )}
+            {renderLocationDialog()}
+          </Grid>
+          
           {/* File name display */}
           {fileName && (
             <Grid item xs={12}>
               <Typography variant="body2">
-                Selected file: {fileName}
+                Current file: {fileName}
+                {selectedLocation && ` (Location: ${selectedLocation})`}
               </Typography>
             </Grid>
           )}
@@ -458,7 +604,7 @@ export function ExcelImport() {
               endDate={endDate}
               onStartDateChange={handleStartDateChange}
               onEndDateChange={handleEndDateChange}
-              locations={reduxTableData.locations}
+              locations={allLocations || []}
               selectedLocation={selectedLocation}
               onLocationChange={handleLocationChange}
               onApplyFilters={() => handleApplyFilters()}
@@ -485,7 +631,7 @@ export function ExcelImport() {
           }}
         >
           <Typography variant="h5" gutterBottom>
-            Sales Analytics
+            Sales Analytics {selectedLocation ? `for ${selectedLocation}` : ''}
           </Typography>
           <Divider sx={{ mb: 1 }} />
           

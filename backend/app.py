@@ -1,17 +1,3 @@
-from fastapi import FastAPI, HTTPException, Body
-from fastapi.middleware.cors import CORSMiddleware
-import base64
-import io
-import os
-from datetime import datetime, timedelta
-import traceback
-
-# Import from local modules
-from models import ExcelUploadRequest, ExcelFilterRequest, ExcelUploadResponse, SalesAnalyticsResponse
-from excel_processor import process_excel_file
-from utils import find_file_in_directory
-from sales_analytics import generate_sales_analytics
-
 # Initialize FastAPI app
 app = FastAPI()
 
@@ -47,14 +33,22 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         # Create BytesIO object for pandas
         excel_data = io.BytesIO(file_content)
         
-        # Save file to disk with timestamp
+        # Save file to disk with timestamp and location
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        file_path = os.path.join(UPLOAD_DIR, f"{timestamp}_{request.fileName}")
+        location_slug = ""
+        
+        # If location is provided, include it in the filename
+        if request.location:
+            location_slug = f"{request.location.replace(' ', '_').lower()}_"
+            
+        file_path = os.path.join(UPLOAD_DIR, f"{timestamp}_{location_slug}{request.fileName}")
         
         with open(file_path, "wb") as f:
             f.write(file_content)
         
         print('Processing uploaded file:', request.fileName)
+        if request.location:
+            print('Location:', request.location)
         
         # Process Excel file with optional filters
         result = process_excel_file(
@@ -69,11 +63,18 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             if table not in result:
                 result[table] = []
         
+        # If location is provided, make sure it's in the locations list
         if 'locations' not in result:
             result['locations'] = []
             
+        if request.location and request.location not in result['locations']:
+            result['locations'].append(request.location)
+            
         if 'dateRanges' not in result:
             result['dateRanges'] = []
+            
+        # Add fileLocation field to the response
+        result['fileLocation'] = request.location
         
         # Return the properly structured response
         return ExcelUploadResponse(**result)
@@ -97,10 +98,20 @@ async def filter_excel_data(request: ExcelFilterRequest = Body(...)):
         print(f"Date range type: {request.dateRangeType}")
         print(f"Location: {request.location}")
         
+        # Build a pattern to match the location in filenames if provided
+        location_pattern = ""
+        if request.location:
+            location_slug = request.location.replace(' ', '_').lower()
+            location_pattern = f"_{location_slug}_"
+            
         # Check if we have the file in the uploads directory
-        file_path = find_file_in_directory(UPLOAD_DIR, request.fileName)
+        file_path = find_file_in_directory(UPLOAD_DIR, request.fileName, location_pattern)
         
-        # If not found, check if fileContent is provided
+        # If not found using the location pattern, try without it
+        if not file_path:
+            file_path = find_file_in_directory(UPLOAD_DIR, request.fileName)
+        
+        # If still not found, check if fileContent is provided
         if not file_path and not request.fileContent:
             print(f"File not found in uploads directory: {request.fileName}")
             print(f"Files in directory: {os.listdir(UPLOAD_DIR)}")
@@ -164,11 +175,18 @@ async def filter_excel_data(request: ExcelFilterRequest = Body(...)):
             if table not in result:
                 result[table] = []
         
+        # If location is provided, make sure it's in the locations list
         if 'locations' not in result:
             result['locations'] = []
             
+        if request.location and request.location not in result['locations']:
+            result['locations'].append(request.location)
+            
         if 'dateRanges' not in result:
             result['dateRanges'] = []
+            
+        # Add fileLocation field to the response
+        result['fileLocation'] = request.location
         
         # Return the properly structured response
         return ExcelUploadResponse(**result)
@@ -198,10 +216,20 @@ async def get_sales_analytics(request: ExcelFilterRequest = Body(...)):
         print(f"Date range type: {request.dateRangeType}")
         print(f"Location: {request.location}")
         
+        # Build a pattern to match the location in filenames if provided
+        location_pattern = ""
+        if request.location:
+            location_slug = request.location.replace(' ', '_').lower()
+            location_pattern = f"_{location_slug}_"
+            
         # Check if we have the file in the uploads directory
-        file_path = find_file_in_directory(UPLOAD_DIR, request.fileName)
+        file_path = find_file_in_directory(UPLOAD_DIR, request.fileName, location_pattern)
         
-        # If not found, check if fileContent is provided
+        # If not found using the location pattern, try without it
+        if not file_path:
+            file_path = find_file_in_directory(UPLOAD_DIR, request.fileName)
+        
+        # If still not found, check if fileContent is provided
         if not file_path and not request.fileContent:
             print(f"File not found in uploads directory: {request.fileName}")
             print(f"Files in directory: {os.listdir(UPLOAD_DIR)}")
@@ -259,6 +287,9 @@ async def get_sales_analytics(request: ExcelFilterRequest = Body(...)):
             end_date=end_date,
             location=request.location
         )
+        
+        # Add the file location to the result
+        result['fileLocation'] = request.location
         
         # Return the analytics response
         return SalesAnalyticsResponse(**result)
