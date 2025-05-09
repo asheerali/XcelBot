@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Tabs from '@mui/material/Tabs';
@@ -15,6 +15,7 @@ import TableHead from '@mui/material/TableHead';
 import IconButton from '@mui/material/IconButton';
 import InfoIcon from '@mui/icons-material/Info';
 import Tooltip from '@mui/material/Tooltip';
+import { alpha } from '@mui/material/styles';
 
 interface TableData {
   [key: string]: any[];
@@ -36,10 +37,15 @@ interface TableInfo {
 }
 
 /**
- * Table Display Component
+ * Fixed Table Display Component
  * Renders data tables in different view modes
  */
-const TableDisplay: React.FC<TableDisplayProps> = ({ tableData, viewMode, activeTab, onTabChange }) => {
+const TableDisplay: React.FC<TableDisplayProps> = ({ 
+  tableData, 
+  viewMode, 
+  activeTab, 
+  onTabChange 
+}) => {
   // Define table properties
   const tableProps: TableInfo[] = [
     {
@@ -71,6 +77,17 @@ const TableDisplay: React.FC<TableDisplayProps> = ({ tableData, viewMode, active
       key: 'table5'
     }
   ];
+
+  // Effect to reset activeTab if it's out of bounds
+  useEffect(() => {
+    if (activeTab >= tableProps.length) {
+      // Reset to the first tab if the active tab is out of bounds
+      onTabChange({} as React.SyntheticEvent, 0);
+    }
+  }, [activeTab, onTabChange]);
+
+  // Ensure activeTab is valid
+  const safeActiveTab = Math.min(activeTab, tableProps.length - 1);
 
   // Custom render function for percentage values
   const renderPercentValue = (value: any): JSX.Element | string => {
@@ -200,7 +217,6 @@ const TableDisplay: React.FC<TableDisplayProps> = ({ tableData, viewMode, active
     label: string;
     description: string;
     compact?: boolean;
-    veryCompact?: boolean;
   }
 
   // Component to render a single data table
@@ -210,38 +226,43 @@ const TableDisplay: React.FC<TableDisplayProps> = ({ tableData, viewMode, active
     columns, 
     label, 
     description, 
-    compact = false, 
-    veryCompact = false 
+    compact = false
   }) => {
     return (
       <Card sx={{ 
         width: '100%', 
-        height: veryCompact ? '600px' : 'auto',
         overflow: 'auto',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
       }}>
-        {!veryCompact && (
-          <Box p={veryCompact ? 1 : 2} bgcolor="#f5f5f5" borderBottom="1px solid #ddd" display="flex" alignItems="center" justifyContent="space-between">
-            <Typography variant={veryCompact ? "subtitle1" : "h6"}>{label}</Typography>
-            
-            <Box display="flex" alignItems="center">
-              <Tooltip title={description}>
-                <IconButton size="small">
-                  <InfoIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Box>
+        <Box
+          p={compact ? 1 : 2}
+          bgcolor="#f5f5f5" 
+          borderBottom="1px solid #ddd"
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+        >
+          <Typography variant={compact ? "subtitle1" : "h6"}>
+            {label}
+          </Typography>
+          
+          <Box display="flex" alignItems="center">
+            <Tooltip title={description}>
+              <IconButton size="small">
+                <InfoIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           </Box>
-        )}
+        </Box>
         <TableContainer sx={{ 
-          maxHeight: veryCompact ? 570 : (compact ? 400 : 600),
+          maxHeight: compact ? 400 : 600,
           flex: 1
         }}>
           <Table 
-            size={veryCompact ? "small" : (compact ? "small" : "medium")} 
+            size={compact ? "small" : "medium"} 
             stickyHeader
-            sx={{ tableLayout: veryCompact ? 'fixed' : 'auto' }}
           >
             <TableHead>
               <TableRow>
@@ -251,15 +272,10 @@ const TableDisplay: React.FC<TableDisplayProps> = ({ tableData, viewMode, active
                     align="center"
                     sx={{ 
                       fontWeight: 'bold',
-                      padding: veryCompact ? '2px' : (compact ? '4px' : '8px'),
+                      padding: compact ? '4px' : '8px',
                       backgroundColor: getHeaderColor(column, tableIndex),
                       color: 'black',
-                      border: '1px solid #ddd',
-                      fontSize: veryCompact ? '0.65rem' : (compact ? '0.75rem' : '0.875rem'),
-                      whiteSpace: veryCompact ? 'nowrap' : 'normal',
-                      overflow: veryCompact ? 'hidden' : 'visible',
-                      textOverflow: veryCompact ? 'ellipsis' : 'clip',
-                      maxWidth: veryCompact ? '60px' : 'none'
+                      border: '1px solid #ddd'
                     }}
                   >
                     {column}
@@ -277,14 +293,9 @@ const TableDisplay: React.FC<TableDisplayProps> = ({ tableData, viewMode, active
                         key={`${rowIndex}-${colIndex}`}
                         align="center"
                         sx={{ 
-                          padding: veryCompact ? '2px' : (compact ? '4px' : '8px'),
+                          padding: compact ? '4px' : '8px',
                           border: '1px solid #ddd',
-                          backgroundColor: rowIndex % 2 === 0 ? '#fff' : '#f9f9f9',
-                          fontSize: veryCompact ? '0.65rem' : (compact ? '0.75rem' : '0.875rem'),
-                          whiteSpace: veryCompact ? 'nowrap' : 'normal',
-                          overflow: veryCompact ? 'hidden' : 'visible',
-                          textOverflow: veryCompact ? 'ellipsis' : 'clip',
-                          maxWidth: veryCompact ? '60px' : 'none'
+                          backgroundColor: rowIndex % 2 === 0 ? '#fff' : '#f9f9f9'
                         }}
                       >
                         {column === 'Week' ? (rowIndex + 1) : 
@@ -313,13 +324,8 @@ const TableDisplay: React.FC<TableDisplayProps> = ({ tableData, viewMode, active
                           key={`${index}-${column}`}
                           align="center"
                           sx={{ 
-                            padding: veryCompact ? '2px' : (compact ? '4px' : '8px'), 
-                            border: '1px solid #ddd',
-                            fontSize: veryCompact ? '0.65rem' : (compact ? '0.75rem' : '0.875rem'),
-                            whiteSpace: veryCompact ? 'nowrap' : 'normal',
-                            overflow: veryCompact ? 'hidden' : 'visible',
-                            textOverflow: veryCompact ? 'ellipsis' : 'clip',
-                            maxWidth: veryCompact ? '60px' : 'none'
+                            padding: compact ? '4px' : '8px', 
+                            border: '1px solid #ddd' 
                           }}
                         >
                           {renderCellValue(column, value, tableIndex)}
@@ -342,7 +348,7 @@ const TableDisplay: React.FC<TableDisplayProps> = ({ tableData, viewMode, active
     return (
       <Paper sx={{ width: '100%' }}>
         <Tabs
-          value={activeTab}
+          value={safeActiveTab}
           onChange={onTabChange}
           variant="scrollable"
           scrollButtons="auto"
@@ -350,44 +356,24 @@ const TableDisplay: React.FC<TableDisplayProps> = ({ tableData, viewMode, active
           {tableProps.map(table => (
             <Tab key={table.index} label={table.label} />
           ))}
-          <Tab label="All Tables" />
         </Tabs>
         
-        {activeTab < 4 ? (
+        <Box p={2}>
           <RenderDataTable 
-            tableIndex={activeTab}
-            data={tableData[tableProps[activeTab].key] || []}
-            columns={tableProps[activeTab].columns}
-            label={tableProps[activeTab].label}
-            description={tableProps[activeTab].description}
+            tableIndex={safeActiveTab}
+            data={tableData[tableProps[safeActiveTab].key] || []}
+            columns={tableProps[safeActiveTab].columns}
+            label={tableProps[safeActiveTab].label}
+            description={tableProps[safeActiveTab].description}
           />
-        ) : (
-          // All tables in row view when "All Tables" tab is selected
-          <Box sx={{ p: 2 }}>
-            <Typography variant="h6" mb={2}>All Tables View - Side by Side</Typography>
-            <Grid container spacing={1}>
-              {tableProps.map(table => (
-                <Grid item xs={12} sm={6} lg={3} key={table.index}>
-                  <RenderDataTable 
-                    tableIndex={table.index}
-                    data={tableData[table.key] || []}
-                    columns={table.columns}
-                    label={table.label}
-                    description={table.description}
-                    veryCompact={true}
-                  />
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-        )}
+        </Box>
       </Paper>
     );
   } else if (viewMode === 'combined') {
     // Combined view - all tables in vertical stack
     return (
       <Paper sx={{ width: '100%', p: 2 }}>
-        <Typography variant="h5" mb={2}>All Tables View - Stacked</Typography>
+        <Typography variant="h5" mb={2}>Stacked Tables View</Typography>
         
         <Grid container spacing={2}>
           {tableProps.map(table => (
@@ -399,28 +385,6 @@ const TableDisplay: React.FC<TableDisplayProps> = ({ tableData, viewMode, active
                 label={table.label}
                 description={table.description}
                 compact={true}
-              />
-            </Grid>
-          ))}
-        </Grid>
-      </Paper>
-    );
-  } else {
-    // Row view - all tables in a single row for wider screens
-    return (
-      <Paper sx={{ width: '100%', p: 2 }}>
-        <Typography variant="h5" mb={2}>All Tables View - Side by Side</Typography>
-        
-        <Grid container spacing={1}>
-          {tableProps.map(table => (
-            <Grid item xs={12} sm={6} lg={3} key={table.index}>
-              <RenderDataTable 
-                tableIndex={table.index}
-                data={tableData[table.key] || []}
-                columns={table.columns}
-                label={table.label}
-                description={table.description}
-                veryCompact={true}
               />
             </Grid>
           ))}

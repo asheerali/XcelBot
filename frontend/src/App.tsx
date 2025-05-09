@@ -136,7 +136,7 @@ export default function App() {
           {/* Use your CustomSidebar here */}
           <CustomSidebar
             logo={<Logo />}
-            title="Audit IQ"
+            title="InsightIQ"
             onSignOut={signOut}
           />
           

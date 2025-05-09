@@ -120,7 +120,7 @@ interface SidebarProps {
 
 export default function MiniDrawerSidebar({ 
   children, 
-  title = 'Audit IQ',
+  title = 'InsightIQ ',
   logo,
   onSignOut,
   onFileUpload

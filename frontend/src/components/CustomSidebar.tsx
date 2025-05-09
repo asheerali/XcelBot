@@ -1,4 +1,3 @@
-// src/components/CustomSidebar.tsx (updated with upload page link)
 import React, { useState } from 'react';
 import {
   Box,
@@ -14,7 +13,9 @@ import {
   IconButton,
   useMediaQuery,
   useTheme,
-  styled
+  styled,
+  alpha,
+  Tooltip
 } from '@mui/material';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
@@ -24,12 +25,15 @@ import NewspaperIcon from '@mui/icons-material/Newspaper';
 import MenuIcon from '@mui/icons-material/Menu';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import HelpIcon from '@mui/icons-material/Help';
 import PaymentIcon from '@mui/icons-material/Payment';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import BarChartIcon from '@mui/icons-material/BarChart';
+import DescriptionIcon from '@mui/icons-material/Description';
 
 // Import Redux hooks
 import { useAppSelector } from '../typedHooks';
@@ -51,7 +55,7 @@ interface SidebarProps {
 
 const CustomSidebar: React.FC<SidebarProps> = ({ 
   logo, 
-  title = 'Audit IQ',
+  title = 'InsightIQ',
   onSignOut
 }) => {
   const theme = useTheme();
@@ -131,37 +135,72 @@ const CustomSidebar: React.FC<SidebarProps> = ({
               minHeight: 48,
               justifyContent: open ? 'initial' : 'center',
               px: 2.5,
-              borderRadius: '8px',
+              borderRadius: '10px',
               mx: 1,
               mb: 0.5,
+              position: 'relative',
+              overflow: 'hidden',
+              transition: 'all 0.2s ease-in-out',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                height: '100%',
+                width: '4px',
+                backgroundColor: isSelected ? 'primary.main' : 'transparent',
+                borderRadius: '4px',
+                transition: 'all 0.2s ease-in-out'
+              },
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                '&::before': {
+                  backgroundColor: alpha(theme.palette.primary.main, 0.5)
+                }
+              },
               '&.Mui-selected': {
-                backgroundColor: 'primary.main',
-                color: 'white',
+                backgroundColor: alpha(theme.palette.primary.main, 0.15),
                 '&:hover': {
-                  backgroundColor: 'primary.dark',
+                  backgroundColor: alpha(theme.palette.primary.main, 0.25),
                 },
                 '& .MuiListItemIcon-root': {
-                  color: 'white'
+                  color: 'primary.main'
+                },
+                '& .MuiListItemText-primary': {
+                  fontWeight: 'bold',
+                  color: 'primary.main'
+                },
+                '&::before': {
+                  backgroundColor: 'primary.main'
                 }
-              }
+              },
+              boxShadow: isSelected ? 
+                `0 0 10px 1px ${alpha(theme.palette.primary.main, 0.15)}` : 'none'
             }}
           >
-            <ListItemIcon
-              sx={{
-                minWidth: 0,
-                mr: open ? 2 : 'auto',
-                justifyContent: 'center',
-              }}
-            >
-              {item.icon}
-            </ListItemIcon>
+            <Tooltip title={open ? "" : item.title} placement="right" arrow>
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  mr: open ? 2 : 'auto',
+                  justifyContent: 'center',
+                  color: isSelected ? 'primary.main' : 'text.secondary',
+                }}
+              >
+                {item.icon}
+              </ListItemIcon>
+            </Tooltip>
             <ListItemText 
               primary={item.title} 
               sx={{ 
                 opacity: open ? 1 : 0,
+                display: open ? 'block' : 'none',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
-                textOverflow: 'ellipsis'
+                textOverflow: 'ellipsis',
+                '& .MuiTypography-root': {
+                  fontWeight: isSelected ? 600 : 400,
+                }
               }} 
             />
           </ListItemButton>
@@ -170,62 +209,122 @@ const CustomSidebar: React.FC<SidebarProps> = ({
     });
   };
 
+  // Create active file component with conditional rendering based on drawer state
+  const ActiveFileComponent = () => {
+    if (!fileName || !open) return null;
+    
+    return (
+      <Box sx={{ 
+        p: 2, 
+        borderBottom: `1px solid ${alpha(theme.palette.divider, 0.7)}`,
+        backgroundColor: alpha(theme.palette.primary.light, 0.05),
+        boxShadow: `inset 0 -1px 3px ${alpha(theme.palette.common.black, 0.05)}`,
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 1
+      }}>
+        <DescriptionIcon 
+          fontSize="small" 
+          color="primary" 
+          sx={{ mt: 0.5 }}
+        />
+        <Box>
+          <Typography 
+            variant="subtitle2" 
+            sx={{ 
+              color: alpha(theme.palette.text.primary, 0.8),
+              fontSize: '0.75rem',
+              lineHeight: 1
+            }}
+          >
+            Active File:
+          </Typography>
+          <Tooltip title={fileName} placement="top" arrow>
+            <Typography
+              variant="body2"
+              component="div"
+              sx={{
+                maxWidth: '100%',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                fontWeight: 500,
+                color: theme.palette.primary.main,
+                fontSize: '0.85rem'
+              }}
+            >
+              {fileName}
+            </Typography>
+          </Tooltip>
+        </Box>
+      </Box>
+    );
+  };
+
   const drawer = (
     <>
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
-          p: 2,
-          borderBottom: `1px solid ${theme.palette.divider}`
+          justifyContent: 'center',
+          p: open ? 2 : 1,
+          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.7)}`,
+          boxShadow: `0 1px 3px ${alpha(theme.palette.common.black, 0.08)}`,
+          backgroundColor: theme.palette.background.paper,
+          position: 'sticky',
+          top: 0,
+          zIndex: 1
         }}
       >
         {logo ? (
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            width: '100%'
+          }}>
             {logo}
             {open && (
               <Typography
                 variant="h6"
                 component="div"
-                sx={{ ml: 1, fontWeight: 'bold' }}
+                sx={{ 
+                  ml: 1, 
+                  fontWeight: 'bold',
+                  color: 'primary.main',
+                  fontSize: '1.5rem'
+                }}
               >
                 {title}
               </Typography>
             )}
           </Box>
         ) : (
-          <Typography
-            variant="h6"
-            component="div"
-            sx={{ 
-              fontWeight: 'bold',
-              opacity: open ? 1 : 0
-            }}
-          >
-            {title}
-          </Typography>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+            width: '100%'
+          }}>
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{ 
+                fontWeight: 'bold',
+                color: 'primary.main',
+                fontSize: '1.5rem',
+                opacity: open ? 1 : 0
+              }}
+            >
+              {open ? title : ''}
+            </Typography>
+          </Box>
         )}
       </Box>
       
-      {/* If there's an active Excel file, show it at the top */}
-      {fileName && (
-        <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
-          <Typography variant="subtitle2" gutterBottom>
-            Active File:
-          </Typography>
-          <Typography
-            variant="body2"
-            component="div"
-            sx={{
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}
-          >
-            {fileName}
-          </Typography>
-        </Box>
-      )}
+      {/* Active File component (only shows when sidebar is open) */}
+      <ActiveFileComponent />
       
       <List sx={{ p: 1, mt: 1 }}>
         {renderNavItems(navItems)}
@@ -233,18 +332,37 @@ const CustomSidebar: React.FC<SidebarProps> = ({
       
       <Box sx={{ flexGrow: 1 }} />
       
-      <Divider />
-      <Box sx={{ p: 2 }}>
+      <Divider sx={{ borderColor: alpha(theme.palette.divider, 0.7) }} />
+      <Box sx={{ 
+        p: 2, 
+        display: 'flex',
+        justifyContent: 'center'
+      }}>
         {onSignOut && (
-          <Button 
-            fullWidth 
-            variant="outlined" 
-            color="secondary"
-            onClick={onSignOut}
-            sx={{ justifyContent: open ? 'center' : 'flex-start' }}
-          >
-            {open && 'Sign Out'}
-          </Button>
+          <Tooltip title={open ? "" : "Sign Out"} placement="right">
+            <Button 
+              fullWidth 
+              variant="outlined" 
+              color="secondary"
+              onClick={onSignOut}
+              sx={{ 
+                justifyContent: open ? 'center' : 'center',
+                minWidth: 0,
+                width: open ? '100%' : '40px',
+                height: '40px',
+                padding: open ? undefined : '8px',
+                borderRadius: '10px',
+                boxShadow: `0 1px 3px ${alpha(theme.palette.common.black, 0.1)}`,
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  boxShadow: `0 3px 6px ${alpha(theme.palette.common.black, 0.15)}`,
+                  backgroundColor: alpha(theme.palette.secondary.main, 0.08)
+                }
+              }}
+            >
+              {open ? 'Sign Out' : ''}
+            </Button>
+          </Tooltip>
         )}
       </Box>
     </>
@@ -265,9 +383,9 @@ const CustomSidebar: React.FC<SidebarProps> = ({
             left: 10, 
             zIndex: theme.zIndex.drawer + 2,
             bgcolor: 'background.paper',
-            boxShadow: 1,
+            boxShadow: `0 2px 5px ${alpha(theme.palette.common.black, 0.15)}`,
             '&:hover': {
-              bgcolor: 'background.default'
+              bgcolor: alpha(theme.palette.background.default, 0.9)
             }
           }}
         >
@@ -290,7 +408,9 @@ const CustomSidebar: React.FC<SidebarProps> = ({
               boxSizing: 'border-box', 
               width: drawerWidth,
               backgroundImage: 'none',
-              bgcolor: 'background.paper'
+              bgcolor: 'background.paper',
+              boxShadow: `5px 0 10px ${alpha(theme.palette.common.black, 0.15)}`,
+              borderRight: `1px solid ${alpha(theme.palette.divider, 0.1)}`
             },
           }}
         >
@@ -298,62 +418,60 @@ const CustomSidebar: React.FC<SidebarProps> = ({
         </Drawer>
       ) : (
         // Desktop drawer (permanent)
-        <Drawer
-          variant="permanent"
-          open={open}
-          sx={{
-            width: open ? drawerWidth : 64,
-            flexShrink: 0,
-            transition: theme.transitions.create('width', {
-              easing: theme.transitions.easing.sharp,
-              duration: theme.transitions.duration.enteringScreen,
-            }),
-            '& .MuiDrawer-paper': {
-              overflow: 'hidden',
+        <Box sx={{ position: 'relative', display: 'flex' }}>
+          <Drawer
+            variant="permanent"
+            open={open}
+            sx={{
               width: open ? drawerWidth : 64,
-              boxSizing: 'border-box',
+              flexShrink: 0,
               transition: theme.transitions.create('width', {
                 easing: theme.transitions.easing.sharp,
                 duration: theme.transitions.duration.enteringScreen,
               }),
-              backgroundImage: 'none',
-              bgcolor: 'background.paper'
-            },
-          }}
-        >
-          {drawer}
-        </Drawer>
-      )}
-
-      {/* Toggle button for desktop */}
-      {!isMobile && (
-        <Box
-          sx={{
-            position: 'fixed',
-            bottom: 16,
-            left: open ? drawerWidth - 20 : 44,
-            zIndex: theme.zIndex.drawer + 1,
-            transition: theme.transitions.create(['left'], {
-              easing: theme.transitions.easing.sharp,
-              duration: theme.transitions.duration.enteringScreen,
-            }),
-          }}
-        >
+              '& .MuiDrawer-paper': {
+                overflow: 'hidden',
+                width: open ? drawerWidth : 64,
+                boxSizing: 'border-box',
+                transition: theme.transitions.create('width', {
+                  easing: theme.transitions.easing.sharp,
+                  duration: theme.transitions.duration.enteringScreen,
+                }),
+                backgroundImage: 'none',
+                bgcolor: 'background.paper',
+                boxShadow: `4px 0 10px ${alpha(theme.palette.common.black, 0.1)}`,
+                borderRight: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+              },
+            }}
+          >
+            {drawer}
+          </Drawer>
+          
+          {/* Add a toggle button outside the drawer for guaranteed visibility */}
           <IconButton
             onClick={handleDrawerToggle}
-            size="small"
+            aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
             sx={{
-              bgcolor: 'background.paper',
-              boxShadow: 2,
+              position: 'absolute',
+              top: '50%',
+              right: open ? -20 : -20,
+              transform: 'translateY(-50%)',
+              bgcolor: '#FFFFFF',
+              boxShadow: '0 0 8px rgba(0,0,0,0.2)',
               borderRadius: '50%',
-              width: 32,
-              height: 32,
+              width: 40,
+              height: 40,
+              border: '1px solid rgba(0,0,0,0.1)',
+              zIndex: 1300,
               '&:hover': {
-                bgcolor: 'background.default'
+                bgcolor: '#F8F9FA',
               }
             }}
           >
-            {open ? <ExpandLess /> : <ExpandMore />}
+            {open 
+              ? <ChevronLeftIcon fontSize="small" />
+              : <ChevronRightIcon fontSize="small" />
+            }
           </IconButton>
         </Box>
       )}

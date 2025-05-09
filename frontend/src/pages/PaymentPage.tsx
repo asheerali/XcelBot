@@ -95,7 +95,7 @@ export default function PaymentPage() {
       title: 'Action Seat',
       subtitle: 'Operations Team',
       price: 99,
-      features: ['AUDITIQ', 'CONNECTIQ', 'MARGINIQ', 'SCHEDULEIQ', 'PROJECTIQ', 'INSIGHTIQ', 'PROFITIQ', 'LOCATIONIQ'],
+      features: ['InsightIQ', 'CONNECTIQ', 'MARGINIQ', 'SCHEDULEIQ', 'PROJECTIQ', 'INSIGHTIQ', 'PROFITIQ', 'LOCATIONIQ'],
       description: 'Emphasizes on-the-ground action for AuditIQ and ConnetiQ tasks.',
       icon: <WrenchIcon />
     },
@@ -103,7 +103,7 @@ export default function PaymentPage() {
       title: 'Control Seat',
       subtitle: 'Director Level',
       price: 159,
-      features: ['AUDITIQ', 'CONNECTIQ', 'MARGINIQ', 'SCHEDULEIQ', 'PROJECTIQ', 'INSIGHTIQ', 'PROFITIQ', 'LOCATIONIQ'],
+      features: ['InsightIQ', 'CONNECTIQ', 'MARGINIQ', 'SCHEDULEIQ', 'PROJECTIQ', 'INSIGHTIQ', 'PROFITIQ', 'LOCATIONIQ'],
       description: 'Implies strategic steering—tying ProjectiQ and ScheduleIQ to daily execution.',
       icon: <TargetIcon />
     },
@@ -111,7 +111,7 @@ export default function PaymentPage() {
       title: 'Helm Seat',
       subtitle: 'Executive Level',
       price: 199,
-      features: ['AUDITIQ', 'CONNECTIQ', 'MARGINIQ', 'SCHEDULEIQ', 'PROJECTIQ', 'INSIGHTIQ', 'PROFITIQ', 'LOCATIONIQ'],
+      features: ['InsightIQ', 'CONNECTIQ', 'MARGINIQ', 'SCHEDULEIQ', 'PROJECTIQ', 'INSIGHTIQ', 'PROFITIQ', 'LOCATIONIQ'],
       description: 'Conveys top-deck control and full 360° Insight into Profit-, Margin-& InsightiQ modules.',
       icon: <AnchorIcon />
     }
