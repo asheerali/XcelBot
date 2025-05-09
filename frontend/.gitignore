@@ -15,7 +15,7 @@ public
 /build
 /dist
 *.png
-*.svg
+
 # misc
 .DS_Store
 .env.local

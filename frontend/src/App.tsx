@@ -3,7 +3,7 @@ import * as React from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { CssBaseline, Box } from "@mui/material";
-import logoMidPng from "./assets/icon/IG_logo.svg" // Adjust the path as necessary
+import logoMidPng from "./assets/icon/IQ_logo.svg" // Adjust the path as necessary
 import { Session } from "@toolpad/core/AppProvider"; // Keep this for Session type
 import { SessionContext } from "./SessionContext";
 import * as agentService from "./services/agentService";
