@@ -1,81 +1,66 @@
-import { _guid, _products, _roles } from '../_mock';
+import { Product, BaseItem } from '../types';
 
+// This would typically be a call to an API, but we're using localStorage for demo purposes
+const ITEMS_KEY = 'products';
 
-const KEYS = {
-  items: "products",
-  itemId: "productId"
+let items: Product[] = [];
+
+export const init = () => {
+  // Initialize with some default data if needed
+  if (localStorage.getItem(ITEMS_KEY) === null) {
+    items = [
+      // Add sample products here if needed
+    ];
+    saveItems();
+  } else {
+    items = JSON.parse(localStorage.getItem(ITEMS_KEY) || '[]');
+  }
 };
 
-export function init() {
-  console.log(_products)
-  localStorage.setItem(KEYS.items, JSON.stringify(_products));
-}
-
-
-
-export function addItem(data: TODO) {
-  let items = getAllItems();
-  data["id"] = generateItemId(items.length);
-  items.push(data);
-  localStorage.setItem(KEYS.items, JSON.stringify(items));
-}
-
-export function generateItemId(totalCount: number) {
-  return `${_guid}${(totalCount + 1)}`;
-}
-
-export function updateItem(data: TODO) {
-  let items = getAllItems() as TODO;
-  let index = items.findIndex((a: TODO) => a.id === data.id);
-  items[index] = data;
-  localStorage.setItem(KEYS.items, JSON.stringify(items));
-}
-
-
-
-
-export function getAllItems() {
-  if (localStorage.getItem(KEYS.items) === null) {
-    localStorage.setItem(KEYS.items, JSON.stringify([]));
+export const getAllItems = (): Product[] => {
+  if (items.length === 0) {
+    items = JSON.parse(localStorage.getItem(ITEMS_KEY) || '[]');
   }
-  const es = localStorage.getItem(KEYS.items);
-  return JSON.parse(es ? es : "");
-}
+  return items;
+};
 
+export const saveItem = (data: Product): Product => {
+  let items = getAllItems() as Product[];
+  let index = items.findIndex((a: Product) => a.id === data.id);
 
-export function getItemById(id: string | number) {
-  if (localStorage.getItem(KEYS.items) === null) {
-    localStorage.setItem(KEYS.items, JSON.stringify([]));
+  if (index !== -1) {
+    items[index] = { ...items[index], ...data };
+  } else {
+    // Assign a new ID if it doesn't exist
+    const newId = Math.max(0, ...items.map(item => Number(item.id))) + 1;
+    items.push({
+      ...data,
+      id: newId
+    });
   }
-  const us = localStorage.getItem(KEYS.items);
-  const ul = JSON.parse(us ? us : "");
-  return ul.find((u: TODO) => u.id === id);
-}
 
-export function deleteItemById(id: string | number) {
-  if (localStorage.getItem(KEYS.items) === null) {
-    localStorage.setItem(KEYS.items, JSON.stringify([]));
+  saveItems();
+  return data;
+};
+
+export const saveItems = () => {
+  localStorage.setItem(ITEMS_KEY, JSON.stringify(items));
+};
+
+export const getItemById = (id: string | number): Product | undefined => {
+  const ul = getAllItems();
+  return ul.find((u: Product) => u.id === id);
+};
+
+export const deleteItem = (id: string | number): boolean => {
+  const items = getAllItems();
+  const index = items.findIndex((u: Product) => u.id === id);
+  
+  if (index !== -1) {
+    items.splice(index, 1);
+    saveItems();
+    return true;
   }
-  const _items = localStorage.getItem(KEYS.items);
-  const items = JSON.parse(_items ? _items : "");
-  const index = items.findIndex((u: TODO) => u.id === id);
-  items.splice(index, 1)
-  localStorage.setItem(KEYS.items, JSON.stringify(items));
-}
-
-
-
-
-export function getItemsByPageNumber(
-  pageNumber: number, pageSize: number = 10) {
-  if (localStorage.getItem(KEYS.items) === null) {
-    localStorage.setItem(KEYS.items, JSON.stringify([]));
-  }
-  const es = localStorage.getItem(KEYS.items);
-  const products = JSON.parse(es ? es : "");
-
-  console.log(` pageNumber ${pageNumber} `)
-  const start = (pageNumber - 1) * pageSize;
-  const end = start + pageSize
-  return products.slice(start, end);
-}
+  
+  return false;
+};

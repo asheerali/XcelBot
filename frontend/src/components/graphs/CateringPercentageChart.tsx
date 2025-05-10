@@ -179,7 +179,7 @@ const CateringPercentageChart: React.FC<CateringPercentageChartProps> = ({ table
 
   // Format Y-axis labels
   const formatYAxis = (value: number) => {
-    return `${value.toFixed(1)}%`;
+    return `${value.toFixed(1)}`;
   };
 
   // Calculate Y-axis range

@@ -1,5 +1,5 @@
 // src/pages/ExcelUploadPage.tsx
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -16,7 +16,6 @@ import {
   ListItemText,
   IconButton,
   Divider,
-  Tooltip,
   Chip,
   Dialog,
   DialogTitle,
@@ -27,11 +26,13 @@ import {
   Select,
   MenuItem,
   InputLabel,
-  FormControl
+  FormControl,
+  Autocomplete
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+
 // Icons
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
@@ -43,10 +44,14 @@ import FileOpenIcon from '@mui/icons-material/FileOpen';
 import EditIcon from '@mui/icons-material/Edit';
 import PlaceIcon from '@mui/icons-material/Place';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import LocationCityIcon from '@mui/icons-material/LocationCity';
+
 // Import Redux hooks
 import { useAppDispatch } from '../typedHooks';
+
 // API URL for Excel upload
 const API_URL = 'http://localhost:8000/api/excel/upload';
+
 // Styled component for the drop zone
 const DropZone = styled(Paper)(({ theme }) => ({
   border: `2px dashed ${theme.palette.primary.main}`,
@@ -81,8 +86,64 @@ const DASHBOARD_OPTIONS = [
   'Product Mix'
 ];
 
+// List of popular US cities
+const US_CITIES = [
+  'New York, NY',
+  'Midtown East',
+  'Los Angeles, CA',
+  'Chicago, IL',
+  'Houston, TX',
+  'Phoenix, AZ',
+  'Philadelphia, PA',
+  'San Antonio, TX',
+  'San Diego, CA',
+  'Dallas, TX',
+  'San Jose, CA',
+  'Austin, TX',
+  'Jacksonville, FL',
+  'Fort Worth, TX',
+  'Columbus, OH',
+  'Charlotte, NC',
+  'San Francisco, CA',
+  'Indianapolis, IN',
+  'Seattle, WA',
+  'Denver, CO',
+  'Washington, DC',
+  'Boston, MA',
+  'El Paso, TX',
+  'Nashville, TN',
+  'Detroit, MI',
+  'Portland, OR',
+  'Las Vegas, NV',
+  'Oklahoma City, OK',
+  'Memphis, TN',
+  'Louisville, KY',
+  'Baltimore, MD',
+  'Milwaukee, WI',
+  'Albuquerque, NM',
+  'Tucson, AZ',
+  'Fresno, CA',
+  'Sacramento, CA',
+  'Kansas City, MO',
+  'Mesa, AZ',
+  'Atlanta, GA',
+  'Omaha, NE',
+  'Colorado Springs, CO',
+  'Raleigh, NC',
+  'Miami, FL',
+  'Long Beach, CA',
+  'Virginia Beach, VA',
+  'Oakland, CA',
+  'Minneapolis, MN',
+  'Tampa, FL',
+  'Tulsa, OK',
+  'Arlington, TX',
+  'New Orleans, LA'
+];
+
 // File status type
 type FileStatus = 'pending' | 'uploading' | 'success' | 'error';
+
 // File info type with location and dashboard
 interface FileInfo {
   file: File;
@@ -103,6 +164,8 @@ const ExcelUploadPage: React.FC = () => {
   const [locationInput, setLocationInput] = useState('');
   const [locationError, setLocationError] = useState('');
   const [selectedDashboard, setSelectedDashboard] = useState('Sales Split'); // Global dashboard selection
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [cityInputValue, setCityInputValue] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const navigate = useNavigate();
@@ -129,22 +192,22 @@ const ExcelUploadPage: React.FC = () => {
         file,
         status: 'pending' as FileStatus,
         progress: 0,
-        location: '', // Empty location initially
+        location: selectedCity || '', // Use selected city if available
         dashboard: selectedDashboard, // Use the global dashboard selection
       }));
       
       setFiles(prevFiles => [...prevFiles, ...newFiles]);
       setGeneralError(null);
       
-      // Open the location dialog for the first file
-      if (newFiles.length > 0) {
-        setCurrentEditingIndex(prevFiles.length);
+      // Only open location dialog if no city is selected
+      if (!selectedCity && newFiles.length > 0) {
+        setCurrentEditingIndex(files.length);
         setLocationInput('');
         setLocationError('');
         setIsLocationDialogOpen(true);
       }
     }
-  }, [files.length]);
+  }, [files.length, selectedCity, selectedDashboard]);
   
   // Handle drag over event
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -176,15 +239,15 @@ const ExcelUploadPage: React.FC = () => {
         file,
         status: 'pending' as FileStatus,
         progress: 0,
-        location: '', // Empty location initially
+        location: selectedCity || '', // Use selected city if available
         dashboard: selectedDashboard, // Use the global dashboard selection
       }));
       
       setFiles(prevFiles => [...prevFiles, ...newFiles]);
       setGeneralError(null);
       
-      // Open the location dialog for the first file
-      if (newFiles.length > 0) {
+      // Only open location dialog if no city is selected
+      if (!selectedCity && newFiles.length > 0) {
         setCurrentEditingIndex(files.length);
         setLocationInput('');
         setLocationError('');
@@ -196,7 +259,21 @@ const ExcelUploadPage: React.FC = () => {
         fileInputRef.current.value = '';
       }
     }
-  }, [files.length]);
+  }, [files.length, selectedCity, selectedDashboard]);
+  
+  // Update file locations when city changes
+  useEffect(() => {
+    if (selectedCity) {
+      // Update all pending files to use the selected city
+      setFiles(prevFiles => 
+        prevFiles.map(file => 
+          file.status === 'pending' 
+            ? { ...file, location: selectedCity } 
+            : file
+        )
+      );
+    }
+  }, [selectedCity]);
   
   // Handle global dashboard change
   const handleDashboardChange = (value: string) => {
@@ -295,16 +372,11 @@ const ExcelUploadPage: React.FC = () => {
       // Clear the progress interval
       clearInterval(progressInterval);
       
-      // Update Redux with the response data
+      // Update Redux with the response data (using existing format for compatibility)
       if (response.data) {
         dispatch({ 
-          type: 'excel/addFileData', 
-          payload: {
-            fileName: fileInfo.file.name,
-            location: fileInfo.location,
-            dashboard: fileInfo.dashboard,
-            data: response.data
-          }
+          type: 'excel/setTableData', 
+          payload: response.data
         });
         
         // Update file status to success and store data
@@ -506,6 +578,78 @@ const ExcelUploadPage: React.FC = () => {
       </Typography>
       
       <Grid container spacing={3}>
+        {/* City selection */}
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                <LocationCityIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                Select a City (Optional)
+              </Typography>
+              
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                <Autocomplete
+                  id="city-select"
+                  options={US_CITIES}
+                  value={selectedCity}
+                  onChange={(event, newValue) => {
+                    setSelectedCity(newValue);
+                  }}
+                  inputValue={cityInputValue}
+                  onInputChange={(event, newInputValue) => {
+                    setCityInputValue(newInputValue);
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="City"
+                      placeholder="Select a US city"
+                      variant="outlined"
+                      fullWidth
+                      helperText="Search and select a city from the list"
+                    />
+                  )}
+                  sx={{ minWidth: 300, flex: 1 }}
+                />
+                
+                {/* Dashboard Selection */}
+                <FormControl sx={{ minWidth: 200 }}>
+                  <InputLabel id="dashboard-select-label">Dashboard</InputLabel>
+                  <Select
+                    labelId="dashboard-select-label"
+                    id="dashboard-select"
+                    value={selectedDashboard}
+                    label="Dashboard"
+                    onChange={(e) => handleDashboardChange(e.target.value as string)}
+                    startAdornment={<DashboardIcon sx={{ mr: 1, ml: -0.5 }} />}
+                  >
+                    {DASHBOARD_OPTIONS.map(option => (
+                      <MenuItem key={option} value={option}>
+                        {option}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <FormHelperText>Select dashboard for all files</FormHelperText>
+                </FormControl>
+              </Box>
+              
+              {selectedCity && (
+                <Box mt={2}>
+                  <Chip 
+                    icon={<PlaceIcon />} 
+                    label={`Selected City: ${selectedCity}`} 
+                    color="primary" 
+                    sx={{ mr: 1 }}
+                  />
+                  <Typography variant="caption" color="text.secondary">
+                    All files will be associated with this location
+                  </Typography>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+        
         {/* Drop zone */}
         <Grid item xs={12}>
           <input
@@ -542,7 +686,9 @@ const ExcelUploadPage: React.FC = () => {
                 Browse Files
               </Button>
               <Typography variant="caption" align="center" color="text.secondary" sx={{ mt: 2 }}>
-                Each file should represent a single location
+                {selectedCity 
+                  ? `All files will be associated with ${selectedCity}` 
+                  : "You'll be asked to provide a location for each file"}
               </Typography>
             </DropZone>
           </label>
@@ -558,25 +704,6 @@ const ExcelUploadPage: React.FC = () => {
                     <Typography variant="h6" sx={{ mr: 2 }}>
                       Selected Files
                     </Typography>
-                    
-                    {/* Global dashboard selection dropdown */}
-                    <FormControl size="small" sx={{ minWidth: 200 }}>
-                      <InputLabel id="global-dashboard-select">Dashboard</InputLabel>
-                      <Select
-                        labelId="global-dashboard-select"
-                        value={selectedDashboard}
-                        label="Dashboard"
-                        onChange={(e) => handleDashboardChange(e.target.value)}
-                        startAdornment={<DashboardIcon sx={{ mr: 1, ml: -0.5 }} />}
-                      >
-                        {DASHBOARD_OPTIONS.map(option => (
-                          <MenuItem key={option} value={option}>
-                            {option}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                      <FormHelperText>Select dashboard for all files</FormHelperText>
-                    </FormControl>
                   </Box>
                   
                   <Box>
@@ -650,7 +777,7 @@ const ExcelUploadPage: React.FC = () => {
                 
                 <Divider sx={{ mb: 2 }} />
                 
-                {/* File list with dashboard dropdown */}
+                {/* File list */}
                 <List>
                   {files.map((fileInfo, index) => (
                     <React.Fragment key={`${fileInfo.file.name}-${index}`}>
@@ -705,8 +832,6 @@ const ExcelUploadPage: React.FC = () => {
                                   sx={{ fontSize: '0.75rem' }}
                                 />
                               )}
-                              
-
                               
                               {/* Dashboard chip for all files */}
                               <Chip 

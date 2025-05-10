@@ -180,7 +180,7 @@ const InHousePercentageChart: React.FC<InHousePercentageChartProps> = ({ tableDa
 
   // Format Y-axis labels
   const formatYAxis = (value: number) => {
-    return `${value.toFixed(2)}%`;
+    return `${value.toFixed(2)}`;
   };
 
   // Calculate Y-axis range

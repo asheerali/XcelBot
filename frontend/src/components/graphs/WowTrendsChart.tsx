@@ -143,7 +143,7 @@ const WowTrendsChart: React.FC<WowTrendsChartProps> = ({ tableData }) => {
 
   // Format Y-axis labels
   const formatYAxis = (value: number) => {
-    return `${value}%`;
+    return `${value}`;
   };
 
   // Calculate Y-axis range based on min and max values
