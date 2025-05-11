@@ -1,10 +1,8 @@
 import { forwardRef } from 'react';
-import { Icon, disableCache } from '@iconify/react';
-
+import { Icon } from '@iconify/react';
 import Box from '@mui/material/Box';
 
 import { iconifyClasses } from './classes';
-
 import type { IconifyProps } from './types';
 
 // ----------------------------------------------------------------------
@@ -12,7 +10,6 @@ import type { IconifyProps } from './types';
 export const Iconify = forwardRef<SVGElement, IconifyProps>(
   ({ className, width = 20, sx, ...other }, ref) => (
     <Box
-      ssr
       ref={ref}
       component={Icon}
       className={iconifyClasses.root.concat(className ? ` ${className}` : '')}
@@ -27,6 +24,3 @@ export const Iconify = forwardRef<SVGElement, IconifyProps>(
     />
   )
 );
-
-// https://iconify.design/docs/iconify-icon/disable-cache.html
-disableCache('local');
