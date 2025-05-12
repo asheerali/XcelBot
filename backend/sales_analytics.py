@@ -17,8 +17,8 @@ def process_raw_excel_data(file_data: io.BytesIO) -> pd.DataFrame:
         
         # Print sample data to debug
         print("Initial data read:")
-        print(df.head(3))
-        print(f"Columns: {df.columns.tolist()}")
+        # print(df.head(3))
+        # print(f"Columns: {df.columns.tolist()}")
         
         # If we have valid headers, return the DataFrame
         if len(df.columns) >= 6 and not all(isinstance(col, int) for col in df.columns):
@@ -36,8 +36,8 @@ def process_raw_excel_data(file_data: io.BytesIO) -> pd.DataFrame:
         
         # Sample the first few rows to identify patterns
         sample_rows = df.head(5)
-        print("Sample data with no headers:")
-        print(sample_rows)
+        # print("Sample data with no headers:")
+        # print(sample_rows)
         
         # If we have at least 6 columns, try to infer the structure
         if len(df.columns) >= 6:
@@ -78,8 +78,8 @@ def process_raw_excel_data(file_data: io.BytesIO) -> pd.DataFrame:
             if 'Date' in df.columns:
                 df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
             
-            print("After processing:")
-            print(df.head(3))
+            # print("After processing:")
+            # print(df.head(3))
             return df
         else:
             # Not enough columns, try to read with Excel's default handling
@@ -140,10 +140,10 @@ def calculate_sales_by_day_of_week(df: pd.DataFrame) -> List[Dict[str, Any]]:
     Returns data in format suitable for charts.
     """
     try:
-        print("=== DEBUGGING DAY OF WEEK CALCULATION ===")
-        print(f"DataFrame columns: {df.columns.tolist()}")
-        print(f"DataFrame shape: {df.shape}")
-        print(f"First few rows: {df.head(2)}")
+        # print("=== DEBUGGING DAY OF WEEK CALCULATION ===")
+        # print(f"DataFrame columns: {df.columns.tolist()}")
+        # print(f"DataFrame shape: {df.shape}")
+        # print(f"First few rows: {df.head(2)}")
         
         # Ensure the Date column is in datetime format
         date_column = None
@@ -183,23 +183,23 @@ def calculate_sales_by_day_of_week(df: pd.DataFrame) -> List[Dict[str, Any]]:
                     pass
         
         if date_column:
-            print(f"Date column found: {date_column}")
-            print(f"Date sample values: {df[date_column].head()}")
+            # print(f"Date column found: {date_column}")
+            # print(f"Date sample values: {df[date_column].head()}")
             
             # Convert to datetime if not already
             if not pd.api.types.is_datetime64_dtype(df[date_column]):
-                print("Converting Date column to datetime...")
+                # print("Converting Date column to datetime...")
                 df['Date'] = pd.to_datetime(df[date_column], errors='coerce')
-                print(f"After conversion - Date sample: {df['Date'].head()}")
-                print(f"NaN values in Date: {df['Date'].isna().sum()}/{len(df)}")
+                # print(f"After conversion - Date sample: {df['Date'].head()}")
+                # print(f"NaN values in Date: {df['Date'].isna().sum()}/{len(df)}")
                 date_column = 'Date'
             
             # Extract day of week (0=Monday, 6=Sunday)
-            print("Extracting day of week...")
+            # print("Extracting day of week...")
             df['DayOfWeek'] = df[date_column].dt.dayofweek
             df['DayName'] = df[date_column].dt.day_name()
             
-            print(f"Day of week sample: {df[['Date', 'DayOfWeek', 'DayName']].head()}")
+            # print(f"Day of week sample: {df[['Date', 'DayOfWeek', 'DayName']].head()}")
             
             # Calculate the total price for each row (price * quantity)
             price_col = None
@@ -232,19 +232,19 @@ def calculate_sales_by_day_of_week(df: pd.DataFrame) -> List[Dict[str, Any]]:
                         break
             
             # Log what we found
-            print(f"Price column found: {price_col}")
-            print(f"Quantity column found: {qty_col}")
+            # print(f"Price column found: {price_col}")
+            # print(f"Quantity column found: {qty_col}")
             
             # Calculate total price
             if price_col:
                 if qty_col:
-                    print(f"Calculating total price as {price_col} * {qty_col}")
+                    # print(f"Calculating total price as {price_col} * {qty_col}")
                     df['TotalPrice'] = pd.to_numeric(df[price_col], errors='coerce') * pd.to_numeric(df[qty_col], errors='coerce').fillna(1)
                 else:
-                    print(f"Using {price_col} directly as total price")
+                    # print(f"Using {price_col} directly as total price")
                     df['TotalPrice'] = pd.to_numeric(df[price_col], errors='coerce')
                 
-                print(f"Total price sample: {df['TotalPrice'].head()}")
+                # print(f"Total price sample: {df['TotalPrice'].head()}")
                 
                 # Check for invalid values
                 if df['TotalPrice'].isna().any():
@@ -253,10 +253,10 @@ def calculate_sales_by_day_of_week(df: pd.DataFrame) -> List[Dict[str, Any]]:
                     df['TotalPrice'] = df['TotalPrice'].fillna(0)
                 
                 # Group by day of week and sum the Total Price
-                print("Grouping by day of week...")
+                # print("Grouping by day of week...")
                 day_of_week_sales = df.groupby(['DayOfWeek', 'DayName'])['TotalPrice'].sum().reset_index()
                 
-                print(f"Day of week sales: {day_of_week_sales}")
+                # print(f"Day of week sales: {day_of_week_sales}")
                 
                 # Sort by day of week (Monday first)
                 day_of_week_sales = day_of_week_sales.sort_values('DayOfWeek')

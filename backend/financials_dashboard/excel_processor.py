@@ -4,87 +4,6 @@ import os
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 
-# Import from local modules
-from table_calculator import (
-    calculate_raw_data_table,
-    calculate_percentage_table, 
-    calculate_inhouse_percentages,
-    calculate_wow_table,
-    calculate_category_summary
-)
-
-def categorize_dining_option(option):
-    """
-    Helper function to categorize dining options into standard categories
-    1P, Catering, DD, GH, In-House, UB
-    """
-    option = str(option).lower()
-    if 'cater' in option:
-        return 'Catering'
-    elif 'doordash' in option or 'door dash' in option:
-        return 'DD'
-    elif 'grubhub' in option or 'grub hub' in option:
-        return 'GH'
-    elif 'uber' in option or 'ubereats' in option:
-        return 'UB'
-    else:
-        return 'In-House'
-
-def generate_date_ranges(df):
-    """
-    Generate a list of date ranges for filtering based on the data
-    """
-    if 'Date' not in df.columns:
-        return []
-    
-    try:
-        # Get min and max dates, with error handling
-        min_date = df['Date'].min()
-        max_date = df['Date'].max()
-        
-        # Check if min_date is valid (not NaT)
-        if pd.isna(min_date):
-            # Use current date if min_date is NaT
-            min_date = pd.Timestamp.now()
-            print("Warning: Min date was NaT, using current date instead")
-        
-        # Generate monthly ranges
-        date_ranges = []
-        
-        # Last 7 days
-        # date_ranges.append("Last 7 Days")
-        
-        # Last 30 days
-        date_ranges.append("Last 30 Days")
-        
-        # This month
-        # Use try-except to handle potential strftime errors
-        try:
-            date_ranges.append(f"This Month ({min_date.strftime('%B %Y')})")
-        except Exception as e:
-            print(f"Error formatting 'This Month': {e}")
-            date_ranges.append("This Month")
-        
-        # Last month
-        try:
-            last_month = min_date - pd.Timedelta(days=30)
-            date_ranges.append(f"Last Month ({last_month.strftime('%B %Y')})")
-        except Exception as e:
-            print(f"Error formatting 'Last Month': {e}")
-            date_ranges.append("Last Month")
-        
-        # Last 3 months
-        date_ranges.append("Last 3 Months")
-        
-        # Custom (encourages custom date range selection)
-        date_ranges.append("Custom Date Range")
-        
-        return date_ranges
-    except Exception as e:
-        print(f"Error generating date ranges: {e}")
-        # Return basic date ranges if there was an error
-        return ["Last 7 Days", "Last 30 Days", "This Month", "Last Month", "Last 3 Months", "Custom Date Range"]
-
 def process_excel_file(file_data: io.BytesIO, start_date=None, end_date=None, location=None) -> Dict[str, List[Dict[str, Any]]]:
     """
     Process the uploaded Excel file and transform the data.
@@ -239,8 +158,4 @@ def process_excel_file(file_data: io.BytesIO, start_date=None, end_date=None, lo
         print(traceback.format_exc())
         # Re-raise to be caught by the endpoint handler
         raise
-    
-    
-    
-    
     

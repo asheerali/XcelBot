@@ -29,6 +29,11 @@ app.add_middleware(
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+@app.get("/")
+async def root():
+    return {"message": "Welcome to the Excel Processing API!"}
+    
+    
 # Add this test endpoint to verify FastAPI routing
 @app.get("/api/test")
 async def test_endpoint():
@@ -42,6 +47,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
     Supports optional date range and location filtering.
     """
     try:
+        print(f"Received file upload: {request.fileName}")
         # Decode base64 file content
         file_content = base64.b64decode(request.fileContent)
         
@@ -64,36 +70,44 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         print('Processing uploaded file:', request.fileName)
         if request.location:
             print('Location:', request.location)
-        
-        # Process Excel file with optional filters
-        result = process_excel_file(
-            excel_data, 
-            start_date=request.startDate,
-            end_date=request.endDate,
-            location=request.location
-        )
-        
-        # Ensure each table exists in the result, even if empty
-        for table in ['table1', 'table2', 'table3', 'table4', 'table5']:
-            if table not in result:
-                result[table] = []
-        
-        # If location is provided, make sure it's in the locations list
-        if 'locations' not in result:
-            result['locations'] = []
             
-        if request.location and request.location not in result['locations']:
-            result['locations'].append(request.location)
+        if request.dashboard == "Financial Dashboard":
+            print("Dashboard type: Financial Dashboard")
             
-        if 'dateRanges' not in result:
-            result['dateRanges'] = []
+            return {"message": "Financial Dashboard is not yet implemented."}
+        
+        if request.dashboard == "Sales Split":
+            print("Dashboard type: Sales Split Dashboard")
+
+            # Process Excel file with optional filters
+            result = process_excel_file(
+                excel_data, 
+                start_date=request.startDate,
+                end_date=request.endDate,
+                location=request.location
+            )
             
-        # Add fileLocation field to the response
-        result['fileLocation'] = request.location
-        
-        # Return the properly structured response
-        return ExcelUploadResponse(**result)
-        
+            # Ensure each table exists in the result, even if empty
+            for table in ['table1', 'table2', 'table3', 'table4', 'table5']:
+                if table not in result:
+                    result[table] = []
+            
+            # If location is provided, make sure it's in the locations list
+            if 'locations' not in result:
+                result['locations'] = []
+                
+            if request.location and request.location not in result['locations']:
+                result['locations'].append(request.location)
+                
+            if 'dateRanges' not in result:
+                result['dateRanges'] = []
+                
+            # Add fileLocation field to the response
+            result['fileLocation'] = request.location
+            
+            # Return the properly structured response
+            return ExcelUploadResponse(**result)
+            
     except Exception as e:
         # Log the full exception for debugging
         print(f"Error processing file: {str(e)}")
