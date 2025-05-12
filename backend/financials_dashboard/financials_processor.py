@@ -3,8 +3,9 @@ import io
 import os
 from datetime import datetime
 from typing import Dict, List, Any, Optional
+from utils.utils import financials_filters, day_of_the_week_tables, calculate_tw_lw_bdg_comparison
 
-def process_financials_file(file_data: io.BytesIO, start_date=None, end_date=None, location=None) -> Dict[str, List[Dict[str, Any]]]:
+def process_financials_file(file_data: io.BytesIO, start_date=None, end_date=None, location=None):
     """
     Process the uploaded Excel file and transform the data.
     Returns data tables for the frontend including the 1P column.
@@ -42,10 +43,24 @@ def process_financials_file(file_data: io.BytesIO, start_date=None, end_date=Non
 
         # Fill excluded (metadata/helper) columns with empty string
         df[exclude_cols] = df[exclude_cols].fillna('')
-        print(df.head())  # Debug log to check the initial data
-        print(df.columns)  # Debug log to check the columns
+
+        financials_weeks, financials_years, financials_stores = financials_filters(df)
         
+        financials_sales_table, financials_orders_table, financials_avg_ticket_table = day_of_the_week_tables(df)
         
+        if location == "0001: Midtown East":
+            financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df, store="0001: Midtown East", year=2025, week_range="1 | 12/30/2024 - 01/05/2025")
+        else:
+            financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df, store="0001: Midtown East", year=2025, week_range="1 | 12/30/2024 - 01/05/2025")
+            
+        return financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table
+    
+    # { financials_filters: [financials_weeks, financials_years, financials_stores],
+    #              financials_sales_table: financials_sales_table,
+    #              financials_orders_table: financials_orders_table,
+    #              financials_avg_ticket_table: financials_avg_ticket_table,
+    #              financials_tw_lw_bdg_table: financials_tw_lw_bdg_table}
+    
     #     # Store all locations before filtering for later use
     #     all_locations = []
     #     if 'Location' in df.columns:

@@ -75,12 +75,11 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             
         if request.dashboard == "Financials":
             print("Dashboard type: Financials")
-            result = process_financials_file(
+            financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table = process_financials_file(
                 excel_data, 
-                start_date=request.startDate,
-                end_date=request.endDate,
                 location=request.location
             )
+            
             return {
         "table1": [],
         "table2": [],
@@ -90,7 +89,12 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         "locations": [request.location] if request.location else [],
         "dateRanges": [],
         "fileLocation": request.location,
-        "message": "Financial Dashboard is not yet implemented."
+         
+        "data":  { "financials_filters": [financials_weeks, financials_years, financials_stores],
+                 financials_sales_table: financials_sales_table,
+                  financials_orders_table: financials_orders_table,
+                  financials_avg_ticket_table: financials_avg_ticket_table,
+                  financials_tw_lw_bdg_table: financials_tw_lw_bdg_table}
     }
             # return {"message": "Financial Dashboard is not yet implemented."}
         
