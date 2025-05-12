@@ -80,9 +80,9 @@ export const excelSlice = createSlice({
       }
     },
     addFileData: (state, action: PayloadAction<{fileName: string; location: string; data: TableData}>) => {
-      // Check if file already exists
+      // Check if file already exists for this location
       const existingFileIndex = state.files.findIndex(
-        f => f.fileName === action.payload.fileName && f.location === action.payload.location
+        f => f.location === action.payload.location
       );
       
       if (existingFileIndex >= 0) {
@@ -98,11 +98,12 @@ export const excelSlice = createSlice({
         state.allLocations.push(action.payload.location);
       }
       
-      // Update the current display data if it matches the location
-      if (state.location === action.payload.location) {
+      // Update the current display data if it matches the location or if this is the first file
+      if (state.location === action.payload.location || state.files.length === 1) {
         state.tableData = action.payload.data;
         state.fileName = action.payload.fileName;
         state.fileProcessed = true;
+        state.location = action.payload.location;
       }
     },
     setLocations: (state, action: PayloadAction<string[]>) => {
@@ -122,8 +123,9 @@ export const excelSlice = createSlice({
         state.fileName = fileData.fileName;
         state.fileProcessed = true;
       } else {
-        // Don't clear the table data if no matching file found
-        // This allows for filter operations on the existing data
+        // If no matching file found, keep the current data but update location
+        // This allows for API calls to fetch data for the new location
+        state.location = location;
       }
     },
     resetExcelData: (state) => {
