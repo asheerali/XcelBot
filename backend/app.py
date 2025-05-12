@@ -11,6 +11,7 @@ from models import ExcelUploadRequest, ExcelFilterRequest, ExcelUploadResponse, 
 from excel_processor import process_excel_file
 from utils import find_file_in_directory
 from sales_analytics import generate_sales_analytics
+from financials_dashboard.financials_processor import process_financials_file
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -74,6 +75,12 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             
         if request.dashboard == "Financials":
             print("Dashboard type: Financials")
+            result = process_financials_file(
+                excel_data, 
+                start_date=request.startDate,
+                end_date=request.endDate,
+                location=request.location
+            )
             return {
         "table1": [],
         "table2": [],
