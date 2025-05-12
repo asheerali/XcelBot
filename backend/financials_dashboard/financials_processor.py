@@ -26,8 +26,26 @@ def process_financials_file(file_data: io.BytesIO, start_date=None, end_date=Non
         
         # Reset the file pointer for further operations
         file_data.seek(0)
+
+        # Strip whitespace from column names
+        df.columns = df.columns.str.strip()
+
+        # Define columns to exclude from filling
+        exclude_cols = ['Store', 'Ly Date', 'Date', 'Day', 'Week', 'Month', 'Quarter', 'Year',
+                        'Helper 1', 'Helper 2', 'Helper 3', 'Helper 4']
+
+        # Get all columns that should be filled with 0
+        fill_cols = [col for col in df.columns if col not in exclude_cols]
+
+        # Replace NaN with 0 only in selected columns
+        df[fill_cols] = df[fill_cols].fillna(0)
+
+        # Fill excluded (metadata/helper) columns with empty string
+        df[exclude_cols] = df[exclude_cols].fillna('')
         print(df.head())  # Debug log to check the initial data
         print(df.columns)  # Debug log to check the columns
+        
+        
     #     # Store all locations before filtering for later use
     #     all_locations = []
     #     if 'Location' in df.columns:
