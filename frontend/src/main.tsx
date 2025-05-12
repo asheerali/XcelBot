@@ -23,6 +23,7 @@ import { ContactUs } from "./pages/ContactUs";
 import { ContactTeam } from "./pages/ContactTeam";
 import PaymentPage from "./pages/PaymentPage";
 import UserPermissions from "./pages/UserPermissions";
+import Financials from "./pages/Financials";
 
 const router = createBrowserRouter([
   {
@@ -40,6 +41,10 @@ const router = createBrowserRouter([
           {
             path: "manage-reports",
             Component: ExcelImport,
+          },
+          {
+            path: "Financials",
+            Component: Financials,
           },
           {
             path: "upload-excel", // New route for the excel upload page

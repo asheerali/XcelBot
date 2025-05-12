@@ -70,11 +70,22 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         print('Processing uploaded file:', request.fileName)
         if request.location:
             print('Location:', request.location)
+
             
-        if request.dashboard == "Financial Dashboard":
-            print("Dashboard type: Financial Dashboard")
-            
-            return {"message": "Financial Dashboard is not yet implemented."}
+        if request.dashboard == "Financials":
+            print("Dashboard type: Financials")
+            return {
+        "table1": [],
+        "table2": [],
+        "table3": [],
+        "table4": [],
+        "table5": [],
+        "locations": [request.location] if request.location else [],
+        "dateRanges": [],
+        "fileLocation": request.location,
+        "message": "Financial Dashboard is not yet implemented."
+    }
+            # return {"message": "Financial Dashboard is not yet implemented."}
         
         if request.dashboard == "Sales Split":
             print("Dashboard type: Sales Split Dashboard")
