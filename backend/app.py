@@ -50,7 +50,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
     try:
         print(f"Received file upload: {request.fileName}")
         # Decode base64 file content
-        print("Type of file_content:", type(file_content))
+        # print("Type of file_content:", type(file_content))
         file_content = base64.b64decode(request.fileContent)
         print("Type of file_content:", type(file_content))
         
