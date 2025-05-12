@@ -90,7 +90,7 @@ const DashboardLabel = styled(Typography)(({ theme }) => ({
 // Dashboard options
 const DASHBOARD_OPTIONS = [
   'Sales Split',
-  'Financial Dashboard',
+  'Financials',
   'Sales Wide',
   'Product Mix'
 ];
@@ -464,22 +464,49 @@ const ExcelUploadPage: React.FC = () => {
   };
   
   // View file analysis (navigate to analysis page)
-  const viewAnalysis = () => {
-    // Store all locations from successful files in Redux before navigating
-    const successfulFiles = files.filter(f => f.status === 'success');
-    const locations = [...new Set(successfulFiles.map(f => f.location))];
+  
+        const viewAnalysis = () => {
+          // Store all locations from successful files in Redux before navigating
+          const successfulFiles = files.filter(f => f.status === 'success');
+          const locations = [...new Set(successfulFiles.map(f => f.location))];
+          
+          if (locations.length > 0) {
+            dispatch(setLocations(locations));
+            
+            // If we have successful files, select the first location
+            if (successfulFiles.length > 0) {
+              dispatch(selectLocation(successfulFiles[0].location));
+            }
+          }
+          
+          navigate('/manage-reports');
+        };
+
+//   const viewAnalysis = () => {
+//   const successfulFiles = files.filter(f => f.status === 'success');
+//   const locations = [...new Set(successfulFiles.map(f => f.location))];
+
+//   if (locations.length > 0) {
+//     dispatch(setLocations(locations));
     
-    if (locations.length > 0) {
-      dispatch(setLocations(locations));
-      
-      // If we have successful files, select the first location
-      if (successfulFiles.length > 0) {
-        dispatch(selectLocation(successfulFiles[0].location));
-      }
-    }
-    
-    navigate('/manage-reports');
-  };
+//     if (successfulFiles.length > 0) {
+//       dispatch(selectLocation(successfulFiles[0].location));
+//     }
+//   }
+
+//   const isFinancial = successfulFiles.some(f => f.dashboard === 'Financials');
+
+//   if (isFinancial) {
+//     navigate('/Financials', {
+//       state: {
+//         message: 'Financial Dashboard is not yet implemented.',
+//       },
+//     });
+//   } else {
+//     navigate('/manage-reports');
+//   }
+// };
+
   
   // Open dialog to edit location
   const editLocation = (index: number) => {

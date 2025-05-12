@@ -37,8 +37,8 @@ const CustomSidebar = ({ logo, title = 'InsightIQ', onSignOut }) => {
             icon: _jsx(NewspaperIcon, {})
         },
         {
-            title: 'Financials ',
-            path: '/Financial',
+            title: 'Financials',
+            path: '/Financials',
             icon: _jsx(NewspaperIcon, {})
         },
         {

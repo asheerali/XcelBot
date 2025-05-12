@@ -8,6 +8,8 @@ class ExcelUploadRequest(BaseModel):
     startDate: Optional[str] = None  # Optional date filter start
     endDate: Optional[str] = None    # Optional date filter end
     location: Optional[str] = None   # Optional location filter
+    dashboard: Optional[str] = None  # Dashboard type (e.g., "Sales", "Inventory")
+
 
 class ExcelFilterRequest(BaseModel):
     fileName: str  # Name of the previously uploaded file

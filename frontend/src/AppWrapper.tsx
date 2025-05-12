@@ -9,6 +9,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 // Import your components
 import CustomSidebar from './components/CustomSidebar';
 import ExcelImport from './components/ExcelImport';
+import Financials from './pages/Financials';
 
 // Create a material UI theme
 const theme = createTheme({
@@ -48,6 +49,8 @@ const AppWrapper: React.FC = () => {
               <Route path="/" element={<ExcelImport />} />
               <Route path="/upload" element={<ExcelImport />} />
               <Route path="/manage-reports" element={<ExcelImport />} />
+              <Route path="/financials" element={<Financials />} />
+
               <Route path="*" element={<ExcelImport />} />
             </Routes>
           </div>

@@ -193,21 +193,28 @@ export function ExcelImport() {
     }
 
     try {
-      dispatch(setLoading(true));
-      dispatch(setError(null));
+      // Use direct action objects instead of potentially undefined actions
+      dispatch({ type: 'excel/setLoading', payload: true });
+      dispatch({ type: 'excel/setError', payload: null });
       
       // Format dates correctly for API
       let formattedStartDate: string | null = null;
       let formattedEndDate: string | null = null;
       
       if (dateRange === 'Custom Date Range' && startDate) {
-        // Ensure date is in YYYY-MM-DD format for the backend
-        formattedStartDate = startDate;
+        // Convert MM/DD/YYYY to YYYY-MM-DD format for backend
+        const dateParts = startDate.split('/');
+        if (dateParts.length === 3) {
+          formattedStartDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
+        }
       }
       
       if (dateRange === 'Custom Date Range' && endDate) {
-        // Ensure date is in YYYY-MM-DD format for the backend
-        formattedEndDate = endDate;
+        // Convert MM/DD/YYYY to YYYY-MM-DD format for backend
+        const dateParts = endDate.split('/');
+        if (dateParts.length === 3) {
+          formattedEndDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
+        }
       }
       
       // Get the file content from the selected file
@@ -230,7 +237,7 @@ export function ExcelImport() {
         .then(response => {
           // Update table data with filtered data
           if (response.data) {
-            dispatch(setTableData(response.data));
+            dispatch({ type: 'excel/setTableData', payload: response.data });
             setError(''); // Clear any previous errors
             
             // Force re-render of chart component when data changes
@@ -261,18 +268,18 @@ export function ExcelImport() {
           }
           
           setError(errorMessage);
-          dispatch(setError(errorMessage));
+          dispatch({ type: 'excel/setError', payload: errorMessage });
         })
         .finally(() => {
-          dispatch(setLoading(false));
+          dispatch({ type: 'excel/setLoading', payload: false });
         });
       
     } catch (err: any) {
       console.error('Filter error:', err);
       const errorMessage = 'Error applying filters: ' + (err.message || 'Unknown error');
       setError(errorMessage);
-      dispatch(setError(errorMessage));
-      dispatch(setLoading(false));
+      dispatch({ type: 'excel/setError', payload: errorMessage });
+      dispatch({ type: 'excel/setLoading', payload: false });
     }
   };
 
@@ -287,13 +294,164 @@ export function ExcelImport() {
     setActiveTab(newValue);
   };
 
-  // Handle date input changes
+  // Handle date input changes - these are in MM/DD/YYYY format
   const handleStartDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setStartDate(event.target.value);
   };
 
   const handleEndDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setEndDate(event.target.value);
+  };
+
+  // Convert file to base64
+  const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
+  
+  // Handle location dialog save
+  const handleLocationSave = () => {
+    if (!locationInput.trim()) {
+      setLocationError('Location name is required');
+      return;
+    }
+    
+    // Check for duplicate locations
+    if (allLocations && allLocations.some(loc => loc.toLowerCase() === locationInput.trim().toLowerCase())) {
+      setLocationError('Location name must be unique');
+      return;
+    }
+    
+    // Close the dialog and proceed with upload
+    setIsLocationDialogOpen(false);
+    setSelectedLocation(locationInput.trim());
+    
+    // Trigger the upload
+    handleUpload(locationInput.trim());
+  };
+
+  // Upload and process file
+  const handleUpload = async (locationName?: string) => {
+    if (!file) {
+      setError('Please select a file first');
+      return;
+    }
+
+    try {
+      // Use explicit action objects if the action creators might be undefined
+      dispatch({ type: 'excel/setLoading', payload: true });
+      dispatch({ type: 'excel/setError', payload: null });
+      setError(''); // Clear any previous errors
+      
+      // Convert file to base64
+      const base64File = await toBase64(file);
+      const base64Content = base64File.split(',')[1]; // Remove data:application/... prefix
+      
+      // Use explicit action object with location if provided
+      dispatch({ 
+        type: 'excel/setExcelFile', 
+        payload: {
+          fileName: file.name,
+          fileContent: base64Content,
+          location: locationName
+        }
+      });
+      
+      // Send to backend
+      const response = await axios.post(API_URL, {
+        fileName: file.name,
+        fileContent: base64Content,
+        location: locationName // Include location in the request
+      });
+      
+      // Update table data with response
+      if (response.data) {
+        // Add file data to Redux store
+        if (locationName) {
+          dispatch({ 
+            type: 'excel/addFileData', 
+            payload: {
+              fileName: file.name,
+              location: locationName,
+              data: response.data
+            }
+          });
+          
+          // Update locations in Redux store
+          dispatch({ 
+            type: 'excel/setLocations', 
+            payload: locationName ? [locationName] : response.data.locations || []
+          });
+        }
+        
+        dispatch({ type: 'excel/setTableData', payload: response.data });
+        setShowSuccessNotification(true);  // Show notification
+        
+        // Set location if available
+        if (locationName) {
+          setSelectedLocation(locationName);
+          dispatch({ type: 'excel/selectLocation', payload: locationName });
+        } else if (response.data.locations && response.data.locations.length > 0) {
+          setSelectedLocation(response.data.locations[0]);
+          dispatch({ type: 'excel/selectLocation', payload: response.data.locations[0] });
+        }
+        
+        // Set date ranges if available
+        if (response.data.dateRanges && response.data.dateRanges.length > 0) {
+          setAvailableDateRanges(response.data.dateRanges);
+          setDateRangeType(response.data.dateRanges[0]);
+        }
+        
+        // Show tutorial on first successful upload
+        if (!localStorage.getItem('tutorialShown')) {
+          setShowTutorial(true);
+          localStorage.setItem('tutorialShown', 'true');
+        }
+        
+        // Force re-render of chart component
+        setChartKey(prevKey => prevKey + 1);
+      } else {
+        throw new Error('Invalid response data');
+      }
+      
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      
+      let errorMessage = 'Error processing file';
+      
+      if (axios.isAxiosError(err)) {
+        if (err.response) {
+          // Get detailed error message if available
+          const detail = err.response.data?.detail;
+          errorMessage = `Server error: ${detail || err.response.status}`;
+          
+          // Special handling for common errors
+          if (detail && typeof detail === 'string' && detail.includes('isinf')) {
+            errorMessage = 'Backend error: Please update the backend code to use numpy.isinf instead of pandas.isinf';
+          } else if (err.response.status === 404) {
+            errorMessage = 'API endpoint not found. Is the server running?';
+          } else if (detail) {
+            // Try to extract a more meaningful message
+            if (typeof detail === 'string' && detail.includes('Column')) {
+              errorMessage = `File format error: ${detail}`;
+            } else {
+              errorMessage = `Processing error: ${detail}`;
+            }
+          }
+        } else if (err.request) {
+          errorMessage = 'No response from server. Please check if the backend is running.';
+        }
+      } else if (err.message) {
+        errorMessage = `Error: ${err.message}`;
+      }
+      
+      setError(errorMessage);
+      dispatch({ type: 'excel/setError', payload: errorMessage });
+    } finally {
+      dispatch({ type: 'excel/setLoading', payload: false });
+    }
   };
 
   // Success notification - decoupled from dataProcessed state
@@ -338,6 +496,47 @@ export function ExcelImport() {
         </Typography>
       </Alert>
     </Snackbar>
+  );
+  
+  // Location dialog
+  const renderLocationDialog = () => (
+    <Dialog
+      open={isLocationDialogOpen}
+      onClose={() => setIsLocationDialogOpen(false)}
+      aria-labelledby="location-dialog-title"
+      fullWidth
+      maxWidth="sm"
+    >
+      <DialogTitle id="location-dialog-title">
+        Enter Location Name
+      </DialogTitle>
+      <DialogContent>
+        <Typography variant="body1" paragraph>
+          Please enter a location name for this Excel file. Each file should represent data from a single location.
+        </Typography>
+        <TextField
+          autoFocus
+          margin="dense"
+          id="location"
+          label="Location Name"
+          type="text"
+          fullWidth
+          variant="outlined"
+          value={locationInput}
+          onChange={(e) => setLocationInput(e.target.value)}
+          error={!!locationError}
+          helperText={locationError}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setIsLocationDialogOpen(false)} color="inherit">
+          Cancel
+        </Button>
+        <Button onClick={handleLocationSave} color="primary" variant="contained">
+          Save
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 
   return (
@@ -498,6 +697,7 @@ export function ExcelImport() {
 
       {renderTutorial()}
       {renderSuccessMessage()}
+      {renderLocationDialog()}
     </>
   );
 }
