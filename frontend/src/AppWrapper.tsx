@@ -49,8 +49,12 @@ const AppWrapper: React.FC = () => {
               <Route path="/" element={<ExcelImport />} />
               <Route path="/upload" element={<ExcelImport />} />
               <Route path="/manage-reports" element={<ExcelImport />} />
+<<<<<<< HEAD
               <Route path="/financials" element={<Financials />} />
 
+=======
+              <Route path="/Financials" element={<Financials />} />
+>>>>>>> feat/financials2
               <Route path="*" element={<ExcelImport />} />
             </Routes>
           </div>

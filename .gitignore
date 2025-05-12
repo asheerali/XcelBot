@@ -6,6 +6,7 @@ node_modules/
 yarn.lock
 __pycache__/
 docker 
+backend_copy/
 *.xlsx
 # Additional environment files
 .env.local

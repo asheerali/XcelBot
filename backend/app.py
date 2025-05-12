@@ -11,6 +11,7 @@ from models import ExcelUploadRequest, ExcelFilterRequest, ExcelUploadResponse, 
 from excel_processor import process_excel_file
 from utils import find_file_in_directory
 from sales_analytics import generate_sales_analytics
+from financials_dashboard.financials_processor import process_financials_file
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -29,6 +30,11 @@ app.add_middleware(
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+@app.get("/")
+async def root():
+    return {"message": "Welcome to the Excel Processing API!"}
+    
+    
 # Add this test endpoint to verify FastAPI routing
 @app.get("/api/test")
 async def test_endpoint():
@@ -65,61 +71,36 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         print('Processing uploaded file:', request.fileName)
         if request.location:
             print('Location:', request.location)
-
-            
-        if request.dashboard == "Financials":
-            print("Dashboard type: Financials")
-            # result = process_financials_file(
-            #     excel_data, 
-            #     start_date=request.startDate,
-            #     end_date=request.endDate,
-            #     location=request.location
-            # )
-            return {
-        "table1": [],
-        "table2": [],
-        "table3": [],
-        "table4": [],
-        "table5": [],
-        "locations": [request.location] if request.location else [],
-        "dateRanges": [],
-        "fileLocation": request.location,
-        "message": "Financial Dashboard is not yet implemented."
-    }
-            # return {"message": "Financial Dashboard is not yet implemented."}
         
-        if request.dashboard == "Sales Split":
-            print("Dashboard type: Sales Split Dashboard")
-
-            # Process Excel file with optional filters
-            result = process_excel_file(
-                excel_data, 
-                start_date=request.startDate,
-                end_date=request.endDate,
-                location=request.location
-            )
+        # Process Excel file with optional filters
+        result = process_excel_file(
+            excel_data, 
+            start_date=request.startDate,
+            end_date=request.endDate,
+            location=request.location
+        )
+        
+        # Ensure each table exists in the result, even if empty
+        for table in ['table1', 'table2', 'table3', 'table4', 'table5']:
+            if table not in result:
+                result[table] = []
+        
+        # If location is provided, make sure it's in the locations list
+        if 'locations' not in result:
+            result['locations'] = []
             
-            # Ensure each table exists in the result, even if empty
-            for table in ['table1', 'table2', 'table3', 'table4', 'table5']:
-                if table not in result:
-                    result[table] = []
+        if request.location and request.location not in result['locations']:
+            result['locations'].append(request.location)
             
-            # If location is provided, make sure it's in the locations list
-            if 'locations' not in result:
-                result['locations'] = []
-                
-            if request.location and request.location not in result['locations']:
-                result['locations'].append(request.location)
-                
-            if 'dateRanges' not in result:
-                result['dateRanges'] = []
-                
-            # Add fileLocation field to the response
-            result['fileLocation'] = request.location
+        if 'dateRanges' not in result:
+            result['dateRanges'] = []
             
-            # Return the properly structured response
-            return ExcelUploadResponse(**result)
-            
+        # Add fileLocation field to the response
+        result['fileLocation'] = request.location
+        
+        # Return the properly structured response
+        return ExcelUploadResponse(**result)
+        
     except Exception as e:
         # Log the full exception for debugging
         print(f"Error processing file: {str(e)}")

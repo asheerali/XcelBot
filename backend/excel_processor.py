@@ -239,3 +239,8 @@ def process_excel_file(file_data: io.BytesIO, start_date=None, end_date=None, lo
         print(traceback.format_exc())
         # Re-raise to be caught by the endpoint handler
         raise
+    
+    
+    
+    
+    

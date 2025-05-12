@@ -3,7 +3,7 @@
 .env.development
 .env.test
 .env.production
-
+test/
 # Jupyter Notebook
 .ipynb_checkpoints
 
