@@ -423,7 +423,11 @@ def process_financials_file(file_data: io.BytesIO, start_date=None, end_date=Non
     """
     # Read the Excel file
     # df = pd.read_excel(file_data)
+    file_data.seek(0)
+    print("Type of file_data:", type(file_data))
+
     try:
+        print("i am here 1")
         df = pd.read_excel(file_data, sheet_name="Database")
     except ValueError as e:
         raise ValueError("Sheet named 'Database' not found in the uploaded Excel file.")
@@ -434,6 +438,7 @@ def process_financials_file(file_data: io.BytesIO, start_date=None, end_date=Non
 
     # Strip whitespace from column names
     df.columns = df.columns.str.strip()
+    print("i am here 2")
 
     # Define columns to exclude from filling
     exclude_cols = ['Store', 'Ly Date', 'Date', 'Day', 'Week', 'Month', 'Quarter', 'Year',
@@ -456,9 +461,20 @@ def process_financials_file(file_data: io.BytesIO, start_date=None, end_date=Non
         financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df, store="0001: Midtown East", year=2025, week_range="1 | 12/30/2024 - 01/05/2025")
     else:
         financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df, store="0001: Midtown East", year=2025, week_range="1 | 12/30/2024 - 01/05/2025")
-        
-    return financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table
+    print("i am here 3")
+    print(financials_tw_lw_bdg_table)
     
+    result = {
+            "table1": [financials_weeks, financials_years, financials_stores],    # Raw data table
+            "table2": financials_years,    # Percentage table
+            "table3": financials_sales_table,    # In-House percentages
+            "table4": financials_orders_table,    # Week-over-Week table
+            "table5": financials_avg_ticket_table,    # Category summary
+            "locations": "locations",   # List of all locations (not just filtered ones)
+            "dateRanges": "" # List of available date ranges
+        }
+    # return financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table
+    return result
     
     # except Exception as e:
     #     # Log the error

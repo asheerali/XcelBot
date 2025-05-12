@@ -50,7 +50,9 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
     try:
         print(f"Received file upload: {request.fileName}")
         # Decode base64 file content
+        print("Type of file_content:", type(file_content))
         file_content = base64.b64decode(request.fileContent)
+        print("Type of file_content:", type(file_content))
         
         # Create BytesIO object for pandas
         excel_data = io.BytesIO(file_content)
@@ -75,27 +77,33 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             
         if request.dashboard == "Financials":
             print("Dashboard type: Financials")
-            financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table = process_financials_file(
-                excel_data, 
+            print("i am here 4")
+            excel_data_copy = io.BytesIO(file_content)
+
+            result = process_financials_file(
+                excel_data_copy, 
                 location=request.location
             )
+            print("i am here 5")
             
-            return {
-        "table1": [],
-        "table2": [],
-        "table3": [],
-        "table4": [],
-        "table5": [],
-        "locations": [request.location] if request.location else [],
-        "dateRanges": [],
-        "fileLocation": request.location,
+# Ensure all returned values are properly converted to JSON-serializable formats
+            return result
+#         return {
+    #     "table1": [],
+    #     "table2": [],
+    #     "table3": [],
+    #     "table4": [],
+    #     "table5": [],
+    #     "locations": [request.location] if request.location else [],
+    #     "dateRanges": [],
+    #     "fileLocation": request.location,
          
-        "data":  { "financials_filters": [financials_weeks, financials_years, financials_stores],
-                 financials_sales_table: financials_sales_table,
-                  financials_orders_table: financials_orders_table,
-                  financials_avg_ticket_table: financials_avg_ticket_table,
-                  financials_tw_lw_bdg_table: financials_tw_lw_bdg_table}
-    }
+    #     "data":  { "financials_filters": [financials_weeks, financials_years, financials_stores],
+    #              "financials_sales_table": financials_sales_table,
+    #               "financials_orders_table": financials_orders_table,
+    #               "financials_avg_ticket_table": financials_avg_ticket_table,
+    #               "financials_tw_lw_bdg_table": financials_tw_lw_bdg_table}
+    # }
             # return {"message": "Financial Dashboard is not yet implemented."}
         
         if request.dashboard == "Sales Split":
