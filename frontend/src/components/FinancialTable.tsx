@@ -55,20 +55,7 @@ const FinancialTable = () => {
       twBdgColor: "#d32f2f",
       twBdgArrow: "down"
     },
-    {
-      category: "",
-      section: "SALES",
-      thisWeekLabel: "",
-      thisWeekValue: "",
-      lastWeekLabel: "",
-      lastWeekValue: "",
-      twLw: "",
-      budgetLabel: "",
-      budgetValue: "",
-      twBdg: "",
-      twBdgColor: "",
-      twBdgArrow: ""
-    },
+  
     
     // LABOR COST category (rows 5-9)
     {
@@ -121,8 +108,8 @@ const FinancialTable = () => {
       thisWeekLabel: "SPMH",
       thisWeekValue: "thr",
       lastWeekLabel: "SPMH",
-      lastWeekValue: "#VALUE!",
-      twLw: "#VALUE!",
+      lastWeekValue: "$0.00",
+      twLw: "$0.00",
       budgetLabel: "SPMH",
       budgetValue: "",
       twBdg: "-18.93%",
@@ -302,7 +289,7 @@ const FinancialTable = () => {
       twBdgArrow: "down"
     },
     {
-      category: "Food Cost %",
+      category: "Food Cost%",
       section: "FOOD COST",
       thisWeekLabel: "Food Cost %",
       thisWeekValue: "63.01%",
@@ -349,6 +336,16 @@ const FinancialTable = () => {
     }
   ];
 
+  // Calculate dynamic heights based on number of rows in each section
+  const salesRows = 5;
+  const laborRows = 5;
+  const foodRows = 14;
+  const rowHeight = 45; // Reduced from 52px
+  
+  const salesHeight = salesRows * rowHeight;
+  const laborHeight = laborRows * rowHeight;
+  const foodHeight = foodRows * rowHeight;
+
   return (
     <Paper elevation={3} sx={{ borderRadius: 2, overflow: 'hidden', width: '100%' }}>
       <Box sx={{ display: 'flex', width: '100%', backgroundColor: '#ffffff' }}>
@@ -360,52 +357,54 @@ const FinancialTable = () => {
           flexShrink: 0,
           borderRight: '1px solid #e0e0e0',
         }}>
-          {/* SALES label (rows 1-4) */}
+          {/* SALES label */}
           <Box sx={{ 
-            height: '207px',
-            backgroundColor: '#0000ee',
-            color: 'white',
+            height: `${salesHeight}px`,
+            backgroundColor: '#f5f5f5', // Light gray background
+            color: 'black', // Black font
             writingMode: 'vertical-rl',
             transform: 'rotate(180deg)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontWeight: 'bold',
-            fontSize: '15px',
-            letterSpacing: '1px'
+            fontSize: '14px',
+            letterSpacing: '1px',
+            borderBottom: '1px solid #e0e0e0'
           }}>
             SALES
           </Box>
           
-          {/* LABOR COST label (rows 5-9) */}
+          {/* LABOR COST label */}
           <Box sx={{ 
-            height: '260px',
-            backgroundColor: '#b71c1c',
-            color: 'white',
+            height: `${laborHeight}px`,
+            backgroundColor: '#f5f5f5', // Light gray background
+            color: 'black', // Black font
             writingMode: 'vertical-rl',
             transform: 'rotate(180deg)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontWeight: 'bold',
-            fontSize: '15px',
-            letterSpacing: '1px'
+            fontSize: '14px',
+            letterSpacing: '1px',
+            borderBottom: '1px solid #e0e0e0'
           }}>
             LABOR COST
           </Box>
           
-          {/* FOOD COST label (rows 10-23) */}
+          {/* FOOD COST label */}
           <Box sx={{ 
-            height: '533px',
-            backgroundColor: '#a45c00',
-            color: 'white',
+            height: `${foodHeight}px`,
+            backgroundColor: '#f5f5f5', // Light gray background
+            color: 'black', // Black font
             writingMode: 'vertical-rl',
             transform: 'rotate(180deg)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontWeight: 'bold',
-            fontSize: '15px',
+            fontSize: '14px',
             letterSpacing: '1px'
           }}>
             FOOD COST
@@ -427,7 +426,7 @@ const FinancialTable = () => {
                     fontSize: '16px',
                     width: '30%',
                     border: '1px solid #e0e0e0',
-                    padding: '14px 8px'
+                    padding: '10px 8px' // Reduced from 14px
                   }}
                 >
                   This Weeks Trend
@@ -441,7 +440,7 @@ const FinancialTable = () => {
                     fontSize: '16px',
                     width: '30%',
                     border: '1px solid #e0e0e0',
-                    padding: '14px 8px'
+                    padding: '10px 8px' // Reduced from 14px
                   }}
                 >
                   Last Weeks Trend
@@ -455,7 +454,7 @@ const FinancialTable = () => {
                     fontSize: '16px',
                     width: '10%',
                     border: '1px solid #e0e0e0',
-                    padding: '14px 8px'
+                    padding: '10px 8px' // Reduced from 14px
                   }}
                 >
                   TW/LW (+/-)
@@ -470,7 +469,7 @@ const FinancialTable = () => {
                     fontSize: '16px',
                     width: '20%',
                     border: '1px solid #e0e0e0',
-                    padding: '14px 8px'
+                    padding: '10px 8px' // Reduced from 14px
                   }}
                 >
                   This Weeks Budget
@@ -484,7 +483,7 @@ const FinancialTable = () => {
                     fontSize: '16px',
                     width: '10%',
                     border: '1px solid #e0e0e0',
-                    padding: '14px 8px'
+                    padding: '10px 8px' // Reduced from 14px
                   }}
                 >
                   TW/Bdg (+/-)
@@ -496,7 +495,7 @@ const FinancialTable = () => {
                 <TableRow 
                   key={index}
                   sx={{ 
-                    height: '52px',
+                    height: `${rowHeight}px`, // Reduced from 52px
                     borderBottom: '1px solid #e0e0e0',
                     backgroundColor: index % 2 === 0 ? '#fafafa' : '#ffffff',
                     '&:hover': {
@@ -509,9 +508,9 @@ const FinancialTable = () => {
                     align="center"
                     sx={{ 
                       borderRight: '1px solid #e0e0e0',
-                      padding: '8px 12px',
+                      padding: '4px 8px', // Reduced padding
                       width: '15%',
-                      fontSize: '15px',
+                      fontSize: '14px', // Slightly smaller font
                       fontWeight: 400
                     }}
                   >
@@ -522,9 +521,9 @@ const FinancialTable = () => {
                     align="center"
                     sx={{ 
                       borderRight: '1px solid #e0e0e0',
-                      padding: '8px 12px',
+                      padding: '4px 8px', // Reduced padding
                       width: '15%',
-                      fontSize: '15px',
+                      fontSize: '14px', // Slightly smaller font
                       fontWeight: 400
                     }}
                   >
@@ -536,9 +535,9 @@ const FinancialTable = () => {
                     align="center"
                     sx={{ 
                       borderRight: '1px solid #e0e0e0',
-                      padding: '8px 12px',
+                      padding: '4px 8px', // Reduced padding
                       width: '15%',
-                      fontSize: '15px',
+                      fontSize: '14px', // Slightly smaller font
                       fontWeight: 400
                     }}
                   >
@@ -549,9 +548,9 @@ const FinancialTable = () => {
                     align="center"
                     sx={{ 
                       borderRight: '1px solid #e0e0e0',
-                      padding: '8px 12px',
+                      padding: '4px 8px', // Reduced padding
                       width: '15%',
-                      fontSize: '15px',
+                      fontSize: '14px', // Slightly smaller font
                       fontWeight: 400
                     }}
                   >
@@ -563,8 +562,8 @@ const FinancialTable = () => {
                     align="center"
                     sx={{ 
                       borderRight: '1px solid #e0e0e0',
-                      padding: '8px 12px',
-                      fontSize: '15px',
+                      padding: '4px 8px', // Reduced padding
+                      fontSize: '14px', // Slightly smaller font
                       fontWeight: 400
                     }}
                   >
@@ -578,13 +577,13 @@ const FinancialTable = () => {
                         {row.twLwArrow === 'up' && (
                           <span style={{ 
                             color: row.twLwColor, 
-                            fontSize: '14px',
+                            fontSize: '12px',
                             fontWeight: 'bold'
                           }}>▲</span>
                         )}
                         <Typography sx={{ 
                           color: row.twLwColor || 'inherit',
-                          fontSize: '15px',
+                          fontSize: '14px',
                           fontWeight: 400
                         }}>
                           {row.twLw}
@@ -598,9 +597,9 @@ const FinancialTable = () => {
                     align="center"
                     sx={{ 
                       borderRight: '1px solid #e0e0e0',
-                      padding: '8px 12px',
+                      padding: '4px 8px', // Reduced padding
                       width: '10%',
-                      fontSize: '15px',
+                      fontSize: '13px', // Slightly smaller font
                       fontWeight: 400
                     }}
                   >
@@ -611,9 +610,9 @@ const FinancialTable = () => {
                     align="center"
                     sx={{ 
                       borderRight: '1px solid #e0e0e0',
-                      padding: '8px 12px',
+                      padding: '4px 8px', // Reduced padding
                       width: '10%',
-                      fontSize: '15px',
+                      fontSize: '14px', // Slightly smaller font
                       fontWeight: 400
                     }}
                   >
@@ -624,8 +623,8 @@ const FinancialTable = () => {
                   <TableCell 
                     align="center"
                     sx={{ 
-                      padding: '8px 12px',
-                      fontSize: '15px',
+                      padding: '4px 8px', // Reduced padding
+                      fontSize: '14px', // Slightly smaller font
                       fontWeight: 400
                     }}
                   >
@@ -638,7 +637,7 @@ const FinancialTable = () => {
                       }}>
                         <Typography sx={{ 
                           color: row.twBdgColor || 'inherit',
-                          fontSize: '15px',
+                          fontSize: '14px',
                           fontWeight: 400
                         }}>
                           {row.twBdg}
@@ -646,13 +645,13 @@ const FinancialTable = () => {
                         {row.twBdgArrow === 'up' ? (
                           <span style={{ 
                             color: row.twBdgColor, 
-                            fontSize: '14px',
+                            fontSize: '12px',
                             fontWeight: 'bold'
                           }}>▲</span>
                         ) : row.twBdgArrow === 'down' && (
                           <span style={{ 
                             color: row.twBdgColor, 
-                            fontSize: '14px',
+                            fontSize: '12px',
                             fontWeight: 'bold'
                           }}>▼</span>
                         )}

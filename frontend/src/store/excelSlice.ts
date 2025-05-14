@@ -1,4 +1,5 @@
-// store/excelSlice.ts
+// store/excelSlice.ts - Updated with separate financial and sales data handling
+
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 // Define the interfaces for our state
@@ -11,9 +12,23 @@ interface TableData {
   locations: string[];
   dateRanges: string[];
   fileLocation?: string;
+  dashboardName?: string;
+  data?: any;
 }
 
 interface FileData {
+  fileName: string;
+  location: string;
+  data: TableData;
+}
+
+interface FinancialData {
+  fileName: string;
+  location: string;
+  data: TableData;
+}
+
+interface SalesData {
   fileName: string;
   location: string;
   data: TableData;
@@ -28,6 +43,8 @@ interface ExcelState {
   loading: boolean;
   error: string | null;
   files: FileData[];
+  financialFiles: FinancialData[];  // Separate financial files
+  salesFiles: SalesData[];          // Separate sales files
   allLocations: string[];
 }
 
@@ -49,6 +66,8 @@ const initialState: ExcelState = {
   loading: false,
   error: null,
   files: [],
+  financialFiles: [],  // Initialize empty
+  salesFiles: [],      // Initialize empty
   allLocations: []
 };
 
@@ -106,6 +125,44 @@ export const excelSlice = createSlice({
         state.location = action.payload.location;
       }
     },
+    addFinancialData: (state, action: PayloadAction<{fileName: string; location: string; data: TableData}>) => {
+      // Check if financial file already exists for this location
+      const existingIndex = state.financialFiles.findIndex(
+        f => f.location === action.payload.location
+      );
+      
+      if (existingIndex >= 0) {
+        // Update existing file
+        state.financialFiles[existingIndex] = action.payload;
+      } else {
+        // Add new file
+        state.financialFiles.push(action.payload);
+      }
+      
+      // Add location to allLocations if it doesn't exist
+      if (!state.allLocations.includes(action.payload.location)) {
+        state.allLocations.push(action.payload.location);
+      }
+    },
+    addSalesData: (state, action: PayloadAction<{fileName: string; location: string; data: TableData}>) => {
+      // Check if sales file already exists for this location
+      const existingIndex = state.salesFiles.findIndex(
+        f => f.location === action.payload.location
+      );
+      
+      if (existingIndex >= 0) {
+        // Update existing file
+        state.salesFiles[existingIndex] = action.payload;
+      } else {
+        // Add new file
+        state.salesFiles.push(action.payload);
+      }
+      
+      // Add location to allLocations if it doesn't exist
+      if (!state.allLocations.includes(action.payload.location)) {
+        state.allLocations.push(action.payload.location);
+      }
+    },
     setLocations: (state, action: PayloadAction<string[]>) => {
       // Set all locations (without duplicates)
       const newLocations = action.payload.filter(loc => loc && loc.trim() !== '');
@@ -115,12 +172,17 @@ export const excelSlice = createSlice({
       const location = action.payload;
       state.location = location;
       
-      // Find file data for this location
+      // Find file data for this location (first check sales, then financial, then general)
+      const salesData = state.salesFiles.find(f => f.location === location);
+      const financialData = state.financialFiles.find(f => f.location === location);
       const fileData = state.files.find(f => f.location === location);
       
-      if (fileData) {
-        state.tableData = fileData.data;
-        state.fileName = fileData.fileName;
+      // Use sales data if available, otherwise financial, otherwise general
+      const dataToUse = salesData || financialData || fileData;
+      
+      if (dataToUse) {
+        state.tableData = dataToUse.data;
+        state.fileName = dataToUse.fileName;
         state.fileProcessed = true;
       } else {
         // If no matching file found, keep the current data but update location
@@ -141,6 +203,8 @@ export const {
   setError, 
   setTableData,
   addFileData,
+  addFinancialData,
+  addSalesData,
   setLocations,
   selectLocation,
   resetExcelData

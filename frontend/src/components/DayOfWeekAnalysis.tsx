@@ -263,32 +263,58 @@ const DayOfWeekAnalysis = () => {
     }
   ];
 
-  const renderTable = (title, data, metrics) => (
+ const renderTable = (title, data, metrics) => (
     <Paper sx={{ mb: 4, overflow: 'hidden' }}>
-      <Typography variant="h6" sx={{ p: 2, backgroundColor: '#f5f5f5', fontWeight: 'bold' }}>
+      <Typography 
+        variant="h5" 
+        sx={{ 
+          p: 3, 
+          backgroundColor: '#f5f5f5', 
+          fontWeight: 'bold',
+          textAlign: 'center',
+          fontSize: '1.75rem'
+        }}
+      >
         {title}
       </Typography>
       <TableContainer>
         <Table size="small">
           <TableHead>
             <TableRow sx={{ backgroundColor: '#f0f0f0' }}>
-              <TableCell sx={{ fontWeight: 'bold', border: '1px solid #ddd' }}>
+              <TableCell align="center" sx={{ 
+                fontWeight: 'bold', 
+                border: '1px solid #ddd',
+                fontSize: '1rem'
+              }}>
                 Day of The Week
               </TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', border: '1px solid #ddd' }}>
+              <TableCell align="center" sx={{ 
+                fontWeight: 'bold', 
+                border: '1px solid #ddd',
+                fontSize: '1rem'
+              }}>
                 {metrics.twLabel}
               </TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', border: '1px solid #ddd' }}>
+              <TableCell align="center" sx={{ 
+                fontWeight: 'bold', 
+                border: '1px solid #ddd',
+                fontSize: '1rem'
+              }}>
                 {metrics.lwLabel}
               </TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold', border: '1px solid #ddd' }}>
+              <TableCell align="center" sx={{ 
+                fontWeight: 'bold', 
+                border: '1px solid #ddd',
+                fontSize: '1rem'
+              }}>
                 {metrics.lyLabel}
               </TableCell>
               <TableCell align="center" sx={{ 
                 fontWeight: 'bold', 
                 border: '1px solid #ddd',
                 backgroundColor: '#ffeb3b',
-                color: '#000'
+                color: '#000',
+                fontSize: '1rem'
               }}>
                 Tw/Lw (+/-)
               </TableCell>
@@ -296,7 +322,8 @@ const DayOfWeekAnalysis = () => {
                 fontWeight: 'bold', 
                 border: '1px solid #ddd',
                 backgroundColor: '#ffeb3b',
-                color: '#000'
+                color: '#000',
+                fontSize: '1rem'
               }}>
                 Tw/Ly (+/-)
               </TableCell>
@@ -311,27 +338,31 @@ const DayOfWeekAnalysis = () => {
                   '&:hover': { backgroundColor: row.isTotal ? '#d0d0d0' : '#f0f0f0' }
                 }}
               >
-                <TableCell sx={{ 
+                <TableCell align="center" sx={{ 
                   fontWeight: row.isTotal ? 'bold' : 'normal',
-                  border: '1px solid #ddd'
+                  border: '1px solid #ddd',
+                  fontSize: row.isTotal ? '0.95rem' : '0.9rem'
                 }}>
                   {row.day}
                 </TableCell>
-                <TableCell align="right" sx={{ 
+                <TableCell align="center" sx={{ 
                   fontWeight: row.isTotal ? 'bold' : 'normal',
-                  border: '1px solid #ddd'
+                  border: '1px solid #ddd',
+                  fontSize: row.isTotal ? '0.95rem' : '0.9rem'
                 }}>
                   {row[metrics.twField]}
                 </TableCell>
-                <TableCell align="right" sx={{ 
+                <TableCell align="center" sx={{ 
                   fontWeight: row.isTotal ? 'bold' : 'normal',
-                  border: '1px solid #ddd'
+                  border: '1px solid #ddd',
+                  fontSize: row.isTotal ? '0.95rem' : '0.9rem'
                 }}>
                   {row[metrics.lwField]}
                 </TableCell>
-                <TableCell align="right" sx={{ 
+                <TableCell align="center" sx={{ 
                   fontWeight: row.isTotal ? 'bold' : 'normal',
-                  border: '1px solid #ddd'
+                  border: '1px solid #ddd',
+                  fontSize: row.isTotal ? '0.95rem' : '0.9rem'
                 }}>
                   {row[metrics.lyField]}
                 </TableCell>
@@ -339,7 +370,8 @@ const DayOfWeekAnalysis = () => {
                   fontWeight: row.isTotal ? 'bold' : 'normal',
                   border: '1px solid #ddd',
                   color: row.isPositiveTwLw ? 'green' : 'red',
-                  backgroundColor: row.isTotal ? '#fff3c4' : 'transparent'
+                  backgroundColor: row.isTotal ? '#fff3c4' : 'transparent',
+                  fontSize: row.isTotal ? '0.95rem' : '0.9rem'
                 }}>
                   {row.twLwChange}
                 </TableCell>
@@ -347,7 +379,8 @@ const DayOfWeekAnalysis = () => {
                   fontWeight: row.isTotal ? 'bold' : 'normal',
                   border: '1px solid #ddd',
                   color: row.isPositiveTwLy ? 'green' : 'red',
-                  backgroundColor: row.isTotal ? '#fff3c4' : 'transparent'
+                  backgroundColor: row.isTotal ? '#fff3c4' : 'transparent',
+                  fontSize: row.isTotal ? '0.95rem' : '0.9rem'
                 }}>
                   {row.twLyChange}
                 </TableCell>

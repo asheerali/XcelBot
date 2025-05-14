@@ -1,3 +1,5 @@
+# Updated app.py backend with dashboard name support
+
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 import base64
@@ -23,7 +25,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # Directory to save uploaded files
 UPLOAD_DIR = "uploads"
@@ -65,30 +66,48 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         print('Processing uploaded file:', request.fileName)
         if request.location:
             print('Location:', request.location)
-
             
         if request.dashboard == "Financials":
             print("Dashboard type: Financials")
-            # result = process_financials_file(
-            #     excel_data, 
-            #     start_date=request.startDate,
-            #     end_date=request.endDate,
-            #     location=request.location
-            # )
-            return {
-        "table1": [],
-        "table2": [],
-        "table3": [],
-        "table4": [],
-        "table5": [],
-        "locations": [request.location] if request.location else [],
-        "dateRanges": [],
-        "fileLocation": request.location,
-        "message": "Financial Dashboard is not yet implemented."
-    }
-            # return {"message": "Financial Dashboard is not yet implemented."}
+            
+            # Mock financial data structure for now
+            result = {
+                "table1": [{"financials_weeks": ["Week 1", "Week 2"], "financials_years": ["2025"], "financials_stores": [request.location or "Default Store"]}],
+                "table2": [{"week": "Week 1", "netSales": "$8,268.68", "netSalesChange": "+5%"}],
+                "table3": [{"week": "Week 1", "orders": "372", "ordersChange": "+3%"}],
+                "table4": [{"week": "Week 1", "avgTicket": "$22.23", "avgTicketChange": "+2%"}],
+                "table5": [
+                    {
+                        "week": "Week 1", 
+                        "netSales": "$8,268.68", 
+                        "netSalesChange": "+5%",
+                        "orders": "372",
+                        "ordersChange": "+3%",
+                        "avgTicket": "$22.23",
+                        "avgTicketChange": "+2.23",
+                        "foodCostPercent": "28.5%",
+                        "foodCostChange": "-1.2%",
+                        "laborCostPercent": "30.23%",
+                        "laborCostChange": "+1.5%",
+                        "spmh": "$68.91",
+                        "spmhChange": "+5.42",
+                        "lpmh": "$20.83",
+                        "lpmhChange": "-2.17"
+                    }
+                ],
+                "locations": [request.location] if request.location else ["Default Store"],
+                "default_location": request.location or "Default Store",
+                "locations_range": [request.location] if request.location else ["Default Store"],
+                "dateRanges": ["1 | 12/30/2024 - 01/05/2025", "2 | 01/06/2025 - 01/12/2025"],
+                "fileLocation": request.location,
+                "dashboardName": "Financials",
+                "data": "Financial Dashboard is not yet implemented."
+            }
+            
+            print("result", result)
+            return ExcelUploadResponse(**result)
         
-        if request.dashboard == "Sales Split":
+        elif request.dashboard == "Sales Split":
             print("Dashboard type: Sales Split Dashboard")
 
             # Process Excel file with optional filters
@@ -117,7 +136,30 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             # Add fileLocation field to the response
             result['fileLocation'] = request.location
             
+            # Add dashboardName to indicate this is Sales Split data
+            result['dashboardName'] = "Sales Split"
+            
             # Return the properly structured response
+            return ExcelUploadResponse(**result)
+        
+        else:
+            # Handle other dashboard types
+            print(f"Dashboard type: {request.dashboard}")
+            
+            # For now, return empty data for unsupported dashboards
+            result = {
+                "table1": [],
+                "table2": [],
+                "table3": [],
+                "table4": [],
+                "table5": [],
+                "locations": [request.location] if request.location else [],
+                "dateRanges": [],
+                "fileLocation": request.location,
+                "dashboardName": request.dashboard,
+                "data": f"{request.dashboard} Dashboard is not yet implemented."
+            }
+            
             return ExcelUploadResponse(**result)
             
     except Exception as e:
@@ -126,7 +168,9 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         print(traceback.format_exc())
         
         # Raise HTTP exception
-        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")# Filter endpoint
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+
+# Filter endpoint
 @app.post("/api/excel/filter", response_model=ExcelUploadResponse)
 async def filter_excel_data(request: ExcelFilterRequest = Body(...)):
     """
@@ -353,4 +397,4 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("your_module_name:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
