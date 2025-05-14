@@ -18,6 +18,16 @@ class ExcelFilterRequest(BaseModel):
     location: Optional[str] = None   # Location filter
     dateRangeType: Optional[str] = None  # Type of date range (e.g., "Last 7 Days")
 
+# class ExcelUploadResponse(BaseModel):
+#     table1: List[Dict[str, Any]]
+#     table2: List[Dict[str, Any]]
+#     table3: List[Dict[str, Any]]
+#     table4: List[Dict[str, Any]]
+#     table5: List[Dict[str, Any]]
+#     locations: List[str] = []
+#     dateRanges: List[str] = []
+#     fileLocation: Optional[str] = None
+
 class ExcelUploadResponse(BaseModel):
     table1: List[Dict[str, Any]]
     table2: List[Dict[str, Any]]
@@ -26,7 +36,9 @@ class ExcelUploadResponse(BaseModel):
     table5: List[Dict[str, Any]]
     locations: List[str] = []
     dateRanges: List[str] = []
-
+    fileLocation: Optional[List[str]] = None  # Explicitly define as List[str]
+    data: Optional[str] = None
+    
 # New model for Sales Analytics response
 class SalesAnalyticsResponse(BaseModel):
     salesByWeek: List[Dict[str, Any]]

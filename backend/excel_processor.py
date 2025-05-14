@@ -112,6 +112,8 @@ def process_excel_file(file_data: io.BytesIO, start_date=None, end_date=None, lo
         
         # Data cleaning and preparation
         # Convert numeric columns
+        print(df.head())
+        print(df.columns)
         df['Net Price'] = pd.to_numeric(df['Net Price'], errors='coerce')
         
         # Convert date columns to proper datetime format if they exist

@@ -77,33 +77,32 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             
         if request.dashboard == "Financials":
             print("Dashboard type: Financials")
-            print("i am here 4")
+            # print("i am here 4")
             excel_data_copy = io.BytesIO(file_content)
 
-            result = process_financials_file(
+            financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table = process_financials_file(
                 excel_data_copy, 
                 location=request.location
             )
-            print("i am here 5")
+            print("financials_weeks type:", type(financials_weeks))
+            # print("financials_weeks:", financials_weeks)
             
 # Ensure all returned values are properly converted to JSON-serializable formats
+            # return {"hello": "world"}
+            result = {
+            "table1": [],
+            "table2": [],
+            "table3": [],
+            "table4": [],
+            "table5": [],
+            "locations": [request.location],
+            "dateRanges": [],
+            "fileLocation":[request.location],
+            "data":  "Financial Dashboard is not yet implemented."
+        }
+            print("result", result )
+            
             return result
-#         return {
-    #     "table1": [],
-    #     "table2": [],
-    #     "table3": [],
-    #     "table4": [],
-    #     "table5": [],
-    #     "locations": [request.location] if request.location else [],
-    #     "dateRanges": [],
-    #     "fileLocation": request.location,
-         
-    #     "data":  { "financials_filters": [financials_weeks, financials_years, financials_stores],
-    #              "financials_sales_table": financials_sales_table,
-    #               "financials_orders_table": financials_orders_table,
-    #               "financials_avg_ticket_table": financials_avg_ticket_table,
-    #               "financials_tw_lw_bdg_table": financials_tw_lw_bdg_table}
-    # }
             # return {"message": "Financial Dashboard is not yet implemented."}
         
         if request.dashboard == "Sales Split":
@@ -140,11 +139,19 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             
     except Exception as e:
         # Log the full exception for debugging
-        print(f"Error processing file: {str(e)}")
+        error_message = str(e)
+        print(f"Error processing file: {error_message}")
         print(traceback.format_exc())
         
+            # Check for specific known error patterns
+        if "Net Price" in error_message:
+            raise HTTPException(
+                status_code=400,
+                detail=f"You uploaded the file in the wrong dashboard i.e. ({request.dashboard}) or the file is not properly structured. Please check the help center for more details."
+            )
+        
         # Raise HTTP exception
-        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing file: {error_message}")
 
 # Filter endpoint
 @app.post("/api/excel/filter", response_model=ExcelUploadResponse)
