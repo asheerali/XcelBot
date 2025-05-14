@@ -6,6 +6,7 @@ import os
 from datetime import datetime, timedelta
 import traceback
 
+
 # Import from local modules
 from models import ExcelUploadRequest, ExcelFilterRequest, ExcelUploadResponse, SalesAnalyticsResponse
 from excel_processor import process_excel_file
@@ -84,23 +85,24 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 excel_data_copy, 
                 location=request.location
             )
-            print("financials_weeks type:", type(financials_weeks))
+            # print("financials_weeks type:", type(financials_weeks))
             # print("financials_weeks:", financials_weeks)
+            print( "table2", [{"financials_sales_table": [financials_sales_table]}])
             
 # Ensure all returned values are properly converted to JSON-serializable formats
             # return {"hello": "world"}
             result = {
-            "table1": [],
-            "table2": [],
-            "table3": [],
-            "table4": [],
-            "table5": [],
-            "locations": [request.location],
-            "dateRanges": [],
-            "fileLocation":[request.location],
+            "table1": [{"financials_weeks": [financials_weeks], "financials_years": [financials_years], "financials_stores": [financials_stores]}],
+            "table2": financials_sales_table.to_dict(orient='records'),
+            "table3": financials_orders_table.to_dict(orient='records'),
+            "table4": financials_avg_ticket_table.to_dict(orient='records'),
+            "table5": financials_tw_lw_bdg_table.to_dict(orient='records'),
+            "locations": ["test"],
+            "dateRanges": ["test"],
+            "fileLocation":["test"],
             "data":  "Financial Dashboard is not yet implemented."
         }
-            print("result", result )
+            # print("result", result )
             
             return result
             # return {"message": "Financial Dashboard is not yet implemented."}
@@ -140,7 +142,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
     except Exception as e:
         # Log the full exception for debugging
         error_message = str(e)
-        print(f"Error processing file: {error_message}")
+        # print(f"Error processing file: {error_message}")
         print(traceback.format_exc())
         
             # Check for specific known error patterns

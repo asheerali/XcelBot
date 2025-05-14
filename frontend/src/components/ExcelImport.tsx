@@ -646,8 +646,12 @@ export function ExcelImport() {
                     <Typography variant="h6">
                       Files Loaded: {files.length}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    {/* <Typography variant="body2" color="text.secondary">
                       Current file: {fileName || "None selected"}
+                      {selectedLocation && ` (Location: ${selectedLocation})`}
+                    </Typography> */}
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      Current file: {fileName}
                       {selectedLocation && ` (Location: ${selectedLocation})`}
                     </Typography>
                   </Box>

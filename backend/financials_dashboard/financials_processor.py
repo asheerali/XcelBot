@@ -75,7 +75,15 @@ def process_financials_file(file_data: io.BytesIO, start_date=None, end_date=Non
     # return result
 
     return financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table
-    
+    # return {
+    #     table1: financials_weeks,
+    #     table2: financials_years,
+    #     table3: financials_sales_table,
+    #     table4: financials_orders_table,
+    #     table5: financials_avg_ticket_table,
+    #     table6: financials_tw_lw_bdg_table,
+
+    # }
     # except Exception as e:
     #     # Log the error
     #     print(f"Error processing Excel file: {str(e)}")

@@ -2,28 +2,19 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 // Define the interfaces for our state
-// interface TableData {
-//   table1: any[];
-//   table2: any[];
-//   table3: any[];
-//   table4: any[];
-//   table5: any[];
-//   locations: string[];
-//   dateRanges: string[];
-//   fileLocation?: string;
-//   data?: string | null;
-// }
-
 interface TableData {
-  table1: any[];
-  table2: any[];
-  table3: any[];
-  table4: any[];
-  table5: any[];
+  // table1: any[] | string;
+  table1: any[] | string; // Allow any number of tables with string keys
+  table2: any[] | string;
+  table3: any[] | string;
+  table4: any[] | string;
+  table5: any[] | string;
+  table6: any[];
   locations: string[];
   dateRanges: string[];
-  fileLocation?: string[] | string; // Support both string and array
-  data?: string | null;
+  fileLocation?: string | string[];
+  data?: any; // Optional data field to be consistent with usage
+  dashboardData?: string | null; // Optional field for dashboard data
 }
 
 interface FileData {
@@ -42,6 +33,8 @@ interface ExcelState {
   error: string | null;
   files: FileData[];
   allLocations: string[];
+  data?: any; // Optional data field to maintain consistency
+  dashboardData: string | null;
 }
 
 // Define initial state
@@ -56,15 +49,17 @@ const initialState: ExcelState = {
     table3: [],
     table4: [],
     table5: [],
+    table6: [],
     locations: [],
     dateRanges: [],
-    fileLocation: undefined,
-    data: null,
+    fileLocation: "21",
+    data: "qw",
   },
   loading: false,
   error: null,
   files: [],
   allLocations: [],
+  dashboardData: null,
 };
 
 export const excelSlice = createSlice({
@@ -96,17 +91,20 @@ export const excelSlice = createSlice({
       state.tableData = action.payload;
       state.fileProcessed = true;
 
+      if (action.payload.data) {
+        state.dashboardData = action.payload.data;
+      }
+
       // Update location from fileLocation if present
-      if (
-        action.payload.fileLocation &&
-        ((Array.isArray(action.payload.fileLocation) &&
-          action.payload.fileLocation.length > 0) ||
-          (typeof action.payload.fileLocation === "string" &&
-            action.payload.fileLocation.trim() !== ""))
-      ) {
-        state.location = Array.isArray(action.payload.fileLocation)
-          ? action.payload.fileLocation[0]
-          : action.payload.fileLocation;
+      if (action.payload.fileLocation) {
+        if (
+          Array.isArray(action.payload.fileLocation) &&
+          action.payload.fileLocation.length > 0
+        ) {
+          state.location = action.payload.fileLocation[0];
+        } else if (typeof action.payload.fileLocation === "string") {
+          state.location = action.payload.fileLocation;
+        }
       }
     },
     addFileData: (
@@ -117,8 +115,6 @@ export const excelSlice = createSlice({
         data: TableData;
       }>
     ) => {
-      console.log("Adding file data to Redux:", action.payload);
-
       // Check if file already exists for this location
       const existingFileIndex = state.files.findIndex(
         (f) => f.location === action.payload.location
@@ -137,13 +133,11 @@ export const excelSlice = createSlice({
         state.allLocations.push(action.payload.location);
       }
 
-      // Update the current display data if it matches the location or if this is the first file
+      // Update the current display data if it matches the location
       if (
         state.location === action.payload.location ||
         state.files.length === 1
       ) {
-        console.log("Data being set to tableData:", action.payload.data);
-
         state.tableData = action.payload.data;
         state.fileName = action.payload.fileName;
         state.fileProcessed = true;
@@ -170,10 +164,6 @@ export const excelSlice = createSlice({
         state.tableData = fileData.data;
         state.fileName = fileData.fileName;
         state.fileProcessed = true;
-      } else {
-        // If no matching file found, keep the current data but update location
-        // This allows for API calls to fetch data for the new location
-        state.location = location;
       }
     },
     resetExcelData: (state) => {

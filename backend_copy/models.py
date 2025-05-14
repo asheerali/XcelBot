@@ -29,15 +29,18 @@ class ExcelFilterRequest(BaseModel):
 #     fileLocation: Optional[str] = None
 
 class ExcelUploadResponse(BaseModel):
-    table1: List[Dict[str, Any]]
+    # table1: List[Dict[str, Any]] or any string
+    table1: Any
     table2: List[Dict[str, Any]]
     table3: List[Dict[str, Any]]
     table4: List[Dict[str, Any]]
     table5: List[Dict[str, Any]]
+    table6: List[Dict[str, Any]]
     locations: List[str] = []
     dateRanges: List[str] = []
     fileLocation: Optional[List[str]] = None  # Explicitly define as List[str]
     data: Optional[str] = None
+    dashboardData : Optional[str] = None
     
 # New model for Sales Analytics response
 class SalesAnalyticsResponse(BaseModel):
