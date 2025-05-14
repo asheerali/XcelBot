@@ -25,47 +25,54 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 # Upload endpoint
-@router.post("/excel/upload", response_model=ExcelUploadResponse)
+@router.post("/financials/filter", response_model=ExcelUploadResponse)
 async def upload_excel(request: ExcelUploadRequest = Body(...)):
     """
     Endpoint to upload and process an Excel file.
     Supports optional date range and location filtering.
     """
     try:
-        print(f"Received file upload: {request.fileName}")
+        # print(f"Received file upload: {request.fileName}")
+        
+        # fileName = request.fileName
+        fileName = "20250514_200147_midtown_east_dashboard2_template1.xlsx"
+        file_location = os.path.join(UPLOAD_DIR, fileName)
+        
         # Decode base64 file content
         # print("Type of file_content:", type(file_content))
-        file_content = base64.b64decode(request.fileContent)
-        print("Type of file_content:", type(file_content))
+        # file_content = base64.b64decode(request.fileContent)
+        # print("Type of file_content:", type(file_content))
         
-        # Create BytesIO object for pandas
-        excel_data = io.BytesIO(file_content)
+        # # Create BytesIO object for pandas
+        # excel_data = io.BytesIO(file_content)
         
-        # Save file to disk with timestamp and location
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        location_slug = ""
+        # # Save file to disk with timestamp and location
+        # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # location_slug = ""
         
-        # If location is provided, include it in the filename
-        if request.location:
-            location_slug = f"{request.location.replace(' ', '_').lower()}_"
+        # # If location is provided, include it in the filename
+        # if request.location:
+        #     location_slug = f"{request.location.replace(' ', '_').lower()}_"
             
-        file_path = os.path.join(UPLOAD_DIR, f"{timestamp}_{location_slug}{request.fileName}")
+        # file_path = os.path.join(UPLOAD_DIR, f"{timestamp}_{location_slug}{request.fileName}")
         
-        with open(file_path, "wb") as f:
-            f.write(file_content)
+        # with open(file_path, "wb") as f:
+        #     f.write(file_content)
         
-        print('Processing uploaded file:', request.fileName)
-        if request.location:
-            print('Location:', request.location)
+        # print('Processing uploaded file:', request.fileName)
+        # if request.location:
+        #     print('Location:', request.location)
             
         if request.dashboard == "Financials":
             print("Dashboard type: Financials")
             # print("i am here 4")
-            excel_data_copy = io.BytesIO(file_content)
+            # excel_data = io.BytesIO(file_content)
 
             financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table = process_financials_file(
-                excel_data_copy, 
+                file_location, 
                 location=request.location
+                year=request.year,
+                week_range=request.week_range
             )
             # print("financials_weeks type:", type(financials_weeks))
             # print("financials_weeks:", financials_weeks)
@@ -101,43 +108,11 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         #     "data":  "Financial Dashboard is not yet implemented."
             
         # }
-            # print("result", result )
+            print("result", result )
             
             return result
             # return {"message": "Financial Dashboard is not yet implemented."}
-        
-        if request.dashboard == "Sales Split":
-            print("Dashboard type: Sales Split Dashboard")
-
-            # Process Excel file with optional filters
-            result = process_excel_file(
-                excel_data, 
-                start_date=request.startDate,
-                end_date=request.endDate,
-                location=request.location
-            )
-            
-            # Ensure each table exists in the result, even if empty
-            for table in ['table1', 'table2', 'table3', 'table4', 'table5']:
-                if table not in result:
-                    result[table] = []
-            
-            # If location is provided, make sure it's in the locations list
-            if 'locations' not in result:
-                result['locations'] = []
-                
-            if request.location and request.location not in result['locations']:
-                result['locations'].append(request.location)
-                
-            if 'dateRanges' not in result:
-                result['dateRanges'] = []
-                
-            # Add fileLocation field to the response
-            result['fileLocation'] = request.location
-            
-            # Return the properly structured response
-            return ExcelUploadResponse(**result)
-            
+       
     except Exception as e:
         # Log the full exception for debugging
         error_message = str(e)

@@ -2,14 +2,14 @@ import pandas as pd
 import io
 import os
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Union
 import pandas as pd
 import numpy as np
 from financials_dashboard.financials_utils import financials_filters, day_of_the_week_tables, calculate_tw_lw_bdg_comparison
 
 
 
-def process_financials_file(file_data: io.BytesIO, start_date=None, end_date=None, location=None):
+def process_financials_file(file_data: Union[io.BytesIO, str], year=None, week_range=None, location=None):
     """
     Process the uploaded Excel file and transform the data.
     Returns data tables for the frontend including the 1P column.
@@ -22,19 +22,24 @@ def process_financials_file(file_data: io.BytesIO, start_date=None, end_date=Non
     """
     # Read the Excel file
     # df = pd.read_excel(file_data)
-    file_data.seek(0)
+    
     print("Type of file_data:", type(file_data))
 
     try:
-        # print("i am here 1")
-        df = pd.read_excel(file_data, sheet_name="Database")
+            if isinstance(file_data, io.BytesIO):
+                file_data.seek(0)
+                print("Reading Excel from BytesIO object.")
+                df = pd.read_excel(file_data, sheet_name="Database")
+            elif isinstance(file_data, str):
+                print("Reading Excel from file path.")
+                df = pd.read_excel(file_data, sheet_name="Database")
+          
+            if df.empty:
+                raise ValueError("The sheet 'Database' is empty or missing.")
     except ValueError as e:
         raise ValueError("Sheet named 'Database' not found in the uploaded Excel file.")
 
     
-    # Reset the file pointer for further operations
-    file_data.seek(0)
-
     # Strip whitespace from column names
     df.columns = df.columns.str.strip()
     # print("i am here 2")
@@ -56,10 +61,10 @@ def process_financials_file(file_data: io.BytesIO, start_date=None, end_date=Non
     
     financials_sales_table, financials_orders_table, financials_avg_ticket_table = day_of_the_week_tables(df)
     
-    if location == "0001: Midtown East":
+    if location == None:
         financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df, store="0001: Midtown East", year=2025, week_range="1 | 12/30/2024 - 01/05/2025")
     else:
-        financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df, store="0001: Midtown East", year=2025, week_range="1 | 12/30/2024 - 01/05/2025")
+        financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df, store=location, year=2025, week_range="1 | 12/30/2024 - 01/05/2025")
     # print("i am here 3")
     # print(financials_tw_lw_bdg_table)
     
