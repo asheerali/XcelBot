@@ -77,7 +77,6 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             
         if request.dashboard == "Financials":
             print("Dashboard type: Financials")
-<<<<<<< HEAD
             # print("i am here 4")
             excel_data_copy = io.BytesIO(file_content)
 
@@ -105,45 +104,6 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             
             return result
             # return {"message": "Financial Dashboard is not yet implemented."}
-=======
-            
-            # Mock financial data structure for now
-            result = {
-                "table1": [{"financials_weeks": ["Week 1", "Week 2"], "financials_years": ["2025"], "financials_stores": [request.location or "Default Store"]}],
-                "table2": [{"week": "Week 1", "netSales": "$8,268.68", "netSalesChange": "+5%"}],
-                "table3": [{"week": "Week 1", "orders": "372", "ordersChange": "+3%"}],
-                "table4": [{"week": "Week 1", "avgTicket": "$22.23", "avgTicketChange": "+2%"}],
-                "table5": [
-                    {
-                        "week": "Week 1", 
-                        "netSales": "$8,268.68", 
-                        "netSalesChange": "+5%",
-                        "orders": "372",
-                        "ordersChange": "+3%",
-                        "avgTicket": "$22.23",
-                        "avgTicketChange": "+2.23",
-                        "foodCostPercent": "28.5%",
-                        "foodCostChange": "-1.2%",
-                        "laborCostPercent": "30.23%",
-                        "laborCostChange": "+1.5%",
-                        "spmh": "$68.91",
-                        "spmhChange": "+5.42",
-                        "lpmh": "$20.83",
-                        "lpmhChange": "-2.17"
-                    }
-                ],
-                "locations": [request.location] if request.location else ["Default Store"],
-                "default_location": request.location or "Default Store",
-                "locations_range": [request.location] if request.location else ["Default Store"],
-                "dateRanges": ["1 | 12/30/2024 - 01/05/2025", "2 | 01/06/2025 - 01/12/2025"],
-                "fileLocation": request.location,
-                "dashboardName": "Financials",
-                "data": "Financial Dashboard is not yet implemented."
-            }
-            
-            print("result", result)
-            return ExcelUploadResponse(**result)
->>>>>>> fix/conflict
         
         elif request.dashboard == "Sales Split":
             print("Dashboard type: Sales Split Dashboard")
@@ -214,11 +174,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             )
         
         # Raise HTTP exception
-<<<<<<< HEAD
         raise HTTPException(status_code=500, detail=f"Error processing file: {error_message}")
-=======
-        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
->>>>>>> fix/conflict
 
 # Filter endpoint
 @app.post("/api/excel/filter", response_model=ExcelUploadResponse)
