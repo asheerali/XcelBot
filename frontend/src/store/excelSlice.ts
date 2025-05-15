@@ -1,11 +1,6 @@
-<<<<<<< HEAD
-// store/excelSlice.ts
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-=======
 // store/excelSlice.ts - Updated with separate financial and sales data handling
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
->>>>>>> fix/conflict
 
 // Define the interfaces for our state
 // interface TableData {
@@ -28,14 +23,8 @@ interface TableData {
   table5: any[];
   locations: string[];
   dateRanges: string[];
-<<<<<<< HEAD
   fileLocation?: string[] | string; // Support both string and array
   data?: string | null;
-=======
-  fileLocation?: string;
-  dashboardName?: string;
-  data?: any;
->>>>>>> fix/conflict
 }
 
 interface FileData {
@@ -90,13 +79,9 @@ const initialState: ExcelState = {
   loading: false,
   error: null,
   files: [],
-<<<<<<< HEAD
-  allLocations: [],
-=======
   financialFiles: [],  // Initialize empty
   salesFiles: [],      // Initialize empty
   allLocations: []
->>>>>>> fix/conflict
 };
 
 export const excelSlice = createSlice({
@@ -232,7 +217,6 @@ export const excelSlice = createSlice({
     selectLocation: (state, action: PayloadAction<string>) => {
       const location = action.payload;
       state.location = location;
-<<<<<<< HEAD
 
       // Find file data for this location
       const fileData = state.files.find((f) => f.location === location);
@@ -240,20 +224,6 @@ export const excelSlice = createSlice({
       if (fileData) {
         state.tableData = fileData.data;
         state.fileName = fileData.fileName;
-=======
-      
-      // Find file data for this location (first check sales, then financial, then general)
-      const salesData = state.salesFiles.find(f => f.location === location);
-      const financialData = state.financialFiles.find(f => f.location === location);
-      const fileData = state.files.find(f => f.location === location);
-      
-      // Use sales data if available, otherwise financial, otherwise general
-      const dataToUse = salesData || financialData || fileData;
-      
-      if (dataToUse) {
-        state.tableData = dataToUse.data;
-        state.fileName = dataToUse.fileName;
->>>>>>> fix/conflict
         state.fileProcessed = true;
       } else {
         // If no matching file found, keep the current data but update location
