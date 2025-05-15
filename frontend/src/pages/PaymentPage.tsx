@@ -20,7 +20,10 @@ import {
   CircularProgress,
   Alert,
   styled,
-  IconButton
+  IconButton,
+  ToggleButtonGroup,
+  ToggleButton,
+  Chip
 } from '@mui/material';
 import {
   CreditCard as CreditCardIcon,
@@ -29,28 +32,41 @@ import {
   Check as CheckIcon,
   ChevronRight as ChevronRightIcon,
   ChevronLeft as ChevronLeftIcon,
-  Build as WrenchIcon,
-  RadioButtonChecked as TargetIcon,
-  Anchor as AnchorIcon
+  Star as StarIcon,
+  Rocket as RocketIcon,
+  Close as CloseIcon,
+  BarChart,
+  TableChart,
+  PieChart,
+  Timeline,
+  Assignment
 } from '@mui/icons-material';
 
 // Define types for our data structures
-type PlanKey = 'action' | 'control' | 'helm';
+type PlanKey = 'basic' | 'advanced';
+type BillingPeriod = 'monthly' | 'annual';
 type PaymentMethodType = 'creditCard' | 'invoice' | 'paypal';
+
+interface Feature {
+  name: string;
+  included: boolean;
+  icon?: React.ReactNode;
+}
 
 interface PlanDetails {
   title: string;
   subtitle: string;
-  price: number;
-  features: string[];
+  monthlyPrice: number;
+  annualPrice: number;
+  features: Feature[];
   description: string;
   icon: React.ReactNode;
+  popular?: boolean;
 }
 
 interface PlansType {
-  action: PlanDetails;
-  control: PlanDetails;
-  helm: PlanDetails;
+  basic: PlanDetails;
+  advanced: PlanDetails;
 }
 
 // Styled components
@@ -77,43 +93,59 @@ const SelectedBadge = styled(Box)(({ theme }) => ({
   alignItems: 'center',
 }));
 
+const PopularBadge = styled(Chip)(({ theme }) => ({
+  position: 'absolute',
+  top: -12,
+  left: '50%',
+  transform: 'translateX(-50%)',
+  fontWeight: 'bold',
+}));
+
 const FeatureItem = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
-  marginBottom: theme.spacing(1),
+  marginBottom: theme.spacing(1.5),
 }));
 
 export default function PaymentPage() {
   const [activeStep, setActiveStep] = useState<number>(0);
-  const [selectedPlan, setSelectedPlan] = useState<PlanKey>('action');
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey>('basic');
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>('creditCard');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   
   const plans: PlansType = {
-    action: {
-      title: 'Action Seat',
-      subtitle: 'Operations Team',
-      price: 99,
-      features: ['InsightIQ', 'CONNECTIQ', 'MARGINIQ', 'SCHEDULEIQ', 'PROJECTIQ', 'INSIGHTIQ', 'PROFITIQ', 'LOCATIONIQ'],
-      description: 'Emphasizes on-the-ground action for AuditIQ and ConnetiQ tasks.',
-      icon: <WrenchIcon />
+    basic: {
+      title: 'Basic Plan',
+      subtitle: 'Essential analytics for your business',
+      monthlyPrice: 35,
+      annualPrice: 350,
+      features: [
+        { name: 'Sales Split Dashboard', included: true, icon: <BarChart /> },
+        { name: 'Financial Dashboard', included: true, icon: <Timeline /> },
+        { name: 'Sales Wide Dashboard', included: true, icon: <PieChart /> },
+        { name: 'Product Mix Dashboard', included: true, icon: <TableChart /> },
+        { name: 'Order Sheet Dashboard', included: false, icon: <Assignment /> },
+      ],
+      description: 'Perfect for small to medium businesses looking for core analytics capabilities.',
+      icon: <StarIcon />
     },
-    control: {
-      title: 'Control Seat',
-      subtitle: 'Director Level',
-      price: 159,
-      features: ['InsightIQ', 'CONNECTIQ', 'MARGINIQ', 'SCHEDULEIQ', 'PROJECTIQ', 'INSIGHTIQ', 'PROFITIQ', 'LOCATIONIQ'],
-      description: 'Implies strategic steering—tying ProjectiQ and ScheduleIQ to daily execution.',
-      icon: <TargetIcon />
-    },
-    helm: {
-      title: 'Helm Seat',
-      subtitle: 'Executive Level',
-      price: 199,
-      features: ['InsightIQ', 'CONNECTIQ', 'MARGINIQ', 'SCHEDULEIQ', 'PROJECTIQ', 'INSIGHTIQ', 'PROFITIQ', 'LOCATIONIQ'],
-      description: 'Conveys top-deck control and full 360° Insight into Profit-, Margin-& InsightiQ modules.',
-      icon: <AnchorIcon />
+    advanced: {
+      title: 'Advanced Plan',
+      subtitle: 'Complete analytics suite',
+      monthlyPrice: 50,
+      annualPrice: 500,
+      features: [
+        { name: 'Sales Split Dashboard', included: true, icon: <BarChart /> },
+        { name: 'Financial Dashboard', included: true, icon: <Timeline /> },
+        { name: 'Sales Wide Dashboard', included: true, icon: <PieChart /> },
+        { name: 'Product Mix Dashboard', included: true, icon: <TableChart /> },
+        { name: 'Order Sheet Dashboard', included: true, icon: <Assignment /> },
+      ],
+      description: 'Full access to all dashboards including advanced order sheet analytics.',
+      icon: <RocketIcon />,
+      popular: true
     }
   };
 
@@ -121,6 +153,12 @@ export default function PaymentPage() {
 
   const handlePlanChange = (plan: PlanKey): void => {
     setSelectedPlan(plan);
+  };
+
+  const handleBillingPeriodChange = (event: React.MouseEvent<HTMLElement>, newPeriod: BillingPeriod | null): void => {
+    if (newPeriod !== null) {
+      setBillingPeriod(newPeriod);
+    }
   };
 
   const handlePaymentMethodChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -151,21 +189,52 @@ export default function PaymentPage() {
 
   const renderPlanSelection = () => (
     <Box my={4}>
-      <Typography variant="h5" fontWeight="bold" mb={2}>
+      <Typography variant="h5" fontWeight="bold" mb={1}>
         Choose your plan
       </Typography>
+      <Typography color="text.secondary" mb={3}>
+        Select the perfect plan for your business needs
+      </Typography>
+
+      {/* Billing Period Toggle */}
+      <Box display="flex" justifyContent="center" mb={4}>
+        <ToggleButtonGroup
+          value={billingPeriod}
+          exclusive
+          onChange={handleBillingPeriodChange}
+          aria-label="billing period"
+        >
+          <ToggleButton value="monthly">
+            Monthly
+          </ToggleButton>
+          <ToggleButton value="annual">
+            Annual (Save 2 months!)
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
+
+      {billingPeriod === 'annual' && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          <Typography variant="body2">
+            Save 2 months with annual billing! Pay for 10 months and get 12 months of access.
+          </Typography>
+        </Alert>
+      )}
       
-      <Grid container spacing={3}>
+      <Grid container spacing={3} justifyContent="center">
         {Object.entries(plans).map(([key, plan]) => (
-          <Grid item xs={12} md={4} key={key}>
+          <Grid item xs={12} md={6} key={key}>
             <StyledPlanCard
               variant="outlined"
               onClick={() => handlePlanChange(key as PlanKey)}
               sx={{
                 borderColor: selectedPlan === key ? 'primary.main' : 'divider',
                 borderWidth: selectedPlan === key ? 2 : 1,
+                position: 'relative',
               }}
             >
+              
+              
               {selectedPlan === key && (
                 <SelectedBadge>
                   <CheckIcon fontSize="small" sx={{ mr: 0.5 }} />
@@ -174,46 +243,67 @@ export default function PaymentPage() {
               )}
               
               <CardHeader
-                avatar={React.cloneElement(plan.icon as React.ReactElement, { color: 'action' })}
+                avatar={React.cloneElement(plan.icon as React.ReactElement, { color: 'primary' })}
                 title={plan.title}
                 subheader={plan.subtitle}
               />
               
               <CardContent>
-                <Typography variant="h5" component="div" mb={1}>
-                  ${plan.price}
-                  <Typography component="span" variant="body2" color="text.secondary" ml={0.5}>
-                    /month
+                <Box textAlign="center" mb={3}>
+                  <Typography variant="h3" component="div" fontWeight="bold">
+                    ${billingPeriod === 'monthly' ? plan.monthlyPrice : plan.annualPrice}
                   </Typography>
-                </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {billingPeriod === 'monthly' ? '/month' : '/year'}
+                  </Typography>
+                  {billingPeriod === 'annual' && (
+                    <Typography variant="body2" color="success.main" fontWeight="medium">
+                      Save ${plan.monthlyPrice * 2}!
+                    </Typography>
+                  )}
+                </Box>
                 
-                <Typography variant="body2" color="text.secondary" mb={2} sx={{ minHeight: 60 }}>
+                <Typography variant="body2" color="text.secondary" mb={3} sx={{ minHeight: 40 }}>
                   {plan.description}
                 </Typography>
                 
                 <Divider sx={{ my: 2 }} />
                 
-                <Box mt={2}>
-                  {plan.features.map((feature: string, index: number) => (
+                <Box mt={3}>
+                  {plan.features.map((feature, index) => (
                     <FeatureItem key={index}>
-                      <CheckIcon color="success" fontSize="small" sx={{ mr: 1 }} />
-                      <Typography variant="body2">{feature}</Typography>
+                      {feature.included ? (
+                        <CheckIcon color="success" fontSize="small" sx={{ mr: 1.5 }} />
+                      ) : (
+                        <CloseIcon color="error" fontSize="small" sx={{ mr: 1.5 }} />
+                      )}
+                      {feature.icon && (
+                        <Box sx={{ mr: 1, display: 'flex', alignItems: 'center' }}>
+                          {React.cloneElement(feature.icon as React.ReactElement, { 
+                            fontSize: 'small',
+                            color: feature.included ? 'action' : 'disabled'
+                          })}
+                        </Box>
+                      )}
+                      <Typography 
+                        variant="body2" 
+                        color={feature.included ? 'text.primary' : 'text.secondary'}
+                      >
+                        {feature.name}
+                      </Typography>
                     </FeatureItem>
                   ))}
                 </Box>
                 
-                <FormControl component="fieldset" sx={{ mt: 3 }}>
-                  <FormControlLabel
-                    value={key}
-                    control={
-                      <Radio
-                        checked={selectedPlan === key}
-                        onChange={() => handlePlanChange(key as PlanKey)}
-                      />
-                    }
-                    label="Select this plan"
-                  />
-                </FormControl>
+                <Box mt={3}>
+                  <Button
+                    fullWidth
+                    variant={selectedPlan === key ? "contained" : "outlined"}
+                    onClick={() => handlePlanChange(key as PlanKey)}
+                  >
+                    {selectedPlan === key ? 'Selected' : 'Select Plan'}
+                  </Button>
+                </Box>
               </CardContent>
             </StyledPlanCard>
           </Grid>
@@ -492,6 +582,7 @@ export default function PaymentPage() {
 
   const renderReviewAndConfirm = () => {
     const plan = plans[selectedPlan];
+    const price = billingPeriod === 'monthly' ? plan.monthlyPrice : plan.annualPrice;
     
     return (
       <Box my={4}>
@@ -509,15 +600,15 @@ export default function PaymentPage() {
               <Box display="flex" alignItems="center">
                 {React.cloneElement(plan.icon as React.ReactElement, { sx: { mr: 1 } })}
                 <Typography fontWeight="medium">
-                  {plan.title} ({plan.subtitle})
+                  {plan.title}
                 </Typography>
               </Box>
               <Typography variant="body2" color="text.secondary" mt={0.5}>
-                Monthly subscription
+                {billingPeriod === 'monthly' ? 'Monthly' : 'Annual'} subscription
               </Typography>
             </Box>
             <Typography fontWeight="bold">
-              ${plan.price}
+              ${price}
             </Typography>
           </Box>
           
@@ -525,7 +616,7 @@ export default function PaymentPage() {
           
           <Box display="flex" justifyContent="space-between" mb={1}>
             <Typography fontWeight="medium">Subtotal</Typography>
-            <Typography fontWeight="medium">${plan.price}</Typography>
+            <Typography fontWeight="medium">${price}</Typography>
           </Box>
           
           <Box display="flex" justifyContent="space-between" mb={1}>
@@ -537,17 +628,17 @@ export default function PaymentPage() {
           
           <Box display="flex" justifyContent="space-between" mb={2}>
             <Typography fontWeight="bold">Total</Typography>
-            <Typography fontWeight="bold" color="primary">${plan.price}</Typography>
+            <Typography fontWeight="bold" color="primary">${price}</Typography>
           </Box>
           
           <Alert severity="info" sx={{ mt: 2 }}>
-            You will be charged ${plan.price} monthly. You can cancel anytime.
+            You will be charged ${price} {billingPeriod === 'monthly' ? 'monthly' : 'annually'}. You can cancel anytime.
           </Alert>
         </Paper>
         
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Typography variant="body2" color="text.secondary">
-            By clicking "Complete Payment", you agree to our <Typography component="span" fontWeight="bold">Terms of Service</Typography> and <Typography component="span" fontWeight="bold">Privacy Policy</Typography>.
+            By clicking "Complete Payment", you agree to our Terms of Service and Privacy Policy.
           </Typography>
         </Box>
       </Box>
@@ -614,7 +705,7 @@ export default function PaymentPage() {
       <Box mb={6} textAlign="center">
         <Typography variant="h3" fontWeight="bold" mb={1}>Complete Your Purchase</Typography>
         <Typography color="text.secondary">
-          You're just a few steps away from accessing our platform
+          You're just a few steps away from accessing our analytics platform
         </Typography>
       </Box>
 
