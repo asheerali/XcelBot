@@ -29,7 +29,7 @@ export function ContactUs() {
   
   // Contact support information
   const supportInfo = {
-    email: 'support@company.com',
+    email: 'asheer.ali@kpi360.ai',
     phone: '+1 (555) 123-4567',
     hours: 'Monday - Friday: 9:00 AM - 6:00 PM EST'
   };
