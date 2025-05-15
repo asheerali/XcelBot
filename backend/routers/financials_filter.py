@@ -70,9 +70,9 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
 
             financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table = process_financials_file(
                 file_location, 
-                location=request.location
+                location=request.location,
                 year=request.year,
-                week_range=request.week_range
+                week_range=request.weekRange,
             )
             # print("financials_weeks type:", type(financials_weeks))
             # print("financials_weeks:", financials_weeks)
@@ -101,8 +101,9 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         #     "locations": [financials_stores],
         #     "default_location": "xyz",
         #     "locations_range": [financials_stores],
-        #     "dateRanges": ["test"],
+        #     "weekRange": ["test"],
         #     "fileLocation":["test"],
+        #     "defaultLocation": "xyz",
         #     "fileName": request.fileName,
         #     "dashboardName": "Financials",
         #     "data":  "Financial Dashboard is not yet implemented."
