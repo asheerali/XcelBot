@@ -141,7 +141,7 @@ export function HelpCenter() {
       {/* Additional help resources section could be added here */}
       <Box sx={{ mt: 8, textAlign: 'center' }}>
         <Typography variant="body1" color="text.secondary">
-          Can&apos;t find what you&apos;re looking for? Email us at <strong>support@company.com</strong>
+          Can&apos;t find what you&apos;re looking for? Email us at <strong>support@kpi360.ai</strong>
         </Typography>
       </Box>
     </>

@@ -221,7 +221,7 @@ export function Financials() {
                 sx={{ 
                   fontWeight: 500,
                   mb: 2,
-                  color: '#1565c0'
+                  // color: '#1565c0'
                 }}
               >
                 Week-Over-Week Analysis
