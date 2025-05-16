@@ -1,4 +1,4 @@
-// store/excelSlice.ts - Updated with separate financial and sales data handling
+// store/excelSlice.ts - Updated with separate filters for different dashboards
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
@@ -35,6 +35,7 @@ interface SalesData {
 }
 
 interface ExcelState {
+  // General state
   fileName: string;
   fileContent: string | null;
   location: string;
@@ -42,10 +43,34 @@ interface ExcelState {
   tableData: TableData;
   loading: boolean;
   error: string | null;
+  
+  // Files by type
   files: FileData[];
-  financialFiles: FinancialData[];  // Separate financial files
-  salesFiles: SalesData[];          // Separate sales files
+  financialFiles: FinancialData[];
+  salesFiles: SalesData[];
+  
+  // Locations by dashboard
   allLocations: string[];
+  salesLocations: string[];      // Locations for sales split dashboard
+  financialLocations: string[];  // Locations for financial dashboard
+  
+  // Current selected locations by dashboard
+  currentSalesLocation: string;
+  currentFinancialLocation: string;
+  
+  // Filter states by dashboard
+  salesFilters: {
+    dateRangeType: string;
+    startDate: string;
+    endDate: string;
+    location: string;
+  };
+  
+  financialFilters: {
+    store: string;
+    year: string;
+    dateRange: string;
+  };
 }
 
 // Define initial state
@@ -66,9 +91,24 @@ const initialState: ExcelState = {
   loading: false,
   error: null,
   files: [],
-  financialFiles: [],  // Initialize empty
-  salesFiles: [],      // Initialize empty
-  allLocations: []
+  financialFiles: [],
+  salesFiles: [],
+  allLocations: [],
+  salesLocations: [],
+  financialLocations: [],
+  currentSalesLocation: '',
+  currentFinancialLocation: '',
+  salesFilters: {
+    dateRangeType: '',
+    startDate: '',
+    endDate: '',
+    location: ''
+  },
+  financialFilters: {
+    store: '0001: Midtown East',
+    year: '2025',
+    dateRange: '1 | 12/30/2024 - 01/05/2025'
+  }
 };
 
 export const excelSlice = createSlice({
@@ -143,6 +183,17 @@ export const excelSlice = createSlice({
       if (!state.allLocations.includes(action.payload.location)) {
         state.allLocations.push(action.payload.location);
       }
+      
+      // Add location to financialLocations if it doesn't exist
+      if (!state.financialLocations.includes(action.payload.location)) {
+        state.financialLocations.push(action.payload.location);
+      }
+      
+      // Set current financial location if this is the first file
+      if (state.financialFiles.length === 1 || !state.currentFinancialLocation) {
+        state.currentFinancialLocation = action.payload.location;
+        state.financialFilters.store = action.payload.location;
+      }
     },
     addSalesData: (state, action: PayloadAction<{fileName: string; location: string; data: TableData}>) => {
       // Check if sales file already exists for this location
@@ -162,11 +213,28 @@ export const excelSlice = createSlice({
       if (!state.allLocations.includes(action.payload.location)) {
         state.allLocations.push(action.payload.location);
       }
+      
+      // Add location to salesLocations if it doesn't exist
+      if (!state.salesLocations.includes(action.payload.location)) {
+        state.salesLocations.push(action.payload.location);
+      }
+      
+      // Set current sales location if this is the first file
+      if (state.salesFiles.length === 1 || !state.currentSalesLocation) {
+        state.currentSalesLocation = action.payload.location;
+        state.salesFilters.location = action.payload.location;
+      }
     },
     setLocations: (state, action: PayloadAction<string[]>) => {
       // Set all locations (without duplicates)
       const newLocations = action.payload.filter(loc => loc && loc.trim() !== '');
       state.allLocations = [...new Set([...state.allLocations, ...newLocations])];
+    },
+    setSalesLocations: (state, action: PayloadAction<string[]>) => {
+      state.salesLocations = action.payload;
+    },
+    setFinancialLocations: (state, action: PayloadAction<string[]>) => {
+      state.financialLocations = action.payload;
     },
     selectLocation: (state, action: PayloadAction<string>) => {
       const location = action.payload;
@@ -186,9 +254,36 @@ export const excelSlice = createSlice({
         state.fileProcessed = true;
       } else {
         // If no matching file found, keep the current data but update location
-        // This allows for API calls to fetch data for the new location
         state.location = location;
       }
+    },
+    selectSalesLocation: (state, action: PayloadAction<string>) => {
+      const location = action.payload;
+      state.currentSalesLocation = location;
+      state.salesFilters.location = location;
+      
+      // Find sales data for this location
+      const salesData = state.salesFiles.find(f => f.location === location);
+      
+      if (salesData) {
+        state.tableData = salesData.data;
+        state.fileName = salesData.fileName;
+        state.fileProcessed = true;
+        state.location = location;
+      }
+    },
+    selectFinancialLocation: (state, action: PayloadAction<string>) => {
+      const location = action.payload;
+      state.currentFinancialLocation = location;
+      state.financialFilters.store = location;
+      
+      // No need to update tableData here as financial dashboard manages its own data
+    },
+    updateSalesFilters: (state, action: PayloadAction<Partial<typeof initialState.salesFilters>>) => {
+      state.salesFilters = { ...state.salesFilters, ...action.payload };
+    },
+    updateFinancialFilters: (state, action: PayloadAction<Partial<typeof initialState.financialFilters>>) => {
+      state.financialFilters = { ...state.financialFilters, ...action.payload };
     },
     resetExcelData: (state) => {
       return initialState;
@@ -206,7 +301,13 @@ export const {
   addFinancialData,
   addSalesData,
   setLocations,
+  setSalesLocations,
+  setFinancialLocations,
   selectLocation,
+  selectSalesLocation,
+  selectFinancialLocation,
+  updateSalesFilters,
+  updateFinancialFilters,
   resetExcelData
 } = excelSlice.actions;
 

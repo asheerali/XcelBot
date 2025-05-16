@@ -1,4 +1,5 @@
-// src/pages/ExcelUploadPage.tsx
+// src/pages/ExcelUploadPage.tsx - Updated version with dashboard routing
+
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Box,
@@ -55,7 +56,9 @@ import {
   setTableData,
   addFileData,
   setLocations,
-  selectLocation
+  selectLocation,
+  addFinancialData,
+  addSalesData
 } from '../store/excelSlice';
 
 // API URL for Excel upload
@@ -97,7 +100,7 @@ const DASHBOARD_OPTIONS = [
 
 // List of popular US cities
 const US_CITIES = [
-  'New York, NY',
+  'New York',
   'Midtown East',
   'Los Angeles, CA',
   'Chicago, IL',
@@ -270,9 +273,6 @@ const ExcelUploadPage: React.FC = () => {
     }
   }, [files.length, selectedCity, selectedDashboard]);
   
-  // Remove the effect that updates existing files when city changes
-  // We only want the city to apply to NEW files
-  
   // Handle global dashboard change - ONLY affects NEW files
   const handleDashboardChange = (value: string) => {
     setSelectedDashboard(value);
@@ -358,13 +358,33 @@ const ExcelUploadPage: React.FC = () => {
       // Clear the progress interval
       clearInterval(progressInterval);
       
-      // Update Redux with the response data
+      // Route data based on dashboard type from response
       if (response.data) {
-        dispatch(addFileData({
-          fileName: fileInfo.file.name,
-          location: fileInfo.location,
-          data: response.data
-        }));
+        const dashboardName = response.data.dashboardName || fileInfo.dashboard;
+        
+        // Dispatch based on dashboard type
+        if (dashboardName === 'Financials') {
+          // Add to financial data in Redux
+          dispatch(addFinancialData({
+            fileName: fileInfo.file.name,
+            location: fileInfo.location,
+            data: response.data
+          }));
+        } else if (dashboardName === 'Sales Split') {
+          // Add to sales data in Redux
+          dispatch(addSalesData({
+            fileName: fileInfo.file.name,
+            location: fileInfo.location,
+            data: response.data
+          }));
+          
+          // Also add to regular file data for backward compatibility
+          dispatch(addFileData({
+            fileName: fileInfo.file.name,
+            location: fileInfo.location,
+            data: response.data
+          }));
+        }
         
         // Update file status to success and store data
         setFiles(prevFiles => {
@@ -464,49 +484,27 @@ const ExcelUploadPage: React.FC = () => {
   };
   
   // View file analysis (navigate to analysis page)
-  
-        const viewAnalysis = () => {
-          // Store all locations from successful files in Redux before navigating
-          const successfulFiles = files.filter(f => f.status === 'success');
-          const locations = [...new Set(successfulFiles.map(f => f.location))];
-          
-          if (locations.length > 0) {
-            dispatch(setLocations(locations));
-            
-            // If we have successful files, select the first location
-            if (successfulFiles.length > 0) {
-              dispatch(selectLocation(successfulFiles[0].location));
-            }
-          }
-          
-          navigate('/manage-reports');
-        };
-
-//   const viewAnalysis = () => {
-//   const successfulFiles = files.filter(f => f.status === 'success');
-//   const locations = [...new Set(successfulFiles.map(f => f.location))];
-
-//   if (locations.length > 0) {
-//     dispatch(setLocations(locations));
+  const viewAnalysis = () => {
+    // Check which dashboards have successful files
+    const successfulFiles = files.filter(f => f.status === 'success');
     
-//     if (successfulFiles.length > 0) {
-//       dispatch(selectLocation(successfulFiles[0].location));
-//     }
-//   }
-
-//   const isFinancial = successfulFiles.some(f => f.dashboard === 'Financials');
-
-//   if (isFinancial) {
-//     navigate('/Financials', {
-//       state: {
-//         message: 'Financial Dashboard is not yet implemented.',
-//       },
-//     });
-//   } else {
-//     navigate('/manage-reports');
-//   }
-// };
-
+    // Separate files by dashboard type
+    const salesFiles = successfulFiles.filter(f => f.dashboard === 'Sales Split');
+    const financialFiles = successfulFiles.filter(f => f.dashboard === 'Financials');
+    
+    // Navigate based on dashboard types
+    if (financialFiles.length > 0 && salesFiles.length === 0) {
+      // Only financial files - navigate to Financials
+      navigate('/Financials');
+    } else if (salesFiles.length > 0 && financialFiles.length === 0) {
+      // Only sales files - navigate to manage-reports
+      navigate('/manage-reports');
+    } else if (salesFiles.length > 0 && financialFiles.length > 0) {
+      // Both types - show a dialog or navigate to a selection page
+      // For now, navigate to sales split
+      navigate('/manage-reports');
+    }
+  };
   
   // Open dialog to edit location
   const editLocation = (index: number) => {
@@ -521,18 +519,6 @@ const ExcelUploadPage: React.FC = () => {
     if (!locationInput.trim()) {
       setLocationError('Location name is required');
       return;
-    }
-    
-    // Check for duplicate locations (optional - you can allow duplicates)
-    const isDuplicate = files.some((file, index) => 
-      index !== currentEditingIndex && 
-      file.location.toLowerCase() === locationInput.trim().toLowerCase()
-    );
-    
-    if (isDuplicate) {
-      // You can choose to allow duplicates by commenting out the return
-      // setLocationError('Location name must be unique');
-      // return;
     }
     
     if (currentEditingIndex !== null) {
@@ -903,6 +889,7 @@ const ExcelUploadPage: React.FC = () => {
             variant="outlined"
             placeholder="e.g., New York, Chicago, Los Angeles"
           />
+          
           {locationError && (
             <FormHelperText error>{locationError}</FormHelperText>
           )}

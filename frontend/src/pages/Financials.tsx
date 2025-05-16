@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+// src/pages/Financials.tsx - Updated with integrated filters using financial-specific Redux state
+
+import React, { useState, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import FormControl from '@mui/material/FormControl';
-import Select from '@mui/material/Select';
+import Select, { SelectChangeEvent } from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
@@ -12,6 +14,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
+import Alert from '@mui/material/Alert';
 import FinancialTable from '../components/FinancialTable';
 import DayOfWeekAnalysis from '../components/DayOfWeekAnalysis';
 import WeekOverWeekChart from '../components/graphs/WeekOverWeekChart';
@@ -19,6 +22,13 @@ import BudgetChart from '../components/graphs/BudgetChart';
 import SalesChart from '../components/graphs/SalesChart';
 import OrdersChart from '../components/graphs/OrdersChart';
 import AvgTicketChart from '../components/graphs/AvgTicketChart';
+
+// Import Redux hooks
+import { useAppDispatch, useAppSelector } from '../typedHooks';
+import { 
+  selectFinancialLocation, 
+  updateFinancialFilters 
+} from '../store/excelSlice';
 
 // Tab Panel Component
 function TabPanel(props) {
@@ -41,75 +51,179 @@ function TabPanel(props) {
   );
 }
 
-// Main component - same name as original
+// Main component
 export function Financials() {
   const theme = useTheme();
+  const dispatch = useAppDispatch();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
 
+  // Get financial-specific data from Redux
+  const { 
+    financialFiles, 
+    currentFinancialLocation, 
+    financialFilters,
+    financialLocations 
+  } = useAppSelector((state) => state.excel);
+  
+  // Find current financial data for selected location
+  const currentFinancialData = financialFiles.find(f => f.location === currentFinancialLocation);
+  
   // State variables
-  const [store, setStore] = useState('0001: Midtown East');
-  const [year, setYear] = useState('2025');
-  const [dateRange, setDateRange] = useState('1 | 12/30/2024 - 01/05/2025');
   const [tabValue, setTabValue] = useState(0);
-
-  // Sample data for the Week-Over-Week Analysis
-  const statsData = [
-    { 
-      label: 'Net Sales', 
-      value: '$8,268.68', 
-      bottomChange: '+0%',
-      bottomLabel: '% Change',
-      changeColor: '#1976d2'
-    },
-    { 
-      label: 'Orders', 
-      value: '372', 
-      bottomChange: '+0%',
-      bottomLabel: '% Change',
-      changeColor: '#1976d2'
-    },
-    { 
-      label: 'Avg Ticket', 
-      value: '$22.23', 
-      bottomChange: '22.23$',
-      changeDirection: 'up',
-      changeColor: '#2e7d32',
-      bottomLabel: '$ Change'
-    },
-    { 
-      label: 'Food Cost', 
-      value: '0.00%', 
-      bottomChange: '0.00%',
-      changeDirection: 'up',
-      changeColor: '#d32f2f',
-      bottomLabel: '% Change'
-    },
-    { 
-      label: 'Labor Cost', 
-      value: '30.23%', 
-      bottomChange: '30.23%',
-      changeDirection: 'up',
-      changeColor: '#d32f2f',
-      bottomLabel: '% Change'
-    },
-    { 
-      label: 'SPMH', 
-      value: '$68.91', 
-      bottomChange: '68.91$',
-      changeDirection: 'up',
-      changeColor: '#2e7d32',
-      bottomLabel: '% Change'
-    },
-    { 
-      label: 'LPMH', 
-      value: '$20.83', 
-      bottomChange: '20.83%',
-      changeDirection: 'up',
-      changeColor: '#d32f2f',
-      bottomLabel: '% Change'
-    },
+  const [statsData, setStatsData] = useState([]);
+  
+  // Get years and date ranges from data or use defaults
+  const availableYears = currentFinancialData?.data?.table1?.[0]?.financials_years || ['2025', '2024'];
+  const availableDateRanges = currentFinancialData?.data?.dateRanges || [
+    '1 | 12/30/2024 - 01/05/2025',
+    '2 | 01/06/2025 - 01/12/2025'
   ];
+
+  // Handle store/location change
+  const handleStoreChange = (event: SelectChangeEvent) => {
+    const newStore = event.target.value;
+    dispatch(selectFinancialLocation(newStore));
+    dispatch(updateFinancialFilters({ store: newStore }));
+  };
+
+  // Handle year change
+  const handleYearChange = (event: SelectChangeEvent) => {
+    const newYear = event.target.value;
+    dispatch(updateFinancialFilters({ year: newYear }));
+  };
+
+  // Handle date range change
+  const handleDateRangeChange = (event: SelectChangeEvent) => {
+    const newDateRange = event.target.value;
+    dispatch(updateFinancialFilters({ dateRange: newDateRange }));
+  };
+
+  // Update stats when data changes
+  useEffect(() => {
+    if (currentFinancialData?.data?.table5?.length > 0) {
+      const weekStats = currentFinancialData.data.table5[0];
+      
+      const newStatsData = [
+        { 
+          label: 'Net Sales', 
+          value: weekStats.netSales || '$0.00', 
+          bottomChange: weekStats.netSalesChange || '+0%',
+          bottomLabel: '% Change',
+          changeColor: parseFloat(weekStats.netSalesChange) >= 0 ? '#2e7d32' : '#d32f2f',
+          changeDirection: parseFloat(weekStats.netSalesChange) >= 0 ? 'up' : 'down'
+        },
+        { 
+          label: 'Orders', 
+          value: weekStats.orders || '0', 
+          bottomChange: weekStats.ordersChange || '+0%',
+          bottomLabel: '% Change',
+          changeColor: parseFloat(weekStats.ordersChange) >= 0 ? '#2e7d32' : '#d32f2f',
+          changeDirection: parseFloat(weekStats.ordersChange) >= 0 ? 'up' : 'down'
+        },
+        { 
+          label: 'Avg Ticket', 
+          value: weekStats.avgTicket || '$0.00', 
+          bottomChange: weekStats.avgTicketChange || '0.00$',
+          changeDirection: parseFloat(weekStats.avgTicketChange) >= 0 ? 'up' : 'down',
+          changeColor: parseFloat(weekStats.avgTicketChange) >= 0 ? '#2e7d32' : '#d32f2f',
+          bottomLabel: '$ Change'
+        },
+        { 
+          label: 'Food Cost', 
+          value: weekStats.foodCostPercent || '0.00%', 
+          bottomChange: weekStats.foodCostChange || '0.00%',
+          changeDirection: parseFloat(weekStats.foodCostChange) >= 0 ? 'up' : 'down',
+          changeColor: parseFloat(weekStats.foodCostChange) >= 0 ? '#d32f2f' : '#2e7d32',
+          bottomLabel: '% Change'
+        },
+        { 
+          label: 'Labor Cost', 
+          value: weekStats.laborCostPercent || '0.00%', 
+          bottomChange: weekStats.laborCostChange || '0.00%',
+          changeDirection: parseFloat(weekStats.laborCostChange) >= 0 ? 'up' : 'down',
+          changeColor: parseFloat(weekStats.laborCostChange) >= 0 ? '#d32f2f' : '#2e7d32',
+          bottomLabel: '% Change'
+        },
+        { 
+          label: 'SPMH', 
+          value: weekStats.spmh || '$0.00', 
+          bottomChange: weekStats.spmhChange || '0.00$',
+          changeDirection: parseFloat(weekStats.spmhChange) >= 0 ? 'up' : 'down',
+          changeColor: parseFloat(weekStats.spmhChange) >= 0 ? '#2e7d32' : '#d32f2f',
+          bottomLabel: '% Change'
+        },
+        { 
+          label: 'LPMH', 
+          value: weekStats.lpmh || '$0.00', 
+          bottomChange: weekStats.lpmhChange || '0.00%',
+          changeDirection: parseFloat(weekStats.lpmhChange) >= 0 ? 'up' : 'down',
+          changeColor: parseFloat(weekStats.lpmhChange) >= 0 ? '#d32f2f' : '#2e7d32',
+          bottomLabel: '% Change'
+        },
+      ];
+      
+      setStatsData(newStatsData);
+    } else {
+      // Use default data if no stats available
+      setStatsData([
+        { 
+          label: 'Net Sales', 
+          value: '$0.00', 
+          bottomChange: '+0%',
+          bottomLabel: '% Change',
+          changeColor: '#1976d2'
+        },
+        { 
+          label: 'Orders', 
+          value: '0', 
+          bottomChange: '+0%',
+          bottomLabel: '% Change',
+          changeColor: '#1976d2'
+        },
+        { 
+          label: 'Avg Ticket', 
+          value: '$0.00', 
+          bottomChange: '0.00$',
+          changeDirection: 'up',
+          changeColor: '#2e7d32',
+          bottomLabel: '$ Change'
+        },
+        { 
+          label: 'Food Cost', 
+          value: '0.00%', 
+          bottomChange: '0.00%',
+          changeDirection: 'up',
+          changeColor: '#d32f2f',
+          bottomLabel: '% Change'
+        },
+        { 
+          label: 'Labor Cost', 
+          value: '0.00%', 
+          bottomChange: '0.00%',
+          changeDirection: 'up',
+          changeColor: '#d32f2f',
+          bottomLabel: '% Change'
+        },
+        { 
+          label: 'SPMH', 
+          value: '$0.00', 
+          bottomChange: '0.00$',
+          changeDirection: 'up',
+          changeColor: '#2e7d32',
+          bottomLabel: '% Change'
+        },
+        { 
+          label: 'LPMH', 
+          value: '$0.00', 
+          bottomChange: '0.00%',
+          changeDirection: 'up',
+          changeColor: '#d32f2f',
+          bottomLabel: '% Change'
+        },
+      ]);
+    }
+  }, [currentFinancialData]);
 
   // Tab change handler
   const handleTabChange = (event, newValue) => {
@@ -133,6 +247,20 @@ export function Financials() {
         FINANCIAL DASHBOARD
       </Typography>
 
+      {/* Alert for no data */}
+      {financialFiles.length === 0 && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          No financial data available. Please upload financial files with dashboard type "Financials" first.
+        </Alert>
+      )}
+
+      {/* Alert for implementation status */}
+      {currentFinancialData?.data?.data === "Financial Dashboard is not yet implemented." && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          Financial Dashboard is not yet fully implemented. Displaying available data.
+        </Alert>
+      )}
+
       <Grid container spacing={3}>
         {/* Left Side Filters */}
         <Grid item xs={12} md={4} lg={3}>
@@ -142,62 +270,86 @@ export function Financials() {
                 Filters
               </Typography>
               
+              {/* Current file info */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="caption" color="text.secondary">
+                  Current file: {currentFinancialData?.fileName || 'No file selected'}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  {financialFiles.length} financial file(s) available
+                </Typography>
+              </Box>
+              
+              {/* Store selector */}
               <Box sx={{ mb: 3 }}>
                 <Typography sx={{ mb: 1, fontSize: '0.875rem', color: '#616161' }}>
                   Store
                 </Typography>
                 <FormControl fullWidth size="small">
                   <Select
-                    value={store}
-                    onChange={(e) => setStore(e.target.value)}
+                    value={financialFilters.store || currentFinancialLocation || ''}
+                    onChange={handleStoreChange}
                     displayEmpty
                     sx={{ 
                       backgroundColor: 'white',
                       borderRadius: 1,
                     }}
+                    disabled={financialLocations.length === 0}
                   >
-                    <MenuItem value="0001: Midtown East">0001: Midtown East</MenuItem>
-                    <MenuItem value="0002: Downtown West">0002: Downtown West</MenuItem>
+                    {financialLocations.length > 0 ? (
+                      financialLocations.map(loc => (
+                        <MenuItem key={loc} value={loc}>{loc}</MenuItem>
+                      ))
+                    ) : (
+                      [
+                        <MenuItem key="default1" value="0001: Midtown East">0001: Midtown East</MenuItem>,
+                        <MenuItem key="default2" value="0002: Downtown West">0002: Downtown West</MenuItem>
+                      ]
+                    )}
                   </Select>
                 </FormControl>
               </Box>
 
+              {/* Year selector */}
               <Box sx={{ mb: 3 }}>
                 <Typography sx={{ mb: 1, fontSize: '0.875rem', color: '#616161' }}>
                   Year
                 </Typography>
                 <FormControl fullWidth size="small">
                   <Select
-                    value={year}
-                    onChange={(e) => setYear(e.target.value)}
+                    value={financialFilters.year}
+                    onChange={handleYearChange}
                     displayEmpty
                     sx={{ 
                       backgroundColor: 'white',
                       borderRadius: 1,
                     }}
                   >
-                    <MenuItem value="2025">2025</MenuItem>
-                    <MenuItem value="2024">2024</MenuItem>
+                    {availableYears.map(year => (
+                      <MenuItem key={year} value={year}>{year}</MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Box>
 
+              {/* Date range selector */}
               <Box>
                 <Typography sx={{ mb: 1, fontSize: '0.875rem', color: '#616161' }}>
                   Week / Date Range
                 </Typography>
                 <FormControl fullWidth size="small">
                   <Select
-                    value={dateRange}
-                    onChange={(e) => setDateRange(e.target.value)}
+                    value={financialFilters.dateRange}
+                    onChange={handleDateRangeChange}
                     displayEmpty
                     sx={{ 
                       backgroundColor: 'white',
                       borderRadius: 1,
                     }}
                   >
-                    <MenuItem value="1 | 12/30/2024 - 01/05/2025">1 | 12/30/2024 - 01/05/2025</MenuItem>
-                    <MenuItem value="2 | 01/06/2025 - 01/12/2025">2 | 01/06/2025 - 01/12/2025</MenuItem>
+                    {availableDateRanges.map(range => (
+                      <MenuItem key={range} value={range}>{range}</MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Box>
@@ -211,7 +363,7 @@ export function Financials() {
             elevation={3} 
             sx={{ 
               borderRadius: 2,
-              height: '100%' // Match filter card height
+              height: '100%'
             }}
           >
             <CardContent sx={{ py: 2, px: 3 }}>
@@ -221,7 +373,7 @@ export function Financials() {
                 sx={{ 
                   fontWeight: 500,
                   mb: 2,
-                  // color: '#1565c0'
+                  color: '#1565c0'
                 }}
               >
                 Week-Over-Week Analysis
@@ -413,74 +565,76 @@ export function Financials() {
           <Tab label="Day of Week Analysis" />
         </Tabs>
 
-
         <TabPanel value={tabValue} index={0}>
           <Box sx={{ p: 3 }}>
             {/* Financial Table */}
-            <FinancialTable />
+            <FinancialTable data={currentFinancialData?.data} />
             
-            
-            <Box sx={{ mt: 4 }}>
-              {/* <Typography 
-                variant="h5" 
-                sx={{ 
-                  mb: 3,
-                  textAlign: 'center',
-                  fontWeight: 600,
-                  color: '#424242'
-                }}
-              >
-                Comparison Charts
-              </Typography> */}
-              
-              {/* First Chart - Full width row */}
-              {/* <Box sx={{ mb: 4 }}>
-                <WeekOverWeekChart />
+            {/* Only show charts if we have data */}
+            {currentFinancialData && (
+              <Box sx={{ mt: 4 }}>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    mb: 3,
+                    textAlign: 'center',
+                    fontWeight: 600,
+                    color: '#424242'
+                  }}
+                >
+                  Comparison Charts
+                </Typography>
+                
+                {/* First Chart - Full width row */}
+                <Box sx={{ mb: 4 }}>
+                  <WeekOverWeekChart data={currentFinancialData?.data} />
+                </Box>
+                
+                {/* Second Chart - Full width row */}
+                <Box>
+                  <BudgetChart data={currentFinancialData?.data} />
+                </Box>
               </Box>
-               */}
-              {/* Second Chart - Full width row */}
-              {/* <Box>
-                <BudgetChart />
-              </Box> */}
-            </Box>
+            )}
           </Box>
         </TabPanel>
-        
         
         <TabPanel value={tabValue} index={1}>
           <Box sx={{ p: 3 }}>
             {/* Day of Week Analysis Tables */}
-            <DayOfWeekAnalysis />
+            <DayOfWeekAnalysis data={currentFinancialData?.data} />
             
-            {/* Charts Section */}
-            <Box sx={{ mt: 4 }}>
-              <Typography 
-                variant="h5" 
-                sx={{ 
-                  mb: 3,
-                  textAlign: 'center',
-                  fontWeight: 600,
-                  color: '#424242'
-                }}
-              >
-                Day of Week Trends
-              </Typography>
-              
-              {/* Sales Chart - Full width row */}
-              <Box sx={{ mb: 4 }}>
-                <SalesChart />
+            {/* Only show charts if we have data */}
+            {currentFinancialData && (
+              <Box sx={{ mt: 4 }}>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    mb: 3,
+                    textAlign: 'center',
+                    fontWeight: 600,
+                    color: '#424242'
+                  }}
+                >
+                  Day of Week Trends
+                </Typography>
+                
+                {/* Sales Chart - Full width row */}
+                <Box sx={{ mb: 4 }}>
+                  <SalesChart data={currentFinancialData?.data} />
+                </Box>
+                
+                {/* Orders Chart - Full width row */}
+                <Box sx={{ mb: 4 }}>
+                  <OrdersChart data={currentFinancialData?.data} />
+                </Box>
+                
+                {/* Average Ticket Chart - Full width row */}
+                <Box>
+                  <AvgTicketChart data={currentFinancialData?.data} />
+                </Box>
               </Box>
-              
-              {/* Orders Chart - Full width row */}
-              <Box sx={{ mb: 4 }}>
-                <OrdersChart />
-              </Box>
-              
-              {/* Average Ticket Chart - Full width row */}
-              <Box>
-                <AvgTicketChart />
-              </Box>
-            </Box>
+            )}
           </Box>
         </TabPanel>
       </Card>

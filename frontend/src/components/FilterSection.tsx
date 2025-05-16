@@ -1,3 +1,5 @@
+// src/components/FilterSection.tsx - Updated to use sales-specific locations
+
 import React, { useState, useRef } from 'react';
 import Grid from '@mui/material/Grid';
 import Button from '@mui/material/Button';
@@ -7,7 +9,7 @@ import Select, { SelectChangeEvent } from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import { useAppDispatch, useAppSelector } from '../typedHooks';
-import { selectLocation } from '../store/excelSlice';
+import { selectSalesLocation, updateSalesFilters } from '../store/excelSlice';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
@@ -88,14 +90,25 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   endDate,
   onStartDateChange,
   onEndDateChange,
-  locations,
+  locations: propsLocations, // Renamed to avoid confusion
   selectedLocation,
   onLocationChange,
   onApplyFilters
 }) => {
-  // Get all locations and file info from Redux store
+  // Get sales-specific locations and file info from Redux store
   const dispatch = useAppDispatch();
-  const { allLocations, files, fileName } = useAppSelector((state) => state.excel);
+  const { 
+    salesLocations, 
+    salesFiles, 
+    currentSalesLocation, 
+    fileName,
+    allLocations,
+    files 
+  } = useAppSelector((state) => state.excel);
+
+  // Use sales-specific locations if available, otherwise fall back to all locations
+  // This ensures we only show locations that have sales files
+  const locations = salesLocations.length > 0 ? salesLocations : propsLocations;
 
   // State for filter popovers
   const [isDiningOpen, setIsDiningOpen] = useState(false);
@@ -105,13 +118,18 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   const [selectedDiningOptions, setSelectedDiningOptions] = useState<string[]>([]);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
 
-  // Find the file for the current location
-  const currentFile = files.find(f => f.location === selectedLocation);
+  // Find the file for the current sales location
+  const currentFile = salesFiles.find(f => f.location === currentSalesLocation);
   const displayFileName = currentFile ? currentFile.fileName : fileName || 'No file selected';
 
-  // Handle location change
+  // Handle location change - update Redux state as well
   const handleLocationChange = (event: SelectChangeEvent) => {
+    const newLocation = event.target.value;
     onLocationChange(event);
+    
+    // Update Redux state for sales location
+    dispatch(selectSalesLocation(newLocation));
+    dispatch(updateSalesFilters({ location: newLocation }));
   };
 
   // Handle dining options filter button click
@@ -216,7 +234,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   return (
     <Box>
       <Typography variant="h6" sx={{ mb: 2, fontWeight: 'normal' }}>
-        Current file: {displayFileName} {selectedLocation && `(Location: ${selectedLocation})`}
+        Current file: {displayFileName} {currentSalesLocation && `(Location: ${currentSalesLocation})`}
       </Typography>
 
       <Grid container spacing={2} alignItems="flex-start" sx={{ mb: 2 }}>
@@ -226,17 +244,18 @@ const FilterSection: React.FC<FilterSectionProps> = ({
             <Select
               labelId="location-select-label"
               id="location-select"
-              value={selectedLocation}
+              value={selectedLocation || currentSalesLocation || ''}
               label="Location"
               onChange={handleLocationChange}
               startAdornment={<PlaceIcon sx={{ mr: 1, ml: -0.5, color: 'primary.main' }} />}
+              disabled={locations.length === 0}
             >
               {locations.map((location) => (
                 <MenuItem key={location} value={location}>{location}</MenuItem>
               ))}
             </Select>
             <Typography variant="caption" color="text.secondary">
-              {files.length} file(s) available
+              {salesFiles.length} sales file(s) available
             </Typography>
           </FormControl>
         </Grid>

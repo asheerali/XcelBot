@@ -1,3 +1,5 @@
+# Updated models.py with dashboardName field
+
 from pydantic import BaseModel
 from typing import Dict, List, Any, Optional
 
@@ -8,8 +10,7 @@ class ExcelUploadRequest(BaseModel):
     startDate: Optional[str] = None  # Optional date filter start
     endDate: Optional[str] = None    # Optional date filter end
     location: Optional[str] = None   # Optional location filter
-    dashboard: Optional[str] = None  # Dashboard type (e.g., "Sales", "Inventory")
-
+    dashboard: Optional[str] = None  # Dashboard type (e.g., "Sales Split", "Financials")
 
 class ExcelFilterRequest(BaseModel):
     fileName: str  # Name of the previously uploaded file
@@ -27,6 +28,9 @@ class ExcelUploadResponse(BaseModel):
     table5: List[Dict[str, Any]]
     locations: List[str] = []
     dateRanges: List[str] = []
+    fileLocation: Optional[str] = None
+    dashboardName: Optional[str] = None  # Added to identify dashboard type
+    data: Optional[Any] = None  # Additional data field for status messages
 
 # New model for Sales Analytics response
 class SalesAnalyticsResponse(BaseModel):
@@ -34,3 +38,4 @@ class SalesAnalyticsResponse(BaseModel):
     salesByDayOfWeek: List[Dict[str, Any]]
     salesByTimeOfDay: List[Dict[str, Any]]
     salesByCategory: List[Dict[str, Any]]
+    fileLocation: Optional[str] = None
