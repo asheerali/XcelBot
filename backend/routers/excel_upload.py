@@ -79,6 +79,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 helper4_filter='All'
             )
             
+            
             result = {
             "table1": [{"financials_weeks": [financials_weeks], "financials_years": [financials_years], "financials_stores": [financials_stores]}],
             "table2": financials_sales_table.to_dict(orient='records'),
@@ -165,27 +166,30 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             result['fileLocation'] = request.location
             
             # Return the properly structured response
-            result_final = ExcelUploadResponse(**result), {
-            "table1": [{"net_sales": [net_sales], "orders": [orders], 
-                        "qty_sold": [qty_sold],"average_order_value": [average_order_value], 
-                        "average_items_per_order": [average_items_per_order], "unique_orders": [unique_orders], 
-                        "total_quantity": [total_quantity]}],
-            "table2": sales_by_category_df.to_dict(orient='records'),
-            "table3": sales_by_menu_group_df.to_dict(orient='records'),
-            "table4": sales_by_server_df.to_dict(orient='records'),
-            "table5": top_selling_items_df.to_dict(orient='records'),
-            "table6": sales_by_location_df.to_dict(orient='records'),
-            "table7": average_price_by_item_df.to_dict(orient='records'),
-            "table8": price_changes_df.to_dict(orient='records'),
-            "table9": top_items_df.to_dict(orient='records'),
-            "locations": result['locations'],
-            "dateRanges": result['dateRanges'],
-            "fileLocation": result['fileLocation'],
-            "fileName": request.fileName,
-            "dashboardName": "Product Mix ",
-            "data":  "Dashboard is not yet implemented."
-            }
+            result_final = ExcelUploadResponse(**result)            # Return the properly structured response
+            # result_final = ExcelUploadResponse(**result), {
+            # "table1": [{"net_sales": [net_sales], "orders": [orders], 
+            #             "qty_sold": [qty_sold],"average_order_value": [average_order_value], 
+            #             "average_items_per_order": [average_items_per_order], "unique_orders": [unique_orders], 
+            #             "total_quantity": [total_quantity]}],
+            # "table2": sales_by_category_df.to_dict(orient='records'),
+            # "table3": sales_by_menu_group_df.to_dict(orient='records'),
+            # "table4": sales_by_server_df.to_dict(orient='records'),
+            # "table5": top_selling_items_df.to_dict(orient='records'),
+            # "table6": sales_by_location_df.to_dict(orient='records'),
+            # "table7": average_price_by_item_df.to_dict(orient='records'),
+            # "table8": price_changes_df.to_dict(orient='records'),
+            # "table9": top_items_df.to_dict(orient='records'),
+            # "locations": result['locations'],
+            # "dateRanges": result['dateRanges'],
+            # "fileLocation": result['fileLocation'],
+            # "fileName": request.fileName,
+            # "dashboardName": "Product Mix ",
+            # "data":  "Dashboard is not yet implemented."
+            # }
             
+            
+            print("result", result_final )
             return result_final
             
             

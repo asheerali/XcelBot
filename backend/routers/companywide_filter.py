@@ -1,19 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
-import base64
-import io
 import os
-
 import traceback
-
-
 # Import from local modules
-from models import ExcelUploadRequest, ExcelUploadResponse, SalesAnalyticsResponse
-from excel_processor import process_excel_file
-from utils import find_file_in_directory
-from sales_analytics import generate_sales_analytics
-from financials_dashboard.financials_processor import process_financials_file
+from models import ExcelUploadRequest, ExcelUploadResponse
 from companywide_dashboard.companywide_processor import process_companywide_file
 
 router = APIRouter(
@@ -60,6 +51,8 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 "table5":reg_pay_df.to_dict(orient='records'),
                 "table6":lb_hrs_df.to_dict(orient='records'),
                 "table7":spmh_df.to_dict(orient='records'),
+                "table8": [],
+                "table9": [],
                 "locations": ["test"],
                 "dateRanges": ["test"],
                 "fileLocation":["test"],
