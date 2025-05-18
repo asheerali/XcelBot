@@ -139,6 +139,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             # Add dashboardName to indicate this is Sales Split data
             result['dashboardName'] = "Sales Split"
             
+            print("result1 is here", result)
             # Return the properly structured response
             return ExcelUploadResponse(**result)
         
