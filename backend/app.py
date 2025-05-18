@@ -6,7 +6,7 @@ import os
 from datetime import datetime, timedelta
 import traceback
 
-from routers import excel_upload, excel_analytics, excel_filter, health
+from routers import excel_upload, excel_analytics, excel_filter, health, companywide_filter, pmix_filter
 
 # Import from local modules
 from models import ExcelUploadRequest, ExcelFilterRequest, ExcelUploadResponse, SalesAnalyticsResponse
@@ -43,7 +43,10 @@ async def root():
 app.include_router(excel_upload.router)
 app.include_router(excel_filter.router)
 app.include_router(excel_analytics.router)
+app.include_router(companywide_filter.router)
+app.include_router(pmix_filter.router)
 app.include_router(health.router)
+
 
 if __name__ == "__main__":
     import uvicorn

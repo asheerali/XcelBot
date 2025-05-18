@@ -9,6 +9,16 @@ class ExcelUploadRequest(BaseModel):
     endDate: Optional[str] = None    # Optional date filter end
     location: Optional[str] = None   # Optional location filter
     dashboard: Optional[str] = None  # Optional type of dashboard (e.g., "Sales", "Inventory")
+    
+class FinancialUploadRequest(BaseModel):
+    fileName: str
+    fileContent: str  # base64 encoded file content
+    startDate: Optional[str] = None  # Optional date filter start
+    endDate: Optional[str] = None    # Optional date filter end
+    location: Optional[str] = None   # Optional location filter
+    dashboard: Optional[str] = None  # Optional type of dashboard (e.g., "Sales", "Inventory")
+    year: Optional[int] = None  # Optional year filter
+    weekRange: Optional[str] = None  # Optional week range filter
 
 class ExcelFilterRequest(BaseModel):
     fileName: str  # Name of the previously uploaded file
@@ -24,8 +34,33 @@ class ExcelUploadResponse(BaseModel):
     table3: List[Dict[str, Any]]
     table4: List[Dict[str, Any]]
     table5: List[Dict[str, Any]]
+    table6: List[Dict[str, Any]]
+    table7: List[Dict[str, Any]]
+    table8: List[Dict[str, Any]]
+    table9: List[Dict[str, Any]]
     locations: List[str] = []
     dateRanges: List[str] = []
+    fileLocation: List[str] = []
+    dashboardName: str
+    fileName: str
+    data: str
+    
+    
+class FinancialUploadResponse(BaseModel):
+    table1: List[Dict[str, Any]]
+    table2: List[Dict[str, Any]]
+    table3: List[Dict[str, Any]]
+    table4: List[Dict[str, Any]]
+    table5: List[Dict[str, Any]]
+    table6: List[Dict[str, Any]]
+    table7: List[Dict[str, Any]]
+    table8: List[Dict[str, Any]]
+    table9: List[Dict[str, Any]]
+    locations: List[str] = []
+    dateRanges: List[str] = []
+    fileName: str
+    dashboardName: str
+    data: str
 
 # New model for Sales Analytics response
 class SalesAnalyticsResponse(BaseModel):

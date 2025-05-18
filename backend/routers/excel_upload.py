@@ -14,6 +14,9 @@ from excel_processor import process_excel_file
 from utils import find_file_in_directory
 from sales_analytics import generate_sales_analytics
 from financials_dashboard.financials_processor import process_financials_file
+from companywide_dashboard.companywide_processor import process_companywide_file
+from pmix_dashboard.pmix_processor import process_pmix_file
+
 
 router = APIRouter(
     prefix="/api",
@@ -58,8 +61,8 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         if request.location:
             print('Location:', request.location)
             
-        if request.dashboard == "Financials":
-            print("Dashboard type: Financials")
+        if request.dashboard in ["Financials", "Companywide"]:
+            print("Dashboard type: ", request.dashboard)
             # print("i am here 4")
             excel_data_copy = io.BytesIO(file_content)
 
@@ -67,24 +70,45 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 excel_data_copy, 
                 location=request.location
             )
-            # print("financials_weeks type:", type(financials_weeks))
-            # print("financials_weeks:", financials_weeks)
-            # print( "table2", [{"financials_sales_table": [financials_sales_table]}])
             
-# Ensure all returned values are properly converted to JSON-serializable formats
-            # return {"hello": "world"}
+            sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df = process_companywide_file(
+                excel_data_copy, 
+                store_filter='All', 
+                year_filter=None, 
+                quarter_filter='All', 
+                helper4_filter='All'
+            )
+            
             result = {
             "table1": [{"financials_weeks": [financials_weeks], "financials_years": [financials_years], "financials_stores": [financials_stores]}],
             "table2": financials_sales_table.to_dict(orient='records'),
             "table3": financials_orders_table.to_dict(orient='records'),
             "table4": financials_avg_ticket_table.to_dict(orient='records'),
             "table5": financials_tw_lw_bdg_table.to_dict(orient='records'),
+            "table6": [],
+            "table7": [],
             "locations": ["test"],
             "dateRanges": ["test"],
             "fileLocation":["test"],
+            "fileName": "123", #the full names of the file saved in the uploads folder
+            "dashboardName": "Financials",
             "data":  "Financial Dashboard is not yet implemented."
-            
-        }
+            },
+            {
+                "table1":sales_df.to_dict(orient='records'),
+                "table2":order_df.to_dict(orient='records'),
+                "table3":avg_ticket_df.to_dict(orient='records'),
+                "table4":cogs_df.to_dict(orient='records'),
+                "table5":reg_pay_df.to_dict(orient='records'),
+                "table6":lb_hrs_df.to_dict(orient='records'),
+                "table7":spmh_df.to_dict(orient='records'),
+                "locations": ["test"],
+                "dateRanges": ["test"],
+                "fileLocation":["test"],
+                "dashboardName": "Companywide",
+                "fileName": "123", #the full names of the file saved in the uploads folder
+                "data":  "Companywide Dashboard is not yet implemented."
+            }
         #        result = {
         #     "table1": [{"financials_weeks": [financials_weeks], "financials_years": [financials_years], "financials_stores": [financials_stores]}],
         #     "table2": financials_sales_table.to_dict(orient='records'),
@@ -106,8 +130,13 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             return result
             # return {"message": "Financial Dashboard is not yet implemented."}
         
-        if request.dashboard == "Sales Split":
+        if request.dashboard == ["Sales Split", "Product Mix"]:
             print("Dashboard type: Sales Split Dashboard")
+            
+            excel_data_copy = io.BytesIO(file_content)
+
+            net_sales, orders, qty_sold, sales_by_category_df, sales_by_menu_group_df, sales_by_server_df, top_selling_items_df, sales_by_location_df, average_price_by_item_df, average_order_value, average_items_per_order, price_changes_df, top_items_df, unique_orders, total_quantity = process_pmix_file(excel_data_copy)
+
 
             # Process Excel file with optional filters
             result = process_excel_file(
@@ -136,7 +165,29 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             result['fileLocation'] = request.location
             
             # Return the properly structured response
-            return ExcelUploadResponse(**result)
+            result_final = ExcelUploadResponse(**result), {
+            "table1": [{"net_sales": [net_sales], "orders": [orders], 
+                        "qty_sold": [qty_sold],"average_order_value": [average_order_value], 
+                        "average_items_per_order": [average_items_per_order], "unique_orders": [unique_orders], 
+                        "total_quantity": [total_quantity]}],
+            "table2": sales_by_category_df.to_dict(orient='records'),
+            "table3": sales_by_menu_group_df.to_dict(orient='records'),
+            "table4": sales_by_server_df.to_dict(orient='records'),
+            "table5": top_selling_items_df.to_dict(orient='records'),
+            "table6": sales_by_location_df.to_dict(orient='records'),
+            "table7": average_price_by_item_df.to_dict(orient='records'),
+            "table8": price_changes_df.to_dict(orient='records'),
+            "table9": top_items_df.to_dict(orient='records'),
+            "locations": result['locations'],
+            "dateRanges": result['dateRanges'],
+            "fileLocation": result['fileLocation'],
+            "fileName": request.fileName,
+            "dashboardName": "Product Mix ",
+            "data":  "Dashboard is not yet implemented."
+            }
+            
+            return result_final
+            
             
     except Exception as e:
         # Log the full exception for debugging
