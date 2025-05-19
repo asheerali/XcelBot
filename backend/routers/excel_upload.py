@@ -167,7 +167,21 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             
             # Return the properly structured response
             result_final = ExcelUploadResponse(**result)            # Return the properly structured response
+      
             
+            # # For now, return empty data for unsupported dashboards
+            # result = {
+            #     "table1": [percentage table],
+            #     "table2": [Inhouse table],
+            #     "table3": [Week over Week table],
+            #     "table4": [category summary table],
+            #     "table5": [1p_3p_table],
+            #     "locations": [request.location] if request.location else [],
+            #     "dateRanges": [],
+            #     "fileLocation": request.location,
+            #     "dashboardName": request.dashboard,
+            #     "data": f"{request.dashboard} Dashboard is not yet implemented."
+            # }      
             # result_final = ExcelUploadResponse(**result), {
             # "table1": [{"net_sales": [net_sales], "orders": [orders], 
             #             "qty_sold": [qty_sold],"average_order_value": [average_order_value], 
