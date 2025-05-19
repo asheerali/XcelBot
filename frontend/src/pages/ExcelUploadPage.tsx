@@ -1,4 +1,4 @@
-// src/pages/ExcelUploadPage.tsx - Updated version with dashboard routing
+// src/pages/ExcelUploadPage.tsx - Updated version with Sales Wide dashboard support
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
@@ -58,7 +58,8 @@ import {
   setLocations,
   selectLocation,
   addFinancialData,
-  addSalesData
+  addSalesData,
+  addSalesWideData  // Added for Sales Wide dashboard
 } from '../store/excelSlice';
 
 // API URL for Excel upload
@@ -384,6 +385,20 @@ const ExcelUploadPage: React.FC = () => {
             location: fileInfo.location,
             data: response.data
           }));
+        } else if (dashboardName === 'Sales Wide') {
+          // Add to sales wide data in Redux
+          dispatch(addSalesWideData({
+            fileName: fileInfo.file.name,
+            location: fileInfo.location,
+            data: response.data
+          }));
+        } else {
+          // For all other types, just use generic file data
+          dispatch(addFileData({
+            fileName: fileInfo.file.name,
+            location: fileInfo.location,
+            data: response.data
+          }));
         }
         
         // Update file status to success and store data
@@ -491,18 +506,32 @@ const ExcelUploadPage: React.FC = () => {
     // Separate files by dashboard type
     const salesFiles = successfulFiles.filter(f => f.dashboard === 'Sales Split');
     const financialFiles = successfulFiles.filter(f => f.dashboard === 'Financials');
+    const salesWideFiles = successfulFiles.filter(f => f.dashboard === 'Sales Wide');
+    const productMixFiles = successfulFiles.filter(f => f.dashboard === 'Product Mix');
     
     // Navigate based on dashboard types
-    if (financialFiles.length > 0 && salesFiles.length === 0) {
+    if (financialFiles.length > 0 && salesFiles.length === 0 && salesWideFiles.length === 0) {
       // Only financial files - navigate to Financials
       navigate('/Financials');
-    } else if (salesFiles.length > 0 && financialFiles.length === 0) {
+    } else if (salesFiles.length > 0 && financialFiles.length === 0 && salesWideFiles.length === 0) {
       // Only sales files - navigate to manage-reports
       navigate('/manage-reports');
-    } else if (salesFiles.length > 0 && financialFiles.length > 0) {
-      // Both types - show a dialog or navigate to a selection page
-      // For now, navigate to sales split
-      navigate('/manage-reports');
+    } else if (salesWideFiles.length > 0 && salesFiles.length === 0 && financialFiles.length === 0) {
+      // Only sales wide files - navigate to sales wide dashboard
+      navigate('/Saleswide');
+    } else if (productMixFiles.length > 0) {
+      // Has product mix files - navigate to product mix
+      navigate('/Productmix');
+    } else {
+      // Multiple dashboard types - navigate to the most recent one
+      // For now, prioritize Sales Split -> Sales Wide -> Financials
+      if (salesFiles.length > 0) {
+        navigate('/manage-reports');
+      } else if (salesWideFiles.length > 0) {
+        navigate('/Saleswide');
+      } else {
+        navigate('/Financials');
+      }
     }
   };
   

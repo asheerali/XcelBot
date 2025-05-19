@@ -1,4 +1,4 @@
-// store/excelSlice.ts - Updated with separate filters for different dashboards
+// store/excelSlice.ts - Complete implementation with Sales Wide support
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
@@ -14,24 +14,50 @@ interface TableData {
   fileLocation?: string;
   dashboardName?: string;
   data?: any;
+  
+  // Sales Wide specific data
+  salesData?: any[];
+  ordersData?: any[];
+  avgTicketData?: any[];
+  laborHrsData?: any[];
+  spmhData?: any[];
+  laborCostData?: any[];
+  laborPercentageData?: any[];
+  cogsData?: any[];
+  cogsPercentageData?: any[];
+  financialTables?: any[];
+  helpers?: string[];
+  years?: string[];
+  equators?: string[];
 }
 
 interface FileData {
   fileName: string;
   location: string;
   data: TableData;
+  uploadDate?: string;
+  dashboard?: string;
 }
 
 interface FinancialData {
   fileName: string;
   location: string;
   data: TableData;
+  uploadDate?: string;
 }
 
 interface SalesData {
   fileName: string;
   location: string;
   data: TableData;
+  uploadDate?: string;
+}
+
+interface SalesWideData {
+  fileName: string;
+  location: string;
+  data: TableData;
+  uploadDate?: string;
 }
 
 interface ExcelState {
@@ -48,15 +74,18 @@ interface ExcelState {
   files: FileData[];
   financialFiles: FinancialData[];
   salesFiles: SalesData[];
+  salesWideFiles: SalesWideData[];
   
   // Locations by dashboard
   allLocations: string[];
   salesLocations: string[];      // Locations for sales split dashboard
   financialLocations: string[];  // Locations for financial dashboard
+  salesWideLocations: string[];  // Locations for sales wide dashboard
   
   // Current selected locations by dashboard
   currentSalesLocation: string;
   currentFinancialLocation: string;
+  currentSalesWideLocation: string;
   
   // Filter states by dashboard
   salesFilters: {
@@ -70,6 +99,16 @@ interface ExcelState {
     store: string;
     year: string;
     dateRange: string;
+  };
+  
+  salesWideFilters: {
+    dateRangeType: string;
+    startDate: string;
+    endDate: string;
+    location: string;
+    helper: string;
+    year: string;
+    equator: string;
   };
 }
 
@@ -93,11 +132,14 @@ const initialState: ExcelState = {
   files: [],
   financialFiles: [],
   salesFiles: [],
+  salesWideFiles: [],
   allLocations: [],
   salesLocations: [],
   financialLocations: [],
+  salesWideLocations: [],
   currentSalesLocation: '',
   currentFinancialLocation: '',
+  currentSalesWideLocation: '',
   salesFilters: {
     dateRangeType: '',
     startDate: '',
@@ -108,6 +150,15 @@ const initialState: ExcelState = {
     store: '0001: Midtown East',
     year: '2025',
     dateRange: '1 | 12/30/2024 - 01/05/2025'
+  },
+  salesWideFilters: {
+    dateRangeType: 'Last 30 Days',
+    startDate: '',
+    endDate: '',
+    location: '',
+    helper: 'Helper 3',
+    year: '2025',
+    equator: 'Equator A'
   }
 };
 
@@ -144,12 +195,19 @@ export const excelSlice = createSlice({
         f => f.location === action.payload.location
       );
       
+      // Create file data with upload timestamp
+      const fileData: FileData = {
+        ...action.payload,
+        uploadDate: new Date().toISOString(),
+        dashboard: action.payload.data.dashboardName
+      };
+      
       if (existingFileIndex >= 0) {
         // Update existing file
-        state.files[existingFileIndex] = action.payload;
+        state.files[existingFileIndex] = fileData;
       } else {
         // Add new file
-        state.files.push(action.payload);
+        state.files.push(fileData);
       }
       
       // Add location to allLocations if it doesn't exist
@@ -171,12 +229,18 @@ export const excelSlice = createSlice({
         f => f.location === action.payload.location
       );
       
+      // Create financial data with upload timestamp
+      const financialData: FinancialData = {
+        ...action.payload,
+        uploadDate: new Date().toISOString()
+      };
+      
       if (existingIndex >= 0) {
         // Update existing file
-        state.financialFiles[existingIndex] = action.payload;
+        state.financialFiles[existingIndex] = financialData;
       } else {
         // Add new file
-        state.financialFiles.push(action.payload);
+        state.financialFiles.push(financialData);
       }
       
       // Add location to allLocations if it doesn't exist
@@ -201,12 +265,18 @@ export const excelSlice = createSlice({
         f => f.location === action.payload.location
       );
       
+      // Create sales data with upload timestamp
+      const salesData: SalesData = {
+        ...action.payload,
+        uploadDate: new Date().toISOString()
+      };
+      
       if (existingIndex >= 0) {
         // Update existing file
-        state.salesFiles[existingIndex] = action.payload;
+        state.salesFiles[existingIndex] = salesData;
       } else {
         // Add new file
-        state.salesFiles.push(action.payload);
+        state.salesFiles.push(salesData);
       }
       
       // Add location to allLocations if it doesn't exist
@@ -225,6 +295,42 @@ export const excelSlice = createSlice({
         state.salesFilters.location = action.payload.location;
       }
     },
+    addSalesWideData: (state, action: PayloadAction<{fileName: string; location: string; data: TableData}>) => {
+      // Check if sales wide file already exists for this location
+      const existingIndex = state.salesWideFiles.findIndex(
+        f => f.location === action.payload.location
+      );
+      
+      // Create sales wide data with upload timestamp
+      const salesWideData: SalesWideData = {
+        ...action.payload,
+        uploadDate: new Date().toISOString()
+      };
+      
+      if (existingIndex >= 0) {
+        // Update existing file
+        state.salesWideFiles[existingIndex] = salesWideData;
+      } else {
+        // Add new file
+        state.salesWideFiles.push(salesWideData);
+      }
+      
+      // Add location to allLocations if it doesn't exist
+      if (!state.allLocations.includes(action.payload.location)) {
+        state.allLocations.push(action.payload.location);
+      }
+      
+      // Add location to salesWideLocations if it doesn't exist
+      if (!state.salesWideLocations.includes(action.payload.location)) {
+        state.salesWideLocations.push(action.payload.location);
+      }
+      
+      // Set current sales wide location if this is the first file
+      if (state.salesWideFiles.length === 1 || !state.currentSalesWideLocation) {
+        state.currentSalesWideLocation = action.payload.location;
+        state.salesWideFilters.location = action.payload.location;
+      }
+    },
     setLocations: (state, action: PayloadAction<string[]>) => {
       // Set all locations (without duplicates)
       const newLocations = action.payload.filter(loc => loc && loc.trim() !== '');
@@ -236,17 +342,21 @@ export const excelSlice = createSlice({
     setFinancialLocations: (state, action: PayloadAction<string[]>) => {
       state.financialLocations = action.payload;
     },
+    setSalesWideLocations: (state, action: PayloadAction<string[]>) => {
+      state.salesWideLocations = action.payload;
+    },
     selectLocation: (state, action: PayloadAction<string>) => {
       const location = action.payload;
       state.location = location;
       
-      // Find file data for this location (first check sales, then financial, then general)
+      // Find file data for this location (first check sales, then financial, then sales wide, then general)
       const salesData = state.salesFiles.find(f => f.location === location);
       const financialData = state.financialFiles.find(f => f.location === location);
+      const salesWideData = state.salesWideFiles.find(f => f.location === location);
       const fileData = state.files.find(f => f.location === location);
       
-      // Use sales data if available, otherwise financial, otherwise general
-      const dataToUse = salesData || financialData || fileData;
+      // Use sales data if available, otherwise financial, or sales wide, or general
+      const dataToUse = salesData || financialData || salesWideData || fileData;
       
       if (dataToUse) {
         state.tableData = dataToUse.data;
@@ -277,13 +387,39 @@ export const excelSlice = createSlice({
       state.currentFinancialLocation = location;
       state.financialFilters.store = location;
       
-      // No need to update tableData here as financial dashboard manages its own data
+      // Find financial data for this location
+      const financialData = state.financialFiles.find(f => f.location === location);
+      
+      if (financialData) {
+        state.tableData = financialData.data;
+        state.fileName = financialData.fileName;
+        state.fileProcessed = true;
+        state.location = location;
+      }
+    },
+    selectSalesWideLocation: (state, action: PayloadAction<string>) => {
+      const location = action.payload;
+      state.currentSalesWideLocation = location;
+      state.salesWideFilters.location = location;
+      
+      // Find sales wide data for this location
+      const salesWideData = state.salesWideFiles.find(f => f.location === location);
+      
+      if (salesWideData) {
+        state.tableData = salesWideData.data;
+        state.fileName = salesWideData.fileName;
+        state.fileProcessed = true;
+        state.location = location;
+      }
     },
     updateSalesFilters: (state, action: PayloadAction<Partial<typeof initialState.salesFilters>>) => {
       state.salesFilters = { ...state.salesFilters, ...action.payload };
     },
     updateFinancialFilters: (state, action: PayloadAction<Partial<typeof initialState.financialFilters>>) => {
       state.financialFilters = { ...state.financialFilters, ...action.payload };
+    },
+    updateSalesWideFilters: (state, action: PayloadAction<Partial<typeof initialState.salesWideFilters>>) => {
+      state.salesWideFilters = { ...state.salesWideFilters, ...action.payload };
     },
     resetExcelData: (state) => {
       return initialState;
@@ -300,14 +436,18 @@ export const {
   addFileData,
   addFinancialData,
   addSalesData,
+  addSalesWideData,
   setLocations,
   setSalesLocations,
   setFinancialLocations,
+  setSalesWideLocations,
   selectLocation,
   selectSalesLocation,
   selectFinancialLocation,
+  selectSalesWideLocation,
   updateSalesFilters,
   updateFinancialFilters,
+  updateSalesWideFilters,
   resetExcelData
 } = excelSlice.actions;
 

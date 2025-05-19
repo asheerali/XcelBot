@@ -1,5 +1,5 @@
-// src/components/FinancialTablesComponent.tsx
-import React, { useState } from 'react';
+// Updated FinancialTablesComponent.tsx to ensure all 7 tables are properly displayed
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Table,
@@ -14,25 +14,26 @@ import {
   Tab,
   useTheme,
   alpha,
-  Card
+  Card,
+  Alert
 } from '@mui/material';
 
 // Interface for financial data
-interface FinancialData {
+interface StoreValuePair {
   store: string;
   value1: string | number;
   value2: string | number;
   value3: string | number;
-  change1: string | number;
-  change2: string | number;
+  change1?: string | number;
+  change2?: string | number;
   isGrandTotal?: boolean;
 }
 
 // Interface for table type
-interface TableType {
+interface FinancialTable {
   title: string;
   columns: string[];
-  data: FinancialData[];
+  data: StoreValuePair[];
 }
 
 // TabPanel Component
@@ -62,9 +63,18 @@ function TablePanel(props: TabPanelProps) {
   );
 }
 
-const FinancialTablesComponent: React.FC = () => {
+// Props for the component
+interface FinancialTablesComponentProps {
+  financialTables?: FinancialTable[];
+}
+
+const FinancialTablesComponent: React.FC<FinancialTablesComponentProps> = ({ financialTables = [] }) => {
   const theme = useTheme();
   const [tableTab, setTableTab] = useState(0);
+
+  useEffect(() => {
+    console.log("Financial tables received:", financialTables);
+  }, [financialTables]);
 
   // Handle table tab change
   const handleTableTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -101,8 +111,8 @@ const FinancialTablesComponent: React.FC = () => {
     }
   };
 
-  // Sample financial data tables
-  const financialTables: TableType[] = [
+  // Sample financial data tables - use passed data if available
+  const tablesToDisplay = financialTables.length > 0 ? financialTables : [
     {
       title: "Sales",
       columns: ["Store", "Tw Sales", "Lw Sales", "Ly Sales", "Tw vs. Lw", "Tw vs. Ly"],
@@ -191,13 +201,20 @@ const FinancialTablesComponent: React.FC = () => {
         { store: "0004: Union Square", value1: "71.39", value2: "198.36", value3: "-64.01%", change1: "", change2: "" },
         { store: "0005: Flatiron", value1: "99.08", value2: "305.27", value3: "-67.54%", change1: "", change2: "" },
         { store: "0011: Williamsburg", value1: "10.12", value2: "668.70", value3: "-98.49%", change1: "", change2: "" },
-        { store: "Grand Total", value1: "$83.65", value2: "325.889628", value3: "-74.33%", change1: "", change2: "", isGrandTotal: true },
+        { store: "Grand Total", value1: "83.65", value2: "325.89", value3: "-74.33%", change1: "", change2: "", isGrandTotal: true },
       ]
     }
   ];
 
   return (
     <Box sx={{ width: '100%' }}>
+      {/* Message for debugging */}
+      {financialTables.length === 0 && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Using default sample data. No financial tables received from backend.
+        </Alert>
+      )}
+
       {/* Table filter tabs */}
       <Tabs 
         value={tableTab}
@@ -220,19 +237,15 @@ const FinancialTablesComponent: React.FC = () => {
         }}
       >
         <Tab label="All Tables" />
-        <Tab label="Sales" />
-        <Tab label="Orders" />
-        <Tab label="Average Ticket" />
-        <Tab label="COGS" />
-        <Tab label="Regular Pay" />
-        <Tab label="Labor Hours" />
-        <Tab label="SPMH" />
+        {tablesToDisplay.map((table, index) => (
+          <Tab key={table.title} label={table.title} />
+        ))}
       </Tabs>
 
       {/* All Tables Panel */}
       <TablePanel value={tableTab} index={0}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {financialTables.map((table, index) => (
+          {tablesToDisplay.map((table, index) => (
             <Card 
               key={index} 
               elevation={2}
@@ -283,7 +296,7 @@ const FinancialTablesComponent: React.FC = () => {
                   <TableBody>
                     {table.data.map((row, rowIndex) => {
                       // Determine if this is the last row (Grand Total)
-                      const isLastRow = rowIndex === table.data.length - 1;
+                      const isLastRow = rowIndex === table.data.length - 1 || row.isGrandTotal;
                       
                       return (
                         <TableRow 
@@ -319,7 +332,7 @@ const FinancialTablesComponent: React.FC = () => {
                           <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                             {row.value3}
                           </TableCell>
-                          {row.change1 !== undefined && (
+                          {row.change1 !== undefined && row.change1 !== "" && (
                             <TableCell 
                               align="right" 
                               sx={{ 
@@ -330,7 +343,7 @@ const FinancialTablesComponent: React.FC = () => {
                               {row.change1}
                             </TableCell>
                           )}
-                          {row.change2 !== undefined && (
+                          {row.change2 !== undefined && row.change2 !== "" && (
                             <TableCell 
                               align="right" 
                               sx={{ 
@@ -353,7 +366,7 @@ const FinancialTablesComponent: React.FC = () => {
       </TablePanel>
 
       {/* Individual table panels */}
-      {financialTables.map((table, index) => (
+      {tablesToDisplay.map((table, index) => (
         <TablePanel value={tableTab} index={index + 1} key={index}>
           <Card 
             elevation={2}
@@ -404,7 +417,7 @@ const FinancialTablesComponent: React.FC = () => {
                 <TableBody>
                   {table.data.map((row, rowIndex) => {
                     // Determine if this is the last row (Grand Total)
-                    const isLastRow = rowIndex === table.data.length - 1;
+                    const isLastRow = rowIndex === table.data.length - 1 || row.isGrandTotal;
                     
                     return (
                       <TableRow 
@@ -440,7 +453,7 @@ const FinancialTablesComponent: React.FC = () => {
                         <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                           {row.value3}
                         </TableCell>
-                        {row.change1 !== undefined && (
+                        {row.change1 !== undefined && row.change1 !== "" && (
                           <TableCell 
                             align="right" 
                             sx={{ 
@@ -451,7 +464,7 @@ const FinancialTablesComponent: React.FC = () => {
                             {row.change1}
                           </TableCell>
                         )}
-                        {row.change2 !== undefined && (
+                        {row.change2 !== undefined && row.change2 !== "" && (
                           <TableCell 
                             align="right" 
                             sx={{ 

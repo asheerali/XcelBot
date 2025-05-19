@@ -25,7 +25,7 @@ import PaymentPage from "./pages/PaymentPage";
 import UserPermissions from "./pages/UserPermissions";
 import Financials from "./pages/Financials";
 import SalesDashboard from "./pages/SalesDashboard";
-
+import ProductMixDashboard from "./pages/ProductMixDashboard";
 const router = createBrowserRouter([
   {
     Component: App,
@@ -50,6 +50,10 @@ const router = createBrowserRouter([
           {
             path: "Saleswide",
             Component: SalesDashboard,
+          },
+           {
+            path: "Productmix",
+            Component: ProductMixDashboard,
           },
           {
             path: "upload-excel", // New route for the excel upload page

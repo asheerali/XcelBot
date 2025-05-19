@@ -1,4 +1,4 @@
-// src/pages/SalesDashboard.tsx - Fixed chart text and label overflow issues
+// Updated SalesDashboard.tsx to use Redux state for Sales Wide dashboard
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -36,6 +36,13 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 // Components
 import FinancialTablesComponent from '../components/FinancialTablesComponent';
 
+// Import Redux hooks and actions
+import { useAppDispatch, useAppSelector } from '../typedHooks';
+import { 
+  selectSalesWideLocation, 
+  updateSalesWideFilters 
+} from '../store/excelSlice';
+
 // TabPanel Component
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -70,7 +77,7 @@ interface BaseChartProps {
   height?: number | string;
 }
 
-const BaseChart: React.FC<BaseChartProps> = ({ title, children, height = 450 }) => { // Increased default height
+const BaseChart: React.FC<BaseChartProps> = ({ title, children, height = 450 }) => {
   const theme = useTheme();
   
   return (
@@ -130,22 +137,52 @@ const getChartTheme = () => {
   };
 };
 
-// Custom CSS for rotation animation
-const rotatingIconStyles = {
-  '@keyframes rotating': {
-    from: { transform: 'rotate(0deg)' },
-    to: { transform: 'rotate(360deg)' }
-  },
-  '.rotating': {
-    animation: 'rotating 2s linear infinite'
-  }
-};
-
 // Main Component
 export default function SalesDashboard() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
+  const dispatch = useAppDispatch();
+
+  // Get data from Redux store
+  const {
+    salesWideFiles,
+    salesWideLocations,
+    currentSalesWideLocation,
+    salesWideFilters
+  } = useAppSelector((state) => state.excel);
+
+  // Find current data for the selected location
+  const currentSalesWideData = salesWideFiles.find(f => f.location === currentSalesWideLocation)?.data;
+
+  // State variables
+  const [tabValue, setTabValue] = useState(0);
+  const [chartTab, setChartTab] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Use location and other filters from Redux state
+  const location = salesWideFilters.location;
+  const helper = salesWideFilters.helper;
+  const year = salesWideFilters.year;
+  const equator = salesWideFilters.equator;
+
+  // Sample data for filters - use from Redux state if available
+  const locations = salesWideLocations.length > 0 ? salesWideLocations : ['Midtown East', 'Downtown West', 'Uptown North', 'Southside'];
+  const helpers = currentSalesWideData?.helpers || ['Helper 1', 'Helper 2', 'Helper 3', 'Helper 4'];
+  const years = currentSalesWideData?.years || ['2023', '2024', '2025', '2026'];
+  const equators = currentSalesWideData?.equators || ['Equator A', 'Equator B', 'Equator C', 'Equator D'];
+
+  // Chart data from Redux state
+  const salesData = currentSalesWideData?.salesData || [];
+  const ordersData = currentSalesWideData?.ordersData || [];
+  const avgTicketData = currentSalesWideData?.avgTicketData || [];
+  const laborHrsData = currentSalesWideData?.laborHrsData || [];
+  const spmhData = currentSalesWideData?.spmhData || [];
+  const laborCostData = currentSalesWideData?.laborCostData || [];
+  const laborPercentageData = currentSalesWideData?.laborPercentageData || [];
+  const cogsData = currentSalesWideData?.cogsData || [];
+  const cogsPercentageData = currentSalesWideData?.cogsPercentageData || [];
+  const financialTables = currentSalesWideData?.financialTables || [];
 
   // Inject the rotating animation styles
   React.useEffect(() => {
@@ -166,36 +203,26 @@ export default function SalesDashboard() {
     };
   }, []);
 
-  // State variables
-  const [tabValue, setTabValue] = useState(0);
-  const [chartTab, setChartTab] = useState(0);
-  const [location, setLocation] = useState('Midtown East');
-  const [helper, setHelper] = useState('Helper 3');
-  const [year, setYear] = useState('2025');
-  const [equator, setEquator] = useState('Equator A');
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Sample data for filters
-  const locations = ['Midtown East', 'Downtown West', 'Uptown North', 'Southside'];
-  const helpers = ['Helper 1', 'Helper 2', 'Helper 3', 'Helper 4'];
-  const years = ['2023', '2024', '2025', '2026'];
-  const equators = ['Equator A', 'Equator B', 'Equator C', 'Equator D'];
-
   // Handlers for filter changes
   const handleLocationChange = (event: SelectChangeEvent) => {
-    setLocation(event.target.value);
+    const newLocation = event.target.value;
+    dispatch(selectSalesWideLocation(newLocation));
+    dispatch(updateSalesWideFilters({ location: newLocation }));
   };
 
   const handleHelperChange = (event: SelectChangeEvent) => {
-    setHelper(event.target.value);
+    const newHelper = event.target.value;
+    dispatch(updateSalesWideFilters({ helper: newHelper }));
   };
 
   const handleYearChange = (event: SelectChangeEvent) => {
-    setYear(event.target.value);
+    const newYear = event.target.value;
+    dispatch(updateSalesWideFilters({ year: newYear }));
   };
 
   const handleEquatorChange = (event: SelectChangeEvent) => {
-    setEquator(event.target.value);
+    const newEquator = event.target.value;
+    dispatch(updateSalesWideFilters({ equator: newEquator }));
   };
 
   // Handle main tab change
@@ -208,7 +235,7 @@ export default function SalesDashboard() {
     setChartTab(newValue);
   };
 
-  // Handle refresh
+  // Handle refresh - simulate data loading
   const handleRefresh = () => {
     setIsLoading(true);
     // Simulate data loading
@@ -246,309 +273,6 @@ export default function SalesDashboard() {
         return margins;
     }
   };
-
-  // CHART DATA SECTION
-  
-  // Sales Comparison Chart Data
-  const salesData = [
-    {
-      store: 'SalesDashboardMidtown East',
-      'Tw vs. Lw': 0.35,
-      'Tw vs. Ly': -60.48
-    },
-    {
-      store: 'SalesDashboardLenox Hill',
-      'Tw vs. Lw': 0.00,
-      'Tw vs. Ly': -64.93
-    },
-    {
-      store: 'SalesDashboard Hell\'s Kitchen',
-      'Tw vs. Lw': 0.38,
-      'Tw vs. Ly': -62.76
-    },
-    {
-      store: 'SalesDashboard Union Square',
-      'Tw vs. Lw': 0.39,
-      'Tw vs. Ly': -57.02
-    },
-    {
-      store: 'SalesDashboard Flatiron',
-      'Tw vs. Lw': 0.21,
-      'Tw vs. Ly': -57.76
-    }
-  ];
-  
-  // Orders Comparison Chart Data
-  const ordersData = [
-    {
-      store: 'SalesDashboardMidtown East',
-      'Tw vs. Lw': 0.00,
-      'Tw vs. Ly': -64.67
-    },
-    {
-      store: 'SalesDashboardLenox Hill',
-      'Tw vs. Lw': 0.00,
-      'Tw vs. Ly': -63.42
-    },
-    {
-      store: 'SalesDashboard Hell\'s Kitchen',
-      'Tw vs. Lw': 0.00,
-      'Tw vs. Ly': -62.34
-    },
-    {
-      store: 'SalesDashboard Union Square',
-      'Tw vs. Lw': 0.00,
-      'Tw vs. Ly': -58.49
-    },
-    {
-      store: 'SalesDashboard Flatiron',
-      'Tw vs. Lw': 0.00,
-      'Tw vs. Ly': -59.92
-    }
-  ];
-  
-  // Avg Ticket Comparison Chart Data
-  const avgTicketData = [
-    {
-      store: 'SalesDashboardMidtown East',
-      'Tw vs. Lw': 0.35,
-      'Tw vs. Ly': 11.85
-    },
-    {
-      store: 'SalesDashboardLenox Hill',
-      'Tw vs. Lw': 0.00,
-      'Tw vs. Ly': -4.11
-    },
-    {
-      store: 'SalesDashboard Hell\'s Kitchen',
-      'Tw vs. Lw': 0.38,
-      'Tw vs. Ly': -1.12
-    },
-    {
-      store: 'SalesDashboard Union Square',
-      'Tw vs. Lw': 0.39,
-      'Tw vs. Ly': 3.54
-    },
-    {
-      store: 'SalesDashboard Flatiron',
-      'Tw vs. Lw': 0.21,
-      'Tw vs. Ly': 5.38
-    }
-  ];
-  
-  // Labor Hours Chart Data
-  const laborHrsData = [
-    {
-      store: 'SalesDashboardMidtown East',
-      'Tw Lb Hrs': 5737.37,
-      'Lw Lb Hrs': 5737.37
-    },
-    {
-      store: 'SalesDashboardLenox Hill',
-      'Tw Lb Hrs': 9291.48,
-      'Lw Lb Hrs': 9291.48
-    },
-    {
-      store: 'SalesDashboard Hell\'s Kitchen',
-      'Tw Lb Hrs': 9436.65,
-      'Lw Lb Hrs': 9436.65
-    },
-    {
-      store: 'SalesDashboard Union Square',
-      'Tw Lb Hrs': 2830.92,
-      'Lw Lb Hrs': 2830.92
-    },
-    {
-      store: 'SalesDashboard Flatiron',
-      'Tw Lb Hrs': 8598.96,
-      'Lw Lb Hrs': 8598.96
-    },
-    {
-      store: 'Williamsburg',
-      'Tw Lb Hrs': 12297.80,
-      'Lw Lb Hrs': 12297.80
-    },
-    {
-      store: 'Grand Total',
-      'Tw Lb Hrs': 48193.18,
-      'Lw Lb Hrs': 48193.18
-    }
-  ];
-  
-  // SPMH Chart Data
-  const spmhData = [
-    {
-      store: 'SalesDashboardMidtown East',
-      'Tw SPMH': 117.44,
-      'Lw SPMH': 389.74
-    },
-    {
-      store: 'SalesDashboardLenox Hill',
-      'Tw SPMH': 84.34,
-      'Lw SPMH': 84.34
-    },
-    {
-      store: 'SalesDashboard Hell\'s Kitchen',
-      'Tw SPMH': 105.41,
-      'Lw SPMH': 345.76
-    },
-    {
-      store: 'SalesDashboard Union Square',
-      'Tw SPMH': 71.39,
-      'Lw SPMH': 198.36
-    },
-    {
-      store: 'SalesDashboard Flatiron',
-      'Tw SPMH': 99.08,
-      'Lw SPMH': 305.27
-    },
-    {
-      store: '0011: Williamsburg',
-      'Tw SPMH': 10.12,
-      'Lw SPMH': 668.70
-    }
-  ];
-  
-  // Labor Cost Chart Data
-  const laborCostData = [
-    {
-      store: 'SalesDashboardMidtown East',
-      'Tw Reg Pay': 120317.61,
-      'Lw Reg Pay': 120317.61
-    },
-    {
-      store: 'SalesDashboardLenox Hill',
-      'Tw Reg Pay': 187929.88,
-      'Lw Reg Pay': 186309.88
-    },
-    {
-      store: 'SalesDashboard Hell\'s Kitchen',
-      'Tw Reg Pay': 200590.94,
-      'Lw Reg Pay': 199078.22
-    },
-    {
-      store: 'SalesDashboard Union Square',
-      'Tw Reg Pay': 56704.25,
-      'Lw Reg Pay': 56704.25
-    },
-    {
-      store: 'SalesDashboard Flatiron',
-      'Tw Reg Pay': 174991.94,
-      'Lw Reg Pay': 173694.02
-    },
-    {
-      store: '0011: Williamsburg',
-      'Tw Reg Pay': 290133.01,
-      'Lw Reg Pay': 290929.09
-    },
-    {
-      store: 'Grand Total',
-      'Tw Reg Pay': 1030667.64,
-      'Lw Reg Pay': 1027033.08
-    }
-  ];
-  
-  // Labor Percentage Chart Data
-  const laborPercentageData = [
-    {
-      store: 'SalesDashboardMidtown East',
-      'Tw Lc %': 17.57,
-      'Lw Lc %': 17.63
-    },
-    {
-      store: 'SalesDashboardLenox Hill',
-      'Tw Lc %': 23.97,
-      'Lw Lc %': 23.77
-    },
-    {
-      store: 'SalesDashboard Hell\'s Kitchen',
-      'Tw Lc %': 22.42,
-      'Lw Lc %': 22.33
-    },
-    {
-      store: 'SalesDashboard Union Square',
-      'Tw Lc %': 24.65,
-      'Lw Lc %': 24.75
-    },
-    {
-      store: 'SalesDashboard Flatiron',
-      'Tw Lc %': 22.62,
-      'Lw Lc %': 22.50
-    }
-  ];
-  
-  // COGS Chart Data
-  const cogsData = [
-    {
-      store: 'SalesDashboardMidtown East',
-      'Tw COGS': 209202.98,
-      'Lw COGS': 208770.59
-    },
-    {
-      store: 'SalesDashboardLenox Hill',
-      'Tw COGS': 263932.59,
-      'Lw COGS': 263932.59
-    },
-    {
-      store: 'SalesDashboard Hell\'s Kitchen',
-      'Tw COGS': 286700.07,
-      'Lw COGS': 286259.49
-    },
-    {
-      store: 'SalesDashboard Union Square',
-      'Tw COGS': 67410.90,
-      'Lw COGS': 66989.23
-    },
-    {
-      store: 'SalesDashboard Flatiron',
-      'Tw COGS': 242340.09,
-      'Lw COGS': 241910.65
-    },
-    {
-      store: '0011: Williamsburg',
-      'Tw COGS': 72649.35,
-      'Lw COGS': 72162.13
-    },
-    {
-      store: 'Grand Total',
-      'Tw COGS': 1142235.99,
-      'Lw COGS': 1140024.68
-    }
-  ];
-  
-  // COGS Percentage Chart Data
-  const cogsPercentageData = [
-    {
-      store: 'SalesDashboardMidtown East',
-      'Tw Fc %': 30.55,
-      'Lw Fc %': 30.59
-    },
-    {
-      store: 'SalesDashboardLenox Hill',
-      'Tw Fc %': 33.67,
-      'Lw Fc %': 33.67
-    },
-    {
-      store: 'SalesDashboard Hell\'s Kitchen',
-      'Tw Fc %': 32.04,
-      'Lw Fc %': 32.11
-    },
-    {
-      store: 'SalesDashboard Union Square',
-      'Tw Fc %': 29.31,
-      'Lw Fc %': 29.24
-    },
-    {
-      store: 'SalesDashboard Flatiron',
-      'Tw Fc %': 31.33,
-      'Lw Fc %': 31.34
-    },
-    {
-      store: '0011: Williamsburg',
-      'Tw Fc %': 2.08,
-      'Lw Fc %': 2.07
-    }
-  ];
 
   // Function to create a common Nivo bar chart with text overflow fixed
   const createNivoBarChart = (
@@ -662,6 +386,26 @@ export default function SalesDashboard() {
           </Tooltip>
         </Box>
       </Box>
+
+      {/* Alert message when no data is available */}
+      {!currentSalesWideData && (
+        <Card sx={{ mb: 3, p: 3, borderRadius: 2 }}>
+          <Typography variant="h6" color="error" gutterBottom>
+            No Sales Wide data available
+          </Typography>
+          <Typography variant="body1">
+            Please upload files with "Sales Wide" dashboard type from the Excel Upload page.
+          </Typography>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            sx={{ mt: 2 }}
+            href="/upload-excel"
+          >
+            Go to Upload Page
+          </Button>
+        </Card>
+      )}
 
       {/* Filters Section */}
       <Card elevation={3} sx={{ mb: 3, borderRadius: 2, overflow: 'hidden' }}>
@@ -790,358 +534,363 @@ export default function SalesDashboard() {
         </CardContent>
       </Card>
 
-      {/* Tabs - Styled to match Image 2 */}
-      <Card sx={{ borderRadius: 2, mb: 3, overflow: 'hidden' }} elevation={3}>
-        <Tabs 
-          value={tabValue} 
-          onChange={handleTabChange} 
-          variant="fullWidth"
-          sx={{
-            '& .MuiTab-root': { 
-              fontWeight: 500,
-              textTransform: 'none',
-              fontSize: '1rem',
-              py: 1.5
-            },
-            '& .Mui-selected': {
-              color: '#4285f4',
-              fontWeight: 600
-            },
-            '& .MuiTabs-indicator': {
-              backgroundColor: '#4285f4',
-              height: 3
-            }
-          }}
-        >
-          <Tab label="Financial Dashboard" />
-          <Tab label="Day of Week Analysis" />
-        </Tabs>
-
-        {/* Financial Dashboard Tab */}
-        <TabPanel value={tabValue} index={0}>
-          <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
-            {/* Directly include the FinancialTablesComponent */}
-            <FinancialTablesComponent />
-          </Box>
-        </TabPanel>
-
-        {/* Day of Week Analysis Tab */}
-        <TabPanel value={tabValue} index={1}>
-          <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
-            {/* Chart Tabs */}
-            <Tabs
-              value={chartTab}
-              onChange={handleChartTabChange}
-              variant="scrollable"
-              scrollButtons="auto"
+      {/* Only render dashboard content if data is available */}
+      {currentSalesWideData && (
+        <>
+          {/* Tabs - Styled to match Image 2 */}
+          <Card sx={{ borderRadius: 2, mb: 3, overflow: 'hidden' }} elevation={3}>
+            <Tabs 
+              value={tabValue} 
+              onChange={handleTabChange} 
+              variant="fullWidth"
               sx={{
-                mb: 2,
-                '& .MuiTab-root': {
-                  textTransform: 'none',
-                  minWidth: 'unset',
+                '& .MuiTab-root': { 
                   fontWeight: 500,
-                  fontSize: '0.9rem',
-                  px: 3,
-                  '&.Mui-selected': {
-                    color: theme.palette.primary.main,
-                    fontWeight: 600
-                  }
+                  textTransform: 'none',
+                  fontSize: '1rem',
+                  py: 1.5
+                },
+                '& .Mui-selected': {
+                  color: '#4285f4',
+                  fontWeight: 600
+                },
+                '& .MuiTabs-indicator': {
+                  backgroundColor: '#4285f4',
+                  height: 3
                 }
               }}
             >
-              <Tab label="All Charts" />
-              <Tab label="Sales" />
-              <Tab label="Orders" />
-              <Tab label="Avg Ticket" />
-              <Tab label="Labor" />
-              <Tab label="COGS" />
+              <Tab label="Financial Dashboard" />
+              <Tab label="Day of Week Analysis" />
             </Tabs>
-            
-            {/* All Charts Panel */}
-            <TabPanel value={chartTab} index={0}>
-              <Grid container spacing={2}>
-                {/* Sales Chart */}
-                <Grid item xs={12} md={6}>
-                  <BaseChart title="Sales">
-                    {createNivoBarChart(
-                      salesData,
-                      ['Tw vs. Lw', 'Tw vs. Ly'],
-                      ['#4285f4', '#ea4335'],
-                      'salesPercentage'
-                    )}
-                  </BaseChart>
-                </Grid>
-                
-                {/* Orders Chart */}
-                <Grid item xs={12} md={6}>
-                  <BaseChart title="Orders">
-                    {createNivoBarChart(
-                      ordersData,
-                      ['Tw vs. Lw', 'Tw vs. Ly'],
-                      ['#4285f4', '#ea4335'],
-                      'ordersPercentage',
-                      formatPercentage,
-                      false
-                    )}
-                  </BaseChart>
-                </Grid>
-                
-                {/* Average Ticket Chart */}
-                <Grid item xs={12}>
-                  <BaseChart title="Avg Ticket">
-                    {createNivoBarChart(
-                      avgTicketData,
-                      ['Tw vs. Lw', 'Tw vs. Ly'],
-                      ['#4285f4', '#ea4335'],
-                      'avgTicket',
-                      formatPercentage,
-                      false
-                    )}
-                  </BaseChart>
-                </Grid>
-                
-                {/* Labor Hours Chart */}
-                <Grid item xs={12} md={6}>
-                  <BaseChart title="Labor Hrs">
-                    {createNivoBarChart(
-                      laborHrsData,
-                      ['Tw Lb Hrs', 'Lw Lb Hrs'],
-                      ['#000000', '#8bc34a'],
-                      'laborHrs',
-                      value => value.toFixed(2),
-                      true,
-                      d => d.data[`${d.id}`].toFixed(2)
-                    )}
-                  </BaseChart>
-                </Grid>
-                
-                {/* SPMH Chart */}
-                <Grid item xs={12} md={6}>
-                  <BaseChart title="SPMH">
-                    {createNivoBarChart(
-                      spmhData,
-                      ['Tw SPMH', 'Lw SPMH'],
-                      ['#000000', '#8bc34a'],
-                      'spmh',
-                      value => value.toFixed(2),
-                      true,
-                      d => d.data[`${d.id}`].toFixed(2)
-                    )}
-                  </BaseChart>
-                </Grid>
-                
-                {/* Labor Cost Chart */}
-                <Grid item xs={12}>
-                  <BaseChart title="Labor $ Spent">
-                    {createNivoBarChart(
-                      laborCostData,
-                      ['Tw Reg Pay', 'Lw Reg Pay'],
-                      ['#4285f4', '#ea4335'],
-                      'laborCost',
-                      formatCurrency,
-                      true,
-                      d => `${Math.floor(d.value / 1000)}k`
-                    )}
-                  </BaseChart>
-                </Grid>
-                
-                {/* Labor Percentage Chart */}
-                <Grid item xs={12}>
-                  <BaseChart title="Labor %">
-                    {createNivoBarChart(
-                      laborPercentageData,
-                      ['Tw Lc %', 'Lw Lc %'],
-                      ['#4285f4', '#ea4335'],
-                      'laborPercentage',
-                      formatPercentage,
-                      true,
-                      d => `${d.value.toFixed(2)}%`
-                    )}
-                  </BaseChart>
-                </Grid>
-                
-                {/* COGS Chart */}
-                <Grid item xs={12} md={6}>
-                  <BaseChart title="COGS $">
-                    {createNivoBarChart(
-                      cogsData,
-                      ['Tw COGS', 'Lw COGS'],
-                      ['#9c27b0', '#e57373'],
-                      'cogs',
-                      formatCurrency,
-                      true,
-                      d => `${Math.floor(d.value / 1000)}k`
-                    )}
-                  </BaseChart>
-                </Grid>
-                
-                {/* COGS Percentage Chart */}
-                <Grid item xs={12} md={6}>
-                  <BaseChart title="COGS %">
-                    {createNivoBarChart(
-                      cogsPercentageData,
-                      ['Tw Fc %', 'Lw Fc %'],
-                      ['#9c27b0', '#e57373'],
-                      'cogsPercentage',
-                      formatPercentage,
-                      true,
-                      d => `${d.value.toFixed(2)}%`
-                    )}
-                  </BaseChart>
-                </Grid>
-              </Grid>
+  
+            {/* Financial Dashboard Tab */}
+            <TabPanel value={tabValue} index={0}>
+              <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+                {/* Pass the financial tables data to the component */}
+                <FinancialTablesComponent financialTables={financialTables} />
+              </Box>
             </TabPanel>
-            
-            {/* Sales Panel */}
-            <TabPanel value={chartTab} index={1}>
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <BaseChart title="Sales">
-                    {createNivoBarChart(
-                      salesData,
-                      ['Tw vs. Lw', 'Tw vs. Ly'],
-                      ['#4285f4', '#ea4335'],
-                      'salesPercentage',
-                      formatPercentage,
-                      false
-                    )}
-                  </BaseChart>
-                </Grid>
-              </Grid>
-            </TabPanel>
-            
-            {/* Orders Panel */}
-            <TabPanel value={chartTab} index={2}>
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <BaseChart title="Orders">
-                    {createNivoBarChart(
-                      ordersData,
-                      ['Tw vs. Lw', 'Tw vs. Ly'],
-                      ['#4285f4', '#ea4335'],
-                      'ordersPercentage',
-                      formatPercentage,
-                      false
-                    )}
-                  </BaseChart>
-                </Grid>
-              </Grid>
-            </TabPanel>
-            
-            {/* Avg Ticket Panel */}
-            <TabPanel value={chartTab} index={3}>
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <BaseChart title="Avg Ticket">
-                    {createNivoBarChart(
-                      avgTicketData,
-                      ['Tw vs. Lw', 'Tw vs. Ly'],
-                      ['#4285f4', '#ea4335'],
-                      'avgTicket',
-                      formatPercentage,
-                      false
-                    )}
-                  </BaseChart>
-                </Grid>
-              </Grid>
-            </TabPanel>
-            
-            {/* Labor Panel */}
-            <TabPanel value={chartTab} index={4}>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
-                  <BaseChart title="Labor Hrs">
-                    {createNivoBarChart(
-                      laborHrsData,
-                      ['Tw Lb Hrs', 'Lw Lb Hrs'],
-                      ['#000000', '#8bc34a'],
-                      'laborHrs',
-                      value => value.toFixed(2),
-                      true,
-                      d => d.data[`${d.id}`].toFixed(2)
-                    )}
-                  </BaseChart>
-                </Grid>
+  
+            {/* Day of Week Analysis Tab */}
+            <TabPanel value={tabValue} index={1}>
+              <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+                {/* Chart Tabs */}
+                <Tabs
+                  value={chartTab}
+                  onChange={handleChartTabChange}
+                  variant="scrollable"
+                  scrollButtons="auto"
+                  sx={{
+                    mb: 2,
+                    '& .MuiTab-root': {
+                      textTransform: 'none',
+                      minWidth: 'unset',
+                      fontWeight: 500,
+                      fontSize: '0.9rem',
+                      px: 3,
+                      '&.Mui-selected': {
+                        color: theme.palette.primary.main,
+                        fontWeight: 600
+                      }
+                    }
+                  }}
+                >
+                  <Tab label="All Charts" />
+                  <Tab label="Sales" />
+                  <Tab label="Orders" />
+                  <Tab label="Avg Ticket" />
+                  <Tab label="Labor" />
+                  <Tab label="COGS" />
+                </Tabs>
                 
-                <Grid item xs={12} md={6}>
-                  <BaseChart title="SPMH">
-                    {createNivoBarChart(
-                      spmhData,
-                      ['Tw SPMH', 'Lw SPMH'],
-                      ['#000000', '#8bc34a'],
-                      'spmh',
-                      value => value.toFixed(2),
-                      true,
-                      d => d.data[`${d.id}`].toFixed(2)
-                    )}
-                  </BaseChart>
-                </Grid>
+                {/* All Charts Panel */}
+                <TabPanel value={chartTab} index={0}>
+                  <Grid container spacing={2}>
+                    {/* Sales Chart */}
+                    <Grid item xs={12} md={6}>
+                      <BaseChart title="Sales">
+                        {createNivoBarChart(
+                          salesData,
+                          ['Tw vs. Lw', 'Tw vs. Ly'],
+                          ['#4285f4', '#ea4335'],
+                          'salesPercentage'
+                        )}
+                      </BaseChart>
+                    </Grid>
+                    
+                    {/* Orders Chart */}
+                    <Grid item xs={12} md={6}>
+                      <BaseChart title="Orders">
+                        {createNivoBarChart(
+                          ordersData,
+                          ['Tw vs. Lw', 'Tw vs. Ly'],
+                          ['#4285f4', '#ea4335'],
+                          'ordersPercentage',
+                          formatPercentage,
+                          false
+                        )}
+                      </BaseChart>
+                    </Grid>
+                    
+                    {/* Average Ticket Chart */}
+                    <Grid item xs={12}>
+                      <BaseChart title="Avg Ticket">
+                        {createNivoBarChart(
+                          avgTicketData,
+                          ['Tw vs. Lw', 'Tw vs. Ly'],
+                          ['#4285f4', '#ea4335'],
+                          'avgTicket',
+                          formatPercentage,
+                          false
+                        )}
+                      </BaseChart>
+                    </Grid>
+                    
+                    {/* Labor Hours Chart */}
+                    <Grid item xs={12} md={6}>
+                      <BaseChart title="Labor Hrs">
+                        {createNivoBarChart(
+                          laborHrsData,
+                          ['Tw Lb Hrs', 'Lw Lb Hrs'],
+                          ['#000000', '#8bc34a'],
+                          'laborHrs',
+                          value => value.toFixed(2),
+                          true,
+                          d => d.data[`${d.id}`].toFixed(2)
+                        )}
+                      </BaseChart>
+                    </Grid>
+                    
+                    {/* SPMH Chart */}
+                    <Grid item xs={12} md={6}>
+                      <BaseChart title="SPMH">
+                        {createNivoBarChart(
+                          spmhData,
+                          ['Tw SPMH', 'Lw SPMH'],
+                          ['#000000', '#8bc34a'],
+                          'spmh',
+                          value => value.toFixed(2),
+                          true,
+                          d => d.data[`${d.id}`].toFixed(2)
+                        )}
+                      </BaseChart>
+                    </Grid>
+                    
+                    {/* Labor Cost Chart */}
+                    <Grid item xs={12}>
+                      <BaseChart title="Labor $ Spent">
+                        {createNivoBarChart(
+                          laborCostData,
+                          ['Tw Reg Pay', 'Lw Reg Pay'],
+                          ['#4285f4', '#ea4335'],
+                          'laborCost',
+                          formatCurrency,
+                          true,
+                          d => `${Math.floor(d.value / 1000)}k`
+                        )}
+                      </BaseChart>
+                    </Grid>
+                    
+                    {/* Labor Percentage Chart */}
+                    <Grid item xs={12}>
+                      <BaseChart title="Labor %">
+                        {createNivoBarChart(
+                          laborPercentageData,
+                          ['Tw Lc %', 'Lw Lc %'],
+                          ['#4285f4', '#ea4335'],
+                          'laborPercentage',
+                          formatPercentage,
+                          true,
+                          d => `${d.value.toFixed(2)}%`
+                        )}
+                      </BaseChart>
+                    </Grid>
+                    
+                    {/* COGS Chart */}
+                    <Grid item xs={12} md={6}>
+                      <BaseChart title="COGS $">
+                        {createNivoBarChart(
+                          cogsData,
+                          ['Tw COGS', 'Lw COGS'],
+                          ['#9c27b0', '#e57373'],
+                          'cogs',
+                          formatCurrency,
+                          true,
+                          d => `${Math.floor(d.value / 1000)}k`
+                        )}
+                      </BaseChart>
+                    </Grid>
+                    
+                    {/* COGS Percentage Chart */}
+                    <Grid item xs={12} md={6}>
+                      <BaseChart title="COGS %">
+                        {createNivoBarChart(
+                          cogsPercentageData,
+                          ['Tw Fc %', 'Lw Fc %'],
+                          ['#9c27b0', '#e57373'],
+                          'cogsPercentage',
+                          formatPercentage,
+                          true,
+                          d => `${d.value.toFixed(2)}%`
+                        )}
+                      </BaseChart>
+                    </Grid>
+                  </Grid>
+                </TabPanel>
                 
-                <Grid item xs={12}>
-                  <BaseChart title="Labor $ Spent">
-                    {createNivoBarChart(
-                      laborCostData,
-                      ['Tw Reg Pay', 'Lw Reg Pay'],
-                      ['#4285f4', '#ea4335'],
-                      'laborCost',
-                      formatCurrency,
-                      true,
-                      d => `${Math.floor(d.value / 1000)}k`
-                    )}
-                  </BaseChart>
-                </Grid>
+                {/* Sales Panel */}
+                <TabPanel value={chartTab} index={1}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <BaseChart title="Sales">
+                        {createNivoBarChart(
+                          salesData,
+                          ['Tw vs. Lw', 'Tw vs. Ly'],
+                          ['#4285f4', '#ea4335'],
+                          'salesPercentage',
+                          formatPercentage,
+                          false
+                        )}
+                      </BaseChart>
+                    </Grid>
+                  </Grid>
+                </TabPanel>
                 
-                <Grid item xs={12}>
-                  <BaseChart title="Labor %">
-                    {createNivoBarChart(
-                      laborPercentageData,
-                      ['Tw Lc %', 'Lw Lc %'],
-                      ['#4285f4', '#ea4335'],
-                      'laborPercentage',
-                      formatPercentage,
-                      true,
-                      d => `${d.value.toFixed(2)}%`
-                    )}
-                  </BaseChart>
-                </Grid>
-              </Grid>
+                {/* Orders Panel */}
+                <TabPanel value={chartTab} index={2}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <BaseChart title="Orders">
+                        {createNivoBarChart(
+                          ordersData,
+                          ['Tw vs. Lw', 'Tw vs. Ly'],
+                          ['#4285f4', '#ea4335'],
+                          'ordersPercentage',
+                          formatPercentage,
+                          false
+                        )}
+                      </BaseChart>
+                    </Grid>
+                  </Grid>
+                </TabPanel>
+                
+                {/* Avg Ticket Panel */}
+                <TabPanel value={chartTab} index={3}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <BaseChart title="Avg Ticket">
+                        {createNivoBarChart(
+                          avgTicketData,
+                          ['Tw vs. Lw', 'Tw vs. Ly'],
+                          ['#4285f4', '#ea4335'],
+                          'avgTicket',
+                          formatPercentage,
+                          false
+                        )}
+                      </BaseChart>
+                    </Grid>
+                  </Grid>
+                </TabPanel>
+                
+                {/* Labor Panel */}
+                <TabPanel value={chartTab} index={4}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}>
+                      <BaseChart title="Labor Hrs">
+                        {createNivoBarChart(
+                          laborHrsData,
+                          ['Tw Lb Hrs', 'Lw Lb Hrs'],
+                          ['#000000', '#8bc34a'],
+                          'laborHrs',
+                          value => value.toFixed(2),
+                          true,
+                          d => d.data[`${d.id}`].toFixed(2)
+                        )}
+                      </BaseChart>
+                    </Grid>
+                    
+                    <Grid item xs={12} md={6}>
+                      <BaseChart title="SPMH">
+                        {createNivoBarChart(
+                          spmhData,
+                          ['Tw SPMH', 'Lw SPMH'],
+                          ['#000000', '#8bc34a'],
+                          'spmh',
+                          value => value.toFixed(2),
+                          true,
+                          d => d.data[`${d.id}`].toFixed(2)
+                        )}
+                      </BaseChart>
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <BaseChart title="Labor $ Spent">
+                        {createNivoBarChart(
+                          laborCostData,
+                          ['Tw Reg Pay', 'Lw Reg Pay'],
+                          ['#4285f4', '#ea4335'],
+                          'laborCost',
+                          formatCurrency,
+                          true,
+                          d => `${Math.floor(d.value / 1000)}k`
+                        )}
+                      </BaseChart>
+                    </Grid>
+                    
+                    <Grid item xs={12}>
+                      <BaseChart title="Labor %">
+                        {createNivoBarChart(
+                          laborPercentageData,
+                          ['Tw Lc %', 'Lw Lc %'],
+                          ['#4285f4', '#ea4335'],
+                          'laborPercentage',
+                          formatPercentage,
+                          true,
+                          d => `${d.value.toFixed(2)}%`
+                          )}
+                      </BaseChart>
+                    </Grid>
+                  </Grid>
+                </TabPanel>
+                
+                {/* COGS Panel */}
+                <TabPanel value={chartTab} index={5}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}>
+                      <BaseChart title="COGS $">
+                        {createNivoBarChart(
+                          cogsData,
+                          ['Tw COGS', 'Lw COGS'],
+                          ['#9c27b0', '#e57373'],
+                          'cogs',
+                          formatCurrency,
+                          true,
+                          d => `${Math.floor(d.value / 1000)}k`
+                        )}
+                      </BaseChart>
+                    </Grid>
+                    
+                    <Grid item xs={12} md={6}>
+                      <BaseChart title="COGS %">
+                        {createNivoBarChart(
+                          cogsPercentageData,
+                          ['Tw Fc %', 'Lw Fc %'],
+                          ['#9c27b0', '#e57373'],
+                          'cogsPercentage',
+                          formatPercentage,
+                          true,
+                          d => `${d.value.toFixed(2)}%`
+                        )}
+                      </BaseChart>
+                    </Grid>
+                  </Grid>
+                </TabPanel>
+              </Box>
             </TabPanel>
-            
-            {/* COGS Panel */}
-            <TabPanel value={chartTab} index={5}>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
-                  <BaseChart title="COGS $">
-                    {createNivoBarChart(
-                      cogsData,
-                      ['Tw COGS', 'Lw COGS'],
-                      ['#9c27b0', '#e57373'],
-                      'cogs',
-                      formatCurrency,
-                      true,
-                      d => `${Math.floor(d.value / 1000)}k`
-                    )}
-                  </BaseChart>
-                </Grid>
-                
-                <Grid item xs={12} md={6}>
-                  <BaseChart title="COGS %">
-                    {createNivoBarChart(
-                      cogsPercentageData,
-                      ['Tw Fc %', 'Lw Fc %'],
-                      ['#9c27b0', '#e57373'],
-                      'cogsPercentage',
-                      formatPercentage,
-                      true,
-                      d => `${d.value.toFixed(2)}%`
-                    )}
-                  </BaseChart>
-                </Grid>
-              </Grid>
-            </TabPanel>
-          </Box>
-        </TabPanel>
-      </Card>
+          </Card>
+        </>
+      )}
     </Box>
   );
 }
