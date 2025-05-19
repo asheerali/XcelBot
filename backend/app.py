@@ -42,7 +42,7 @@ async def root():
 
 app.include_router(excel_upload.router)
 app.include_router(excel_filter.router)
-app.include_router(excel_analytics.router)
+# app.include_router(excel_analytics.router)
 app.include_router(companywide_filter.router)
 app.include_router(pmix_filter.router)
 app.include_router(health.router)

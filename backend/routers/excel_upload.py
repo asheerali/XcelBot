@@ -167,6 +167,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             
             # Return the properly structured response
             result_final = ExcelUploadResponse(**result)            # Return the properly structured response
+            
             # result_final = ExcelUploadResponse(**result), {
             # "table1": [{"net_sales": [net_sales], "orders": [orders], 
             #             "qty_sold": [qty_sold],"average_order_value": [average_order_value], 
