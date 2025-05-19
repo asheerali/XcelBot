@@ -297,10 +297,11 @@ const MenuAnalysisDashboardtwo = () => {
           </Paper>
         </Grid>
 
+        {/* Order statistics cards - Side by side in one row instead of stacked */}
         <Grid item xs={12} md={5}>
           <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Paper sx={{ p: 2, borderRadius: 2 }}>
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ p: 2, borderRadius: 2, height: '100%' }}>
                 <Typography variant="h6" fontWeight="bold" gutterBottom>
                   Average Order Value
                 </Typography>
@@ -310,14 +311,14 @@ const MenuAnalysisDashboardtwo = () => {
                   alignItems: 'center',
                   height: 140
                 }}>
-                  <Typography variant="h1" fontWeight="bold" sx={{ color: '#333' }}>
+                  <Typography variant="h2" fontWeight="bold" sx={{ color: '#333' }}>
                     4,11
                   </Typography>
                 </Box>
               </Paper>
             </Grid>
-            <Grid item xs={12}>
-              <Paper sx={{ p: 2, borderRadius: 2 }}>
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ p: 2, borderRadius: 2, height: '100%' }}>
                 <Typography variant="h6" fontWeight="bold" gutterBottom>
                   Average Items per Order
                 </Typography>
@@ -327,7 +328,7 @@ const MenuAnalysisDashboardtwo = () => {
                   alignItems: 'center',
                   height: 140
                 }}>
-                  <Typography variant="h1" fontWeight="bold" sx={{ color: '#333' }}>
+                  <Typography variant="h2" fontWeight="bold" sx={{ color: '#333' }}>
                     2,7
                   </Typography>
                 </Box>
