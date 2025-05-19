@@ -169,13 +169,16 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             result_final = ExcelUploadResponse(**result)            # Return the properly structured response
       
             
-            # # For now, return empty data for unsupported dashboards
+               # # For now, return empty data for unsupported dashboards
             # result = {
-            #     "table1": [percentage table],
-            #     "table2": [Inhouse table],
-            #     "table3": [Week over Week table],
-            #     "table4": [category summary table],
-            #     "table5": [1p_3p_table],
+            #     "table1": [sales_by_week_table],
+            #     "table2": [sale_by_day_of_week_table],
+            #     "table3": [sales_by_time_Of_day_table],
+            #     "table4": [percentage_table],
+            #     "table5": [Inhouse_table],
+            #     "table6": [Week_over_Week_table],
+            #     "table7": [category_summary_table],
+            #     "table8": [1p_3p_table],
             #     "locations": [request.location] if request.location else [],
             #     "dateRanges": [],
             #     "fileLocation": request.location,
