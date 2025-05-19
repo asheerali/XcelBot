@@ -244,7 +244,9 @@ async def filter_excel_data(request: ExcelFilterRequest = Body(...)):
                 start_date = (now - timedelta(days=90)).strftime("%Y-%m-%d")
                 end_date = now.strftime("%Y-%m-%d")
                 
+                
             print(f"Using date range: {start_date} to {end_date} based on type: {request.dateRangeType}")
+            
         
         # Process Excel file with filters
         result = process_excel_file(
@@ -271,6 +273,8 @@ async def filter_excel_data(request: ExcelFilterRequest = Body(...)):
             
         # Add fileLocation field to the response
         result['fileLocation'] = request.location
+        
+        print("result2 is here", result)
         
         # Return the properly structured response
         return ExcelUploadResponse(**result)
@@ -375,6 +379,7 @@ async def get_sales_analytics(request: ExcelFilterRequest = Body(...)):
         # Add the file location to the result
         result['fileLocation'] = request.location
         
+        print("result3 is here", result)
         # Return the analytics response
         return SalesAnalyticsResponse(**result)
         
