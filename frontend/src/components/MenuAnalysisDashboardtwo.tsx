@@ -155,21 +155,46 @@ const MenuAnalysisDashboardtwo = () => {
   );
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 3 }}>
-      {/* First row - Sales per Location and Additional Metrics */}
-      <Grid container spacing={3}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 2 }}>
+      {/* First row - Sales per Location and Additional Metrics - REDUCED HEIGHT */}
+      <Grid container spacing={2.5}>
         <Grid item xs={12} md={7}>
-          <Paper sx={{ p: 2, borderRadius: 2, height: '100%' }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
+          <Paper 
+            sx={{ 
+              p: 2.5, 
+              borderRadius: 2, 
+              height: '100%', 
+              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+              transition: 'transform 0.3s, box-shadow 0.3s',
+              '&:hover': {
+                boxShadow: '0 6px 25px rgba(0,0,0,0.1)',
+                transform: 'translateY(-3px)'
+              }
+            }}
+          >
+            <Typography 
+              variant="h6" 
+              fontWeight="600" 
+              gutterBottom
+              sx={{ 
+                borderBottom: '2px solid #4CB0B0',
+                paddingBottom: 1,
+                display: 'inline-block'
+              }}
+            >
               Sales per Location
             </Typography>
-            <Box sx={{ height: 300 }}>
-              <ResponsiveContainer width="100%" height="100%">
+            <Box sx={{ height: 450 }}>  {/* Reduced from 400px to 320px */}
+              <ResponsiveContainer width="100%" height="100%"  sx={{ 
+          
+                paddingBottom: 5,
+                
+              }}>
                 <LineChart
                   data={continuousData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                  margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
                   <XAxis 
                     dataKey="name" 
                     axisLine={false} 
@@ -178,18 +203,25 @@ const MenuAnalysisDashboardtwo = () => {
                   />
                   <YAxis 
                     domain={[0, 20]} 
-                    ticks={[0, 4, 8, 12, 16, 20]} 
+                    ticks={[0, 5, 10, 15, 20]} 
                     axisLine={false} 
                     tickLine={false}
                   />
-                  <Tooltip />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'rgba(255,255,255,0.95)', 
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                      border: 'none'
+                    }}
+                  />
                   <Line 
                     type="monotone" 
                     dataKey="value" 
                     stroke="#4CB0B0" 
                     strokeWidth={3}
-                    dot={{ r: 0 }}
-                    activeDot={{ r: 6 }}
+                    dot={{ r: 1, strokeWidth: 2, fill: 'white' }}
+                    activeDot={{ r: 6, stroke: '#4CB0B0', strokeWidth: 2, fill: 'white' }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -198,13 +230,33 @@ const MenuAnalysisDashboardtwo = () => {
         </Grid>
 
         <Grid item xs={12} md={5}>
-          <Grid container spacing={3} height="100%">
+          <Grid container spacing={2.5} height="100%">
             <Grid item xs={12}>
-              <Paper sx={{ p: 2, borderRadius: 2 }}>
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
+              <Paper 
+                sx={{ 
+                  p: 2.5, 
+                  borderRadius: 2,
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+                  transition: 'transform 0.3s, box-shadow 0.3s',
+                  '&:hover': {
+                    boxShadow: '0 6px 25px rgba(0,0,0,0.1)',
+                    transform: 'translateY(-3px)'
+                  }
+                }}
+              >
+                <Typography 
+                  variant="h6" 
+                  fontWeight="600" 
+                  gutterBottom
+                  sx={{ 
+                    borderBottom: '2px solid #4CB0B0',
+                    paddingBottom: 1,
+                    display: 'inline-block'
+                  }}
+                >
                   Additional Metrics
                 </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, py: 1 }}>
                   <MetricCard 
                     icon={<TrendingUpIcon fontSize="large" />} 
                     prefix="+" 
@@ -213,7 +265,7 @@ const MenuAnalysisDashboardtwo = () => {
                     sublabel="PRICE" 
                     iconColor="#4CB0B0" 
                   />
-                  <Divider />
+                  <Divider sx={{ opacity: 0.5 }} />
                   <MetricCard 
                     icon={<TrendingDownIcon fontSize="large" />} 
                     prefix="-" 
@@ -226,11 +278,31 @@ const MenuAnalysisDashboardtwo = () => {
               </Paper>
             </Grid>
             <Grid item xs={12}>
-              <Paper sx={{ p: 2, borderRadius: 2 }}>
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
+              <Paper 
+                sx={{ 
+                  p: 2.5, 
+                  borderRadius: 2,
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+                  transition: 'transform 0.3s, box-shadow 0.3s',
+                  '&:hover': {
+                    boxShadow: '0 6px 25px rgba(0,0,0,0.1)',
+                    transform: 'translateY(-3px)'
+                  }
+                }}
+              >
+                <Typography 
+                  variant="h6" 
+                  fontWeight="600" 
+                  gutterBottom
+                  sx={{ 
+                    borderBottom: '2px solid #4CB0B0',
+                    paddingBottom: 1,
+                    display: 'inline-block'
+                  }}
+                >
                   Additional Metrics
                 </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, py: 1 }}>
                   <MetricCard 
                     icon={<TrendingUpIcon fontSize="large" />}
                     value="0.9" 
@@ -238,7 +310,7 @@ const MenuAnalysisDashboardtwo = () => {
                     sublabel="NET PRICE" 
                     iconColor="#4CB0B0" 
                   />
-                  <Divider />
+                  <Divider sx={{ opacity: 0.5 }} />
                   <ProductMetricCard 
                     name="SOPHIE'S SPICY CHICKEN SANDWICH"
                     price="5,99"
@@ -252,20 +324,40 @@ const MenuAnalysisDashboardtwo = () => {
       </Grid>
 
       {/* Second row - Average Price by Menu Item and Order Values */}
-      <Grid container spacing={3}>
+      <Grid container spacing={2.5}>
         <Grid item xs={12} md={7}>
-          <Paper sx={{ p: 2, borderRadius: 2 }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
+          <Paper 
+            sx={{ 
+              p: 2.5, 
+              borderRadius: 2,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+              transition: 'transform 0.3s, box-shadow 0.3s',
+              '&:hover': {
+                boxShadow: '0 6px 25px rgba(0,0,0,0.1)',
+                transform: 'translateY(-3px)'
+              }
+            }}
+          >
+            <Typography 
+              variant="h6" 
+              fontWeight="600" 
+              gutterBottom
+              sx={{ 
+                borderBottom: '2px solid #4CB0B0',
+                paddingBottom: 1,
+                display: 'inline-block'
+              }}
+            >
               Average Price by Menu Item
             </Typography>
-            <Box sx={{ height: 300 }}>
+            <Box sx={{ height: 280 }}>  {/* Reduced from 300px to 280px */}
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   layout="vertical"
                   data={menuItemsData}
                   margin={{ top: 20, right: 70, left: 20, bottom: 20 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.2} />
                   <XAxis type="number" axisLine={false} tickLine={false} />
                   <YAxis 
                     dataKey="name" 
@@ -278,6 +370,12 @@ const MenuAnalysisDashboardtwo = () => {
                   <Tooltip 
                     formatter={(value) => [`${value}`, 'Price']}
                     labelFormatter={(value) => `Item: ${value}`}
+                    contentStyle={{ 
+                      backgroundColor: 'rgba(255,255,255,0.95)', 
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                      border: 'none'
+                    }}
                   />
                   <Bar 
                     dataKey="price" 
@@ -297,44 +395,129 @@ const MenuAnalysisDashboardtwo = () => {
           </Paper>
         </Grid>
 
-        {/* Order statistics cards - Side by side in one row instead of stacked */}
+        {/* Order statistics cards - More modern style with centered content */}
         <Grid item xs={12} md={5}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2, borderRadius: 2, height: '100%' }}>
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
-                  Average Order Value
-                </Typography>
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'center', 
-                  alignItems: 'center',
-                  height: 140
-                }}>
-                  <Typography variant="h2" fontWeight="bold" sx={{ color: '#333' }}>
-                    4,11
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            height: '100%', 
+            justifyContent: 'space-between'
+          }}>
+            <Grid container spacing={2.5}>
+              <Grid item xs={12} md={12}>  {/* Changed to full width */}
+                <Paper 
+                  sx={{ 
+                    p: 2.5, 
+                    borderRadius: 2,
+                    textAlign: 'center',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+                    transition: 'transform 0.3s, box-shadow 0.3s',
+                    '&:hover': {
+                      boxShadow: '0 6px 25px rgba(0,0,0,0.1)',
+                      transform: 'translateY(-3px)'
+                    }
+                  }}
+                >
+                  <Typography 
+                    variant="h6" 
+                    fontWeight="600" 
+                    gutterBottom
+                    sx={{ 
+                      borderBottom: '2px solid #4CB0B0',
+                      paddingBottom: 1,
+                      display: 'inline-block'
+                    }}
+                  >
+                    Average Order Value
                   </Typography>
-                </Box>
-              </Paper>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2, borderRadius: 2, height: '100%' }}>
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
-                  Average Items per Order
-                </Typography>
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'center', 
-                  alignItems: 'center',
-                  height: 140
-                }}>
-                  <Typography variant="h2" fontWeight="bold" sx={{ color: '#333' }}>
-                    2,7
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    alignItems: 'center',
+                    height: 77,  /* Reduced from 140px */
+                    mt: 1
+                  }}>
+                    <Typography 
+                      variant="h2" 
+                      fontWeight="bold" 
+                      sx={{ 
+                        color: '#4CB0B0',
+                        position: 'relative',
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          width: '40%',
+                          height: '4px',
+                          backgroundColor: '#4CB0B0',
+                          bottom: '-8px',
+                          left: '30%',
+                          borderRadius: '2px'
+                        }
+                      }}
+                    >
+                      4,11
+                    </Typography>
+                  </Box>
+                </Paper>
+              </Grid>
+              <Grid item xs={12} md={12}>  {/* Changed to full width */}
+                <Paper 
+                  sx={{ 
+                    p: 2.5, 
+                    borderRadius: 2,
+                    textAlign: 'center',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+                    transition: 'transform 0.3s, box-shadow 0.3s',
+                    '&:hover': {
+                      boxShadow: '0 6px 25px rgba(0,0,0,0.1)',
+                      transform: 'translateY(-3px)'
+                    }
+                  }}
+                >
+                  <Typography 
+                    variant="h6" 
+                    fontWeight="600" 
+                    gutterBottom
+                    sx={{ 
+                      borderBottom: '2px solid #4CB0B0',
+                      paddingBottom: 1,
+                      display: 'inline-block'
+                    }}
+                  >
+                    Average Items per Order
                   </Typography>
-                </Box>
-              </Paper>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    alignItems: 'center',
+                    height: 77,  /* Reduced from 140px */
+                    mt: 1
+                  }}>
+                    <Typography 
+                      variant="h2" 
+                      fontWeight="bold" 
+                      sx={{ 
+                        color: '#4CB0B0',
+                        position: 'relative',
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          width: '40%',
+                          height: '4px',
+                          backgroundColor: '#4CB0B0',
+                          bottom: '-8px',
+                          left: '30%',
+                          borderRadius: '2px'
+                        }
+                      }}
+                    >
+                      2,7
+                    </Typography>
+                  </Box>
+                </Paper>
+              </Grid>
             </Grid>
-          </Grid>
+          </Box>
         </Grid>
       </Grid>
     </Box>

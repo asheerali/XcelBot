@@ -623,11 +623,7 @@ export default function ProductMixDashboard() {
 
       {/* Placeholder for dashboard content */}
       <Box sx={{ mt: 2 }}>
-        <Typography variant="body2" color="text.secondary">
-          Additional dashboard components would be rendered here based on the selected tab.
-          For tab one, we would show Server Performance components.
-          For tab two, we would show Menu Analysis components.
-        </Typography>
+        
       </Box>
     </Box>
   );
