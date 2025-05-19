@@ -233,18 +233,17 @@ export function Financials() {
   return (
     <Box sx={{ p: 2, backgroundColor: '#ffffff', minHeight: '100vh' }}>
       {/* Dashboard Title */}
-      <Typography 
-        variant="h4" 
-        component="h1" 
-        align="center" 
-        sx={{ 
-          mb: 2.5, 
-          fontWeight: 600,
-          color: '#1a237e',
-          fontSize: { xs: '1.75rem', sm: '2.5rem', md: '3rem' }
-        }}
-      >
-        FINANCIAL DASHBOARD
+       <Typography 
+          variant="h4" 
+          component="h1" 
+          sx={{ 
+            fontWeight: 600,
+            color: '#1a237e',
+            fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }
+          }}
+        >
+
+        Financial Dashboard
       </Typography>
 
       {/* Alert for no data */}
@@ -561,8 +560,8 @@ export function Financials() {
             backgroundColor: '#fafafa'
           }}
         >
-          <Tab label="Financial Dashboard" />
-          <Tab label="Day of Week Analysis" />
+          <Tab label="Dashboard" />
+          <Tab label="Detailed Analysis" />
         </Tabs>
 
         <TabPanel value={tabValue} index={0}>

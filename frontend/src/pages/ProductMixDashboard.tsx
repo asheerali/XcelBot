@@ -406,7 +406,7 @@ export default function ProductMixDashboard() {
           component="h1" 
           sx={{ 
             fontWeight: 600,
-            color: '#1a237e',
+            color:'rgb(9, 43, 117)',
             fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }
           }}
         >
@@ -602,8 +602,8 @@ export default function ProductMixDashboard() {
             }
           }}
         >
-          <Tab label="Server Performance" />
-          <Tab label="Menu Analysis" />
+          <Tab label="Overview" />
+          <Tab label="Detailed Analysis" />
         </Tabs>
 
         {/* Server Performance Tab */}

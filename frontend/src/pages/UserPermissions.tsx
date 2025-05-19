@@ -61,6 +61,12 @@ const ExcelUploadPermissions: React.FC = () => {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [allPermissions, setAllPermissions] = useState<any>(MOCK_PERMISSIONS);
   const [showPermissionTable, setShowPermissionTable] = useState<boolean>(false);
+  const [selectedStore, setSelectedStore] = useState<string>('');
+
+  // Handle store selection change
+  const handleStoreChange = (event: SelectChangeEvent<string>) => {
+    setSelectedStore(event.target.value);
+  };
 
   // Handle user selection change
   const handleUserChange = (event: SelectChangeEvent<typeof selectedUserId>) => {
@@ -227,6 +233,26 @@ const ExcelUploadPermissions: React.FC = () => {
         <Card sx={{ mb: 4 }}>
           <CardContent>
             <Grid container spacing={3}>
+                 {/* Stores Selection */}
+      <Grid item xs={12} md={6}>
+        <FormControl fullWidth>
+          <InputLabel id="store-select-label">Select Store</InputLabel>
+          <Select
+            labelId="store-select-label"
+            id="store-select"
+            value={selectedStore}
+            label="Select Store"
+            onChange={handleStoreChange}
+          >
+            <MenuItem value="midtown-east">Midtown East</MenuItem>
+            <MenuItem value="hells-kitchen">Hell's Kitchen</MenuItem>
+            <MenuItem value="lenox-hill">Lenox Hill</MenuItem>
+          </Select>
+        </FormControl>
+      </Grid>
+
+
+
               {/* User Selection */}
               <Grid item xs={12} md={6}>
                 <FormControl fullWidth>

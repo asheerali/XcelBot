@@ -363,7 +363,7 @@ export default function SalesDashboard() {
     <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
       {/* Dashboard Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-        <Typography 
+        {/* <Typography 
           variant="h4" 
           component="h1" 
           sx={{ 
@@ -371,8 +371,18 @@ export default function SalesDashboard() {
             color: '#1a237e',
             fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }
           }}
-        >
-          Equator Dashboard
+        > */}
+
+         <Typography 
+                  variant="h4" 
+                  component="h1" 
+                  sx={{ 
+                    fontWeight: 600,
+                    color: '#1a237e',
+                    fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }
+                  }}
+                >
+        Companywide Sales Dashboard
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -560,8 +570,8 @@ export default function SalesDashboard() {
                 }
               }}
             >
-              <Tab label="Financial Dashboard" />
-              <Tab label="Day of Week Analysis" />
+              <Tab label="Tables" />
+              <Tab label="Graphs" />
             </Tabs>
   
             {/* Financial Dashboard Tab */}

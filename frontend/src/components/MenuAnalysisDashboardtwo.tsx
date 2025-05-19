@@ -418,19 +418,7 @@ const MenuAnalysisDashboardtwo = () => {
                     }
                   }}
                 >
-                  <Typography 
-                    variant="h6" 
-                    fontWeight="600" 
-                    gutterBottom
-                    sx={{ 
-                      borderBottom: '2px solid #4CB0B0',
-                      paddingBottom: 1,
-                      display: 'inline-block'
-                    }}
-                  >
-                    Average Order Value
-                  </Typography>
-                  <Box sx={{ 
+                   <Box sx={{ 
                     display: 'flex', 
                     justifyContent: 'center', 
                     alignItems: 'center',
@@ -443,21 +431,34 @@ const MenuAnalysisDashboardtwo = () => {
                       sx={{ 
                         color: '#4CB0B0',
                         position: 'relative',
-                        '&::after': {
-                          content: '""',
-                          position: 'absolute',
-                          width: '40%',
-                          height: '4px',
-                          backgroundColor: '#4CB0B0',
-                          bottom: '-8px',
-                          left: '30%',
-                          borderRadius: '2px'
-                        }
+                        // '&::after': {
+                        //   content: '""',
+                        //   position: 'absolute',
+                        //   width: '40%',
+                        //   height: '4px',
+                        //   backgroundColor: '#4CB0B0',
+                        //   bottom: '-8px',
+                        //   left: '30%',
+                        //   borderRadius: '2px'
+                        // }
                       }}
                     >
-                      4,11
+                     <span>$</span>4.5
                     </Typography>
                   </Box>
+                  <Typography 
+                    variant="h6" 
+                    // fontWeight="600" 
+                    gutterBottom
+                    sx={{ 
+                      // borderBottom: '2px solid #4CB0B0',
+                      paddingBottom: 1,
+                      display: 'inline-block'
+                    }}
+                  >
+                    Average Order Value
+                  </Typography>
+                 
                 </Paper>
               </Grid>
               <Grid item xs={12} md={12}>  {/* Changed to full width */}
@@ -474,18 +475,6 @@ const MenuAnalysisDashboardtwo = () => {
                     }
                   }}
                 >
-                  <Typography 
-                    variant="h6" 
-                    fontWeight="600" 
-                    gutterBottom
-                    sx={{ 
-                      borderBottom: '2px solid #4CB0B0',
-                      paddingBottom: 1,
-                      display: 'inline-block'
-                    }}
-                  >
-                    Average Items per Order
-                  </Typography>
                   <Box sx={{ 
                     display: 'flex', 
                     justifyContent: 'center', 
@@ -499,21 +488,34 @@ const MenuAnalysisDashboardtwo = () => {
                       sx={{ 
                         color: '#4CB0B0',
                         position: 'relative',
-                        '&::after': {
-                          content: '""',
-                          position: 'absolute',
-                          width: '40%',
-                          height: '4px',
-                          backgroundColor: '#4CB0B0',
-                          bottom: '-8px',
-                          left: '30%',
-                          borderRadius: '2px'
-                        }
+                        // '&::after': {
+                        //   content: '""',
+                        //   position: 'absolute',
+                        //   width: '40%',
+                        //   height: '4px',
+                        //   backgroundColor: '#4CB0B0',
+                        //   bottom: '-8px',
+                        //   left: '30%',
+                        //   borderRadius: '2px'
+                        // }
                       }}
                     >
-                      2,7
+                      3
                     </Typography>
                   </Box>
+                  <Typography 
+                    variant="h6" 
+                    // fontWeight="600" 
+                    gutterBottom
+                    sx={{ 
+                      // borderBottom: '2px solid #4CB0B0',
+                      paddingBottom: 1,
+                      display: 'inline-block'
+                    }}
+                  >
+                    Average Items per Order
+                  </Typography>
+                  
                 </Paper>
               </Grid>
             </Grid>

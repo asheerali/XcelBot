@@ -95,7 +95,7 @@ const DashboardLabel = styled(Typography)(({ theme }) => ({
 const DASHBOARD_OPTIONS = [
   'Sales Split',
   'Financials',
-  'Sales Wide',
+  'Companywide Sales',
   'Product Mix'
 ];
 
@@ -506,7 +506,7 @@ const ExcelUploadPage: React.FC = () => {
     // Separate files by dashboard type
     const salesFiles = successfulFiles.filter(f => f.dashboard === 'Sales Split');
     const financialFiles = successfulFiles.filter(f => f.dashboard === 'Financials');
-    const salesWideFiles = successfulFiles.filter(f => f.dashboard === 'Sales Wide');
+    const salesWideFiles = successfulFiles.filter(f => f.dashboard === 'Sales Wide' || f.dashboard === 'Companywide Sales');
     const productMixFiles = successfulFiles.filter(f => f.dashboard === 'Product Mix');
     
     // Navigate based on dashboard types
@@ -587,7 +587,16 @@ const ExcelUploadPage: React.FC = () => {
   
   return (
     <Box sx={{ py: 4 }}>
-      <Typography variant="h4" gutterBottom>
+      {/* <Typography variant="h4" gutterBottom> */}
+       <Typography 
+                variant="h4" 
+                component="h1" 
+                sx={{ 
+                  fontWeight: 600,
+                  color: '#1a237e',
+                  fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }
+                }}
+              >
         Excel File Upload
       </Typography>
       <Typography variant="subtitle1" color="text.secondary" paragraph>
@@ -602,7 +611,7 @@ const ExcelUploadPage: React.FC = () => {
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 <LocationCityIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                Select a City for New Files (Optional)
+                Select a Location/Store for New Files (Optional)
               </Typography>
               
               <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
@@ -620,7 +629,7 @@ const ExcelUploadPage: React.FC = () => {
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="City"
+                      label="Store/Location"
                       placeholder="Select a US city"
                       variant="outlined"
                       fullWidth

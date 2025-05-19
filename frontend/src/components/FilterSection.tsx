@@ -24,6 +24,7 @@ import Divider from '@mui/material/Divider';
 import CloseIcon from '@mui/icons-material/Close';
 import IconButton from '@mui/material/IconButton';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import DateRangeIcon from '@mui/icons-material/DateRange';
 
 // Sample dining options matching the image
 const DINING_OPTIONS = [
@@ -231,6 +232,53 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     }
   };
 
+
+// Add these state variables to your component
+const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+const [selectedWeek, setSelectedWeek] = useState<number>(getCurrentWeek());
+
+// Add these handler functions
+const handleYearChange = (event: SelectChangeEvent) => {
+  setSelectedYear(Number(event.target.value));
+  // Reset week when year changes to avoid invalid combinations
+  setSelectedWeek(1);
+};
+
+const handleWeekChange = (event: SelectChangeEvent) => {
+  setSelectedWeek(Number(event.target.value));
+};
+
+// Helper function to get current week number
+function getCurrentWeek(): number {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 1);
+  const diff = Number(now) - Number(start) + (start.getTimezoneOffset() - now.getTimezoneOffset()) * 60 * 1000;
+  const oneWeek = 604800000;
+  return Math.floor(diff / oneWeek) + 1;
+}
+
+// Helper function to convert week number to date range string
+function getWeekDateRange(year: number, week: number): string {
+  const firstDayOfYear = new Date(year, 0, 1);
+  const daysOffset = firstDayOfYear.getDay() > 0 ? firstDayOfYear.getDay() - 1 : 6;
+  
+  // Calculate the first day of first week
+  const firstDayOfFirstWeek = new Date(year, 0, 1);
+  firstDayOfFirstWeek.setDate(firstDayOfFirstWeek.getDate() - daysOffset);
+  
+  const firstDayOfSelectedWeek = new Date(firstDayOfFirstWeek);
+  firstDayOfSelectedWeek.setDate(firstDayOfFirstWeek.getDate() + (week - 1) * 7);
+  
+  const lastDayOfSelectedWeek = new Date(firstDayOfSelectedWeek);
+  lastDayOfSelectedWeek.setDate(firstDayOfSelectedWeek.getDate() + 6);
+  
+  const formatDate = (date: Date): string => {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+  
+  return `${formatDate(firstDayOfSelectedWeek)} - ${formatDate(lastDayOfSelectedWeek)}`;
+}
+
   return (
     <Box>
       <Typography variant="h6" sx={{ mb: 2, fontWeight: 'normal' }}>
@@ -238,7 +286,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       </Typography>
 
       <Grid container spacing={2} alignItems="flex-start" sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={3}>
+        {/* <Grid item xs={12} sm={3}>
           <FormControl fullWidth sx={{ height: 80 }}>
             <InputLabel id="location-select-label">Location</InputLabel>
             <Select
@@ -258,7 +306,30 @@ const FilterSection: React.FC<FilterSectionProps> = ({
               {salesFiles.length} sales file(s) available
             </Typography>
           </FormControl>
-        </Grid>
+        </Grid> */}
+
+         <Grid item xs={12} sm={3}>
+    <FormControl fullWidth sx={{ height: 80 }}>
+      <InputLabel id="location-select-label">Location</InputLabel>
+      <Select
+        labelId="location-select-label"
+        id="location-select"
+        value={selectedLocation || currentSalesLocation || ''}
+        label="Location"
+        onChange={handleLocationChange}
+        startAdornment={<PlaceIcon sx={{ mr: 1, ml: -0.5, color: 'primary.main' }} />}
+        disabled={locations.length === 0}
+      >
+        {locations.map((location) => (
+          <MenuItem key={location} value={location}>{location}</MenuItem>
+        ))}
+        <Divider sx={{ my: 1 }} />
+        <MenuItem key="company-wide" value="company-wide">
+          Company Wide
+        </MenuItem>
+      </Select>
+    </FormControl>
+  </Grid>
 
         <Grid item xs={12} sm={3}>
           <FormControl fullWidth sx={{ height: 80 }}>
@@ -370,6 +441,9 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           </FormControl>
         </Grid>
 
+
+
+
         <Grid item xs={12} sm={3}>
           <FormControl fullWidth sx={{ height: 80 }}>
             <InputLabel id="employee-select-label">Employees</InputLabel>
@@ -456,6 +530,55 @@ const FilterSection: React.FC<FilterSectionProps> = ({
             </Typography>
           </FormControl>
         </Grid>
+
+<Grid container spacing={2}>
+  {/* Year Filter */}
+  <Grid item xs={12} sm={6} md={3}>
+    <FormControl fullWidth>
+      <InputLabel id="year-select-label">Year</InputLabel>
+      <Select
+        labelId="year-select-label"
+        id="year-select"
+        value={selectedYear}
+        label="Year"
+        onChange={handleYearChange}
+        startAdornment={<CalendarTodayIcon sx={{ mr: 1, ml: -0.5, color: 'primary.main' }} />}
+      >
+        <MenuItem value={2023}>2023</MenuItem>
+        <MenuItem value={2024}>2024</MenuItem>
+        <MenuItem value={2025}>2025</MenuItem>
+      </Select>
+    </FormControl>
+  </Grid>
+
+  {/* Week of Year Filter */}
+  <Grid item xs={12} sm={6} md={3}>
+    <FormControl fullWidth>
+      <InputLabel id="week-select-label">Week</InputLabel>
+      <Select
+        labelId="week-select-label"
+        id="week-select"
+        value={selectedWeek}
+        label="Week"
+        onChange={handleWeekChange}
+        startAdornment={<DateRangeIcon sx={{ mr: 1, ml: -0.5, color: 'primary.main' }} />}
+        disabled={!selectedYear}
+      >
+        {Array.from({ length: 52 }, (_, i) => (
+          <MenuItem key={i + 1} value={i + 1}>
+            Week {i + 1}
+          </MenuItem>
+        ))}
+      </Select>
+      {selectedWeek > 0 && (
+        <Typography variant="caption" color="text.secondary">
+          {getWeekDateRange(selectedYear, selectedWeek)}
+        </Typography>
+      )}
+    </FormControl>
+  </Grid>
+</Grid>
+
 
         {customDateRange && (
           <>
