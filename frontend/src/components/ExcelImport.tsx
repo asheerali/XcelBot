@@ -73,6 +73,8 @@ export function ExcelImport() {
     tableData: reduxTableData,
     fileProcessed,
     allLocations,
+    salesLocations,
+    
     files,
     location: currentLocation
   } = useAppSelector((state) => state.excel);
@@ -614,7 +616,7 @@ export function ExcelImport() {
                   endDate={endDate}
                   onStartDateChange={handleStartDateChange}
                   onEndDateChange={handleEndDateChange}
-                  locations={allLocations || []}
+                  locations={salesLocations || []} 
                   selectedLocation={selectedLocation}
                   onLocationChange={handleLocationChange}
                   onApplyFilters={() => handleApplyFilters()}

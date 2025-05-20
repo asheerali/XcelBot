@@ -1,6 +1,8 @@
-// store/excelSlice.ts - Complete implementation with Sales Wide support
+// store/excelSlice.ts - Fixed to properly categorize locations by dashboard type
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import axios from 'axios';
+import { AppThunk } from '../index';
 
 // Define the interfaces for our state
 interface TableData {
@@ -31,16 +33,27 @@ interface TableData {
   equators?: string[];
 }
 
+interface AnalyticsData {
+  salesByWeek: any[];
+  salesByDayOfWeek: any[];
+  salesByTimeOfDay: any[];
+  salesByCategory: any[];
+  fileLocation?: string;
+}
+
 interface FileData {
   fileName: string;
+  fileContent: string; // Added to store the file content for each file
   location: string;
   data: TableData;
+  analyticsData?: AnalyticsData; // Store analytics data with each file
   uploadDate?: string;
   dashboard?: string;
 }
 
 interface FinancialData {
   fileName: string;
+  fileContent: string; // Added to store the file content
   location: string;
   data: TableData;
   uploadDate?: string;
@@ -48,13 +61,16 @@ interface FinancialData {
 
 interface SalesData {
   fileName: string;
+  fileContent: string; // Added to store the file content
   location: string;
   data: TableData;
+  analyticsData?: AnalyticsData; // Added to store analytics with each sales file
   uploadDate?: string;
 }
 
 interface SalesWideData {
   fileName: string;
+  fileContent: string; // Added to store the file content
   location: string;
   data: TableData;
   uploadDate?: string;
@@ -67,6 +83,7 @@ interface ExcelState {
   location: string;
   fileProcessed: boolean;
   tableData: TableData;
+  analyticsData: AnalyticsData | null; // Added to store current analytics
   loading: boolean;
   error: string | null;
   
@@ -110,6 +127,9 @@ interface ExcelState {
     year: string;
     equator: string;
   };
+  
+  // Added to track the active file
+  activeFileIndex: number;
 }
 
 // Define initial state
@@ -127,6 +147,7 @@ const initialState: ExcelState = {
     locations: [],
     dateRanges: []
   },
+  analyticsData: null, // Initialize analytics data as null
   loading: false,
   error: null,
   files: [],
@@ -159,6 +180,28 @@ const initialState: ExcelState = {
     helper: 'Helper 3',
     year: '2025',
     equator: 'Equator A'
+  },
+  activeFileIndex: -1 // Initialize with no active file
+};
+
+// Helper function to add a location to the appropriate dashboard location list
+const addLocationToDashboardList = (
+  state: ExcelState,
+  location: string,
+  dashboardName?: string
+) => {
+  // Add to allLocations if it doesn't exist
+  if (!state.allLocations.includes(location)) {
+    state.allLocations.push(location);
+  }
+
+  // Only add to specific dashboard location lists based on dashboard type
+  if (dashboardName === "Sales Split" && !state.salesLocations.includes(location)) {
+    state.salesLocations.push(location);
+  } else if (dashboardName === "Financials" && !state.financialLocations.includes(location)) {
+    state.financialLocations.push(location);
+  } else if (dashboardName === "Sales Wide" && !state.salesWideLocations.includes(location)) {
+    state.salesWideLocations.push(location);
   }
 };
 
@@ -188,50 +231,89 @@ export const excelSlice = createSlice({
       if (action.payload.fileLocation) {
         state.location = action.payload.fileLocation;
       }
+      
+      // Update the active file with this data if there is an active file
+      if (state.activeFileIndex >= 0) {
+        state.files[state.activeFileIndex].data = action.payload;
+      }
     },
-    addFileData: (state, action: PayloadAction<{fileName: string; location: string; data: TableData}>) => {
+    // New action to set analytics data
+    setAnalyticsData: (state, action: PayloadAction<{fileName: string; location: string; data: AnalyticsData}>) => {
+      state.analyticsData = action.payload.data;
+      
+      // Find the matching file to store the analytics data with it
+      const fileIndex = state.files.findIndex(
+        f => f.fileName === action.payload.fileName && f.location === action.payload.location
+      );
+      
+      if (fileIndex >= 0) {
+        state.files[fileIndex].analyticsData = action.payload.data;
+      }
+      
+      // Also update sales files if needed
+      const salesFileIndex = state.salesFiles.findIndex(
+        f => f.fileName === action.payload.fileName && f.location === action.payload.location
+      );
+      
+      if (salesFileIndex >= 0) {
+        state.salesFiles[salesFileIndex].analyticsData = action.payload.data;
+      }
+    },
+    // Modified to properly categorize locations by dashboard type
+    addFileData: (state, action: PayloadAction<{fileName: string; fileContent: string; location: string; data: TableData}>) => {
       // Check if file already exists for this location
       const existingFileIndex = state.files.findIndex(
         f => f.location === action.payload.location
       );
       
-      // Create file data with upload timestamp
+      // Get the dashboard type from the data
+      const dashboardName = action.payload.data.dashboardName;
+      
+      // Create file data with upload timestamp and file content
       const fileData: FileData = {
-        ...action.payload,
+        fileName: action.payload.fileName,
+        fileContent: action.payload.fileContent, // Store the file content
+        location: action.payload.location,
+        data: action.payload.data,
         uploadDate: new Date().toISOString(),
-        dashboard: action.payload.data.dashboardName
+        dashboard: dashboardName
       };
       
       if (existingFileIndex >= 0) {
         // Update existing file
         state.files[existingFileIndex] = fileData;
+        state.activeFileIndex = existingFileIndex;
       } else {
         // Add new file
         state.files.push(fileData);
+        state.activeFileIndex = state.files.length - 1;
       }
       
-      // Add location to allLocations if it doesn't exist
-      if (!state.allLocations.includes(action.payload.location)) {
-        state.allLocations.push(action.payload.location);
-      }
+      // Add location to appropriate dashboard lists
+      addLocationToDashboardList(state, action.payload.location, dashboardName);
       
       // Update the current display data if it matches the location or if this is the first file
       if (state.location === action.payload.location || state.files.length === 1) {
         state.tableData = action.payload.data;
         state.fileName = action.payload.fileName;
+        state.fileContent = action.payload.fileContent; // Update file content in main state
         state.fileProcessed = true;
         state.location = action.payload.location;
       }
     },
-    addFinancialData: (state, action: PayloadAction<{fileName: string; location: string; data: TableData}>) => {
+    // Fixed to only add location to financial locations
+    addFinancialData: (state, action: PayloadAction<{fileName: string; fileContent: string; location: string; data: TableData}>) => {
       // Check if financial file already exists for this location
       const existingIndex = state.financialFiles.findIndex(
         f => f.location === action.payload.location
       );
       
-      // Create financial data with upload timestamp
+      // Create financial data with upload timestamp and file content
       const financialData: FinancialData = {
-        ...action.payload,
+        fileName: action.payload.fileName,
+        fileContent: action.payload.fileContent, // Store file content
+        location: action.payload.location,
+        data: action.payload.data,
         uploadDate: new Date().toISOString()
       };
       
@@ -243,12 +325,11 @@ export const excelSlice = createSlice({
         state.financialFiles.push(financialData);
       }
       
-      // Add location to allLocations if it doesn't exist
+      // Add location to financial locations only
       if (!state.allLocations.includes(action.payload.location)) {
         state.allLocations.push(action.payload.location);
       }
       
-      // Add location to financialLocations if it doesn't exist
       if (!state.financialLocations.includes(action.payload.location)) {
         state.financialLocations.push(action.payload.location);
       }
@@ -259,15 +340,19 @@ export const excelSlice = createSlice({
         state.financialFilters.store = action.payload.location;
       }
     },
-    addSalesData: (state, action: PayloadAction<{fileName: string; location: string; data: TableData}>) => {
+    // Fixed to only add location to sales locations
+    addSalesData: (state, action: PayloadAction<{fileName: string; fileContent: string; location: string; data: TableData}>) => {
       // Check if sales file already exists for this location
       const existingIndex = state.salesFiles.findIndex(
         f => f.location === action.payload.location
       );
       
-      // Create sales data with upload timestamp
+      // Create sales data with upload timestamp and file content
       const salesData: SalesData = {
-        ...action.payload,
+        fileName: action.payload.fileName,
+        fileContent: action.payload.fileContent, // Store file content
+        location: action.payload.location,
+        data: action.payload.data,
         uploadDate: new Date().toISOString()
       };
       
@@ -279,12 +364,11 @@ export const excelSlice = createSlice({
         state.salesFiles.push(salesData);
       }
       
-      // Add location to allLocations if it doesn't exist
+      // Add location to sales locations only
       if (!state.allLocations.includes(action.payload.location)) {
         state.allLocations.push(action.payload.location);
       }
       
-      // Add location to salesLocations if it doesn't exist
       if (!state.salesLocations.includes(action.payload.location)) {
         state.salesLocations.push(action.payload.location);
       }
@@ -295,15 +379,19 @@ export const excelSlice = createSlice({
         state.salesFilters.location = action.payload.location;
       }
     },
-    addSalesWideData: (state, action: PayloadAction<{fileName: string; location: string; data: TableData}>) => {
+    // Fixed to only add location to sales wide locations
+    addSalesWideData: (state, action: PayloadAction<{fileName: string; fileContent: string; location: string; data: TableData}>) => {
       // Check if sales wide file already exists for this location
       const existingIndex = state.salesWideFiles.findIndex(
         f => f.location === action.payload.location
       );
       
-      // Create sales wide data with upload timestamp
+      // Create sales wide data with upload timestamp and file content
       const salesWideData: SalesWideData = {
-        ...action.payload,
+        fileName: action.payload.fileName,
+        fileContent: action.payload.fileContent, // Store file content
+        location: action.payload.location,
+        data: action.payload.data,
         uploadDate: new Date().toISOString()
       };
       
@@ -315,12 +403,11 @@ export const excelSlice = createSlice({
         state.salesWideFiles.push(salesWideData);
       }
       
-      // Add location to allLocations if it doesn't exist
+      // Add location to sales wide locations only
       if (!state.allLocations.includes(action.payload.location)) {
         state.allLocations.push(action.payload.location);
       }
       
-      // Add location to salesWideLocations if it doesn't exist
       if (!state.salesWideLocations.includes(action.payload.location)) {
         state.salesWideLocations.push(action.payload.location);
       }
@@ -331,11 +418,13 @@ export const excelSlice = createSlice({
         state.salesWideFilters.location = action.payload.location;
       }
     },
+    // Now just maintains the allLocations list
     setLocations: (state, action: PayloadAction<string[]>) => {
       // Set all locations (without duplicates)
       const newLocations = action.payload.filter(loc => loc && loc.trim() !== '');
       state.allLocations = [...new Set([...state.allLocations, ...newLocations])];
     },
+    // Below methods now just set their specific location lists
     setSalesLocations: (state, action: PayloadAction<string[]>) => {
       state.salesLocations = action.payload;
     },
@@ -345,28 +434,83 @@ export const excelSlice = createSlice({
     setSalesWideLocations: (state, action: PayloadAction<string[]>) => {
       state.salesWideLocations = action.payload;
     },
+    // Enhanced to update active file index and handle dashboard-specific file selection
     selectLocation: (state, action: PayloadAction<string>) => {
       const location = action.payload;
       state.location = location;
       
-      // Find file data for this location (first check sales, then financial, then sales wide, then general)
-      const salesData = state.salesFiles.find(f => f.location === location);
-      const financialData = state.financialFiles.find(f => f.location === location);
-      const salesWideData = state.salesWideFiles.find(f => f.location === location);
-      const fileData = state.files.find(f => f.location === location);
+      // Find file data for this location
+      const fileIndex = state.files.findIndex(f => f.location === location);
       
-      // Use sales data if available, otherwise financial, or sales wide, or general
-      const dataToUse = salesData || financialData || salesWideData || fileData;
-      
-      if (dataToUse) {
-        state.tableData = dataToUse.data;
-        state.fileName = dataToUse.fileName;
+      if (fileIndex >= 0) {
+        // Update active file index
+        state.activeFileIndex = fileIndex;
+        
+        // Get the file
+        const file = state.files[fileIndex];
+        
+        // Update current data with the file's data
+        state.tableData = file.data;
+        state.fileName = file.fileName;
+        state.fileContent = file.fileContent; // Update file content
         state.fileProcessed = true;
+        
+        // Update analytics data if available
+        if (file.analyticsData) {
+          state.analyticsData = file.analyticsData;
+        } else {
+          state.analyticsData = null; // Clear if not available
+        }
+        
+        // Update dashboard-specific location based on file's dashboard type
+        if (file.dashboard === "Sales Split") {
+          state.currentSalesLocation = location;
+          state.salesFilters.location = location;
+        } else if (file.dashboard === "Financials") {
+          state.currentFinancialLocation = location;
+          state.financialFilters.store = location;
+        } else if (file.dashboard === "Sales Wide") {
+          state.currentSalesWideLocation = location;
+          state.salesWideFilters.location = location;
+        }
       } else {
-        // If no matching file found, keep the current data but update location
-        state.location = location;
+        // If no matching file found, try to find in specialized files
+        const salesData = state.salesFiles.find(f => f.location === location);
+        const financialData = state.financialFiles.find(f => f.location === location);
+        const salesWideData = state.salesWideFiles.find(f => f.location === location);
+        
+        // Use the first available data
+        if (salesData) {
+          state.tableData = salesData.data;
+          state.fileName = salesData.fileName;
+          state.fileContent = salesData.fileContent;
+          state.fileProcessed = true;
+          state.analyticsData = salesData.analyticsData || null;
+          state.currentSalesLocation = location;
+          state.salesFilters.location = location;
+        } else if (financialData) {
+          state.tableData = financialData.data;
+          state.fileName = financialData.fileName;
+          state.fileContent = financialData.fileContent;
+          state.fileProcessed = true;
+          state.analyticsData = null; // Financial files don't have analytics
+          state.currentFinancialLocation = location;
+          state.financialFilters.store = location;
+        } else if (salesWideData) {
+          state.tableData = salesWideData.data;
+          state.fileName = salesWideData.fileName;
+          state.fileContent = salesWideData.fileContent;
+          state.fileProcessed = true;
+          state.analyticsData = null; // Sales wide files don't have analytics
+          state.currentSalesWideLocation = location;
+          state.salesWideFilters.location = location;
+        } else {
+          // If no matching file found, keep the current data but update location
+          state.location = location;
+        }
       }
     },
+    // Enhanced to update file content - Sales-specific location selection
     selectSalesLocation: (state, action: PayloadAction<string>) => {
       const location = action.payload;
       state.currentSalesLocation = location;
@@ -378,10 +522,19 @@ export const excelSlice = createSlice({
       if (salesData) {
         state.tableData = salesData.data;
         state.fileName = salesData.fileName;
+        state.fileContent = salesData.fileContent; // Update file content
         state.fileProcessed = true;
         state.location = location;
+        state.analyticsData = salesData.analyticsData || null;
+        
+        // Update active file index in main files array
+        const fileIndex = state.files.findIndex(f => f.location === location && f.dashboard === "Sales Split");
+        if (fileIndex >= 0) {
+          state.activeFileIndex = fileIndex;
+        }
       }
     },
+    // Enhanced to update file content - Financial-specific location selection
     selectFinancialLocation: (state, action: PayloadAction<string>) => {
       const location = action.payload;
       state.currentFinancialLocation = location;
@@ -393,10 +546,18 @@ export const excelSlice = createSlice({
       if (financialData) {
         state.tableData = financialData.data;
         state.fileName = financialData.fileName;
+        state.fileContent = financialData.fileContent; // Update file content
         state.fileProcessed = true;
         state.location = location;
+        
+        // Update active file index in main files array
+        const fileIndex = state.files.findIndex(f => f.location === location && f.dashboard === "Financials");
+        if (fileIndex >= 0) {
+          state.activeFileIndex = fileIndex;
+        }
       }
     },
+    // Enhanced to update file content - Sales Wide-specific location selection
     selectSalesWideLocation: (state, action: PayloadAction<string>) => {
       const location = action.payload;
       state.currentSalesWideLocation = location;
@@ -408,8 +569,15 @@ export const excelSlice = createSlice({
       if (salesWideData) {
         state.tableData = salesWideData.data;
         state.fileName = salesWideData.fileName;
+        state.fileContent = salesWideData.fileContent; // Update file content
         state.fileProcessed = true;
         state.location = location;
+        
+        // Update active file index in main files array
+        const fileIndex = state.files.findIndex(f => f.location === location && f.dashboard === "Sales Wide");
+        if (fileIndex >= 0) {
+          state.activeFileIndex = fileIndex;
+        }
       }
     },
     updateSalesFilters: (state, action: PayloadAction<Partial<typeof initialState.salesFilters>>) => {
@@ -427,12 +595,13 @@ export const excelSlice = createSlice({
   }
 });
 
-// Export actions and reducer
+// Export actions
 export const { 
   setExcelFile, 
   setLoading, 
   setError, 
   setTableData,
+  setAnalyticsData,
   addFileData,
   addFinancialData,
   addSalesData,
@@ -450,5 +619,194 @@ export const {
   updateSalesWideFilters,
   resetExcelData
 } = excelSlice.actions;
+
+// Thunk action creators
+export const fetchAnalytics = (fileName: string, dateRangeType: string, location: string): AppThunk => async (dispatch, getState) => {
+  try {
+    dispatch(setLoading(true));
+    
+    // Get the file content from state
+    const state = getState();
+    let fileContent: string | null = null;
+    
+    // Check if the file exists in any of the file collections
+    const file = state.excel.files.find(f => f.fileName === fileName && f.location === location);
+    const salesFile = state.excel.salesFiles.find(f => f.fileName === fileName && f.location === location);
+    
+    if (file) {
+      fileContent = file.fileContent;
+    } else if (salesFile) {
+      fileContent = salesFile.fileContent;
+    } else {
+      // If no file found, use the current fileContent from state
+      fileContent = state.excel.fileContent;
+    }
+    
+    if (!fileContent) {
+      throw new Error(`No file content found for ${fileName} at location ${location}`);
+    }
+    
+    // Create the payload
+    const payload = {
+      fileName,
+      fileContent,
+      dateRangeType,
+      location,
+      // Add any other necessary parameters for your API
+      startDate: state.excel.salesFilters.startDate,
+      endDate: state.excel.salesFilters.endDate
+    };
+    
+    console.log("Fetching analytics with payload:", payload);
+    
+    // Make the API call
+    const response = await axios.post('/api/excel/analytics', payload);
+    
+    if (response.data) {
+      dispatch(setAnalyticsData({
+        fileName,
+        location,
+        data: response.data
+      }));
+    }
+  } catch (error) {
+    console.error('Error fetching analytics:', error);
+    dispatch(setError(error instanceof Error ? error.message : 'Unknown error'));
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
+
+// Updated to check if the file is of the appropriate dashboard type
+export const selectFileAndFetchData = (location: string, dashboardType: string = ''): AppThunk => async (dispatch, getState) => {
+  const state = getState();
+  
+  // Find the file for the selected location with matching dashboard type if specified
+  let fileIndex = -1;
+  
+  if (dashboardType) {
+    fileIndex = state.excel.files.findIndex(
+      f => f.location === location && f.dashboard === dashboardType
+    );
+  } else {
+    fileIndex = state.excel.files.findIndex(f => f.location === location);
+  }
+  
+  if (fileIndex >= 0) {
+    const file = state.excel.files[fileIndex];
+    
+    // Select based on dashboard type
+    if (file.dashboard === "Sales Split") {
+      dispatch(selectSalesLocation(location));
+    } else if (file.dashboard === "Financials") {
+      dispatch(selectFinancialLocation(location));
+    } else if (file.dashboard === "Sales Wide") {
+      dispatch(selectSalesWideLocation(location));
+    } else {
+      // Fallback to general selection
+      dispatch(selectLocation(location));
+    }
+    
+    // Then fetch the analytics data if needed for Sales Split dashboard
+    if (file.dashboard === "Sales Split" && !file.analyticsData) {
+      dispatch(fetchAnalytics(
+        file.fileName,
+        state.excel.salesFilters.dateRangeType,
+        location
+      ));
+    }
+  }
+};
+
+// Updated to use the correct file for the current dashboard
+export const applyFilters = (dashboardType: string = 'Sales Split'): AppThunk => async (dispatch, getState) => {
+  const state = getState();
+  
+  if (state.excel.files.length === 0) {
+    dispatch(setError('No files uploaded'));
+    return;
+  }
+  
+  try {
+    dispatch(setLoading(true));
+    
+    // Determine which file to use based on the dashboard type
+    let file: FileData | undefined;
+    let location: string = '';
+    
+    if (dashboardType === 'Sales Split') {
+      location = state.excel.salesFilters.location || state.excel.currentSalesLocation;
+      file = state.excel.files.find(f => f.location === location && f.dashboard === 'Sales Split');
+      
+      // Fall back to the first Sales Split file if we couldn't find one for this location
+      if (!file) {
+        file = state.excel.files.find(f => f.dashboard === 'Sales Split');
+        if (file) location = file.location;
+      }
+    } else if (dashboardType === 'Financials') {
+      location = state.excel.financialFilters.store || state.excel.currentFinancialLocation;
+      file = state.excel.files.find(f => f.location === location && f.dashboard === 'Financials');
+      
+      // Fall back to the first Financial file
+      if (!file) {
+        file = state.excel.files.find(f => f.dashboard === 'Financials');
+        if (file) location = file.location;
+      }
+    } else if (dashboardType === 'Sales Wide') {
+      location = state.excel.salesWideFilters.location || state.excel.currentSalesWideLocation;
+      file = state.excel.files.find(f => f.location === location && f.dashboard === 'Sales Wide');
+      
+      // Fall back to the first Sales Wide file
+      if (!file) {
+        file = state.excel.files.find(f => f.dashboard === 'Sales Wide');
+        if (file) location = file.location;
+      }
+    }
+    
+    // Use the active file as a last resort
+    if (!file && state.excel.activeFileIndex >= 0) {
+      file = state.excel.files[state.excel.activeFileIndex];
+      location = file.location;
+    }
+    
+    if (!file) {
+      throw new Error(`No ${dashboardType} file available to apply filters`);
+    }
+    
+    // Create filter payload
+    const payload = {
+      fileName: file.fileName,
+      fileContent: file.fileContent,
+      location: location,
+      dateRangeType: state.excel.salesFilters.dateRangeType,
+      startDate: state.excel.salesFilters.startDate,
+      endDate: state.excel.salesFilters.endDate
+    };
+    
+    console.log(`Sending filter request for ${dashboardType}:`, payload);
+    
+    // Make the API call to filter endpoint
+    const response = await axios.post('/api/excel/filter', payload);
+    
+    if (response.data) {
+      // Update the table data
+      dispatch(setTableData(response.data));
+      
+      // Also fetch analytics with the new filters for Sales Split dashboard
+      if (dashboardType === 'Sales Split') {
+        dispatch(fetchAnalytics(
+          file.fileName,
+          state.excel.salesFilters.dateRangeType,
+          location
+        ));
+      }
+    }
+  } catch (error) {
+    console.error(`Error applying ${dashboardType} filters:`, error);
+    dispatch(setError(error instanceof Error ? error.message : 'Unknown error'));
+  } finally {
+    dispatch(setLoading(false));
+  }
+};
 
 export default excelSlice.reducer;
