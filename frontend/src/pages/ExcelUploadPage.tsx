@@ -95,7 +95,7 @@ const DashboardLabel = styled(Typography)(({ theme }) => ({
 const DASHBOARD_OPTIONS = [
   'Sales Split',
   'Financials',
-  'Companywide Sales',
+  'Sales Wide',
   'Product Mix'
 ];
 
