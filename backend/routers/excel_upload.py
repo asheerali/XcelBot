@@ -72,7 +72,9 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         #     result = process_sales_split_file(excel_data, request.location, request.startDate, request.endDate)
         #     return ExcelUploadResponse(success=True, message="File processed successfully", data=result)
 
-        if request.dashboard in ["Financials", "Companywide", "Sales Wide"]:
+        # if request.dashboard in ["Financials", "Companywide", "Sales Wide"]:
+        if request.dashboard == "Financials" or request.dashboard == "Sales Wide" or request.dashboard == "Companywide":
+
             print("Dashboard type: ", request.dashboard)
             # print("i am here 4")
             excel_data_copy = io.BytesIO(file_content)
@@ -145,13 +147,13 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         if request.dashboard == "Sales Split" or request.dashboard == "Product Mix":
             print("Dashboard type: Sales Split / Product Mix Dashboard")
             
-            # excel_data_copy = io.BytesIO(file_content)
+            excel_data_copy = io.BytesIO(file_content)
 
-            # location_filter = request.location if request.location else 'All'
-            # order_date_filter = request.startDate if request.startDate else None
-            # server_filter = request.server if request.server else 'All'
-            # dining_option_filter = request.diningOption if request.diningOption else 'All'
-            # menu_item_filter = request.menuItem if request.menuItem else 'All'
+            location_filter = request.location if request.location else 'All'
+            order_date_filter = request.startDate if request.startDate else None
+            server_filter = request.server if request.server else 'All'
+            dining_option_filter = request.diningOption if request.diningOption else 'All'
+            menu_item_filter = request.menuItem if request.menuItem else 'All'
             
             # net_sales, orders, qty_sold, sales_by_category_df, sales_by_menu_group_df, sales_by_server_df, top_selling_items_df, sales_by_location_df, average_price_by_item_df, average_order_value, average_items_per_order, price_changes_df, top_items_df, unique_orders, total_quantity = process_pmix_file(excel_data_copy, location_filter=location_filter, 
             #                                                                                                                                                                                                                                                                                                  order_date_filter=order_date_filter, 
@@ -159,43 +161,47 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             #                                                                                                                                                                                                                                                                                                  dining_option_filter=dining_option_filter,)
 
 
-            # # # Set dynamic dates
-            # # default_end_date1 = date.today()
-            # # default_end_date = default_end_date1.strftime('%Y-%m-%d')
-            # # default_start_date = (default_end_date1 - relativedelta(months=2)).strftime('%Y-%m-%d')                                                                                                                                                                                                                                                                                                             menu_item_filter=menu_item_filter )
+            # # Set dynamic dates
+            # default_end_date1 = date.today()
+            # default_end_date = default_end_date1.strftime('%Y-%m-%d')
+            # default_start_date = (default_end_date1 - relativedelta(months=2)).strftime('%Y-%m-%d')                                                                                                                                                                                                                                                                                                             menu_item_filter=menu_item_filter )
 
+            default_start_date = "2025-05-01"
+            default_end_date = "2025-05-31"
 
+            start_date = request.startDate
+            end_date = request.endDate
+            start_date = start_date if start_date else default_start_date
+            end_date = end_date if end_date else default_end_date
+         
+            # Process Excel file with optional filters
+            pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay = process_sales_split_file(
+                excel_data, 
+                start_date=start_date,
+                end_date=end_date,
+                location=request.location
+            )
             
-            # start_date = start_date if start_date else default_start_date
-            # end_date = end_date if end_date else default_end_date
-            # default_start_date = "2025-05-01"
-            # default_end_date = "2025-05-31"
+               # For now, return empty data for unsupported dashboards
+            result = {
+                "table1": pivot_table.to_dict(orient='records'),
+                "table2": in_house_table.to_dict(orient='records'),
+                "table3": week_over_week_table.to_dict(orient='records'),
+                "table4": category_summary_table.to_dict(orient='records'),
+                "table5": salesByWeek.to_dict(orient='records'),
+                "table6": salesByDayOfWeek.to_dict(orient='records'),
+                "table7": salesByTimeOfDay.to_dict(orient='records'),
+                "table8": [],
+                "table9": [],
+                "locations": [request.location] if request.location else [],
+                "fileName": request.fileName,
+                "fileLocation": request.location,
+                "dashboardName": request.dashboard,
+                "data": f"{request.dashboard} Dashboard is not yet implemented."
+            }    
 
-            # # Process Excel file with optional filters
-            # pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay = process_sales_split_file(
-            #     excel_data, 
-            #     start_date=start_date,
-            #     end_date=end_date,
-            #     location=request.location
-            # )
-            
-            #    # For now, return empty data for unsupported dashboards
-            # result = {
-            #     "table1": pivot_table.to_dict(orient='records'),
-            #     "table2": in_house_table.to_dict(orient='records'),
-            #     "table3": week_over_week_table.to_dict(orient='records'),
-            #     "table4": category_summary_table.to_dict(orient='records'),
-            #     "table5": salesByWeek.to_dict(orient='records'),
-            #     "table6": salesByDayOfWeek.to_dict(orient='records'),
-            #     "table7": salesByTimeOfDay.to_dict(orient='records'),
-            #     "table8": [],
-            #     "table9": [],
-            #     "locations": [request.location] if request.location else [],
-            #     "fileName": request.fileName,
-            #     "fileLocation": request.location,
-            #     "dashboardName": request.dashboard,
-            #     "data": f"{request.dashboard} Dashboard is not yet implemented."
-            # }      
+            result_final = ExcelUploadResponse(**result)
+            return result_final
             # result_final = ExcelUploadResponse(**result), {
             # "table1": [{"net_sales": [net_sales], "orders": [orders], 
             #             "qty_sold": [qty_sold],"average_order_value": [average_order_value], 
@@ -220,24 +226,25 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             # print("result", result_final )
             # return result_final
             
-            return {
-                "table1": [],
-                "table2": [],
-                "table3": [],
-                "table4": [],
-                "table5": [],
-                "table6": [],
-                "table7": [],
-                "table8": [],
-                "table9": [],
-                "locations": ["test"],
-                "dateRanges": ["test"],
-                "fileLocation":["test"],
-                "dashboardName": request.dashboard,
-                "fileName": request.fileName,
-                "data":  f"{request.dashboard} Dashboard is not yet implemented."
-            }
+            # return {
+            #     "table1": [],
+            #     "table2": [],
+            #     "table3": [],
+            #     "table4": [],
+            #     "table5": [],
+            #     "table6": [],
+            #     "table7": [],
+            #     "table8": [],
+            #     "table9": [],
+            #     "locations": ["test"],
+            #     "dateRanges": ["test"],
+            #     "fileLocation":["test"],
+            #     "dashboardName": request.dashboard,
+            #     "fileName": request.fileName,
+            #     "data":  f"{request.dashboard} Dashboard is not yet implemented."
+            # }
             
+            # return result
     except Exception as e:
         # Log the full exception for debugging
         error_message = str(e)

@@ -9,6 +9,10 @@ class ExcelUploadRequest(BaseModel):
     endDate: Optional[str] = None    # Optional date filter end
     location: Optional[str] = None   # Optional location filter
     dashboard: Optional[str] = None  # Optional type of dashboard (e.g., "Sales", "Inventory")
+    server: Optional[str] = None  # Optional server filter
+    diningOption: Optional[str] = None  # Optional dining option filter
+    menuItem: Optional[str] = None  # Optional menu item filter
+
     
 class FinancialUploadRequest(BaseModel):
     fileName: str
