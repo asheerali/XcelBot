@@ -166,20 +166,21 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             # default_end_date = default_end_date1.strftime('%Y-%m-%d')
             # default_start_date = (default_end_date1 - relativedelta(months=2)).strftime('%Y-%m-%d')                                                                                                                                                                                                                                                                                                             menu_item_filter=menu_item_filter )
 
-            default_start_date = "2025-05-01"
+            default_start_date = "2025-01-01"
             default_end_date = "2025-05-31"
 
             start_date = request.startDate
             end_date = request.endDate
             start_date = start_date if start_date else default_start_date
             end_date = end_date if end_date else default_end_date
-         
+            # print("i am here in excel upload printing start_date", start_date)
+
             # Process Excel file with optional filters
             pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay = process_sales_split_file(
                 excel_data, 
                 start_date=start_date,
                 end_date=end_date,
-                location=request.location
+                location="All"
             )
             
                # For now, return empty data for unsupported dashboards
@@ -195,12 +196,12 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 "table9": [],
                 "locations": [request.location] if request.location else [],
                 "dateRanges": [],
-                "fileLocation": request.location,
+                "fileLocation": [request.location] if request.location else [],
                 "dashboardName": request.dashboard,
                 "fileName": request.fileName,
                 "data": f"{request.dashboard} Dashboard is not yet implemented."
             }    
-            print("result (i am here1)", result )
+            # print("result (i am here1)", result )
             result_final = ExcelUploadResponse(**result)
             
             print("result (i am here2)", result_final )

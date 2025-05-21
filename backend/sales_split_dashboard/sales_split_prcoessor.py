@@ -20,14 +20,17 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
     # Read the Excel file
     # df = pd.read_excel(file_data)
     
-    print("Type of file_data:", type(file_data))
+    print("Type of file_data: i am here", type(file_data))
+    
 
     try:
             if isinstance(file_data, io.BytesIO):
+                print("i am here in io.BytesIO")
                 file_data.seek(0)
                 print("Reading Excel from BytesIO object.")
                 needed_columns = ["Location", "Sent Date", "Dining Option", "Net Price", "Qty"]
                 df = pd.read_excel(file_data, usecols=needed_columns)
+                print("df im here prnting df in sales_split_processor_file", "\n", df.head())
                 # df = pd.read_excel(file_data)
             elif isinstance(file_data, str):
                 print("Reading Excel from file path.")
@@ -116,6 +119,8 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
     df["Category"] = df["Category"].replace({"": "Others"})
 
  
+ 
+    print("df i am here in sales split procesor after df cleanign and transforming", "\n", df.head())
     # sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df = companywide_tables(df, store_filter=store_filter, year_filter=year_filter, quarter_filter=quarter_filter, helper4_filter=helper4_filter)
  
     # p1 = overview_tables(df, location_filter=location_filter, order_date_filter=order_date_filter, server_filter=server_filter, dining_option_filter=dining_option_filter)
@@ -127,7 +132,7 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
     week_over_week_table = pivot['week_over_week_table'] #value
     category_summary_table = pivot['category_summary_table']
    
-    
+    print("pivot_table i am here in sales split processor", "\n", pivot_table.head())
     # p2 = detailed_analysis_tables(df, location_filter=location_filter, order_date_filter=order_date_filter, dining_option_filter=dining_option_filter, menu_item_filter=menu_item_filter)
     
 
