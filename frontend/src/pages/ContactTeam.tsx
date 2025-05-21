@@ -43,7 +43,7 @@ export function ContactTeam() {
     {
       name: "Sarah Johnson",
       role: "Frontend Developer",
-      email: "sarah.johnson@company.com",
+      email: "musawar.soomro@kpi360.ai",
       phone: "+1 (555) 234-5678",
     },
   ];

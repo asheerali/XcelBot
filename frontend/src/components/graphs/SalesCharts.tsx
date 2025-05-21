@@ -356,7 +356,7 @@ const SalesCharts = ({ fileName, dateRangeType, selectedLocation }) => {
       </Card>
       
       {/* Stacked Categories Chart */}
-      <Card sx={chartCardStyle}>
+      {/* <Card sx={chartCardStyle}>
         <Box sx={chartHeaderStyle}>
           <Typography variant="h6" fontWeight={600} color="#333">
             Sales by Category
@@ -369,7 +369,7 @@ const SalesCharts = ({ fileName, dateRangeType, selectedLocation }) => {
             <Typography color="text.secondary">No category data available</Typography>
           )}
         </CardContent>
-      </Card>
+      </Card> */}
       
       {/* Two-column layout for day of week and time of day */}
       <Box sx={chartRowStyle}>

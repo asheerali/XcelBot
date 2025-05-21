@@ -73,7 +73,7 @@ export function Faq() {
     {
       name: 'Sarah Johnson',
       role: 'Sales Representative',
-      email: 'sarah.johnson@company.com',
+      email: 'musawar.soomro@kpi360.ai',
       phone: '+1 (555) 234-5678'
     }
   ];
