@@ -157,7 +157,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
 
             
             start_date = request.startDate 
-            end_date = request.endDate:
+            end_date = request.endDate
                 
 
             # Process Excel file with optional filters
