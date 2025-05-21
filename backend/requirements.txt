@@ -1,6 +1,29 @@
-fastapi
-uvicorn
-python-multipart
-pydantic
-base64io
-pandas
+# Core dependencies
+fastapi==0.103.1
+uvicorn==0.23.2
+pydantic==2.3.0
+python-multipart==0.0.6
+
+# Data processing
+pandas==2.1.0
+numpy==1.25.2
+openpyxl==3.1.2   # For Excel file handling
+python-dateutil==2.8.2
+
+# Base64 handling
+base64io==1.0.3
+
+# Starlette framework (FastAPI dependency)
+starlette==0.27.0
+
+# HTTP client
+httpx==0.24.1     # For making HTTP requests if needed
+
+# CORS support
+fastapi-cors==0.0.6
+
+# For environment variables
+python-dotenv==1.0.0
+
+# Utility libraries
+pytz==2023.3      # For timezone handling
