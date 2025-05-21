@@ -26,10 +26,10 @@ def process_pmix_file(file_data: Union[io.BytesIO, str], location_filter='All', 
             if isinstance(file_data, io.BytesIO):
                 file_data.seek(0)
                 print("Reading Excel from BytesIO object.")
-                df = pd.read_excel(file_data, sheet_name="Actuals")
+                df = pd.read_excel(file_data)
             elif isinstance(file_data, str):
                 print("Reading Excel from file path.")
-                df = pd.read_excel(file_data, sheet_name="Actuals")
+                df = pd.read_excel(file_data)
           
             if df.empty:
                 raise ValueError("The sheet 'Database' is empty or missing.")
