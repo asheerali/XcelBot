@@ -55,12 +55,12 @@ def create_sales_pivot_tables(df, location_filter='All', start_date=None, end_da
     # If the dataframe is empty after filtering, return empty tables
     if filtered_df.empty:
         return {
-            'sales_table': pd.DataFrame(),
-            'percentage_change_table': pd.DataFrame(),
-            'category_percent_of_total': pd.DataFrame(),
-            'category_summary': pd.DataFrame()
-        }
-    
+    'pivot_table': pd.DataFrame(),
+    'in_house_table': pd.DataFrame(),
+    'week_over_week_table': pd.DataFrame(),
+    'category_summary_table': pd.DataFrame()
+}
+
     # Create a pivot table using Category for columns
     sales_pivot = filtered_df.pivot_table(
         index='Week',

@@ -43,7 +43,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         # print("Type of file_content:", type(file_content))
         file_content = base64.b64decode(request.fileContent)
         print("Type of file_content:", type(file_content))
-        print("response", request)
+        # print("response", request)
         
         # Create BytesIO object for pandas
         excel_data = io.BytesIO(file_content)
@@ -194,13 +194,16 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 "table8": [],
                 "table9": [],
                 "locations": [request.location] if request.location else [],
-                "fileName": request.fileName,
+                "dateRanges": [],
                 "fileLocation": request.location,
                 "dashboardName": request.dashboard,
+                "fileName": request.fileName,
                 "data": f"{request.dashboard} Dashboard is not yet implemented."
             }    
-
+            print("result (i am here1)", result )
             result_final = ExcelUploadResponse(**result)
+            
+            print("result (i am here2)", result_final )
             return result_final
             # result_final = ExcelUploadResponse(**result), {
             # "table1": [{"net_sales": [net_sales], "orders": [orders], 

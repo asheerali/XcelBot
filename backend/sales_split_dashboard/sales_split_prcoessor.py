@@ -6,7 +6,7 @@ import pandas as pd
 from sales_split_dashboard.sales_split_utils import create_sales_pivot_tables, sales_analysis_tables
 import numpy as np
 
-def process_sales_split_file(file_data: Union[io.BytesIO, str],location_filter='All', start_date=None, end_date=None):
+def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', start_date=None, end_date=None):
     """
     Process the uploaded Excel file and transform the data.
     Returns data tables for the frontend including the 1P column.
@@ -120,7 +120,7 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location_filter='
  
     # p1 = overview_tables(df, location_filter=location_filter, order_date_filter=order_date_filter, server_filter=server_filter, dining_option_filter=dining_option_filter)
     
-    pivot = create_sales_pivot_tables(df, location_filter=location_filter, start_date=start_date, end_date=end_date)
+    pivot = create_sales_pivot_tables(df, location_filter=location, start_date=start_date, end_date=end_date)
     
     pivot_table = pivot['pivot_table'] #value
     in_house_table = pivot['in_house_table'] #value
@@ -131,7 +131,7 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location_filter='
     # p2 = detailed_analysis_tables(df, location_filter=location_filter, order_date_filter=order_date_filter, dining_option_filter=dining_option_filter, menu_item_filter=menu_item_filter)
     
 
-    analysis = sales_analysis_tables(df, location_filter=location_filter, start_date=start_date, end_date=end_date)
+    analysis = sales_analysis_tables(df, location_filter=location, start_date=start_date, end_date=end_date)
     
     #    # Return all tables and metrics in a dictionary
     # return {
