@@ -148,23 +148,26 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             net_sales, orders, qty_sold, sales_by_category_df, sales_by_menu_group_df, sales_by_server_df, top_selling_items_df, sales_by_location_df, average_price_by_item_df, average_order_value, average_items_per_order, price_changes_df, top_items_df, unique_orders, total_quantity = process_pmix_file(excel_data_copy, location_filter=location_filter, 
                                                                                                                                                                                                                                                                                                              order_date_filter=order_date_filter, 
                                                                                                                                                                                                                                                                                                              server_filter=server_filter, 
-                                                                                                                                                                                                                                                                                                             dining_option_filter=dining_option_filter,  
+                                                                                                                                                                                                                                                                                                             dining_option_filter=dining_option_filter,)
 
 
-            # Set dynamic dates
-            default_end_date = (date.today()).strftime('%Y-%m-%d')
-            default_start_date = (default_end_date - relativedelta(months=2)).strftime('%Y-%m-%d')                                                                                                                                                                                                                                                                                                             menu_item_filter=menu_item_filter )
+            # # Set dynamic dates
+            # default_end_date1 = date.today()
+            # default_end_date = default_end_date1.strftime('%Y-%m-%d')
+            # default_start_date = (default_end_date1 - relativedelta(months=2)).strftime('%Y-%m-%d')                                                                                                                                                                                                                                                                                                             menu_item_filter=menu_item_filter )
+
 
             
-            start_date = request.startDate 
-            end_date = request.endDate
-                
+            start_date = start_date if start_date else default_start_date
+            end_date = end_date if end_date else default_end_date
+            default_start_date = "2025-05-01"
+            default_end_date = "2025-05-31"
 
             # Process Excel file with optional filters
             pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay = process_sales_split_file(
                 excel_data, 
-                start_date=if start_date else default_start_date,
-                end_date=if end_date else default_end_date,
+                start_date=start_date,
+                end_date=end_date,
                 location=request.location
             )
             
