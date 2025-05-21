@@ -27,6 +27,7 @@ import Financials from "./pages/Financials";
 import SalesDashboard from "./pages/SalesDashboard";
 import ProductMixDashboard from "./pages/ProductMixDashboard";
 import DateRangeSelector from "./components/DateRangeSelector";
+import SalesSplitDashboard from "./components/SalesSplitDashboard";
 const router = createBrowserRouter([
   {
     Component: App,
@@ -55,6 +56,10 @@ const router = createBrowserRouter([
            {
             path: "Productmix",
             Component: ProductMixDashboard,
+          },
+           {
+            path: "SalesSplitDashboard",
+            Component: SalesSplitDashboard,
           },
            {
             path: "daterange",

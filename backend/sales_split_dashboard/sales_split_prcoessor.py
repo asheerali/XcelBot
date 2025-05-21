@@ -4,7 +4,7 @@ from typing import Union
 import pandas as pd
 # from pmix_dashboard.pmix_utils import overview_tables, detailed_analysis_tables
 from sales_split_dashboard.sales_split_utils import create_sales_pivot_tables, sales_analysis_tables
-
+import numpy as np
 
 def process_sales_split_file(file_data: Union[io.BytesIO, str],location_filter='All', start_date=None, end_date=None):
     """
@@ -27,12 +27,12 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location_filter='
                 file_data.seek(0)
                 print("Reading Excel from BytesIO object.")
                 needed_columns = ["Location", "Sent Date", "Dining Option", "Net Price", "Qty"]
-                df = pd.read_excel(file_bytes, usecols=needed_columns)
+                df = pd.read_excel(file_data, usecols=needed_columns)
                 # df = pd.read_excel(file_data)
             elif isinstance(file_data, str):
                 print("Reading Excel from file path.")
                 needed_columns = ["Location", "Sent Date", "Dining Option", "Net Price", "Qty"]
-                df = pd.read_excel(file_bytes, usecols=needed_columns)
+                df = pd.read_excel(file_data, usecols=needed_columns)
                 # df = pd.read_excel(file_data)
           
             if df.empty:
