@@ -1,11 +1,6 @@
-<<<<<<< HEAD
-// src/pages/ExcelUploadPage.tsx
-import React, { useState, useCallback, useRef, useEffect } from "react";
-=======
 // src/pages/ExcelUploadPage.tsx - Updated version with Sales Wide dashboard support
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
->>>>>>> deploy
 import {
   Box,
   Typography,
@@ -62,14 +57,10 @@ import {
   addFileData,
   setLocations,
   selectLocation,
-<<<<<<< HEAD
-} from "../store/excelSlice";
-=======
   addFinancialData,
   addSalesData,
   addSalesWideData  // Added for Sales Wide dashboard
 } from '../store/excelSlice';
->>>>>>> deploy
 
 // API URL for Excel upload
 const API_URL = "http://localhost:8000/api/excel/upload";
@@ -110,59 +101,6 @@ const DASHBOARD_OPTIONS = [
 
 // List of popular US cities
 const US_CITIES = [
-<<<<<<< HEAD
-  "New York, NY",
-  "Midtown East",
-  "Los Angeles, CA",
-  "Chicago, IL",
-  "Houston, TX",
-  "Phoenix, AZ",
-  "Philadelphia, PA",
-  "San Antonio, TX",
-  "San Diego, CA",
-  "Dallas, TX",
-  "San Jose, CA",
-  "Austin, TX",
-  "Jacksonville, FL",
-  "Fort Worth, TX",
-  "Columbus, OH",
-  "Charlotte, NC",
-  "San Francisco, CA",
-  "Indianapolis, IN",
-  "Seattle, WA",
-  "Denver, CO",
-  "Washington, DC",
-  "Boston, MA",
-  "El Paso, TX",
-  "Nashville, TN",
-  "Detroit, MI",
-  "Portland, OR",
-  "Las Vegas, NV",
-  "Oklahoma City, OK",
-  "Memphis, TN",
-  "Louisville, KY",
-  "Baltimore, MD",
-  "Milwaukee, WI",
-  "Albuquerque, NM",
-  "Tucson, AZ",
-  "Fresno, CA",
-  "Sacramento, CA",
-  "Kansas City, MO",
-  "Mesa, AZ",
-  "Atlanta, GA",
-  "Omaha, NE",
-  "Colorado Springs, CO",
-  "Raleigh, NC",
-  "Miami, FL",
-  "Long Beach, CA",
-  "Virginia Beach, VA",
-  "Oakland, CA",
-  "Minneapolis, MN",
-  "Tampa, FL",
-  "Tulsa, OK",
-  "Arlington, TX",
-  "New Orleans, LA",
-=======
   'New York',
   'Midtown East',
   'Los Angeles, CA',
@@ -214,7 +152,6 @@ const US_CITIES = [
   'Tulsa, OK',
   'Arlington, TX',
   'New Orleans, LA'
->>>>>>> deploy
 ];
 
 // File status type
@@ -341,15 +278,6 @@ const ExcelUploadPage: React.FC = () => {
           fileInputRef.current.value = "";
         }
       }
-<<<<<<< HEAD
-    },
-    [files.length, selectedCity, selectedDashboard]
-  );
-
-  // Remove the effect that updates existing files when city changes
-  // We only want the city to apply to NEW files
-
-=======
       
       // Add the Excel files to our state with current selected dashboard
       const newFiles = excelFiles.map(file => ({
@@ -378,7 +306,6 @@ const ExcelUploadPage: React.FC = () => {
     }
   }, [files.length, selectedCity, selectedDashboard]);
   
->>>>>>> deploy
   // Handle global dashboard change - ONLY affects NEW files
   const handleDashboardChange = (value: string) => {
     setSelectedDashboard(value);
@@ -465,20 +392,6 @@ const ExcelUploadPage: React.FC = () => {
 
       // Clear the progress interval
       clearInterval(progressInterval);
-<<<<<<< HEAD
-
-      // Update Redux with the response data
-      if (response.data) {
-        dispatch(
-          addFileData({
-            fileName: fileInfo.file.name,
-            location: fileInfo.location,
-            data: response.data,
-          })
-        );
-        console.log("File data added to Redux store:", response.data);
-
-=======
       
       // Route data based on dashboard type from response
       if (response.data) {
@@ -522,7 +435,6 @@ const ExcelUploadPage: React.FC = () => {
           }));
         }
         
->>>>>>> deploy
         // Update file status to success and store data
         setFiles((prevFiles) => {
           const updatedFiles = [...prevFiles];
@@ -626,51 +538,6 @@ const ExcelUploadPage: React.FC = () => {
   };
 
   // View file analysis (navigate to analysis page)
-<<<<<<< HEAD
-
-  const viewAnalysis = () => {
-    // Store all locations from successful files in Redux before navigating
-    const successfulFiles = files.filter((f) => f.status === "success");
-    const locations = [...new Set(successfulFiles.map((f) => f.location))];
-
-    if (locations.length > 0) {
-      dispatch(setLocations(locations));
-
-      // If we have successful files, select the first location
-      if (successfulFiles.length > 0) {
-        dispatch(selectLocation(successfulFiles[0].location));
-      }
-    }
-
-    navigate("/manage-reports");
-  };
-
-  //   const viewAnalysis = () => {
-  //   const successfulFiles = files.filter(f => f.status === 'success');
-  //   const locations = [...new Set(successfulFiles.map(f => f.location))];
-
-  //   if (locations.length > 0) {
-  //     dispatch(setLocations(locations));
-
-  //     if (successfulFiles.length > 0) {
-  //       dispatch(selectLocation(successfulFiles[0].location));
-  //     }
-  //   }
-
-  //   const isFinancial = successfulFiles.some(f => f.dashboard === 'Financials');
-
-  //   if (isFinancial) {
-  //     navigate('/Financials', {
-  //       state: {
-  //         message: 'Financial Dashboard is not yet implemented.',
-  //       },
-  //     });
-  //   } else {
-  //     navigate('/manage-reports');
-  //   }
-  // };
-
-=======
   const viewAnalysis = () => {
     // Check which dashboards have successful files
     const successfulFiles = files.filter(f => f.status === 'success');
@@ -707,7 +574,6 @@ const ExcelUploadPage: React.FC = () => {
     }
   };
   
->>>>>>> deploy
   // Open dialog to edit location
   const editLocation = (index: number) => {
     setCurrentEditingIndex(index);
@@ -722,24 +588,7 @@ const ExcelUploadPage: React.FC = () => {
       setLocationError("Location name is required");
       return;
     }
-<<<<<<< HEAD
-
-    // Check for duplicate locations (optional - you can allow duplicates)
-    const isDuplicate = files.some(
-      (file, index) =>
-        index !== currentEditingIndex &&
-        file.location.toLowerCase() === locationInput.trim().toLowerCase()
-    );
-
-    if (isDuplicate) {
-      // You can choose to allow duplicates by commenting out the return
-      // setLocationError('Location name must be unique');
-      // return;
-    }
-
-=======
     
->>>>>>> deploy
     if (currentEditingIndex !== null) {
       setFiles((prevFiles) => {
         const updatedFiles = [...prevFiles];
@@ -802,13 +651,8 @@ const ExcelUploadPage: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-<<<<<<< HEAD
-                <LocationCityIcon sx={{ mr: 1, verticalAlign: "middle" }} />
-                Select a City for New Files (Optional)
-=======
                 <LocationCityIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
                 Select a Location/Store for New Files (Optional)
->>>>>>> deploy
               </Typography>
 
               <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>

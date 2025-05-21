@@ -25,10 +25,6 @@ interface TableData {
   table5: any[];
   locations: string[];
   dateRanges: string[];
-<<<<<<< HEAD
-  fileLocation?: string[] | string; // Support both string and array
-  data?: string | null;
-=======
   fileLocation?: string;
   dashboardName?: string;
   data?: any;
@@ -55,7 +51,6 @@ interface AnalyticsData {
   salesByTimeOfDay: any[];
   salesByCategory: any[];
   fileLocation?: string;
->>>>>>> deploy
 }
 
 interface FileData {
@@ -271,18 +266,6 @@ export const excelSlice = createSlice({
         state.files[state.activeFileIndex].data = action.payload;
       }
     },
-<<<<<<< HEAD
-    addFileData: (
-      state,
-      action: PayloadAction<{
-        fileName: string;
-        location: string;
-        data: TableData;
-      }>
-    ) => {
-      console.log("Adding file data to Redux:", action.payload);
-
-=======
     // New action to set analytics data
     setAnalyticsData: (state, action: PayloadAction<{fileName: string; location: string; data: AnalyticsData}>) => {
       state.analyticsData = action.payload.data;
@@ -307,14 +290,10 @@ export const excelSlice = createSlice({
     },
     // Modified to properly categorize locations by dashboard type
     addFileData: (state, action: PayloadAction<{fileName: string; fileContent: string; location: string; data: TableData}>) => {
->>>>>>> deploy
       // Check if file already exists for this location
       const existingFileIndex = state.files.findIndex(
         (f) => f.location === action.payload.location
       );
-<<<<<<< HEAD
-
-=======
       
       // Get the dashboard type from the data
       const dashboardName = action.payload.data.dashboardName;
@@ -329,7 +308,6 @@ export const excelSlice = createSlice({
         dashboard: dashboardName
       };
       
->>>>>>> deploy
       if (existingFileIndex >= 0) {
         // Update existing file
         state.files[existingFileIndex] = fileData;
@@ -339,19 +317,10 @@ export const excelSlice = createSlice({
         state.files.push(fileData);
         state.activeFileIndex = state.files.length - 1;
       }
-<<<<<<< HEAD
-
-      // Add location to allLocations if it doesn't exist
-      if (!state.allLocations.includes(action.payload.location)) {
-        state.allLocations.push(action.payload.location);
-      }
-
-=======
       
       // Add location to appropriate dashboard lists
       addLocationToDashboardList(state, action.payload.location, dashboardName);
       
->>>>>>> deploy
       // Update the current display data if it matches the location or if this is the first file
       if (
         state.location === action.payload.location ||
@@ -507,15 +476,6 @@ export const excelSlice = createSlice({
     selectLocation: (state, action: PayloadAction<string>) => {
       const location = action.payload;
       state.location = location;
-<<<<<<< HEAD
-
-      // Find file data for this location
-      const fileData = state.files.find((f) => f.location === location);
-
-      if (fileData) {
-        state.tableData = fileData.data;
-        state.fileName = fileData.fileName;
-=======
       
       // Find file data for this location
       const fileIndex = state.files.findIndex(f => f.location === location);
@@ -531,7 +491,6 @@ export const excelSlice = createSlice({
         state.tableData = file.data;
         state.fileName = file.fileName;
         state.fileContent = file.fileContent; // Update file content
->>>>>>> deploy
         state.fileProcessed = true;
         
         // Update analytics data if available
@@ -674,19 +633,11 @@ export const excelSlice = createSlice({
   },
 });
 
-<<<<<<< HEAD
-// Export actions and reducer
-export const {
-  setExcelFile,
-  setLoading,
-  setError,
-=======
 // Export actions
 export const { 
   setExcelFile, 
   setLoading, 
   setError, 
->>>>>>> deploy
   setTableData,
   setAnalyticsData,
   addFileData,
@@ -698,12 +649,6 @@ export const {
   setFinancialLocations,
   setSalesWideLocations,
   selectLocation,
-<<<<<<< HEAD
-  resetExcelData,
-} = excelSlice.actions;
-
-export default excelSlice.reducer;
-=======
   selectSalesLocation,
   selectFinancialLocation,
   selectSalesWideLocation,
@@ -903,4 +848,3 @@ export const applyFilters = (dashboardType: string = 'Sales Split'): AppThunk =>
 };
 
 export default excelSlice.reducer;
->>>>>>> deploy
