@@ -5,18 +5,6 @@ import axios from 'axios';
 import { AppThunk } from '../index';
 
 // Define the interfaces for our state
-// interface TableData {
-//   table1: any[];
-//   table2: any[];
-//   table3: any[];
-//   table4: any[];
-//   table5: any[];
-//   locations: string[];
-//   dateRanges: string[];
-//   fileLocation?: string;
-//   data?: string | null;
-// }
-
 interface TableData {
   table1: any[];
   table2: any[];
@@ -146,9 +134,9 @@ interface ExcelState {
 
 // Define initial state
 const initialState: ExcelState = {
-  fileName: "",
+  fileName: '',
   fileContent: null,
-  location: "",
+  location: '',
   fileProcessed: false,
   tableData: {
     table1: [],
@@ -157,9 +145,7 @@ const initialState: ExcelState = {
     table4: [],
     table5: [],
     locations: [],
-    dateRanges: [],
-    fileLocation: undefined,
-    data: null,
+    dateRanges: []
   },
   analyticsData: null, // Initialize analytics data as null
   loading: false,
@@ -220,17 +206,10 @@ const addLocationToDashboardList = (
 };
 
 export const excelSlice = createSlice({
-  name: "excel",
+  name: 'excel',
   initialState,
   reducers: {
-    setExcelFile: (
-      state,
-      action: PayloadAction<{
-        fileName: string;
-        fileContent: string;
-        location?: string;
-      }>
-    ) => {
+    setExcelFile: (state, action: PayloadAction<{fileName: string; fileContent: string; location?: string}>) => {
       state.fileName = action.payload.fileName;
       state.fileContent = action.payload.fileContent;
       state.fileProcessed = false;
@@ -247,18 +226,10 @@ export const excelSlice = createSlice({
     setTableData: (state, action: PayloadAction<TableData>) => {
       state.tableData = action.payload;
       state.fileProcessed = true;
-
+      
       // Update location from fileLocation if present
-      if (
-        action.payload.fileLocation &&
-        ((Array.isArray(action.payload.fileLocation) &&
-          action.payload.fileLocation.length > 0) ||
-          (typeof action.payload.fileLocation === "string" &&
-            action.payload.fileLocation.trim() !== ""))
-      ) {
-        state.location = Array.isArray(action.payload.fileLocation)
-          ? action.payload.fileLocation[0]
-          : action.payload.fileLocation;
+      if (action.payload.fileLocation) {
+        state.location = action.payload.fileLocation;
       }
       
       // Update the active file with this data if there is an active file
@@ -292,7 +263,7 @@ export const excelSlice = createSlice({
     addFileData: (state, action: PayloadAction<{fileName: string; fileContent: string; location: string; data: TableData}>) => {
       // Check if file already exists for this location
       const existingFileIndex = state.files.findIndex(
-        (f) => f.location === action.payload.location
+        f => f.location === action.payload.location
       );
       
       // Get the dashboard type from the data
@@ -322,12 +293,7 @@ export const excelSlice = createSlice({
       addLocationToDashboardList(state, action.payload.location, dashboardName);
       
       // Update the current display data if it matches the location or if this is the first file
-      if (
-        state.location === action.payload.location ||
-        state.files.length === 1
-      ) {
-        console.log("Data being set to tableData:", action.payload.data);
-
+      if (state.location === action.payload.location || state.files.length === 1) {
         state.tableData = action.payload.data;
         state.fileName = action.payload.fileName;
         state.fileContent = action.payload.fileContent; // Update file content in main state
@@ -455,12 +421,8 @@ export const excelSlice = createSlice({
     // Now just maintains the allLocations list
     setLocations: (state, action: PayloadAction<string[]>) => {
       // Set all locations (without duplicates)
-      const newLocations = action.payload.filter(
-        (loc) => loc && loc.trim() !== ""
-      );
-      state.allLocations = [
-        ...new Set([...state.allLocations, ...newLocations]),
-      ];
+      const newLocations = action.payload.filter(loc => loc && loc.trim() !== '');
+      state.allLocations = [...new Set([...state.allLocations, ...newLocations])];
     },
     // Below methods now just set their specific location lists
     setSalesLocations: (state, action: PayloadAction<string[]>) => {
@@ -629,8 +591,8 @@ export const excelSlice = createSlice({
     },
     resetExcelData: (state) => {
       return initialState;
-    },
-  },
+    }
+  }
 });
 
 // Export actions
