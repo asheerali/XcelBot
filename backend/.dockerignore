@@ -1,3 +1,19 @@
+# Additional environment files
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Jupyter Notebook
+.ipynb_checkpoints
+test
+
+# Additional Python environments
+.venv
+env/
+ENV/
+xcelbot/
+
 .env
 data/
 xcelbot/

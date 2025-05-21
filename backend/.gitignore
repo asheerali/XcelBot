@@ -6,6 +6,7 @@
 test/
 # Jupyter Notebook
 .ipynb_checkpoints
+test
 
 # Additional Python environments
 .venv

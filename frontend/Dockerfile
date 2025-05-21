@@ -39,4 +39,4 @@ export default defineConfig({\n\
 EXPOSE 5173
 
 # Command to run the development server in --force mode to bypass errors
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--force"]
+CMD ["npm", "run", "dev"]

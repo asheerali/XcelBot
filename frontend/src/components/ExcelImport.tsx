@@ -73,6 +73,8 @@ export function ExcelImport() {
     tableData: reduxTableData,
     fileProcessed,
     allLocations,
+    salesLocations,
+    
     files,
     location: currentLocation,
   } = useAppSelector((state) => state.excel);
@@ -602,7 +604,16 @@ export function ExcelImport() {
   return (
     <>
       <Box mb={4}>
-        <Typography variant="h4" gutterBottom>
+         <Typography 
+          variant="h4" 
+          component="h1" 
+          sx={{ 
+            fontWeight: 600,
+            color: '#1a237e',
+            fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }
+          }}
+        >
+           {/* <Typography variant="h4" gutterBottom> */}
           Sales Analysis Dashboard
         </Typography>
         <Typography variant="subtitle1" color="text.secondary">
@@ -671,7 +682,7 @@ export function ExcelImport() {
                   endDate={endDate}
                   onStartDateChange={handleStartDateChange}
                   onEndDateChange={handleEndDateChange}
-                  locations={allLocations || []}
+                  locations={salesLocations || []} 
                   selectedLocation={selectedLocation}
                   onLocationChange={handleLocationChange}
                   onApplyFilters={() => handleApplyFilters()}

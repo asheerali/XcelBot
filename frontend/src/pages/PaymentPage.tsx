@@ -703,7 +703,17 @@ export default function PaymentPage() {
   return (
     <Box maxWidth="lg" mx="auto" px={2}>
       <Box mb={6} textAlign="center">
-        <Typography variant="h3" fontWeight="bold" mb={1}>Complete Your Purchase</Typography>
+        {/* <Typography variant="h3" fontWeight="bold" mb={1}> */}
+                   <Typography 
+                            variant="h4" 
+                            component="h1" 
+                            sx={{ 
+                              fontWeight: 600,
+                              color: '#1a237e',
+                              fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }
+                            }}
+                          >
+          Complete Your Purchase</Typography>
         <Typography color="text.secondary">
           You're just a few steps away from accessing our analytics platform
         </Typography>

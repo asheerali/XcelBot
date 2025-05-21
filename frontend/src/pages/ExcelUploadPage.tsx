@@ -1,5 +1,11 @@
+<<<<<<< HEAD
 // src/pages/ExcelUploadPage.tsx
 import React, { useState, useCallback, useRef, useEffect } from "react";
+=======
+// src/pages/ExcelUploadPage.tsx - Updated version with Sales Wide dashboard support
+
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+>>>>>>> deploy
 import {
   Box,
   Typography,
@@ -56,7 +62,14 @@ import {
   addFileData,
   setLocations,
   selectLocation,
+<<<<<<< HEAD
 } from "../store/excelSlice";
+=======
+  addFinancialData,
+  addSalesData,
+  addSalesWideData  // Added for Sales Wide dashboard
+} from '../store/excelSlice';
+>>>>>>> deploy
 
 // API URL for Excel upload
 const API_URL = "http://localhost:8000/api/excel/upload";
@@ -97,6 +110,7 @@ const DASHBOARD_OPTIONS = [
 
 // List of popular US cities
 const US_CITIES = [
+<<<<<<< HEAD
   "New York, NY",
   "Midtown East",
   "Los Angeles, CA",
@@ -148,6 +162,59 @@ const US_CITIES = [
   "Tulsa, OK",
   "Arlington, TX",
   "New Orleans, LA",
+=======
+  'New York',
+  'Midtown East',
+  'Los Angeles, CA',
+  'Chicago, IL',
+  'Houston, TX',
+  'Phoenix, AZ',
+  'Philadelphia, PA',
+  'San Antonio, TX',
+  'San Diego, CA',
+  'Dallas, TX',
+  'San Jose, CA',
+  'Austin, TX',
+  'Jacksonville, FL',
+  'Fort Worth, TX',
+  'Columbus, OH',
+  'Charlotte, NC',
+  'San Francisco, CA',
+  'Indianapolis, IN',
+  'Seattle, WA',
+  'Denver, CO',
+  'Washington, DC',
+  'Boston, MA',
+  'El Paso, TX',
+  'Nashville, TN',
+  'Detroit, MI',
+  'Portland, OR',
+  'Las Vegas, NV',
+  'Oklahoma City, OK',
+  'Memphis, TN',
+  'Louisville, KY',
+  'Baltimore, MD',
+  'Milwaukee, WI',
+  'Albuquerque, NM',
+  'Tucson, AZ',
+  'Fresno, CA',
+  'Sacramento, CA',
+  'Kansas City, MO',
+  'Mesa, AZ',
+  'Atlanta, GA',
+  'Omaha, NE',
+  'Colorado Springs, CO',
+  'Raleigh, NC',
+  'Miami, FL',
+  'Long Beach, CA',
+  'Virginia Beach, VA',
+  'Oakland, CA',
+  'Minneapolis, MN',
+  'Tampa, FL',
+  'Tulsa, OK',
+  'Arlington, TX',
+  'New Orleans, LA'
+>>>>>>> deploy
 ];
 
 // File status type
@@ -274,6 +341,7 @@ const ExcelUploadPage: React.FC = () => {
           fileInputRef.current.value = "";
         }
       }
+<<<<<<< HEAD
     },
     [files.length, selectedCity, selectedDashboard]
   );
@@ -281,6 +349,36 @@ const ExcelUploadPage: React.FC = () => {
   // Remove the effect that updates existing files when city changes
   // We only want the city to apply to NEW files
 
+=======
+      
+      // Add the Excel files to our state with current selected dashboard
+      const newFiles = excelFiles.map(file => ({
+        file,
+        status: 'pending' as FileStatus,
+        progress: 0,
+        location: selectedCity || '', // Use selected city if available
+        dashboard: selectedDashboard, // Use the global dashboard selection
+      }));
+      
+      setFiles(prevFiles => [...prevFiles, ...newFiles]);
+      setGeneralError(null);
+      
+      // Only open location dialog if no city is selected
+      if (!selectedCity && newFiles.length > 0) {
+        setCurrentEditingIndex(files.length);
+        setLocationInput('');
+        setLocationError('');
+        setIsLocationDialogOpen(true);
+      }
+      
+      // Clear the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, [files.length, selectedCity, selectedDashboard]);
+  
+>>>>>>> deploy
   // Handle global dashboard change - ONLY affects NEW files
   const handleDashboardChange = (value: string) => {
     setSelectedDashboard(value);
@@ -367,6 +465,7 @@ const ExcelUploadPage: React.FC = () => {
 
       // Clear the progress interval
       clearInterval(progressInterval);
+<<<<<<< HEAD
 
       // Update Redux with the response data
       if (response.data) {
@@ -379,6 +478,51 @@ const ExcelUploadPage: React.FC = () => {
         );
         console.log("File data added to Redux store:", response.data);
 
+=======
+      
+      // Route data based on dashboard type from response
+      if (response.data) {
+        const dashboardName = response.data.dashboardName || fileInfo.dashboard;
+        
+        // Dispatch based on dashboard type
+        if (dashboardName === 'Financials') {
+          // Add to financial data in Redux
+          dispatch(addFinancialData({
+            fileName: fileInfo.file.name,
+            location: fileInfo.location,
+            data: response.data
+          }));
+        } else if (dashboardName === 'Sales Split') {
+          // Add to sales data in Redux
+          dispatch(addSalesData({
+            fileName: fileInfo.file.name,
+            location: fileInfo.location,
+            data: response.data
+          }));
+          
+          // Also add to regular file data for backward compatibility
+          dispatch(addFileData({
+            fileName: fileInfo.file.name,
+            location: fileInfo.location,
+            data: response.data
+          }));
+        } else if (dashboardName === 'Sales Wide') {
+          // Add to sales wide data in Redux
+          dispatch(addSalesWideData({
+            fileName: fileInfo.file.name,
+            location: fileInfo.location,
+            data: response.data
+          }));
+        } else {
+          // For all other types, just use generic file data
+          dispatch(addFileData({
+            fileName: fileInfo.file.name,
+            location: fileInfo.location,
+            data: response.data
+          }));
+        }
+        
+>>>>>>> deploy
         // Update file status to success and store data
         setFiles((prevFiles) => {
           const updatedFiles = [...prevFiles];
@@ -482,6 +626,7 @@ const ExcelUploadPage: React.FC = () => {
   };
 
   // View file analysis (navigate to analysis page)
+<<<<<<< HEAD
 
   const viewAnalysis = () => {
     // Store all locations from successful files in Redux before navigating
@@ -525,6 +670,44 @@ const ExcelUploadPage: React.FC = () => {
   //   }
   // };
 
+=======
+  const viewAnalysis = () => {
+    // Check which dashboards have successful files
+    const successfulFiles = files.filter(f => f.status === 'success');
+    
+    // Separate files by dashboard type
+    const salesFiles = successfulFiles.filter(f => f.dashboard === 'Sales Split');
+    const financialFiles = successfulFiles.filter(f => f.dashboard === 'Financials');
+    const salesWideFiles = successfulFiles.filter(f => f.dashboard === 'Sales Wide' || f.dashboard === 'Companywide Sales');
+    const productMixFiles = successfulFiles.filter(f => f.dashboard === 'Product Mix');
+    
+    // Navigate based on dashboard types
+    if (financialFiles.length > 0 && salesFiles.length === 0 && salesWideFiles.length === 0) {
+      // Only financial files - navigate to Financials
+      navigate('/Financials');
+    } else if (salesFiles.length > 0 && financialFiles.length === 0 && salesWideFiles.length === 0) {
+      // Only sales files - navigate to manage-reports
+      navigate('/manage-reports');
+    } else if (salesWideFiles.length > 0 && salesFiles.length === 0 && financialFiles.length === 0) {
+      // Only sales wide files - navigate to sales wide dashboard
+      navigate('/Saleswide');
+    } else if (productMixFiles.length > 0) {
+      // Has product mix files - navigate to product mix
+      navigate('/Productmix');
+    } else {
+      // Multiple dashboard types - navigate to the most recent one
+      // For now, prioritize Sales Split -> Sales Wide -> Financials
+      if (salesFiles.length > 0) {
+        navigate('/manage-reports');
+      } else if (salesWideFiles.length > 0) {
+        navigate('/Saleswide');
+      } else {
+        navigate('/Financials');
+      }
+    }
+  };
+  
+>>>>>>> deploy
   // Open dialog to edit location
   const editLocation = (index: number) => {
     setCurrentEditingIndex(index);
@@ -539,6 +722,7 @@ const ExcelUploadPage: React.FC = () => {
       setLocationError("Location name is required");
       return;
     }
+<<<<<<< HEAD
 
     // Check for duplicate locations (optional - you can allow duplicates)
     const isDuplicate = files.some(
@@ -553,6 +737,9 @@ const ExcelUploadPage: React.FC = () => {
       // return;
     }
 
+=======
+    
+>>>>>>> deploy
     if (currentEditingIndex !== null) {
       setFiles((prevFiles) => {
         const updatedFiles = [...prevFiles];
@@ -592,7 +779,16 @@ const ExcelUploadPage: React.FC = () => {
 
   return (
     <Box sx={{ py: 4 }}>
-      <Typography variant="h4" gutterBottom>
+      {/* <Typography variant="h4" gutterBottom> */}
+       <Typography 
+                variant="h4" 
+                component="h1" 
+                sx={{ 
+                  fontWeight: 600,
+                  color: '#1a237e',
+                  fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }
+                }}
+              >
         Excel File Upload
       </Typography>
       <Typography variant="subtitle1" color="text.secondary" paragraph>
@@ -606,8 +802,13 @@ const ExcelUploadPage: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
+<<<<<<< HEAD
                 <LocationCityIcon sx={{ mr: 1, verticalAlign: "middle" }} />
                 Select a City for New Files (Optional)
+=======
+                <LocationCityIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+                Select a Location/Store for New Files (Optional)
+>>>>>>> deploy
               </Typography>
 
               <Box sx={{ display: "flex", alignItems: "flex-start", gap: 2 }}>
@@ -625,7 +826,7 @@ const ExcelUploadPage: React.FC = () => {
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="City"
+                      label="Store/Location"
                       placeholder="Select a US city"
                       variant="outlined"
                       fullWidth
@@ -959,6 +1160,7 @@ const ExcelUploadPage: React.FC = () => {
             variant="outlined"
             placeholder="e.g., New York, Chicago, Los Angeles"
           />
+          
           {locationError && (
             <FormHelperText error>{locationError}</FormHelperText>
           )}

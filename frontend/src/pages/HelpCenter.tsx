@@ -21,10 +21,20 @@ export function HelpCenter() {
   return (
     <>
       <Box sx={{ mb: 5, textAlign: 'center' }}>
-        <Typography variant="h4" gutterBottom>
+        {/* <Typography variant="h4" gutterBottom> */}
+         <Typography 
+                            variant="h4" 
+                            component="h1" 
+                            sx={{ 
+                              fontWeight: 600,
+                              color: '#1a237e',
+                              fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }
+                            }}
+                          >
           Help Center
         </Typography>
         <Typography variant="body1" color="text.secondary">
+          
           Welcome to our Help Center. How can we assist you today?
         </Typography>
       </Box>
