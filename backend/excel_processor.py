@@ -99,7 +99,10 @@ def process_excel_file(file_data: io.BytesIO, start_date=None, end_date=None, lo
     try:
         # Read the Excel file
         df = pd.read_excel(file_data)
-        
+        # after reading df
+        cols = ['Location', 'Sent Date', 'Dining Option', 'Net Price', 'Qty']
+        df = df[cols]
+        print("df head for the checking" , df.head())
         # Reset the file pointer for further operations
         file_data.seek(0)
         
