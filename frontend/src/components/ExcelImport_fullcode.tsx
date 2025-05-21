@@ -28,8 +28,8 @@ import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 
 // API base URLs - update to match your backend URL
-const API_URL = 'http://localhost:8000/api/excel/upload';
-const FILTER_API_URL = 'http://localhost:8000/api/excel/filter';
+const API_URL = 'http://13.60.27.209:8000/api/excel/upload';
+const FILTER_API_URL = 'http://13.60.27.209::8000/api/excel/filter';
 
 // Main Component
 export function ExcelImport() {

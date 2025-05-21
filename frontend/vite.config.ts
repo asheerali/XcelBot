@@ -11,7 +11,9 @@ export default defineConfig({
     host: true, // ensures Vite listens on all interfaces
     allowedHosts: [
       'xcelbot-latest-r3m7.onrender.com', // Render's domain
-      'localhost'
+      'localhost',
+      "13.60.27.209",
+      "http://13.60.27.209"
     ]
   }
 });
