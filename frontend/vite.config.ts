@@ -6,5 +6,12 @@ export default defineConfig({
   plugins: [react()],
   esbuild: {
     jsx: 'automatic'
+  },
+  server: {
+    host: true, // ensures Vite listens on all interfaces
+    allowedHosts: [
+      'xcelbot-latest-r3m7.onrender.com', // Render's domain
+      'localhost'
+    ]
   }
 });
