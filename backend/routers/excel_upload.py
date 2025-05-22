@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import traceback
 from datetime import date
 from dateutil.relativedelta import relativedelta
-
+from fastapi import Request
 
 # Import from local modules
 from models import ExcelUploadRequest, ExcelFilterRequest, ExcelUploadResponse, SalesAnalyticsResponse
@@ -32,11 +32,17 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # Upload endpoint
 @router.post("/excel/upload", response_model=ExcelUploadResponse)
+# @router.post("/excel/upload")
 async def upload_excel(request: ExcelUploadRequest = Body(...)):
+# async def upload_excel(request: Request):
     """
     Endpoint to upload and process an Excel file.
     Supports optional date range and location filtering.
     """
+        
+    # request = await request.json()
+
+    print("i am here in excel upload printhign the request", request)	
     try:
         print(f"Received file upload: {request.fileName}")
         # Decode base64 file content
@@ -183,6 +189,8 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 location="All"
             )
             
+            
+            # response accepted from the FE
                # For now, return empty data for unsupported dashboards
             result = {
                 "table1": pivot_table.to_dict(orient='records'),
@@ -202,10 +210,11 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 "data": f"{request.dashboard} Dashboard is not yet implemented."
             }    
             # print("result (i am here1)", result )
-            result_final = ExcelUploadResponse(**result)
-            
+            # result_final = ExcelUploadResponse(**result)
+            result_final = result
             print("result (i am here2)", result_final )
             return result_final
+        
             # result_final = ExcelUploadResponse(**result), {
             # "table1": [{"net_sales": [net_sales], "orders": [orders], 
             #             "qty_sold": [qty_sold],"average_order_value": [average_order_value], 
