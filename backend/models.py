@@ -35,15 +35,15 @@ class ExcelFilterRequest(BaseModel):
 
 
 class DashboardResponse(BaseModel):
-    table1: List[Dict[str, Any]]
-    table2: List[Dict[str, Any]]
-    table3: List[Dict[str, Any]]
-    table4: List[Dict[str, Any]]
-    table5: List[Dict[str, Any]]
-    table6: List[Dict[str, Any]]
-    table7: List[Dict[str, Any]]
-    table8: List[Dict[str, Any]]
-    table9: List[Dict[str, Any]]
+    table1: Optional[List[Dict[str, Any]]] = None
+    table2: Optional[List[Dict[str, Any]]] = None
+    table3: Optional[List[Dict[str, Any]]] = None
+    table4: Optional[List[Dict[str, Any]]] = None
+    table5: Optional[List[Dict[str, Any]]] = None
+    table6: Optional[List[Dict[str, Any]]] = None
+    table7: Optional[List[Dict[str, Any]]] = None
+    table8: Optional[List[Dict[str, Any]]] = None
+    table9: Optional[List[Dict[str, Any]]] = None
     locations: List[Any] = []
     servers: List[Any] = []
     categories: List[Any] = []
@@ -52,6 +52,26 @@ class DashboardResponse(BaseModel):
     dashboardName: str
     fileName: str
     data: str
+
+    # Financials specific fields
+    default_location: Optional[str] = None
+    locations_range: Optional[List[str]] = None
+
+    # Sales Wide specific fields
+    salesData: Optional[List[Dict[str, Any]]] = None
+    ordersData: Optional[List[Dict[str, Any]]] = None
+    avgTicketData: Optional[List[Dict[str, Any]]] = None
+    laborHrsData: Optional[List[Dict[str, Any]]] = None
+    spmhData: Optional[List[Dict[str, Any]]] = None
+    laborCostData: Optional[List[Dict[str, Any]]] = None
+    laborPercentageData: Optional[List[Dict[str, Any]]] = None
+    cogsData: Optional[List[Dict[str, Any]]] = None
+    cogsPercentageData: Optional[List[Dict[str, Any]]] = None
+    financialTables: Optional[List[Dict[str, Any]]] = None
+    dates: Optional[List[str]] = None
+    years: Optional[List[str]] = None
+    stores: Optional[List[str]] = None
+    quarters: Optional[List[str]] = None
 
 
 

@@ -90,7 +90,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             #     location=request.location
             # )
             
-            sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df = process_companywide_file(
+            sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df, years, dates, stores = process_companywide_file(
                 excel_data_copy, 
                 store_filter='All', 
                 year_filter=None, 
@@ -130,26 +130,27 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             #     "data":  "Companywide Dashboard is not yet implemented."
             # }
             
-            result ={
-                "table1":sales_df.to_dict(orient='records'),
-                "table2":order_df.to_dict(orient='records'),
-                "table3":avg_ticket_df.to_dict(orient='records'),
-                "table4":cogs_df.to_dict(orient='records'),
-                "table5":reg_pay_df.to_dict(orient='records'),
-                "table6":lb_hrs_df.to_dict(orient='records'),
-                "table7":spmh_df.to_dict(orient='records'),
-                "table8": [],
-                "table9": [],
-                "locations": ["test"],
+            sales_wide_result ={
+                "salesData":sales_df.to_dict(orient='records'),
+                "ordersData":order_df.to_dict(orient='records'),
+                "avgTicketData":avg_ticket_df.to_dict(orient='records'),
+                "cogsData":cogs_df.to_dict(orient='records'),
+                "laborCostData":reg_pay_df.to_dict(orient='records'),
+                "laborHrsData":lb_hrs_df.to_dict(orient='records'),
+                "spmhData":spmh_df.to_dict(orient='records'),
+                "locations": stores,
+                "years": years,
+                "dates": dates,
                 "dateRanges": ["test"],
                 "fileLocation":["test"],
-                "dashboardName": "Companywide",
-                "fileName": "123", #the full names of the file saved in the uploads folder
-                "data":  "Companywide Dashboard is not yet implemented."
+                "dashboardName": "Sales Wide",
+                "fileName": request.fileName, #the full names of the file saved in the uploads folder
+                "data": "Sales Wide Dashboard data."
             }
-            print("result", result )
             
-            return result
+            print("result", sales_wide_result )
+            
+            return sales_wide_result
             # return {"message": "Financial Dashboard is not yet implemented."}
                 # return {
             #     "table1": [],

@@ -56,8 +56,14 @@ def process_companywide_file(file_data: Union[io.BytesIO, str], store_filter='Al
 
     # Fill excluded (metadata/helper) columns with empty string
     df[exclude_cols] = df[exclude_cols].fillna('')
+    df["Store"] = df["Store"].str.replace(r'^\d{4}:\s*', '', regex=True)
+    
+    years = df["Year"].unique().tolist()  # Display unique values in the 'Year' column
+    dates = df["Helper 4"].unique().tolist()  # Display unique values in the 'Helper 4' column
+    stores = df["Store"].unique().tolist()  # Display unique values in the 'stores' column
+
  
     sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df = companywide_tables(df, store_filter=store_filter, year_filter=year_filter, quarter_filter=quarter_filter, helper4_filter=helper4_filter)
  
 
-    return sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df
+    return sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df, years, dates, stores
