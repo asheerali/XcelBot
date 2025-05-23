@@ -11,7 +11,7 @@ from dateutil.relativedelta import relativedelta
 from fastapi import Request
 
 # Import from local modules
-from models import ExcelUploadRequest, ExcelFilterRequest, ExcelUploadResponse, SalesAnalyticsResponse, DualDashboardResponse
+from models import ExcelUploadRequest, ExcelFilterRequest, ExcelUploadResponse, SalesAnalyticsResponse, DualDashboardResponse, DashboardResponse
 from excel_processor import process_excel_file
 from utils import find_file_in_directory
 from sales_analytics import generate_sales_analytics
@@ -31,7 +31,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 # Upload endpoint
-@router.post("/excel/upload", response_model=DualDashboardResponse)
+@router.post("/excel/upload", response_model=DashboardResponse)
 # @router.post("/excel/upload")
 async def upload_excel(request: ExcelUploadRequest = Body(...)):
 # async def upload_excel(request: Request):
@@ -85,10 +85,10 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             # print("i am here 4")
             excel_data_copy = io.BytesIO(file_content)
 
-            financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table = process_financials_file(
-                excel_data_copy, 
-                location=request.location
-            )
+            # financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table = process_financials_file(
+            #     excel_data_copy, 
+            #     location=request.location
+            # )
             
             sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df = process_companywide_file(
                 excel_data_copy, 
@@ -99,22 +99,38 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             )
             
             
-            result = {
-            "table1": [{"financials_weeks": [financials_weeks], "financials_years": [financials_years], "financials_stores": [financials_stores]}],
-            "table2": financials_sales_table.to_dict(orient='records'),
-            "table3": financials_orders_table.to_dict(orient='records'),
-            "table4": financials_avg_ticket_table.to_dict(orient='records'),
-            "table5": financials_tw_lw_bdg_table.to_dict(orient='records'),
-            "table6": [],
-            "table7": [],
-            "locations": ["test"],
-            "dateRanges": ["test"],
-            "fileLocation":["test"],
-            "fileName": "123", #the full names of the file saved in the uploads folder
-            "dashboardName": "Financials",
-            "data":  "Financial Dashboard is not yet implemented."
-            },
-            {
+            # result = {
+            # "table1": [{"financials_weeks": [financials_weeks], "financials_years": [financials_years], "financials_stores": [financials_stores]}],
+            # "table2": financials_sales_table.to_dict(orient='records'),
+            # "table3": financials_orders_table.to_dict(orient='records'),
+            # "table4": financials_avg_ticket_table.to_dict(orient='records'),
+            # "table5": financials_tw_lw_bdg_table.to_dict(orient='records'),
+            # "table6": [],
+            # "table7": [],
+            # "locations": ["test"],
+            # "dateRanges": ["test"],
+            # "fileLocation":["test"],
+            # "fileName": "123", #the full names of the file saved in the uploads folder
+            # "dashboardName": "Financials",
+            # "data":  "Financial Dashboard is not yet implemented."
+            # },
+            # {
+            #     "table1":sales_df.to_dict(orient='records'),
+            #     "table2":order_df.to_dict(orient='records'),
+            #     "table3":avg_ticket_df.to_dict(orient='records'),
+            #     "table4":cogs_df.to_dict(orient='records'),
+            #     "table5":reg_pay_df.to_dict(orient='records'),
+            #     "table6":lb_hrs_df.to_dict(orient='records'),
+            #     "table7":spmh_df.to_dict(orient='records'),
+            #     "locations": ["test"],
+            #     "dateRanges": ["test"],
+            #     "fileLocation":["test"],
+            #     "dashboardName": "Companywide",
+            #     "fileName": "123", #the full names of the file saved in the uploads folder
+            #     "data":  "Companywide Dashboard is not yet implemented."
+            # }
+            
+            result ={
                 "table1":sales_df.to_dict(orient='records'),
                 "table2":order_df.to_dict(orient='records'),
                 "table3":avg_ticket_df.to_dict(orient='records'),
@@ -122,6 +138,8 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 "table5":reg_pay_df.to_dict(orient='records'),
                 "table6":lb_hrs_df.to_dict(orient='records'),
                 "table7":spmh_df.to_dict(orient='records'),
+                "table8": [],
+                "table9": [],
                 "locations": ["test"],
                 "dateRanges": ["test"],
                 "fileLocation":["test"],
@@ -129,26 +147,27 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 "fileName": "123", #the full names of the file saved in the uploads folder
                 "data":  "Companywide Dashboard is not yet implemented."
             }
-        #        result = {
-        #     "table1": [{"financials_weeks": [financials_weeks], "financials_years": [financials_years], "financials_stores": [financials_stores]}],
-        #     "table2": financials_sales_table.to_dict(orient='records'),
-        #     "table3": financials_orders_table.to_dict(orient='records'),
-        #     "table4": financials_avg_ticket_table.to_dict(orient='records'),
-        #     "table5": financials_tw_lw_bdg_table.to_dict(orient='records'),
-        #     "locations": [financials_stores],
-        #     "default_location": "xyz",
-        #     "locations_range": [financials_stores],
-        #     "dateRanges": ["test"],
-        #     "fileLocation":["test"],
-        #     "fileName": request.fileName,
-        #     "dashboardName": "Financials",
-        #     "data":  "Financial Dashboard is not yet implemented."
-            
-        # }
-            # print("result", result )
+            print("result", result )
             
             return result
             # return {"message": "Financial Dashboard is not yet implemented."}
+                # return {
+            #     "table1": [],
+            #     "table2": [],
+            #     "table3": [],
+            #     "table4": [],
+            #     "table5": [],
+            #     "table6": [],
+            #     "table7": [],
+            #     "table8": [],
+            #     "table9": [],
+            #     "locations": ["test"],
+            #     "dateRanges": ["test"],
+            #     "fileLocation":["test"],
+            #     "dashboardName": request.dashboard,
+            #     "fileName": request.fileName,
+            #     "data":  f"{request.dashboard} Dashboard is not yet implemented."
+            # }
         
         if request.dashboard == "Sales Split" or request.dashboard == "Product Mix":
             print("Dashboard type: Sales Split / Product Mix Dashboard")
@@ -247,31 +266,6 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             }
                
             return [sales_split_dashboard, pmix_dashboard]
-        
-            # result_final = ExcelUploadResponse(**result), {
-            # "table1": [{"net_sales": [net_sales], "orders": [orders], 
-            #             "qty_sold": [qty_sold],"average_order_value": [average_order_value], 
-            #             "average_items_per_order": [average_items_per_order], "unique_orders": [unique_orders], 
-            #             "total_quantity": [total_quantity]}],
-            # "table2": sales_by_category_df.to_dict(orient='records'),
-            # "table3": sales_by_menu_group_df.to_dict(orient='records'),
-            # "table4": sales_by_server_df.to_dict(orient='records'),
-            # "table5": top_selling_items_df.to_dict(orient='records'),
-            # "table6": sales_by_location_df.to_dict(orient='records'),
-            # "table7": average_price_by_item_df.to_dict(orient='records'),
-            # "table8": price_changes_df.to_dict(orient='records'),
-            # "table9": top_items_df.to_dict(orient='records'),
-            # "locations": result['locations'],
-            # "dateRanges": result['dateRanges'],
-            # "fileLocation": result['fileLocation'],
-            # "fileName": request.fileName,
-            # "dashboardName": "Product Mix ",
-            # "data":  "Dashboard is not yet implemented."
-            # }
-            
-            # print("result", result_final )
-            # return result_final
-            
             # return {
             #     "table1": [],
             #     "table2": [],
