@@ -105,12 +105,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             "table3": financials_orders_table.to_dict(orient='records'),
             "table4": financials_avg_ticket_table.to_dict(orient='records'),
             "table5": financials_tw_lw_bdg_table.to_dict(orient='records'),
-            "table6": [],
-            "table7": [],
-            "locations": ["test"],
-            "dateRanges": ["test"],
-            "fileLocation":["test"],
-            "fileName": "123", #the full names of the file saved in the uploads folder
+            "fileName": request.fileName, #the full names of the file saved in the uploads folder
             "dashboardName": "Financials",
             "data":  "Financial Dashboard is not yet implemented."
             }

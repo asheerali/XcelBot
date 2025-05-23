@@ -29,20 +29,22 @@ def process_financials_file(file_data: Union[io.BytesIO, str], year=None, week_r
             if isinstance(file_data, io.BytesIO):
                 file_data.seek(0)
                 print("Reading Excel from BytesIO object.")
-                df = pd.read_excel(file_data, sheet_name="Database")
+                # df = pd.read_excel(file_data, sheet_name="Database")
+                df = pd.read_excel(file_data, sheet_name="Actuals")
+                df_budget = pd.read_excel(file_data, sheet_name="Budget")
             elif isinstance(file_data, str):
                 print("Reading Excel from file path.")
-                df = pd.read_excel(file_data, sheet_name="Database")
+                # df = pd.read_excel(file_data, sheet_name="Database")
+                df = pd.read_excel(file_data, sheet_name="Actuals")
+                df_budget = pd.read_excel(file_data, sheet_name="Budget")
           
             if df.empty:
-                raise ValueError("The sheet 'Database' is empty or missing.")
+                raise ValueError("The sheet 'Actuals' is empty or missing.")
     except ValueError as e:
-        raise ValueError("Sheet named 'Database' not found in the uploaded Excel file.")
+        raise ValueError("Sheet named 'Actuals' not found in the uploaded Excel file.")
 
-    
-    # Strip whitespace from column names
+        # Strip whitespace from column names
     df.columns = df.columns.str.strip()
-    # print("i am here 2")
 
     # Define columns to exclude from filling
     exclude_cols = ['Store', 'Ly Date', 'Date', 'Day', 'Week', 'Month', 'Quarter', 'Year',
@@ -56,15 +58,54 @@ def process_financials_file(file_data: Union[io.BytesIO, str], year=None, week_r
 
     # Fill excluded (metadata/helper) columns with empty string
     df[exclude_cols] = df[exclude_cols].fillna('')
+    df["Store"] = df["Store"].str.replace(r'^\d{4}:\s*', '', regex=True)
+
+
+    # Strip whitespace from column names
+    df_budget.columns = df_budget.columns.str.strip()
+
+    # Identify all column names
+    cols = list(df_budget.columns)
+
+    # Replace only the first occurrence of "Net Sales" with "Net Sales 1"
+    found = False
+    for i, col in enumerate(cols):
+        if col.strip() == "Net Sales" and not found:
+            cols[i] = "Net Sales 1"
+            found = True
+
+    # Assign the modified column names back
+    df_budget.columns = cols
+
+
+    # Define columns to exclude from numeric NaN filling
+    exclude_cols = [
+        'Store', 'Ly Date', 'Date', 'Day', 'Week', 'Month', 'Quarter', 'Year',
+        'Helper 1', 'Helper 2', 'Helper 3', 'Helper 4', 'Helper'  # Include any actual column names in your sheet
+    ]
+
+    # Ensure all exclude columns that are present in df_budget
+    exclude_cols = [col for col in exclude_cols if col in df_budget.columns]
+
+    # Get all columns that should be filled with 0
+    fill_cols = [col for col in df_budget.columns if col not in exclude_cols]
+
+    # Replace NaN with 0 only in selected columns
+    df_budget[fill_cols] = df_budget[fill_cols].fillna(0)
+
+    # Fill excluded (metadata/helper) columns with empty string
+    df_budget[exclude_cols] = df_budget[exclude_cols].fillna('')
+
+    df_budget["Store"] = df_budget["Store"].str.replace(r'^\d{4}:\s*', '', regex=True)
+    df_budget["Store"].unique()  # Display unique values in the 'stores' column
+
 
     financials_weeks, financials_years, financials_stores = financials_filters(df)
     
     financials_sales_table, financials_orders_table, financials_avg_ticket_table = day_of_the_week_tables(df)
     
-    if location == None:
-        financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df, store="Midtown East", year=2025, week_range="1 | 12/30/2024 - 01/05/2025")
-    else:
-        financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df, store=location, year=2025, week_range="1 | 12/30/2024 - 01/05/2025")
+    financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df,df_budget, store="All", year="All", week_range="All")
+    
     # print("i am here 3")
     # print(financials_tw_lw_bdg_table)
     
