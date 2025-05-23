@@ -1,12 +1,11 @@
 import pandas as pd
+import numpy as np
 import io
 from typing import Union
-import pandas as pd
 from pmix_dashboard.pmix_utils import overview_tables, detailed_analysis_tables
 
 
-
-def process_pmix_file(file_data: Union[io.BytesIO, str], location_filter='All', order_date_filter=None, server_filter='All', dining_option_filter='All',  menu_item_filter='All'):
+def process_pmix_file(file_data: Union[io.BytesIO, str],start_date=None, end_date=None , location_filter='All', server_filter='All', category_filter='All',  menu_item_filter='All'):
     """
     Process the uploaded Excel file and transform the data.
     Returns data tables for the frontend including the 1P column.
@@ -65,14 +64,63 @@ def process_pmix_file(file_data: Union[io.BytesIO, str], location_filter='All', 
 
     # Fill excluded (metadata/helper) columns with empty string
     df[exclude_cols] = df[exclude_cols].fillna('')
+    
+        
+    df["Order Date"] = pd.to_datetime(df["Order Date"], dayfirst=False)
+    # Create derived columns
+    df['Date'] = df['Order Date'].dt.date
 
 
     df["Order Date"] = pd.to_datetime(df["Order Date"], dayfirst=False).dt.strftime('%m-%d-%Y')
 
- 
+    # Define groups
+    in_house = [
+        "Kiosk - Dine In", "Kiosk - Take Out", "Take Out - Cashier",
+        "Take Out  - Cashier", "Pick Up - Phone", "Inkind - Take Out"
+    ]
+    one_p = [
+        "Delivery - Phone", "ChowNow: Pick Up", "Lunchbox Delivery",
+        "Lunchbox Pick Up", "ChowNow: Delivery"
+    ]
+    dd = [
+        "DoorDash Pick Up", "DoorDash Self-Delivery"
+    ]
+    catering = [
+        "EZ Cater - Pick Up", "LB Catering Delivery", "Catering Delivery - Phone",
+        "LB Catering Pick Up", "Ez Cater - Delivery", "Catering Pick Up - Phone",
+        "CaterCow - Delivery", "Fooda Pick up", "Sharebite - Pick Up"
+    ]
+    gh = [
+        "Grubhub Pick Up", "Grubhub Self - Delivery"
+    ]
+    ub = [
+        "UberEats Pick Up", "UberEats Self-Delivery"
+    ]
+
+    # Create conditions and corresponding values
+    conditions = [
+        df["Dining Option"].isin(in_house),
+        df["Dining Option"].isin(one_p),
+        df["Dining Option"].isin(dd),
+        df["Dining Option"].isin(catering),
+        df["Dining Option"].isin(gh),
+        df["Dining Option"].isin(ub)
+    ]
+
+    choices = ["In-House", "1P", "DD", "Catering", "GH", "UB"]
+
+    # Apply the mapping
+    df["Category"] = np.select(conditions, choices, default="")
+    df["Category"] = df["Category"].replace({"": "Others"})
+
+    # locations = df["Location"].unique()
+    locations = df["Location"].unique().tolist()
+    server = df["Server"].unique().tolist()
+    category = df["Category"].unique().tolist()
+
     # sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df = companywide_tables(df, store_filter=store_filter, year_filter=year_filter, quarter_filter=quarter_filter, helper4_filter=helper4_filter)
  
-    p1 = overview_tables(df, location_filter=location_filter, order_date_filter=order_date_filter, server_filter=server_filter, dining_option_filter=dining_option_filter)
+    p1 = overview_tables(df, location_filter=location_filter, server_filter=server_filter, category_filter=category_filter,  start_date=start_date, end_date=end_date)
     
     net_sales = p1['net_sales'] #value
     orders = p1['orders'] #value
@@ -82,7 +130,8 @@ def process_pmix_file(file_data: Union[io.BytesIO, str], location_filter='All', 
     sales_by_server_df = p1['sales_by_server']
     top_selling_items_df = p1['top_selling_items']
     
-    p2 = detailed_analysis_tables(df, location_filter=location_filter, order_date_filter=order_date_filter, dining_option_filter=dining_option_filter, menu_item_filter=menu_item_filter)
+    # p2 = detailed_analysis_tables(df, location_filter=location_filter, menu_item_filter=menu_item_filter)
+    p2 = detailed_analysis_tables(df, location_filter=location_filter ,category_filter=category_filter, start_date=start_date, end_date=end_date)
     
     
     #    # Return all tables and metrics in a dictionary
@@ -108,4 +157,4 @@ def process_pmix_file(file_data: Union[io.BytesIO, str], location_filter='All', 
      
     
  
-    return net_sales, orders, qty_sold, sales_by_category_df, sales_by_menu_group_df, sales_by_server_df, top_selling_items_df, sales_by_location_df, average_price_by_item_df, average_order_value, average_items_per_order, price_changes_df, top_items_df, unique_orders, total_quantity
+    return net_sales, orders, qty_sold, sales_by_category_df, sales_by_menu_group_df, sales_by_server_df, top_selling_items_df, sales_by_location_df, average_price_by_item_df, average_order_value, average_items_per_order, price_changes_df, top_items_df, unique_orders, total_quantity, locations, server, category

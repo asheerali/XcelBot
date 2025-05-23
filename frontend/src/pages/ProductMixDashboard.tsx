@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -28,27 +28,27 @@ import {
   ClickAwayListener,
   MenuList,
   Popover,
-  useMediaQuery
-} from '@mui/material';
+  useMediaQuery,
+} from "@mui/material";
 
 // Icons
-import FilterListIcon from '@mui/icons-material/FilterList';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import PlaceIcon from '@mui/icons-material/Place';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
-import PersonIcon from '@mui/icons-material/Person';
-import FastfoodIcon from '@mui/icons-material/Fastfood';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import SearchIcon from '@mui/icons-material/Search';
-import CloseIcon from '@mui/icons-material/Close';
-import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
-import CheckBoxIcon from '@mui/icons-material/CheckBox';
-import MenuAnalysisDashboard from '../components/SalesDashboard';
+import FilterListIcon from "@mui/icons-material/FilterList";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import PlaceIcon from "@mui/icons-material/Place";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import RestaurantMenuIcon from "@mui/icons-material/RestaurantMenu";
+import PersonIcon from "@mui/icons-material/Person";
+import FastfoodIcon from "@mui/icons-material/Fastfood";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import SearchIcon from "@mui/icons-material/Search";
+import CloseIcon from "@mui/icons-material/Close";
+import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
+import CheckBoxIcon from "@mui/icons-material/CheckBox";
+import MenuAnalysisDashboard from "../components/SalesDashboard";
 
 // Import Redux hooks (assuming you have these set up)
-import { useAppDispatch, useAppSelector } from '../typedHooks';
-import MenuAnalysisDashboardtwo from '../components/MenuAnalysisDashboardtwo';
+import { useAppDispatch, useAppSelector } from "../typedHooks";
+import MenuAnalysisDashboardtwo from "../components/MenuAnalysisDashboardtwo";
 
 // TabPanel Component
 interface TabPanelProps {
@@ -68,11 +68,7 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`product-mix-tab-${index}`}
       {...other}
     >
-      {value === index && (
-        <Box sx={{ pt: 3 }}>
-          {children}
-        </Box>
-      )}
+      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
     </div>
   );
 }
@@ -95,34 +91,34 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   value,
   onChange,
   icon,
-  placeholder
+  placeholder,
 }) => {
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  
-  const filteredOptions = options.filter(option => 
+
+  const filteredOptions = options.filter((option) =>
     option.toLowerCase().includes(searchText.toLowerCase())
   );
-  
+
   const handleToggle = (event: React.MouseEvent<HTMLDivElement>) => {
     setAnchorEl(event.currentTarget);
     setIsOpen(!isOpen);
   };
-  
+
   const handleClose = () => {
     setIsOpen(false);
     setAnchorEl(null);
-    setSearchText('');
+    setSearchText("");
   };
-  
+
   const handleSelect = (option: string) => {
     const newValue = value.includes(option)
-      ? value.filter(item => item !== option)
+      ? value.filter((item) => item !== option)
       : [...value, option];
     onChange(newValue);
   };
-  
+
   const handleSelectAll = () => {
     if (value.length === options.length) {
       onChange([]);
@@ -130,121 +126,162 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
       onChange([...options]);
     }
   };
-  
+
   const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === 'Escape') {
+    if (event.key === "Escape") {
       handleClose();
     }
   };
-  
+
   return (
-    <Box sx={{ position: 'relative', width: '100%' }}>
-      <Box 
+    <Box sx={{ position: "relative", width: "100%" }}>
+      <Box
         onClick={handleToggle}
-        sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          border: '1px solid rgba(0, 0, 0, 0.23)', 
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          border: "1px solid rgba(0, 0, 0, 0.23)",
           borderRadius: 1,
-          p: 1, 
-          cursor: 'pointer',
-          minHeight: '40px',
-          position: 'relative',
-          height: '40px', // Fixed height to maintain consistency
-          overflow: 'hidden'
+          p: 1,
+          cursor: "pointer",
+          minHeight: "40px",
+          position: "relative",
+          height: "40px", // Fixed height to maintain consistency
+          overflow: "hidden",
         }}
       >
         {icon && (
-          <Box sx={{ color: 'primary.light', mr: 1, ml: -0.5, display: 'flex', alignItems: 'center' }}>
+          <Box
+            sx={{
+              color: "primary.light",
+              mr: 1,
+              ml: -0.5,
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
             {icon}
           </Box>
         )}
-        
-        <Box sx={{ flexGrow: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+
+        <Box
+          sx={{
+            flexGrow: 1,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
           {value.length === 0 && (
-            <Typography color="text.secondary" variant="body2" noWrap>{placeholder || 'Select options'}</Typography>
+            <Typography color="text.secondary" variant="body2" noWrap>
+              {placeholder || "Select options"}
+            </Typography>
           )}
-          
+
           {value.length > 0 && (
-            <Box sx={{ display: 'flex', flexWrap: 'nowrap', gap: 0.5, overflow: 'hidden' }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "nowrap",
+                gap: 0.5,
+                overflow: "hidden",
+              }}
+            >
               {value.length <= 2 ? (
-                value.map(item => (
-                  <Chip 
-                    key={item} 
-                    label={item} 
-                    size="small" 
+                value.map((item) => (
+                  <Chip
+                    key={item}
+                    label={item}
+                    size="small"
                     onDelete={(e) => {
                       e.stopPropagation();
-                      onChange(value.filter(val => val !== item));
+                      onChange(value.filter((val) => val !== item));
                     }}
-                    onClick={e => e.stopPropagation()}
-                    sx={{ maxWidth: '120px' }}
+                    onClick={(e) => e.stopPropagation()}
+                    sx={{ maxWidth: "120px" }}
                   />
                 ))
               ) : (
                 <>
-                  <Chip 
-                    label={value[0]} 
-                    size="small" 
+                  <Chip
+                    label={value[0]}
+                    size="small"
                     onDelete={(e) => {
                       e.stopPropagation();
-                      onChange(value.filter(val => val !== value[0]));
+                      onChange(value.filter((val) => val !== value[0]));
                     }}
-                    onClick={e => e.stopPropagation()}
-                    sx={{ maxWidth: '120px' }}
+                    onClick={(e) => e.stopPropagation()}
+                    sx={{ maxWidth: "120px" }}
                   />
-                  <Chip 
-                    label={`+${value.length - 1} more`} 
+                  <Chip
+                    label={`+${value.length - 1} more`}
                     size="small"
-                    onClick={e => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                   />
                 </>
               )}
             </Box>
           )}
         </Box>
-        
-        <Box sx={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}>
-          <IconButton size="small" onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}>
-            {isOpen ? <CloseIcon fontSize="small" /> : <SearchIcon fontSize="small" />}
+
+        <Box
+          sx={{
+            position: "absolute",
+            right: 8,
+            top: "50%",
+            transform: "translateY(-50%)",
+          }}
+        >
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsOpen(!isOpen);
+            }}
+          >
+            {isOpen ? (
+              <CloseIcon fontSize="small" />
+            ) : (
+              <SearchIcon fontSize="small" />
+            )}
           </IconButton>
         </Box>
       </Box>
-      
-      <InputLabel 
+
+      <InputLabel
         htmlFor={id}
         sx={{
-          position: 'absolute',
+          position: "absolute",
           top: -6,
           left: 8,
-          backgroundColor: 'white',
+          backgroundColor: "white",
           px: 0.5,
-          fontSize: '0.75rem',
-          pointerEvents: 'none'
+          fontSize: "0.75rem",
+          pointerEvents: "none",
         }}
       >
         {label}
       </InputLabel>
-      
+
       <Popover
         id={`${id}-popover`}
         open={isOpen}
         anchorEl={anchorEl}
         onClose={handleClose}
         anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
+          vertical: "bottom",
+          horizontal: "left",
         }}
         transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
+          vertical: "top",
+          horizontal: "left",
         }}
         PaperProps={{
-          style: { 
+          style: {
             width: anchorEl ? anchorEl.clientWidth : undefined,
             maxHeight: 300,
-            overflow: 'auto'
-          }
+            overflow: "auto",
+          },
         }}
       >
         <Box sx={{ p: 1 }}>
@@ -257,15 +294,20 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
             onChange={(e) => setSearchText(e.target.value)}
             onKeyDown={handleKeyDown}
             InputProps={{
-              startAdornment: <SearchIcon fontSize="small" sx={{ mr: 1, color: 'action.active' }} />
+              startAdornment: (
+                <SearchIcon
+                  fontSize="small"
+                  sx={{ mr: 1, color: "action.active" }}
+                />
+              ),
             }}
           />
         </Box>
         <Divider />
         <Box sx={{ p: 1 }}>
           <MenuItem dense onClick={handleSelectAll}>
-            <Checkbox 
-              checked={value.length === options.length} 
+            <Checkbox
+              checked={value.length === options.length}
               indeterminate={value.length > 0 && value.length < options.length}
               size="small"
             />
@@ -279,7 +321,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
               <ListItemText primary="No options found" />
             </MenuItem>
           ) : (
-            filteredOptions.map(option => (
+            filteredOptions.map((option) => (
               <MenuItem key={option} dense onClick={() => handleSelect(option)}>
                 <Checkbox checked={value.includes(option)} size="small" />
                 <ListItemText primary={option} />
@@ -293,25 +335,63 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
 };
 
 // Sample data for filters
-const LOCATIONS = ['Midtown East', 'Downtown West', 'Uptown North', 'Southside', 'West Village', 'Upper East', 'Financial District'];
-const DATE_RANGES = [
-  '10 | 03/03/2025 - 03/09/2025',
-  '11 | 03/10/2025 - 03/16/2025',
-  '12 | 03/17/2025 - 03/23/2025',
-  '13 | 03/24/2025 - 03/30/2025',
-  '14 | 03/31/2025 - 04/06/2025',
-  '15 | 04/07/2025 - 04/13/2025'
+const LOCATIONS = [
+  "Midtown East",
+  "Downtown West",
+  "Uptown North",
+  "Southside",
+  "West Village",
+  "Upper East",
+  "Financial District",
 ];
-const SERVERS = ['John Smith', 'Maria Garcia', 'David Johnson', 'Lisa Williams', 'Robert Brown', 'Linda Chen', 'Michael Rodriguez'];
-const MENU_ITEMS = ['Burger', 'Pizza', 'Pasta', 'Salad', 'Chicken Sandwich', 'French Fries', 'Coca Cola', 'Dessert', 'Ice Cream', 'Coffee'];
-const DINING_OPTIONS = ['Dine In', 'Take Out', 'Delivery', 'Catering', 'Drive Thru', 'Online Order', 'DoorDash', 'Uber Eats', 'GrubHub', 'Pickup'];
+const DATE_RANGES = [
+  "10 | 03/03/2025 - 03/09/2025",
+  "11 | 03/10/2025 - 03/16/2025",
+  "12 | 03/17/2025 - 03/23/2025",
+  "13 | 03/24/2025 - 03/30/2025",
+  "14 | 03/31/2025 - 04/06/2025",
+  "15 | 04/07/2025 - 04/13/2025",
+];
+const SERVERS = [
+  "John Smith",
+  "Maria Garcia",
+  "David Johnson",
+  "Lisa Williams",
+  "Robert Brown",
+  "Linda Chen",
+  "Michael Rodriguez",
+];
+const MENU_ITEMS = [
+  "Burger",
+  "Pizza",
+  "Pasta",
+  "Salad",
+  "Chicken Sandwich",
+  "French Fries",
+  "Coca Cola",
+  "Dessert",
+  "Ice Cream",
+  "Coffee",
+];
+const DINING_OPTIONS = [
+  "Dine In",
+  "Take Out",
+  "Delivery",
+  "Catering",
+  "Drive Thru",
+  "Online Order",
+  "DoorDash",
+  "Uber Eats",
+  "GrubHub",
+  "Pickup",
+];
 
 // Main Dashboard Component
 export default function ProductMixDashboard() {
   const theme = useTheme();
   const dispatch = useAppDispatch();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isTablet = useMediaQuery(theme.breakpoints.down("md"));
 
   // State variables
   const [tabValue, setTabValue] = useState(0);
@@ -364,11 +444,11 @@ export default function ProductMixDashboard() {
     // On mobile, always use full width for each filter
     if (isMobile) {
       return { xs: 12 };
-    } 
+    }
     // On tablet, use half width for each filter
     else if (isTablet) {
       return { xs: 12, sm: 6 };
-    } 
+    }
     // On desktop/laptop
     else {
       // Use 25% width (3 out of 12 grid columns) to fit 4 filters in one row
@@ -380,7 +460,7 @@ export default function ProductMixDashboard() {
 
   // Inject the rotating animation styles for the refresh icon
   React.useEffect(() => {
-    const styleElement = document.createElement('style');
+    const styleElement = document.createElement("style");
     styleElement.textContent = `
       @keyframes rotating {
         from { transform: rotate(0deg); }
@@ -391,7 +471,7 @@ export default function ProductMixDashboard() {
       }
     `;
     document.head.appendChild(styleElement);
-    
+
     return () => {
       document.head.removeChild(styleElement);
     };
@@ -400,50 +480,71 @@ export default function ProductMixDashboard() {
   return (
     <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
       {/* Dashboard Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-        <Typography 
-          variant="h4" 
-          component="h1" 
-          sx={{ 
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+          flexWrap: "wrap",
+          gap: 2,
+        }}
+      >
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{
             fontWeight: 600,
-            color:'rgb(9, 43, 117)',
-            fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }
+            color: "rgb(9, 43, 117)",
+            fontSize: { xs: "1.5rem", sm: "2rem", md: "2.5rem" },
           }}
         >
           Product Mix Dashboard
         </Typography>
 
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: "flex", gap: 1 }}>
           <Tooltip title="Help">
-            <IconButton 
-              color="info" 
-              sx={{ backgroundColor: 'white', boxShadow: 1 }}
+            <IconButton
+              color="info"
+              sx={{ backgroundColor: "white", boxShadow: 1 }}
             >
               <HelpOutlineIcon />
             </IconButton>
           </Tooltip>
         </Box>
       </Box>
-
       {/* Filters Section */}
-      <Card elevation={3} sx={{ mb: 3, borderRadius: 2, overflow: 'hidden' }}>
+      <Card elevation={3} sx={{ mb: 3, borderRadius: 2, overflow: "hidden" }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <FilterListIcon color="primary" />
               <Typography variant="h6" sx={{ fontWeight: 500 }}>
                 Filters
               </Typography>
             </Box>
-            <Button 
-              variant="outlined" 
-              size="small" 
+            <Button
+              variant="outlined"
+              size="small"
               color="primary"
               disabled={isLoading}
               onClick={handleRefresh}
-              startIcon={isLoading ? <RefreshIcon className="rotating" /> : <RefreshIcon />}
+              startIcon={
+                isLoading ? (
+                  <RefreshIcon className="rotating" />
+                ) : (
+                  <RefreshIcon />
+                )
+              }
             >
-              {isLoading ? 'Loading...' : 'Apply Filters'}
+              {isLoading ? "Loading..." : "Apply Filters"}
             </Button>
           </Box>
 
@@ -494,7 +595,7 @@ export default function ProductMixDashboard() {
                   value={menuItems}
                   onChange={handleMenuItemChange}
                   icon={<RestaurantMenuIcon />}
-                  placeholder="Select menu items"
+                  placeholder="disabled filter"
                 />
               )}
             </Grid>
@@ -503,75 +604,98 @@ export default function ProductMixDashboard() {
             <Grid item {...gridSizes}>
               <MultiSelect
                 id="dining-option-select"
-                label="Dining Option"
+                label="Category"
                 options={DINING_OPTIONS}
                 value={diningOptions}
                 onChange={handleDiningOptionChange}
                 icon={<FastfoodIcon />}
-                placeholder="Select dining options"
+                placeholder="Select dining category"
               />
             </Grid>
           </Grid>
 
           {/* Active filters display */}
-          {(locations.length > 0 || dateRanges.length > 0 || servers.length > 0 || 
-            menuItems.length > 0 || diningOptions.length > 0) && (
+          {(locations.length > 0 ||
+            dateRanges.length > 0 ||
+            servers.length > 0 ||
+            menuItems.length > 0 ||
+            diningOptions.length > 0) && (
             <Box sx={{ mt: 2 }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 Active Filters:
               </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                 {locations.length > 0 && (
-                  <Chip 
-                    label={locations.length === 1 ? `Location: ${locations[0]}` : `Locations: ${locations.length} selected`} 
-                    color="primary" 
-                    variant="outlined" 
-                    size="small" 
-                    icon={<PlaceIcon />} 
+                  <Chip
+                    label={
+                      locations.length === 1
+                        ? `Location: ${locations[0]}`
+                        : `Locations: ${locations.length} selected`
+                    }
+                    color="primary"
+                    variant="outlined"
+                    size="small"
+                    icon={<PlaceIcon />}
                     onDelete={() => setLocations([])}
                   />
                 )}
-                
+
                 {dateRanges.length > 0 && (
-                  <Chip 
-                    label={dateRanges.length === 1 ? `Date Range: ${dateRanges[0].split('|')[0].trim()}` : `Date Ranges: ${dateRanges.length} selected`} 
-                    color="secondary" 
-                    variant="outlined" 
-                    size="small" 
-                    icon={<CalendarTodayIcon />} 
+                  <Chip
+                    label={
+                      dateRanges.length === 1
+                        ? `Date Range: ${dateRanges[0].split("|")[0].trim()}`
+                        : `Date Ranges: ${dateRanges.length} selected`
+                    }
+                    color="secondary"
+                    variant="outlined"
+                    size="small"
+                    icon={<CalendarTodayIcon />}
                     onDelete={() => setDateRanges([])}
                   />
                 )}
-                
+
                 {tabValue === 0 && servers.length > 0 && (
-                  <Chip 
-                    label={servers.length === 1 ? `Server: ${servers[0]}` : `Servers: ${servers.length} selected`} 
-                    color="info" 
-                    variant="outlined" 
-                    size="small" 
-                    icon={<PersonIcon />} 
+                  <Chip
+                    label={
+                      servers.length === 1
+                        ? `Server: ${servers[0]}`
+                        : `Servers: ${servers.length} selected`
+                    }
+                    color="info"
+                    variant="outlined"
+                    size="small"
+                    icon={<PersonIcon />}
                     onDelete={() => setServers([])}
                   />
                 )}
-                
+
                 {tabValue === 1 && menuItems.length > 0 && (
-                  <Chip 
-                    label={menuItems.length === 1 ? `Menu Item: ${menuItems[0]}` : `Menu Items: ${menuItems.length} selected`} 
-                    color="success" 
-                    variant="outlined" 
-                    size="small" 
-                    icon={<RestaurantMenuIcon />} 
+                  <Chip
+                    label={
+                      menuItems.length === 1
+                        ? `Menu Item: ${menuItems[0]}`
+                        : `Menu Items: ${menuItems.length} selected`
+                    }
+                    color="success"
+                    variant="outlined"
+                    size="small"
+                    icon={<RestaurantMenuIcon />}
                     onDelete={() => setMenuItems([])}
                   />
                 )}
-                
+
                 {diningOptions.length > 0 && (
-                  <Chip 
-                    label={diningOptions.length === 1 ? `Dining Option: ${diningOptions[0]}` : `Dining Options: ${diningOptions.length} selected`} 
-                    color="error" 
-                    variant="outlined" 
-                    size="small" 
-                    icon={<FastfoodIcon />} 
+                  <Chip
+                    label={
+                      diningOptions.length === 1
+                        ? `Dining Option: ${diningOptions[0]}`
+                        : `Dining Options: ${diningOptions.length} selected`
+                    }
+                    color="error"
+                    variant="outlined"
+                    size="small"
+                    icon={<FastfoodIcon />}
                     onDelete={() => setDiningOptions([])}
                   />
                 )}
@@ -579,27 +703,28 @@ export default function ProductMixDashboard() {
             </Box>
           )}
         </CardContent>
-      </Card>      {/* Tabs */}
-      <Card sx={{ borderRadius: 2, mb: 3, overflow: 'hidden' }} elevation={3}>
-        <Tabs 
-          value={tabValue} 
-          onChange={handleTabChange} 
+      </Card>{" "}
+      {/* Tabs */}
+      <Card sx={{ borderRadius: 2, mb: 3, overflow: "hidden" }} elevation={3}>
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
           variant="fullWidth"
           sx={{
-            '& .MuiTab-root': { 
+            "& .MuiTab-root": {
               fontWeight: 500,
-              textTransform: 'none',
-              fontSize: '1rem',
-              py: 1.5
+              textTransform: "none",
+              fontSize: "1rem",
+              py: 1.5,
             },
-            '& .Mui-selected': {
-              color: '#4285f4',
-              fontWeight: 600
+            "& .Mui-selected": {
+              color: "#4285f4",
+              fontWeight: 600,
             },
-            '& .MuiTabs-indicator': {
-              backgroundColor: '#4285f4',
-              height: 3
-            }
+            "& .MuiTabs-indicator": {
+              backgroundColor: "#4285f4",
+              height: 3,
+            },
           }}
         >
           <Tab label="Overview" />
@@ -609,22 +734,19 @@ export default function ProductMixDashboard() {
         {/* Server Performance Tab */}
         <TabPanel value={tabValue} index={0}>
           <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
-              <MenuAnalysisDashboard />
+            <MenuAnalysisDashboard />
           </Box>
         </TabPanel>
 
         {/* Menu Analysis Tab */}
         <TabPanel value={tabValue} index={1}>
           <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
-              <MenuAnalysisDashboardtwo />
+            <MenuAnalysisDashboardtwo />
           </Box>
         </TabPanel>
       </Card>
-
       {/* Placeholder for dashboard content */}
-      <Box sx={{ mt: 2 }}>
-        
-      </Box>
+      <Box sx={{ mt: 2 }}></Box>
     </Box>
   );
 }

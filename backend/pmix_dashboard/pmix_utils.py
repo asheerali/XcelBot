@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
+from datetime import datetime
 
-
-def overview_tables(df, location_filter='All', order_date_filter=None, server_filter='All', dining_option_filter='All'):
+def overview_tables(df, location_filter='All', start_date=None, end_date=None  ,order_date_filter=None, server_filter='All', dining_option_filter='All', category_filter='All'):
     """
     Create dashboard tables for restaurant visualization with optional filters.
     
@@ -18,6 +18,8 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
         Filter by specific server(s)
     dining_option_filter : str or list, optional
         Filter by specific dining option(s)
+    category_filter : str or list, optional
+        Filter by specific category(s). Options: ['In-House', 'DD', '1P', 'GH', 'Catering', 'UB', 'Others']
     
     Returns:
     --------
@@ -34,11 +36,11 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
         else:
             filtered_df = filtered_df[filtered_df['Location'] == location_filter]
     
-    if order_date_filter is not None:
-        if isinstance(order_date_filter, list):
-            filtered_df = filtered_df[filtered_df['Order Date'].isin(order_date_filter)]
-        else:
-            filtered_df = filtered_df[filtered_df['Order Date'] == order_date_filter]
+    # if order_date_filter is not None:
+    #     if isinstance(order_date_filter, list):
+    #         filtered_df = filtered_df[filtered_df['Order Date'].isin(order_date_filter)]
+    #     else:
+    #         filtered_df = filtered_df[filtered_df['Order Date'] == order_date_filter]
         
     if server_filter != 'All':
         if isinstance(server_filter, list):
@@ -51,6 +53,25 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
             filtered_df = filtered_df[filtered_df['Dining Option'].isin(dining_option_filter)]
         else:
             filtered_df = filtered_df[filtered_df['Dining Option'] == dining_option_filter]
+    
+    # Add category filter
+    if category_filter != 'All':
+        if isinstance(category_filter, list):
+            filtered_df = filtered_df[filtered_df['Category'].isin(category_filter)]
+        else:
+            filtered_df = filtered_df[filtered_df['Category'] == category_filter]
+
+    # Apply date range filter - convert string dates to datetime.date objects
+    if start_date is not None:
+        if isinstance(start_date, str):
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        filtered_df = filtered_df[filtered_df['Date'] >= start_date]
+    
+    if end_date is not None:
+        if isinstance(end_date, str):
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        filtered_df = filtered_df[filtered_df['Date'] <= end_date]
+        
     
     # If the dataframe is empty after filtering, return empty tables
     if filtered_df.empty:
@@ -71,9 +92,9 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     unique_orders = filtered_df['Order #'].nunique()
     qty_sold = filtered_df['Qty'].sum()
     
-    net_sales_table = pd.DataFrame({'Value': [net_sales], 'Label': ['Net Sales']})
-    orders_table = pd.DataFrame({'Value': [unique_orders], 'Label': ['Orders']})
-    qty_sold_table = pd.DataFrame({'Value': [qty_sold], 'Label': ['Qty Sold']})
+    # net_sales_table = pd.DataFrame({'Value': [net_sales], 'Label': ['Net Sales']})
+    # orders_table = pd.DataFrame({'Value': [unique_orders], 'Label': ['Orders']})
+    # qty_sold_table = pd.DataFrame({'Value': [qty_sold], 'Label': ['Qty Sold']})
     
     # -------------------------------------------------------
     # 2. Sales by Category
@@ -164,9 +185,9 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     
     # Return all tables in a dictionary
     return {
-        'net_sales': net_sales_table,
-        'orders': orders_table,
-        'qty_sold': qty_sold_table,
+        'net_sales': net_sales,
+        'orders': unique_orders,
+        'qty_sold': qty_sold,
         'sales_by_category': sales_by_category,
         'sales_by_menu_group': sales_by_menu_group,
         'sales_by_server': sales_by_server,
@@ -174,8 +195,183 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     }
 
 
+# def detailed_analysis_tables(df, location_filter='All', order_date_filter=None, dining_option_filter='All', menu_item_filter='All'):
+#     """
+#     Create dashboard tables for restaurant visualization with optional filters.
+    
+#     Parameters:
+#     -----------
+#     df : pd.DataFrame
+#         The raw data containing order information
+#     location_filter : str or list, optional
+#         Filter by specific location(s)
+#     order_date_filter : str or list, optional
+#         Filter by specific order date(s)
+#     dining_option_filter : str or list, optional
+#         Filter by specific dining option(s)
+#     menu_item_filter : str or list, optional
+#         Filter by specific menu item(s)
+    
+#     Returns:
+#     --------
+#     Dict[str, pd.DataFrame or float]
+#         Dictionary containing all tables and metrics needed for the dashboard
+#     """
+#     # Make a copy of the dataframe
+#     filtered_df = df.copy()
+    
+#     # Apply filters
+#     if location_filter != 'All':
+#         if isinstance(location_filter, list):
+#             filtered_df = filtered_df[filtered_df['Location'].isin(location_filter)]
+#         else:
+#             filtered_df = filtered_df[filtered_df['Location'] == location_filter]
+    
+#     if order_date_filter is not None:
+#         if isinstance(order_date_filter, list):
+#             filtered_df = filtered_df[filtered_df['Order Date'].isin(order_date_filter)]
+#         else:
+#             filtered_df = filtered_df[filtered_df['Order Date'] == order_date_filter]
+        
+#     if dining_option_filter != 'All':
+#         if isinstance(dining_option_filter, list):
+#             filtered_df = filtered_df[filtered_df['Dining Option'].isin(dining_option_filter)]
+#         else:
+#             filtered_df = filtered_df[filtered_df['Dining Option'] == dining_option_filter]
+    
+#     if menu_item_filter != 'All':
+#         if isinstance(menu_item_filter, list):
+#             filtered_df = filtered_df[filtered_df['Menu Item'].isin(menu_item_filter)]
+#         else:
+#             filtered_df = filtered_df[filtered_df['Menu Item'] == menu_item_filter]
+    
+#     # If the dataframe is empty after filtering, return empty tables
+#     if filtered_df.empty:
+#         return {
+#             'sales_by_location': pd.DataFrame(columns=['Location', 'Sales']),
+#             'average_price_by_item': pd.DataFrame(columns=['Menu Item', 'Price']),
+#             'average_order_value': 0,
+#             'average_items_per_order': 0,
+#             'price_changes': pd.DataFrame(columns=['Item', 'Change', 'Direction', 'Category']),
+#             'top_items': pd.DataFrame(columns=['Item', 'Price'])
+#         }
+    
+#     # -------------------------------------------------------
+#     # 1. Sales per Location
+#     # -------------------------------------------------------
+#     sales_by_location = filtered_df.groupby('Location')['Net Price'].sum().reset_index()
+#     sales_by_location.columns = ['Location', 'Sales']
+    
+#     # -------------------------------------------------------
+#     # 2. Average Price by Menu Item
+#     # -------------------------------------------------------
+#     # Calculate average price for each menu item
+#     average_price_by_item = filtered_df.groupby('Menu Item')['Avg Price'].mean().reset_index()
+#     average_price_by_item.columns = ['Menu Item', 'Price']
+    
+#     # Sort by price descending and get top items
+#     average_price_by_item = average_price_by_item.sort_values('Price', ascending=False).head(5).reset_index(drop=True)
+    
+#     # -------------------------------------------------------
+#     # 3. Average Order Value & Items per Order
+#     # -------------------------------------------------------
+#     # Calculate total sales per order
+#     order_totals = filtered_df.groupby('Order #')['Net Price'].sum()
+#     average_order_value = round(order_totals.mean(), 2)
+    
+#     # Calculate items per order
+#     items_per_order = filtered_df.groupby('Order #')['Qty'].sum()
+#     average_items_per_order = round(items_per_order.mean(), 1)
+    
+#     # -------------------------------------------------------
+#     # 4. Price Changes (for the arrows in the dashboard)
+#     # -------------------------------------------------------
+#     # Calculate price changes compared to historical or baseline data
+#     # This would need a time comparison - using a simple approach here
+#     # This assumes df has some historical data for comparison
+    
+#     # Get unique items for price change calculation
+#     unique_items = filtered_df['Menu Item'].unique()
+    
+#     # Initialize empty dataframe for price changes
+#     price_changes = pd.DataFrame(columns=['Item', 'Change', 'Direction', 'Category'])
+    
+#     # For NET PRICE change, calculate the relative change in average net price
+#     # (This is just an example calculation - adjust based on your actual requirements)
+#     if 'Net Price' in filtered_df.columns:
+#         current_avg_net_price = filtered_df['Net Price'].mean()
+        
+#         # Calculate change from previous period if you have that data
+#         # For now, just use a random small value as placeholder
+#         net_price_change = round(np.random.uniform(-2, 2), 2)  # Replace with actual calculation
+        
+#         # Determine direction
+#         direction = 'up' if net_price_change > 0 else ('down' if net_price_change < 0 else 'neutral')
+        
+#         # Add to price changes
+#         price_change_row = {
+#             'Item': 'NET PRICE',
+#             'Change': abs(net_price_change),
+#             'Direction': direction,
+#             'Category': 'PRICE'
+#         }
+#         price_changes = pd.concat([price_changes, pd.DataFrame([price_change_row])], ignore_index=True)
+    
+#     # Get a few sample menu items for price change display
+#     sample_items = filtered_df.groupby('Menu Item')['Net Price'].mean().nlargest(3).index.tolist()
+    
+#     # Add sample menu items with price changes
+#     for item in sample_items:
+#         if item in filtered_df['Menu Item'].unique():
+#             # Get sales category for this item
+#             category = filtered_df[filtered_df['Menu Item'] == item]['Sales Category'].iloc[0] \
+#                 if 'Sales Category' in filtered_df.columns else 'N/A'
+            
+#             # Calculate or simulate price change
+#             # Replace with actual calculation if you have historical data
+#             item_price_change = round(np.random.uniform(-3, 3), 2)  # Replace with actual calculation
+            
+#             # Determine direction
+#             direction = 'up' if item_price_change > 0 else ('down' if item_price_change < 0 else 'neutral')
+            
+#             # Add to price changes
+#             price_change_row = {
+#                 'Item': item,
+#                 'Change': abs(item_price_change),
+#                 'Direction': direction,
+#                 'Category': category
+#             }
+#             price_changes = pd.concat([price_changes, pd.DataFrame([price_change_row])], ignore_index=True)
+    
+#     # -------------------------------------------------------
+#     # 5. Top Items (shown in the dashboard)
+#     # -------------------------------------------------------
+#     # Extract top items by sales volume or price
+#     top_items = filtered_df.groupby('Menu Item')['Net Price'].sum().reset_index()
+#     top_items.columns = ['Item', 'Price']
+#     top_items = top_items.sort_values('Price', ascending=False).head(5).reset_index(drop=True)
+    
+#     # -------------------------------------------------------
+#     # 6. Additional Metrics
+#     # -------------------------------------------------------
+#     # Calculate the key metrics shown in the dashboard
+#     unique_orders = filtered_df['Order #'].nunique()
+#     total_quantity = filtered_df['Qty'].sum()
+    
+#     # Return all tables and metrics in a dictionary
+#     return {
+#         'sales_by_location': sales_by_location,
+#         'average_price_by_item': average_price_by_item,
+#         'average_order_value': average_order_value, #value
+#         'average_items_per_order': average_items_per_order,
+#         'price_changes': price_changes,
+#         'top_items': top_items,
+#         'unique_orders': unique_orders,
+#         'total_quantity': total_quantity
+#     }
 
-def detailed_analysis_tables(df, location_filter='All', order_date_filter=None, dining_option_filter='All', menu_item_filter='All'):
+
+def detailed_analysis_tables(df, location_filter='All', dining_option_filter='All', menu_item_filter='All',category_filter='All', start_date=None, end_date=None):
     """
     Create dashboard tables for restaurant visualization with optional filters.
     
@@ -207,11 +403,29 @@ def detailed_analysis_tables(df, location_filter='All', order_date_filter=None, 
         else:
             filtered_df = filtered_df[filtered_df['Location'] == location_filter]
     
-    if order_date_filter is not None:
-        if isinstance(order_date_filter, list):
-            filtered_df = filtered_df[filtered_df['Order Date'].isin(order_date_filter)]
+    # if order_date_filter is not None:
+    #     if isinstance(order_date_filter, list):
+    #         filtered_df = filtered_df[filtered_df['Order Date'].isin(order_date_filter)]
+    #     else:
+    #         filtered_df = filtered_df[filtered_df['Order Date'] == order_date_filter]
+    
+    # Apply date range filter - convert string dates to datetime.date objects
+    if start_date is not None:
+        if isinstance(start_date, str):
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        filtered_df = filtered_df[filtered_df['Date'] >= start_date]
+    
+    if end_date is not None:
+        if isinstance(end_date, str):
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        filtered_df = filtered_df[filtered_df['Date'] <= end_date]
+        
+    # Add category filter
+    if category_filter != 'All':
+        if isinstance(category_filter, list):
+            filtered_df = filtered_df[filtered_df['Category'].isin(category_filter)]
         else:
-            filtered_df = filtered_df[filtered_df['Order Date'] == order_date_filter]
+            filtered_df = filtered_df[filtered_df['Category'] == category_filter]
         
     if dining_option_filter != 'All':
         if isinstance(dining_option_filter, list):
@@ -342,13 +556,14 @@ def detailed_analysis_tables(df, location_filter='All', order_date_filter=None, 
     return {
         'sales_by_location': sales_by_location,
         'average_price_by_item': average_price_by_item,
-        'average_order_value': average_order_value, #value
+        'average_order_value': average_order_value,
         'average_items_per_order': average_items_per_order,
         'price_changes': price_changes,
         'top_items': top_items,
         'unique_orders': unique_orders,
         'total_quantity': total_quantity
     }
+
 
 # # Example usage (commented out since actual dataframe is not provided):
 # result = detailed_analysis_tables(df, location_filter='Lenox Hill')

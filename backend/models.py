@@ -42,13 +42,31 @@ class ExcelUploadResponse(BaseModel):
     table7: List[Dict[str, Any]]
     table8: List[Dict[str, Any]]
     table9: List[Dict[str, Any]]
-    locations: List[str] = []
+    locations: List[Any] = []
+    servers: List[Any] = []
+    categories: List[Any] = []
     dateRanges: List[str] = []
-    fileLocation: List[str] = []
+    fileLocation: List[Any] = []
     dashboardName: str
     fileName: str
     data: str
-    
+
+# class ExcelUploadResponse(BaseModel):
+#     table1: List[Dict[str, Any]]
+#     table2: List[Dict[str, Any]]
+#     table3: List[Dict[str, Any]]
+#     table4: List[Dict[str, Any]]
+#     table5: List[Dict[str, Any]]
+#     table6: List[Dict[str, Any]]
+#     table7: List[Dict[str, Any]]
+#     table8: List[Dict[str, Any]]
+#     table9: List[Dict[str, Any]]
+#     locations: List[str] = []
+#     dateRanges: List[str] = []
+#     fileLocation: List[str] = []
+#     dashboardName: str
+#     fileName: str
+#     data: str    
     
 class FinancialUploadResponse(BaseModel):
     table1: List[Dict[str, Any]]
