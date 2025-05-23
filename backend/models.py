@@ -44,11 +44,11 @@ class DashboardResponse(BaseModel):
     table7: Optional[List[Dict[str, Any]]] = None
     table8: Optional[List[Dict[str, Any]]] = None
     table9: Optional[List[Dict[str, Any]]] = None
-    locations: List[Any] = []
-    servers: List[Any] = []
-    categories: List[Any] = []
-    dateRanges: List[str] = []
-    fileLocation: List[Any] = []
+    locations: Optional[List[Any]] = None
+    servers: Optional[List[Any]] = None
+    categories: Optional[List[Any]] = None
+    dateRanges: Optional[List[str]] = None
+    fileLocation:Optional[List[Any]] = None
     dashboardName: str
     fileName: str
     data: str
@@ -61,17 +61,18 @@ class DashboardResponse(BaseModel):
     salesData: Optional[List[Dict[str, Any]]] = None
     ordersData: Optional[List[Dict[str, Any]]] = None
     avgTicketData: Optional[List[Dict[str, Any]]] = None
+    cogsData: Optional[List[Dict[str, Any]]] = None
+    laborCostData: Optional[List[Dict[str, Any]]] = None
     laborHrsData: Optional[List[Dict[str, Any]]] = None
     spmhData: Optional[List[Dict[str, Any]]] = None
-    laborCostData: Optional[List[Dict[str, Any]]] = None
     laborPercentageData: Optional[List[Dict[str, Any]]] = None
-    cogsData: Optional[List[Dict[str, Any]]] = None
     cogsPercentageData: Optional[List[Dict[str, Any]]] = None
     financialTables: Optional[List[Dict[str, Any]]] = None
     dates: Optional[List[str]] = None
-    years: Optional[List[str]] = None
+    years: Optional[List[Any]] = None
     stores: Optional[List[str]] = None
     quarters: Optional[List[str]] = None
+    
 
 
 

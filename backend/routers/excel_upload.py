@@ -141,7 +141,6 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 "locations": stores,
                 "years": years,
                 "dates": dates,
-                "dateRanges": ["test"],
                 "fileLocation":["test"],
                 "dashboardName": "Sales Wide",
                 "fileName": request.fileName, #the full names of the file saved in the uploads folder
