@@ -62,7 +62,7 @@ def process_financials_file(file_data: Union[io.BytesIO, str], year=None, week_r
     financials_sales_table, financials_orders_table, financials_avg_ticket_table = day_of_the_week_tables(df)
     
     if location == None:
-        financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df, store="0001: Midtown East", year=2025, week_range="1 | 12/30/2024 - 01/05/2025")
+        financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df, store="Midtown East", year=2025, week_range="1 | 12/30/2024 - 01/05/2025")
     else:
         financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df, store=location, year=2025, week_range="1 | 12/30/2024 - 01/05/2025")
     # print("i am here 3")
