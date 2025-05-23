@@ -10,7 +10,9 @@ export default defineConfig({
   server: {
     host: true, // ensures Vite listens on all interfaces
     allowedHosts: [
-      'xcelbot-latest-r3m7.onrender.com', // Render's domain
+      'xcelbot-latest.onrender.com',
+      'xcelbot-latest-r3m7.onrender.com',
+      'excelbot-frontend.onrender.com', // Add the new domain here
       'localhost'
     ]
   }
