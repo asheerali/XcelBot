@@ -628,7 +628,7 @@ export default function SalesDashboard() {
                 <Select
                   labelId="quarter-select-label"
                   id="quarter-select"
-                  value={quarters}
+                  value={quarters[0]}
                   label="Quarter"
                   onChange={handleQuarterChange}
                   startAdornment={

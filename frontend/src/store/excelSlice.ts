@@ -125,7 +125,7 @@ interface ExcelState {
     location: string;
     date: string;
     year: string;
-    quarter: int;
+    quarters: number;
   };
 
   // Added to track the active file
@@ -177,9 +177,9 @@ const initialState: ExcelState = {
     startDate: "",
     endDate: "",
     location: "",
-    data: "2 | 01/06/2025 - 01/12/2025",
+    date: "2 | 01/06/2025 - 01/12/2025",
     year: "2025",
-    quarter: "Q1",
+    quarters: 1,
   },
   activeFileIndex: -1, // Initialize with no active file
 };
