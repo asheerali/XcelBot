@@ -11,7 +11,7 @@ from dateutil.relativedelta import relativedelta
 from fastapi import Request
 
 # Import from local modules
-from models import ExcelUploadRequest, ExcelFilterRequest, ExcelUploadResponse, SalesAnalyticsResponse
+from models import ExcelUploadRequest, ExcelFilterRequest, ExcelUploadResponse, SalesAnalyticsResponse, DualDashboardResponse
 from excel_processor import process_excel_file
 from utils import find_file_in_directory
 from sales_analytics import generate_sales_analytics
@@ -31,7 +31,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 # Upload endpoint
-@router.post("/excel/upload", response_model=ExcelUploadResponse)
+@router.post("/excel/upload", response_model=DualDashboardResponse)
 # @router.post("/excel/upload")
 async def upload_excel(request: ExcelUploadRequest = Body(...)):
 # async def upload_excel(request: Request):
@@ -178,7 +178,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                                                                                                                                                                                                                                                                                                                 server_filter=server_filter)
 
             print("i am here in excel upload printing before the result" )
-            result = {
+            pmix_dashboard = {
             # "table1": [{"net_sales": [net_sales], "orders": [orders], 
             #             "qty_sold": [qty_sold],"average_order_value": [average_order_value], 
             #             "average_items_per_order": [average_items_per_order], "unique_orders": [unique_orders], 
@@ -209,47 +209,44 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             "dashboardName": "Product Mix ",
             "data":  "Dashboard is not yet implemented."
             }
-            print("i am here in excel upload printing  the result", result)
+            # print("i am here in excel upload printing  the result", result)
             
             
-            return result
+            # return result
         
 
             # # print("i am here in excel upload printing start_date", start_date)
 
-            # # Process Excel file with optional filters
-            # pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay = process_sales_split_file(
-            #     excel_data, 
-            #     start_date=start_date,
-            #     end_date=end_date,
-            #     location="All"
-            # )
+            # Process Excel file with optional filters
+            pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay = process_sales_split_file(
+                excel_data, 
+                start_date=start_date,
+                end_date=end_date,
+                location="All"
+            )
             
             
-            # # response accepted from the FE
-            #    # For now, return empty data for unsupported dashboards
-            # result = {
-            #     "table1": pivot_table.to_dict(orient='records'),
-            #     "table2": in_house_table.to_dict(orient='records'),
-            #     "table3": week_over_week_table.to_dict(orient='records'),
-            #     "table4": category_summary_table.to_dict(orient='records'),
-            #     "table5": salesByWeek.to_dict(orient='records'),
-            #     "table6": salesByDayOfWeek.to_dict(orient='records'),
-            #     "table7": salesByTimeOfDay.to_dict(orient='records'),
-            #     "table8": [],
-            #     "table9": [],
-            #     "locations": [request.location] if request.location else [],
-            #     "dateRanges": [],
-            #     "fileLocation": [request.location] if request.location else [],
-            #     "dashboardName": request.dashboard,
-            #     "fileName": request.fileName,
-            #     "data": f"{request.dashboard} Dashboard is not yet implemented."
-            # }    
-            # # print("result (i am here1)", result )
-            # # result_final = ExcelUploadResponse(**result)
-            # result_final = result
-            # print("result (i am here2)", result_final )
-            # return result_final
+            # response accepted from the FE
+               # For now, return empty data for unsupported dashboards
+            sales_split_dashboard = {
+                "table1": pivot_table.to_dict(orient='records'),
+                "table2": in_house_table.to_dict(orient='records'),
+                "table3": week_over_week_table.to_dict(orient='records'),
+                "table4": category_summary_table.to_dict(orient='records'),
+                "table5": salesByWeek.to_dict(orient='records'),
+                "table6": salesByDayOfWeek.to_dict(orient='records'),
+                "table7": salesByTimeOfDay.to_dict(orient='records'),
+                "table8": [],
+                "table9": [],
+                "locations": [request.location] if request.location else [],
+                "dateRanges": [],
+                "fileLocation": [request.location] if request.location else [],
+                "dashboardName": request.dashboard,
+                "fileName": request.fileName,
+                "data": f"{request.dashboard} Dashboard is not yet implemented."
+            }
+               
+            return [sales_split_dashboard, pmix_dashboard]
         
             # result_final = ExcelUploadResponse(**result), {
             # "table1": [{"net_sales": [net_sales], "orders": [orders], 

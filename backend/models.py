@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 from typing import Dict, List, Any, Optional
 
 # Pydantic models
@@ -32,6 +32,31 @@ class ExcelFilterRequest(BaseModel):
     location: Optional[str] = None   # Location filter
     dateRangeType: Optional[str] = None  # Type of date range (e.g., "Last 7 Days")
 
+
+
+class DashboardResponse(BaseModel):
+    table1: List[Dict[str, Any]]
+    table2: List[Dict[str, Any]]
+    table3: List[Dict[str, Any]]
+    table4: List[Dict[str, Any]]
+    table5: List[Dict[str, Any]]
+    table6: List[Dict[str, Any]]
+    table7: List[Dict[str, Any]]
+    table8: List[Dict[str, Any]]
+    table9: List[Dict[str, Any]]
+    locations: List[Any] = []
+    servers: List[Any] = []
+    categories: List[Any] = []
+    dateRanges: List[str] = []
+    fileLocation: List[Any] = []
+    dashboardName: str
+    fileName: str
+    data: str
+
+
+
+class DualDashboardResponse(RootModel[List[DashboardResponse]]):
+    pass
 class ExcelUploadResponse(BaseModel):
     table1: List[Dict[str, Any]]
     table2: List[Dict[str, Any]]
