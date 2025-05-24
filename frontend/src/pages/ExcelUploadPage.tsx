@@ -291,80 +291,134 @@ const ExcelUploadPage: React.FC = () => {
   };
   
   // Upload a single file
-  const uploadFile = async (fileInfo: FileInfo, index: number) => {
-    if (!fileInfo.location.trim()) {
-      // Don't upload files without a location
-      setFiles(prevFiles => {
-        const updatedFiles = [...prevFiles];
-        updatedFiles[index] = {
-          ...updatedFiles[index],
-          status: 'error',
-          error: 'Location is required',
-          progress: 0
-        };
-        return updatedFiles;
-      });
-      return false;
-    }
+ // Complete uploadFile function for ExcelUploadPage.tsx
+// Replace your entire uploadFile function with this version
+
+const uploadFile = async (fileInfo: FileInfo, index: number) => {
+  if (!fileInfo.location.trim()) {
+    // Don't upload files without a location
+    setFiles(prevFiles => {
+      const updatedFiles = [...prevFiles];
+      updatedFiles[index] = {
+        ...updatedFiles[index],
+        status: 'error',
+        error: 'Location is required',
+        progress: 0
+      };
+      return updatedFiles;
+    });
+    return false;
+  }
+  
+  try {
+    // Update status to uploading
+    setFiles(prevFiles => {
+      const updatedFiles = [...prevFiles];
+      updatedFiles[index] = {
+        ...updatedFiles[index],
+        status: 'uploading',
+        progress: 0
+      };
+      return updatedFiles;
+    });
     
-    try {
-      // Update status to uploading
-      setFiles(prevFiles => {
-        const updatedFiles = [...prevFiles];
-        updatedFiles[index] = {
-          ...updatedFiles[index],
-          status: 'uploading',
-          progress: 0
-        };
-        return updatedFiles;
-      });
-      
-      // Convert file to base64
-      const base64File = await toBase64(fileInfo.file);
-      const base64Content = base64File.split(',')[1]; // Remove data:application/... prefix
-      
-      // Store file info in Redux
-      dispatch(setExcelFile({
-        fileName: fileInfo.file.name,
-        fileContent: base64Content,
-        location: fileInfo.location
-      }));
-      
-      // Simulate progress updates (since we don't have real progress events with axios)
-      let progress = 0;
-      const progressInterval = setInterval(() => {
-        progress += 10;
-        if (progress <= 90) {
-          setFiles(prevFiles => {
-            const updatedFiles = [...prevFiles];
-            updatedFiles[index] = {
-              ...updatedFiles[index],
-              progress
+    // Convert file to base64
+    const base64File = await toBase64(fileInfo.file);
+    const base64Content = base64File.split(',')[1]; // Remove data:application/... prefix
+    
+    // Store file info in Redux
+    dispatch(setExcelFile({
+      fileName: fileInfo.file.name,
+      fileContent: base64Content,
+      location: fileInfo.location
+    }));
+    
+    // Simulate progress updates (since we don't have real progress events with axios)
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+      progress += 10;
+      if (progress <= 90) {
+        setFiles(prevFiles => {
+          const updatedFiles = [...prevFiles];
+          updatedFiles[index] = {
+            ...updatedFiles[index],
+            progress
+          };
+          return updatedFiles;
+        });
+      } else {
+        clearInterval(progressInterval);
+      }
+    }, 300);
+    
+    // Send to backend with location and dashboard parameters
+    const response = await axios.post(API_URL, {
+      fileName: fileInfo.file.name,
+      fileContent: base64Content,
+      location: fileInfo.location,
+      dashboard: fileInfo.dashboard
+    });
+    
+    // Clear the progress interval
+    clearInterval(progressInterval);
+    
+    // Route data based on dashboard type from response
+    if (response.data) {
+      // Check if response.data is an array (multiple dashboards)
+      if (Array.isArray(response.data)) {
+        console.log('Multiple dashboards detected in response array');
+        
+        // Handle multiple dashboards (Sales Split + Product Mix)
+        response.data.forEach((dashboardData) => {
+          const dashboardName = dashboardData.dashboardName;
+          console.log(`Processing dashboard: ${dashboardName} from array`);
+          
+          if (dashboardName === 'Sales Split') {
+            console.log('Sales Split dashboard detected in array - processing data');
+            console.log('Sales Split data:', dashboardData);
+            
+            // Add to sales data in Redux
+            dispatch(addSalesData({
+              fileName: fileInfo.file.name,
+              location: fileInfo.location,
+              data: dashboardData
+            }));
+            
+            // Also add to regular file data for backward compatibility
+            dispatch(addFileData({
+              fileName: fileInfo.file.name,
+              location: fileInfo.location,
+              data: dashboardData
+            }));
+          } else if (dashboardName === 'Product Mix') {
+            // Product Mix functionality not implemented yet
+            console.log('Product Mix dashboard detected in array - functionality not implemented yet');
+            console.log('Product Mix data:', dashboardData);
+            
+            // For now, just store in a dummy variable to prevent errors
+            const dummyProductMixData = {
+              fileName: fileInfo.file.name,
+              location: fileInfo.location,
+              data: dashboardData
             };
-            return updatedFiles;
-          });
-        } else {
-          clearInterval(progressInterval);
+            console.log('Dummy Product Mix data stored (array):', dummyProductMixData);
+          }
+        });
+        
+        // Update locations in Redux store for multiple dashboards
+        if (fileInfo.location) {
+          dispatch(setLocations([fileInfo.location]));
+          dispatch(selectLocation(fileInfo.location));
         }
-      }, 300);
-      
-      // Send to backend with location and dashboard parameters
-      const response = await axios.post(API_URL, {
-        fileName: fileInfo.file.name,
-        fileContent: base64Content,
-        location: fileInfo.location,
-        dashboard: fileInfo.dashboard
-      });
-      
-      // Clear the progress interval
-      clearInterval(progressInterval);
-      
-      // Route data based on dashboard type from response
-      if (response.data) {
+      } else {
+        // Handle single dashboard (existing logic)
         const dashboardName = response.data.dashboardName || fileInfo.dashboard;
+        console.log(`Processing single dashboard: ${dashboardName}`);
         
         // Dispatch based on dashboard type
         if (dashboardName === 'Financials') {
+          console.log('Financials dashboard detected - processing data');
+          
           // Add to financial data in Redux
           dispatch(addFinancialData({
             fileName: fileInfo.file.name,
@@ -372,6 +426,9 @@ const ExcelUploadPage: React.FC = () => {
             data: response.data
           }));
         } else if (dashboardName === 'Sales Split') {
+          console.log('Sales Split dashboard detected - processing data');
+          console.log('Sales Split data:', response.data);
+          
           // Add to sales data in Redux
           dispatch(addSalesData({
             fileName: fileInfo.file.name,
@@ -386,69 +443,83 @@ const ExcelUploadPage: React.FC = () => {
             data: response.data
           }));
         } else if (dashboardName === 'Sales Wide') {
+          console.log('Sales Wide dashboard detected - processing data');
+          
           // Add to sales wide data in Redux
           dispatch(addSalesWideData({
             fileName: fileInfo.file.name,
             location: fileInfo.location,
             data: response.data
           }));
-        } else {
-          // For all other types, just use generic file data
-          dispatch(addFileData({
+        } else if (dashboardName === 'Product Mix') {
+          // Product Mix functionality not implemented yet
+          console.log('Product Mix dashboard detected - functionality not implemented yet');
+          console.log('Product Mix data:', response.data);
+          
+          // For now, just store in a dummy variable to prevent errors
+          const dummyProductMixData = {
             fileName: fileInfo.file.name,
             location: fileInfo.location,
             data: response.data
-          }));
-        }
-        
-        // Update file status to success and store data
-        setFiles(prevFiles => {
-          const updatedFiles = [...prevFiles];
-          updatedFiles[index] = {
-            ...updatedFiles[index],
-            status: 'success',
-            progress: 100,
-            data: response.data
           };
-          return updatedFiles;
-        });
-        
-        return true;
-      } else {
-        throw new Error('Invalid response data');
-      }
-    } catch (err) {
-      console.error('Upload error:', err);
-      
-      let errorMessage = 'Error processing file';
-      
-      if (axios.isAxiosError(err)) {
-        if (err.response) {
-          // Get detailed error message if available
-          const detail = err.response.data?.detail;
-          errorMessage = `Server error: ${detail || err.response.status}`;
-        } else if (err.request) {
-          errorMessage = 'No response from server. Please check if the backend is running.';
+          console.log('Dummy Product Mix data stored:', dummyProductMixData);
         }
-      } else if (err instanceof Error) {
-        errorMessage = `Error: ${err.message}`;
+        
+        // Update locations in Redux store for single dashboard  
+        if (fileInfo.location) {
+          dispatch(setLocations([fileInfo.location]));
+          dispatch(selectLocation(fileInfo.location));
+        }
       }
       
-      // Update file status to error
+      // Update file status to success and store data
       setFiles(prevFiles => {
         const updatedFiles = [...prevFiles];
         updatedFiles[index] = {
           ...updatedFiles[index],
-          status: 'error',
-          error: errorMessage,
-          progress: 0
+          status: 'success',
+          progress: 100,
+          data: response.data
         };
         return updatedFiles;
       });
       
-      return false;
+      return true;
+    } else {
+      throw new Error('Invalid response data');
     }
-  };
+  } catch (err) {
+    console.error('Upload error:', err);
+    
+    let errorMessage = 'Error processing file';
+    
+    if (axios.isAxiosError(err)) {
+      if (err.response) {
+        // Get detailed error message if available
+        const detail = err.response.data?.detail;
+        errorMessage = `Server error: ${detail || err.response.status}`;
+      } else if (err.request) {
+        errorMessage = 'No response from server. Please check if the backend is running.';
+      }
+    } else if (err instanceof Error) {
+      errorMessage = `Error: ${err.message}`;
+    }
+    
+    // Update file status to error
+    setFiles(prevFiles => {
+      const updatedFiles = [...prevFiles];
+      updatedFiles[index] = {
+        ...updatedFiles[index],
+        status: 'error',
+        error: errorMessage,
+        progress: 0
+      };
+      return updatedFiles;
+    });
+    
+    return false;
+  }
+};
   
   // Upload all pending files
   const uploadAllFiles = async () => {

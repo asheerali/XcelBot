@@ -60,7 +60,13 @@ const CustomSidebar = ({ logo, title = 'InsightIQ', onSignOut }) => {
             title: 'Help Center',
             path: '/HelpCenter',
             icon: _jsx(HelpIcon, {})
+        },
+         {
+            title: 'DebugExcelSlice',
+            path: '/DebugExcelSlice',
+            icon: _jsx(HelpIcon, {})
         }
+        
     ];
     const handleDrawerToggle = () => {
         if (isMobile) {
