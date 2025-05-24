@@ -31,7 +31,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 # Upload endpoint
-@router.post("/excel/upload", response_model=DashboardResponse)
+@router.post("/excel/upload", response_model=DualDashboardResponse)
 # @router.post("/excel/upload")
 async def upload_excel(request: ExcelUploadRequest = Body(...)):
 # async def upload_excel(request: Request):
@@ -260,7 +260,8 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 "fileName": request.fileName,
                 "data": f"{request.dashboard} Dashboard is not yet implemented."
             }
-               
+                        
+
             return [sales_split_dashboard, pmix_dashboard]
             # return {
             #     "table1": [],
