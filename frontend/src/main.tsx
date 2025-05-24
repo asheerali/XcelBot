@@ -28,7 +28,6 @@ import SalesDashboard from "./pages/SalesDashboard";
 import ProductMixDashboard from "./pages/ProductMixDashboard";
 import DateRangeSelector from "./components/DateRangeSelector";
 import SalesSplitDashboard from "./components/SalesSplitDashboard";
-import DebugExcelSlice from "./components/DebugExcelSlice"; // Import the debug component
 const router = createBrowserRouter([
   {
     Component: App,
@@ -75,11 +74,6 @@ const router = createBrowserRouter([
             path: "HelpCenter",
             Component: HelpCenter,
           },
-           {
-            path: "DebugExcelSlice",
-            Component:DebugExcelSlice,
-          },
-       
           {
             path: "faq",
             Component: Faq,

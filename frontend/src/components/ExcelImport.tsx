@@ -1,3 +1,4 @@
+// Fixed ExcelImport.tsx - Product Mix Dashboard Style with Working Data Tables Tabs
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -6,6 +7,7 @@ import Card from '@mui/material/Card';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
+import LinearProgress from '@mui/material/LinearProgress';
 import Alert from '@mui/material/Alert';
 import Grid from '@mui/material/Grid';
 import Snackbar from '@mui/material/Snackbar';
@@ -16,6 +18,27 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import Skeleton from '@mui/material/Skeleton';
+import Fade from '@mui/material/Fade';
+import Grow from '@mui/material/Grow';
+import Chip from '@mui/material/Chip';
+import Paper from '@mui/material/Paper';
+import Backdrop from '@mui/material/Backdrop';
+import { styled, alpha, keyframes } from '@mui/material/styles';
+
+// Icons
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
+import TableChartIcon from '@mui/icons-material/TableChart';
+import InsightsIcon from '@mui/icons-material/Insights';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import BarChartIcon from '@mui/icons-material/BarChart';
 
 // Import components
 import FilterSection from './FilterSection';
@@ -28,6 +51,8 @@ import FirstPartyPercentageChart from './graphs/PercentageFirstThirdPartyChart';
 import TotalSalesChart from './graphs/TotalSalesChart';
 import WowTrendsChart from './graphs/WowTrendsChart';
 import PercentageFirstThirdPartyChart from './graphs/PercentageFirstThirdPartyChart';
+import SalesDashboard from './SalesDashboard';
+import SalesSplitDashboard from './SalesSplitDashboard';
 
 // Import Redux hooks
 import { useAppDispatch, useAppSelector } from '../typedHooks';
@@ -38,28 +63,143 @@ import {
   setTableData,
   addFileData,
   setLocations,
-  selectLocation
+  selectLocation,
+  addSalesWideData,
+  selectSalesWideLocation
 } from '../store/excelSlice';
 
-// API base URLs - update to match your backend URL
+// Modern styled components with clean white background
+const slideIn = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
+const CleanCard = styled(Card)(({ theme }) => ({
+  background: '#ffffff',
+  borderRadius: 12,
+  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+  border: '1px solid #e0e0e0',
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  animation: `${slideIn} 0.6s ease-out`,
+  '&:hover': {
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+  }
+}));
+
+// Product Mix style tabs - matching the image
+const ProductMixTab = styled(Tab)(({ theme }) => ({
+  textTransform: 'none',
+  fontWeight: 500,
+  fontSize: '1rem',
+  minHeight: 48,
+  padding: '12px 24px',
+  margin: '0 2px',
+  color: '#6B7280',
+  transition: 'all 0.2s ease',
+  '&.Mui-selected': {
+    color: '#3B82F6',
+    fontWeight: 600,
+  },
+  '&:hover': {
+    color: '#3B82F6',
+  }
+}));
+
+const ProductMixTabs = styled(Tabs)(({ theme }) => ({
+  '& .MuiTabs-indicator': {
+    backgroundColor: '#3B82F6',
+    height: 2,
+    borderRadius: 1,
+  },
+  '& .MuiTabs-flexContainer': {
+    borderBottom: '1px solid #E5E7EB',
+  },
+  minHeight: 48,
+}));
+
+const StatsCard = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(3),
+  borderRadius: 12,
+  background: '#ffffff',
+  border: '1px solid #e0e0e0',
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  '&:hover': {
+    transform: 'translateY(-2px)',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+  }
+}));
+
+const LoadingOverlay = styled(Backdrop)(({ theme }) => ({
+  zIndex: theme.zIndex.drawer + 1,
+  background: 'rgba(255, 255, 255, 0.9)',
+  backdropFilter: 'blur(8px)',
+}));
+
+const ModernLoader = () => (
+  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+    <Box sx={{ position: 'relative' }}>
+      <CircularProgress size={60} thickness={4} />
+      <Box
+        sx={{
+          top: 0,
+          left: 0,
+          bottom: 0,
+          right: 0,
+          position: 'absolute',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <AnalyticsIcon sx={{ fontSize: 24, color: 'primary.main' }} />
+      </Box>
+    </Box>
+    <Typography variant="h6" sx={{ fontWeight: 500 }}>
+      Processing Data...
+    </Typography>
+    <Typography variant="body2" color="text.secondary">
+      Analyzing your Excel data and generating insights
+    </Typography>
+  </Box>
+);
+
+// API base URLs
 const API_URL = 'http://localhost:8000/api/excel/upload';
 const FILTER_API_URL = 'http://localhost:8000/api/excel/filter';
 
-// Define types
-interface TableData {
-  table1: any[];
-  table2: any[];
-  table3: any[];
-  table5: any[];
-  locations: string[];
-  dateRanges: string[];
-  [key: string]: any;
+// Tab Panel Component
+interface TabPanelProps {
+  children?: React.ReactNode;
+  value: number;
+  index: number;
 }
 
-interface FileData {
-  fileName: string;
-  location: string;
-  data: TableData;
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`dashboard-tabpanel-${index}`}
+      aria-labelledby={`dashboard-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Fade in={value === index} timeout={500}>
+          <Box sx={{ pt: 3 }}>
+            {children}
+          </Box>
+        </Fade>
+      )}
+    </div>
+  );
 }
 
 // Main Component
@@ -74,39 +214,39 @@ export function ExcelImport() {
     fileProcessed,
     allLocations,
     salesLocations,
-    
     files,
-    location: currentLocation
+    location: currentLocation,
+    salesWideFiles,
+    salesWideLocations,
+    currentSalesWideLocation
   } = useAppSelector((state) => state.excel);
   
   const dispatch = useAppDispatch();
   
-  // Local state
+  // Local state - simplified to remove main tabs since everything is Sales Split
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<number>(0);
-  const [viewMode, setViewMode] = useState<string>('tabs'); // 'tabs', 'combined', or 'row'
+  const [salesSplitTab, setSalesSplitTab] = useState<number>(0); // Main tabs for the dashboard
+  const [tableTab, setTableTab] = useState<number>(0); // NEW: Separate state for table tabs
+  const [viewMode, setViewMode] = useState<string>('tabs');
   const [showTutorial, setShowTutorial] = useState<boolean>(false);
   const [selectedLocation, setSelectedLocation] = useState<string>(currentLocation || '');
-  
-  // Location dialog state - not needed in this component since files come pre-loaded
   const [isLocationDialogOpen, setIsLocationDialogOpen] = useState<boolean>(false);
   const [locationInput, setLocationInput] = useState<string>('');
   const [locationError, setLocationError] = useState<string>('');
-  
-  // Separate states for notification
   const [showSuccessNotification, setShowSuccessNotification] = useState<boolean>(false);
-  
-  // State to force chart re-render
   const [chartKey, setChartKey] = useState<number>(0);
-  
-  // Date filter states
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [dateRangeType, setDateRangeType] = useState<string>('');
   const [availableDateRanges, setAvailableDateRanges] = useState<string[]>([]);
   const [customDateRange, setCustomDateRange] = useState<boolean>(false);
   
+  // Loading states
+  const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
+  const [loadingProgress, setLoadingProgress] = useState<number>(0);
+  const [loadingMessage, setLoadingMessage] = useState<string>('');
+
   // Update selected location whenever Redux location changes
   useEffect(() => {
     if (currentLocation && currentLocation !== selectedLocation) {
@@ -118,7 +258,6 @@ export function ExcelImport() {
   useEffect(() => {
     if (fileProcessed) {
       setShowSuccessNotification(true);
-      // Force re-render of chart component when data is processed
       setChartKey(prevKey => prevKey + 1);
     }
   }, [fileProcessed]);
@@ -128,13 +267,11 @@ export function ExcelImport() {
     if (reduxTableData && reduxTableData.dateRanges && reduxTableData.dateRanges.length > 0) {
       setAvailableDateRanges(reduxTableData.dateRanges);
       
-      // Set default date range if not already set
       if (!dateRangeType && reduxTableData.dateRanges.length > 0) {
         setDateRangeType(reduxTableData.dateRanges[0]);
       }
     }
     
-    // Update location if available from Redux state
     if (allLocations && allLocations.length > 0 && !selectedLocation) {
       const firstLocation = currentLocation || allLocations[0];
       setSelectedLocation(firstLocation);
@@ -142,7 +279,6 @@ export function ExcelImport() {
     }
   }, [reduxTableData, dateRangeType, selectedLocation, allLocations, currentLocation, dispatch]);
 
-  // Effect to handle custom date range selection
   useEffect(() => {
     if (dateRangeType === 'Custom Date Range') {
       setCustomDateRange(true);
@@ -151,18 +287,37 @@ export function ExcelImport() {
     }
   }, [dateRangeType]);
 
+  // Simulate loading progress
+  const simulateProgress = (duration: number) => {
+    setLoadingProgress(0);
+    const interval = setInterval(() => {
+      setLoadingProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          return 100;
+        }
+        return prev + (100 / (duration / 100));
+      });
+    }, 100);
+    return interval;
+  };
+
+  // Handle tab changes - now only for the main Product Mix style tabs
+  const handleSalesSplitTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setSalesSplitTab(newValue);
+  };
+
+  // NEW: Handle table tab changes
+  const handleTableTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTableTab(newValue);
+  };
+
   // Handle location change
   const handleLocationChange = (event: SelectChangeEvent) => {
     const newLocation = event.target.value;
     setSelectedLocation(newLocation);
-    
-    // Dispatch redux action to select location
     dispatch(selectLocation(newLocation));
-    
-    // Apply filters with new location
     handleApplyFilters(newLocation, dateRangeType);
-    
-    // Force re-render of chart component when filters change
     setChartKey(prevKey => prevKey + 1);
   };
 
@@ -170,32 +325,28 @@ export function ExcelImport() {
   const handleDateRangeChange = (event: SelectChangeEvent) => {
     const newDateRange = event.target.value;
     setDateRangeType(newDateRange);
-    
-    // Apply filters with new date range
     handleApplyFilters(selectedLocation, newDateRange);
-    
-    // Force re-render of chart component when filters change
     setChartKey(prevKey => prevKey + 1);
   };
 
-  // Apply filters
-  const handleApplyFilters = (location = selectedLocation, dateRange = dateRangeType) => {
-    // Check if we have any files loaded
+  // Apply filters with enhanced loading
+  const handleApplyFilters = async (location = selectedLocation, dateRange = dateRangeType) => {
     if (!files || files.length === 0) {
       setError('No files uploaded. Please upload Excel files first.');
       return;
     }
     
-    // Find the file for the selected location
     const fileForLocation = files.find(f => f.location === location);
-    
     if (!fileForLocation) {
       setError(`No file found for location: ${location}`);
       return;
     }
 
     try {
-      // Use direct action objects instead of potentially undefined actions
+      setIsLoadingData(true);
+      setLoadingMessage('Applying filters...');
+      const progressInterval = simulateProgress(2000);
+      
       dispatch({ type: 'excel/setLoading', payload: true });
       dispatch({ type: 'excel/setError', payload: null });
       
@@ -204,7 +355,6 @@ export function ExcelImport() {
       let formattedEndDate: string | null = null;
       
       if (dateRange === 'Custom Date Range' && startDate) {
-        // Convert MM/DD/YYYY to YYYY-MM-DD format for backend
         const dateParts = startDate.split('/');
         if (dateParts.length === 3) {
           formattedStartDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
@@ -212,97 +362,80 @@ export function ExcelImport() {
       }
       
       if (dateRange === 'Custom Date Range' && endDate) {
-        // Convert MM/DD/YYYY to YYYY-MM-DD format for backend
         const dateParts = endDate.split('/');
         if (dateParts.length === 3) {
           formattedEndDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
         }
       }
       
-      // Get the file content from the selected file
       const selectedFile = fileForLocation;
-      
-      // Prepare filter data
       const filterData = {
         fileName: selectedFile.fileName,
-        fileContent: fileContent, // Use stored file content if available
+        fileContent: fileContent,
         startDate: formattedStartDate,
         endDate: formattedEndDate,
         location: location || null,
         dateRangeType: dateRange
       };
       
-      console.log('Sending filter request:', filterData);
+      setLoadingMessage('Processing data...');
       
-      // Call filter API
-      axios.post(FILTER_API_URL, filterData)
-        .then(response => {
-          // Update table data with filtered data
-          if (response.data) {
-            dispatch({ type: 'excel/setTableData', payload: response.data });
-            setError(''); // Clear any previous errors
-            
-            // Force re-render of chart component when data changes
-            setChartKey(prevKey => prevKey + 1);
-          } else {
-            throw new Error('Invalid response data');
-          }
-        })
-        .catch(err => {
-          console.error('Filter error:', err);
-          
-          let errorMessage = 'Error filtering data';
-          if (axios.isAxiosError(err)) {
-            if (err.response) {
-              // Get detailed error message if available
-              const detail = err.response.data?.detail;
-              errorMessage = `Server error: ${detail || err.response.status}`;
-              
-              // Special handling for common errors
-              if (detail && typeof detail === 'string' && detail.includes('isinf')) {
-                errorMessage = 'Backend error: Please update the backend code to use numpy.isinf instead of pandas.isinf';
-              } else if (err.response.status === 404) {
-                errorMessage = 'API endpoint not found. Is the server running?';
-              }
-            } else if (err.request) {
-              errorMessage = 'No response from server. Please check if the backend is running.';
-            }
-          }
-          
-          setError(errorMessage);
-          dispatch({ type: 'excel/setError', payload: errorMessage });
-        })
-        .finally(() => {
-          dispatch({ type: 'excel/setLoading', payload: false });
-        });
+      const response = await axios.post(FILTER_API_URL, filterData);
+      
+      if (response.data) {
+        dispatch({ type: 'excel/setTableData', payload: response.data });
+        setError('');
+        setChartKey(prevKey => prevKey + 1);
+        setLoadingMessage('Complete!');
+        
+        // Brief delay to show completion
+        setTimeout(() => {
+          setIsLoadingData(false);
+          clearInterval(progressInterval);
+        }, 500);
+      } else {
+        throw new Error('Invalid response data');
+      }
       
     } catch (err: any) {
       console.error('Filter error:', err);
-      const errorMessage = 'Error applying filters: ' + (err.message || 'Unknown error');
+      setIsLoadingData(false);
+      
+      let errorMessage = 'Error filtering data';
+      if (axios.isAxiosError(err)) {
+        if (err.response) {
+          const detail = err.response.data?.detail;
+          errorMessage = `Server error: ${detail || err.response.status}`;
+          
+          if (detail && typeof detail === 'string' && detail.includes('isinf')) {
+            errorMessage = 'Backend error: Please update the backend code to use numpy.isinf instead of pandas.isinf';
+          } else if (err.response.status === 404) {
+            errorMessage = 'API endpoint not found. Is the server running?';
+          }
+        } else if (err.request) {
+          errorMessage = 'No response from server. Please check if the backend is running.';
+        }
+      }
+      
       setError(errorMessage);
       dispatch({ type: 'excel/setError', payload: errorMessage });
+    } finally {
       dispatch({ type: 'excel/setLoading', payload: false });
     }
   };
 
-  // Handle file selection (not needed since we're not uploading from here)
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    // This component doesn't handle file uploads - redirect to upload page
-    window.location.href = '/upload-excel';
-  };
-
-  // Handle tab changes
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
-  };
-
-  // Handle date input changes - these are in MM/DD/YYYY format
+  // Handle date input changes
   const handleStartDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setStartDate(event.target.value);
   };
 
   const handleEndDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setEndDate(event.target.value);
+  };
+
+  // Handle file selection redirect
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    window.location.href = '/upload-excel';
   };
 
   // Convert file to base64
@@ -320,21 +453,17 @@ export function ExcelImport() {
       return;
     }
     
-    // Check for duplicate locations
     if (allLocations && allLocations.some(loc => loc.toLowerCase() === locationInput.trim().toLowerCase())) {
       setLocationError('Location name must be unique');
       return;
     }
     
-    // Close the dialog and proceed with upload
     setIsLocationDialogOpen(false);
     setSelectedLocation(locationInput.trim());
-    
-    // Trigger the upload
     handleUpload(locationInput.trim());
   };
 
-  // Upload and process file
+  // Upload and process file with enhanced loading
   const handleUpload = async (locationName?: string) => {
     if (!file) {
       setError('Please select a file first');
@@ -342,16 +471,19 @@ export function ExcelImport() {
     }
 
     try {
-      // Use explicit action objects if the action creators might be undefined
+      setIsLoadingData(true);
+      setLoadingMessage('Uploading file...');
+      const progressInterval = simulateProgress(3000);
+      
       dispatch({ type: 'excel/setLoading', payload: true });
       dispatch({ type: 'excel/setError', payload: null });
-      setError(''); // Clear any previous errors
+      setError('');
       
-      // Convert file to base64
       const base64File = await toBase64(file);
-      const base64Content = base64File.split(',')[1]; // Remove data:application/... prefix
+      const base64Content = base64File.split(',')[1];
       
-      // Use explicit action object with location if provided
+      setLoadingMessage('Processing Excel data...');
+      
       dispatch({ 
         type: 'excel/setExcelFile', 
         payload: {
@@ -361,16 +493,15 @@ export function ExcelImport() {
         }
       });
       
-      // Send to backend
       const response = await axios.post(API_URL, {
         fileName: file.name,
         fileContent: base64Content,
-        location: locationName // Include location in the request
+        location: locationName
       });
       
-      // Update table data with response
+      setLoadingMessage('Generating insights...');
+      
       if (response.data) {
-        // Add file data to Redux store
         if (locationName) {
           dispatch({ 
             type: 'excel/addFileData', 
@@ -381,7 +512,6 @@ export function ExcelImport() {
             }
           });
           
-          // Update locations in Redux store
           dispatch({ 
             type: 'excel/setLocations', 
             payload: locationName ? [locationName] : response.data.locations || []
@@ -389,9 +519,8 @@ export function ExcelImport() {
         }
         
         dispatch({ type: 'excel/setTableData', payload: response.data });
-        setShowSuccessNotification(true);  // Show notification
+        setShowSuccessNotification(true);
         
-        // Set location if available
         if (locationName) {
           setSelectedLocation(locationName);
           dispatch({ type: 'excel/selectLocation', payload: locationName });
@@ -400,42 +529,43 @@ export function ExcelImport() {
           dispatch({ type: 'excel/selectLocation', payload: response.data.locations[0] });
         }
         
-        // Set date ranges if available
         if (response.data.dateRanges && response.data.dateRanges.length > 0) {
           setAvailableDateRanges(response.data.dateRanges);
           setDateRangeType(response.data.dateRanges[0]);
         }
         
-        // Show tutorial on first successful upload
         if (!localStorage.getItem('tutorialShown')) {
           setShowTutorial(true);
           localStorage.setItem('tutorialShown', 'true');
         }
         
-        // Force re-render of chart component
         setChartKey(prevKey => prevKey + 1);
+        setLoadingMessage('Complete!');
+        
+        setTimeout(() => {
+          setIsLoadingData(false);
+          clearInterval(progressInterval);
+        }, 500);
       } else {
         throw new Error('Invalid response data');
       }
       
     } catch (err: any) {
       console.error('Upload error:', err);
+      setIsLoadingData(false);
       
       let errorMessage = 'Error processing file';
       
       if (axios.isAxiosError(err)) {
         if (err.response) {
-          // Get detailed error message if available
           const detail = err.response.data?.detail;
           errorMessage = `Server error: ${detail || err.response.status}`;
           
-          // Special handling for common errors
           if (detail && typeof detail === 'string' && detail.includes('isinf')) {
             errorMessage = 'Backend error: Please update the backend code to use numpy.isinf instead of pandas.isinf';
           } else if (err.response.status === 404) {
             errorMessage = 'API endpoint not found. Is the server running?';
           } else if (detail) {
-            // Try to extract a more meaningful message
             if (typeof detail === 'string' && detail.includes('Column')) {
               errorMessage = `File format error: ${detail}`;
             } else {
@@ -456,8 +586,8 @@ export function ExcelImport() {
     }
   };
 
-  // Success notification - decoupled from dataProcessed state
-  const renderSuccessMessage = () => (
+  // Success notification
+  const renderSuccessNotification = () => (
     <Snackbar
       open={showSuccessNotification}
       autoHideDuration={5000}
@@ -467,9 +597,17 @@ export function ExcelImport() {
       <Alert 
         onClose={() => setShowSuccessNotification(false)} 
         severity="success" 
-        sx={{ width: '100%' }}
+        sx={{ 
+          width: '100%',
+          borderRadius: 2,
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
+        }}
+        icon={<CheckCircleIcon />}
       >
-        Excel file processed successfully!
+        <Typography variant="subtitle2" fontWeight={600}>
+          Success!
+        </Typography>
+        Excel file processed successfully and insights generated.
       </Alert>
     </Snackbar>
   );
@@ -485,16 +623,21 @@ export function ExcelImport() {
       <Alert 
         onClose={() => setShowTutorial(false)} 
         severity="info" 
-        sx={{ width: '100%', maxWidth: '500px' }}
+        sx={{ 
+          width: '100%', 
+          maxWidth: '500px',
+          borderRadius: 2,
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
+        }}
       >
-        <Typography variant="subtitle1" gutterBottom>Welcome to the Sales Analyzer!</Typography>
-        <Typography variant="body2">
-          • <strong>Percentage Table</strong>: Shows week-over-week changes<br />
-          • <strong>In-House Table</strong>: Categories as % of In-House sales<br />
-          • <strong>WOW Table</strong>: Includes 3P totals and 1P/3P ratio<br />
-          • <strong>Category Summary</strong>: Overall sales by category<br />
+        <Typography variant="subtitle1" gutterBottom fontWeight={600}>
+          🎉 Welcome to the Sales Analyzer!
+        </Typography>
+        <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+          <strong>📊 Overview</strong>: Interactive dashboard overview<br />
+          <strong>📈 Detailed Analysis</strong>: Advanced sales insights<br />
           <br />
-          Use the date filter to analyze specific time periods!
+          💡 <strong>Tip:</strong> Use the filters to analyze specific time periods and locations!
         </Typography>
       </Alert>
     </Snackbar>
@@ -508,12 +651,20 @@ export function ExcelImport() {
       aria-labelledby="location-dialog-title"
       fullWidth
       maxWidth="sm"
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          background: '#ffffff',
+        }
+      }}
     >
-      <DialogTitle id="location-dialog-title">
-        Enter Location Name
+      <DialogTitle id="location-dialog-title" sx={{ pb: 1 }}>
+        <Typography variant="h5" fontWeight={600}>
+          📍 Enter Location Name
+        </Typography>
       </DialogTitle>
       <DialogContent>
-        <Typography variant="body1" paragraph>
+        <Typography variant="body1" paragraph sx={{ color: 'text.secondary' }}>
           Please enter a location name for this Excel file. Each file should represent data from a single location.
         </Typography>
         <TextField
@@ -528,13 +679,30 @@ export function ExcelImport() {
           onChange={(e) => setLocationInput(e.target.value)}
           error={!!locationError}
           helperText={locationError}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 2,
+            }
+          }}
         />
       </DialogContent>
-      <DialogActions>
-        <Button onClick={() => setIsLocationDialogOpen(false)} color="inherit">
+      <DialogActions sx={{ p: 3, pt: 1 }}>
+        <Button 
+          onClick={() => setIsLocationDialogOpen(false)} 
+          color="inherit"
+          sx={{ borderRadius: 2 }}
+        >
           Cancel
         </Button>
-        <Button onClick={handleLocationSave} color="primary" variant="contained">
+        <Button 
+          onClick={handleLocationSave} 
+          color="primary" 
+          variant="contained"
+          sx={{ 
+            borderRadius: 2,
+            px: 3
+          }}
+        >
           Save
         </Button>
       </DialogActions>
@@ -543,171 +711,345 @@ export function ExcelImport() {
 
   return (
     <>
-      <Box mb={4}>
-         <Typography 
-          variant="h4" 
-          component="h1" 
-          sx={{ 
-            fontWeight: 600,
-            color: '#1a237e',
-            fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }
-          }}
-        >
-           {/* <Typography variant="h4" gutterBottom> */}
-          Sales Analysis Dashboard
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          {files.length > 0 
-            ? `Analyzing data from ${files.length} location${files.length > 1 ? 's' : ''}`
-            : 'Upload Excel files to analyze sales data across different categories'}
-        </Typography>
-      </Box>
+      {/* Loading Overlay */}
+      <LoadingOverlay open={isLoadingData || reduxLoading}>
+        <Box sx={{ textAlign: 'center' }}>
+          <ModernLoader />
+          {loadingMessage && (
+            <Box sx={{ mt: 2, minWidth: 300 }}>
+              <LinearProgress 
+                variant="determinate" 
+                value={loadingProgress}
+                sx={{ 
+                  borderRadius: 1,
+                  height: 8,
+                  backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                  '& .MuiLinearProgress-bar': {
+                    borderRadius: 1,
+                  }
+                }}
+              />
+              <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
+                {loadingMessage} ({Math.round(loadingProgress)}%)
+              </Typography>
+            </Box>
+          )}
+        </Box>
+      </LoadingOverlay>
 
-      {/* Excel Upload Card - Modified to show files loaded status */}
-      <Card sx={{ p: 3, mb: 4 }}>
-        <Grid container spacing={2}>
-          {/* File status display */}
-          {files.length === 0 ? (
-            <Grid item xs={12}>
-              <Box textAlign="center" py={4}>
-                <Typography variant="h6" color="text.secondary" gutterBottom>
-                  No files uploaded yet
-                </Typography>
-                <Button 
-                  variant="contained" 
-                  onClick={() => window.location.href = '/upload-excel'}
-                  sx={{ mt: 2 }}
-                >
-                  Go to Upload Page
-                </Button>
-              </Box>
-            </Grid>
-          ) : (
-            <>
-              {/* File summary */}
+      {/* Clean white background */}
+      <Box sx={{ 
+        background: '#ffffff',
+        minHeight: '100vh',
+        p: 3
+      }}>
+        {/* Product Mix Dashboard Header - matching the style from images */}
+        <Box mb={4}>
+          <Typography 
+            variant="h4" 
+            component="h1" 
+            sx={{ 
+              fontWeight: 600,
+              color: 'rgb(9, 43, 117)', // Same blue color as in ProductMixDashboard
+              fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+              mb: 2
+            }}
+          >
+            Product Mix Dashboard
+          </Typography>
+          <Typography variant="subtitle1" color="text.secondary">
+            {files.length > 0
+              ? `Analyzing data from ${files.length} location${files.length > 1 ? 's' : ''}`
+              : 'Upload Excel files to analyze sales data across different categories'}
+          </Typography>
+        </Box>
+
+        {/* Status Card */}
+        <CleanCard sx={{ p: 3, mb: 4 }}>
+          <Grid container spacing={2}>
+            {files.length === 0 ? (
               <Grid item xs={12}>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
-                  <Box>
-                    <Typography variant="h6">
-                      Files Loaded: {files.length}
+                <StatsCard sx={{ textAlign: 'center', py: 6 }}>
+                  <CloudUploadIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
+                  <Typography variant="h5" color="text.secondary" gutterBottom fontWeight={600}>
+                    Ready to Analyze Your Data
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" paragraph>
+                    Upload your Excel files to get started with powerful sales insights
+                  </Typography>
+                  <Button 
+                    variant="contained" 
+                    size="large"
+                    onClick={() => window.location.href = '/upload-excel'}
+                    startIcon={<CloudUploadIcon />}
+                    sx={{ 
+                      mt: 2,
+                      borderRadius: 2,
+                      px: 4,
+                      py: 1.5,
+                    }}
+                  >
+                    Upload Files
+                  </Button>
+                </StatsCard>
+              </Grid>
+            ) : (
+              <>
+                {/* File Summary */}
+                <Grid item xs={12}>
+                  <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
+                    <Box>
+                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                        📈 Data Sources Active
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                        <Chip 
+                          icon={<BarChartIcon />}
+                          label={`Sales Analysis: ${files.length} files`} 
+                          color="primary"
+                          sx={{ 
+                            borderRadius: 2,
+                            '& .MuiChip-icon': { fontSize: 18 }
+                          }}
+                        />
+                      </Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        📂 Current: {fileName || 'None selected'}
+                        {selectedLocation && ` • 📍 ${selectedLocation}`}
+                      </Typography>
+                    </Box>
+                    <Button 
+                      variant="outlined" 
+                      onClick={() => window.location.href = '/upload-excel'}
+                      startIcon={<CloudUploadIcon />}
+                      sx={{ 
+                        borderRadius: 2,
+                        borderWidth: 2,
+                        '&:hover': {
+                          borderWidth: 2,
+                          transform: 'translateY(-1px)',
+                        }
+                      }}
+                    >
+                      Upload More
+                    </Button>
+                  </Box>
+                </Grid>
+                
+                {/* Filter Section */}
+                <Grid item xs={12} sx={{ mt: 2 }}>
+                  <Paper sx={{ 
+                    p: 3, 
+                    borderRadius: 2,
+                    background: '#ffffff',
+                    border: '1px solid #e0e0e0'
+                  }}>
+                    <FilterSection 
+                      dateRangeType={dateRangeType}
+                      availableDateRanges={availableDateRanges}
+                      onDateRangeChange={handleDateRangeChange}
+                      customDateRange={customDateRange}
+                      startDate={startDate}
+                      endDate={endDate}
+                      onStartDateChange={handleStartDateChange}
+                      onEndDateChange={handleEndDateChange}
+                      locations={salesLocations} 
+                      selectedLocation={selectedLocation}
+                      onLocationChange={handleLocationChange}
+                      onApplyFilters={() => handleApplyFilters()}
+                    />
+                  </Paper>
+                </Grid>
+              </>
+            )}
+          </Grid>
+          
+          {/* Error Alert */}
+          {(error || reduxError) && (
+            <Fade in>
+              <Alert 
+                severity="error" 
+                sx={{ 
+                  mt: 2,
+                  borderRadius: 2,
+                  '& .MuiAlert-icon': {
+                    fontSize: 24
+                  }
+                }}
+                icon={<ErrorIcon />}
+                action={
+                  <Button 
+                    color="inherit" 
+                    size="small"
+                    onClick={() => {
+                      setError('');
+                      dispatch({ type: 'excel/setError', payload: null });
+                    }}
+                  >
+                    Dismiss
+                  </Button>
+                }
+              >
+                <Typography variant="subtitle2" fontWeight={600}>
+                  Processing Error
+                </Typography>
+                {error || reduxError}
+              </Alert>
+            </Fade>
+          )}
+        </CleanCard>
+
+        {/* Main Dashboard - Product Mix Style */}
+        {files.length > 0 && (
+          <CleanCard sx={{ borderRadius: 2, mb: 3, overflow: 'hidden' }}>
+            {/* Product Mix Style Tabs - matching the image */}
+            <Box sx={{ 
+              background: '#ffffff',
+              borderBottom: '1px solid #E5E7EB'
+            }}>
+              <ProductMixTabs 
+                value={salesSplitTab} 
+                onChange={handleSalesSplitTabChange} 
+                variant="fullWidth"
+              >
+                <ProductMixTab 
+                  label="Overview" 
+                />
+                <ProductMixTab 
+                  label="Detailed Analysis" 
+                />
+              </ProductMixTabs>
+            </Box>
+
+            {/* Overview Tab */}
+            <TabPanel value={salesSplitTab} index={0}>
+              <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+                {fileProcessed && files.length > 0 ? (
+                  <Fade in timeout={600}>
+                    <Box>
+                      <SalesSplitDashboard 
+                        tableData={reduxTableData}
+                        selectedLocation={selectedLocation}
+                      />
+                    </Box>
+                  </Fade>
+                ) : (
+                  <Box sx={{ textAlign: 'center', py: 6 }}>
+                    <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, mb: 2 }} />
+                    <Skeleton variant="text" width="60%" />
+                    <Skeleton variant="text" width="40%" />
+                  </Box>
+                )}
+              </Box>
+            </TabPanel>
+
+            {/* Detailed Analysis Tab */}
+            <TabPanel value={salesSplitTab} index={1}>
+              <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+                {fileProcessed && reduxTableData.table1 && reduxTableData.table1.length > 0 ? (
+                  <Fade in timeout={600}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                        <InsightsIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
+                        <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                          🔍 Detailed Analysis
+                        </Typography>
+                      </Box>
+
+                      {/* Analytics Charts Section */}
+                      <CleanCard sx={{ p: 3, mb: 3 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                          <AnalyticsIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
+                          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                            📊 Sales Analytics {selectedLocation ? `for ${selectedLocation}` : ''}
+                          </Typography>
+                        </Box>
+                        <Divider sx={{ mb: 3 }} />
+                        
+                        <div key={`sales-chart-${chartKey}`}>
+                          <SalesCharts 
+                            fileName={fileName}
+                            dateRangeType={dateRangeType}
+                            selectedLocation={selectedLocation}
+                            height={250}
+                          />
+                        </div>
+                      </CleanCard>
+
+                      {/* Data Tables Section - FIXED: Now passes the correct handler */}
+                      <CleanCard sx={{ p: 3, mb: 3 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                          <TableChartIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
+                          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                            📋 Data Tables
+                          </Typography>
+                        </Box>
+                        <TableDisplay 
+                          tableData={reduxTableData}
+                          viewMode="tabs"
+                          activeTab={tableTab}
+                          onTabChange={handleTableTabChange} // FIXED: Now passes the correct handler
+                        />
+                      </CleanCard>
+
+                      {/* Detailed Charts Grid */}
+                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                        📈 Detailed Charts
+                      </Typography>
+                      <Grid container spacing={3}>
+                        <Grid item xs={12} lg={6}>
+                          <CleanCard sx={{ p: 3, height: 350 }}>
+                            <DeliveryPercentageChart tableData={reduxTableData} height={270} />
+                          </CleanCard>
+                        </Grid>
+                        <Grid item xs={12} lg={6}>
+                          <CleanCard sx={{ p: 3, height: 350 }}>
+                            <InHousePercentageChart tableData={reduxTableData} height={270} />
+                          </CleanCard>
+                        </Grid>
+                        <Grid item xs={12} lg={6}>
+                          <CleanCard sx={{ p: 3, height: 350 }}>
+                            <CateringPercentageChart tableData={reduxTableData} height={270} />
+                          </CleanCard>
+                        </Grid>
+                        <Grid item xs={12} lg={6}>
+                          <CleanCard sx={{ p: 3, height: 350 }}>
+                            <TotalSalesChart tableData={reduxTableData} height={270} />
+                          </CleanCard>
+                        </Grid>
+                        {reduxTableData.table4 && reduxTableData.table4.length > 0 && (
+                          <Grid item xs={12}>
+                            <CleanCard sx={{ p: 3, height: 400 }}>
+                              <WowTrendsChart tableData={reduxTableData} height={320} />
+                            </CleanCard>
+                          </Grid>
+                        )}
+                        <Grid item xs={12}>
+                          <CleanCard sx={{ p: 3, height: 350 }}>
+                            <PercentageFirstThirdPartyChart tableData={reduxTableData} height={270} />
+                          </CleanCard>
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  </Fade>
+                ) : (
+                  <Box sx={{ textAlign: 'center', py: 6 }}>
+                    <Typography variant="h6" color="text.secondary" gutterBottom>
+                      📊 No detailed data available
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Current file: {fileName || 'None selected'}
-                      {selectedLocation && ` (Location: ${selectedLocation})`}
+                      Upload files to see detailed analysis
                     </Typography>
                   </Box>
-                  <Button 
-                    variant="outlined" 
-                    onClick={() => window.location.href = '/upload-excel'}
-                  >
-                    Upload More Files
-                  </Button>
-                </Box>
-              </Grid>
-              
-              {/* Filter section */}
-              <Grid item xs={12} sx={{ mt: 2 }}>
-                <FilterSection 
-                  dateRangeType={dateRangeType}
-                  availableDateRanges={availableDateRanges}
-                  onDateRangeChange={handleDateRangeChange}
-                  customDateRange={customDateRange}
-                  startDate={startDate}
-                  endDate={endDate}
-                  onStartDateChange={handleStartDateChange}
-                  onEndDateChange={handleEndDateChange}
-                  locations={salesLocations || []} 
-                  selectedLocation={selectedLocation}
-                  onLocationChange={handleLocationChange}
-                  onApplyFilters={() => handleApplyFilters()}
-                />
-              </Grid>
-            </>
-          )}
-        </Grid>
-        
-        {/* Error Alert */}
-        {(error || reduxError) && (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {error || reduxError}
-          </Alert>
+                )}
+              </Box>
+            </TabPanel>
+          </CleanCard>
         )}
-      </Card>
-
-      {/* CHART COMPONENT - Always visible when data is processed */}
-      {fileProcessed && files.length > 0 && (
-        <Card 
-          elevation={2} 
-          sx={{ 
-            mb: 3, 
-            p: 2, 
-            position: 'relative'
-          }}
-        >
-          <Typography variant="h5" gutterBottom>
-            Sales Analytics {selectedLocation ? `for ${selectedLocation}` : ''}
-          </Typography>
-          <Divider sx={{ mb: 1 }} />
-          
-          {/* Using key to force complete remount of the component when filters change */}
-          <div key={`sales-chart-${chartKey}`}>
-            <SalesCharts 
-              fileName={fileName}
-              dateRangeType={dateRangeType}
-              selectedLocation={selectedLocation}
-              height={200} // Reduced height to make charts more compact
-            />
-          </div>
-        </Card>
-      )}
-
-      {/* Table Display Component */}
-      <TableDisplay 
-        tableData={reduxTableData}
-        viewMode={viewMode}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-      />
-
-      {/* Add charts only when data is available */}
-      {fileProcessed && reduxTableData.table1 && reduxTableData.table1.length > 0 && (
-        <>
-          {/* Delivery Percentage Chart */}
-          <Card sx={{ mb: 3, p: 2 }}>
-            <Divider sx={{ mb: 1 }} />
-            <DeliveryPercentageChart tableData={reduxTableData} height={200} />
-          </Card>
-
-          {/* In-House Percentage Chart */}
-          <Card sx={{ mb: 3, p: 2 }}>
-            <Divider sx={{ mb: 1 }} />
-            <InHousePercentageChart tableData={reduxTableData} height={200} />
-          </Card>
-          
-          {/* Catering Percentage Chart */}
-          <Card sx={{ mb: 3, p: 2 }}>
-            <Divider sx={{ mb: 1 }} />
-            <CateringPercentageChart tableData={reduxTableData} height={200} />
-          </Card>
-          
-          {/* Total Sales Chart */}
-          <Card sx={{ mb: 3, p: 2 }}>
-            <Divider sx={{ mb: 1 }} />
-            <TotalSalesChart tableData={reduxTableData} height={200} />
-          </Card>
-
-          {/* WOW Trends Chart */}
-          {reduxTableData.table4 && reduxTableData.table4.length > 0 && (
-            <Card sx={{ mb: 3, p: 2 }}>
-              <Divider sx={{ mb: 1 }} />
-              <WowTrendsChart tableData={reduxTableData} height={200} />
-            </Card>
-          )}
-        </>
-      )}
+      </Box>
 
       {renderTutorial()}
-      {renderSuccessMessage()}
+      {renderSuccessNotification()}
       {renderLocationDialog()}
     </>
   );
