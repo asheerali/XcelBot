@@ -9,7 +9,7 @@ from financials_dashboard.financials_utils import financials_filters, day_of_the
 
 
 
-def process_financials_file(file_data: Union[io.BytesIO, str], year=None, week_range=None, location=None):
+def process_financials_file(file_data: Union[io.BytesIO, str], year="All", week_range="All", location="All"):
     """
     Process the uploaded Excel file and transform the data.
     Returns data tables for the frontend including the 1P column.
@@ -99,12 +99,17 @@ def process_financials_file(file_data: Union[io.BytesIO, str], year=None, week_r
     df_budget["Store"] = df_budget["Store"].str.replace(r'^\d{4}:\s*', '', regex=True)
     df_budget["Store"].unique()  # Display unique values in the 'stores' column
 
+    
+    years = df["Year"].unique().tolist()  # Display unique values in the 'Year' column
+    dates = df["Helper 4"].unique().tolist()  # Display unique values in the 'Helper 4' column
+    stores = df["Store"].unique().tolist()  # Display unique values in the 'stores' column
+
 
     financials_weeks, financials_years, financials_stores = financials_filters(df)
     
     financials_sales_table, financials_orders_table, financials_avg_ticket_table = day_of_the_week_tables(df)
     
-    financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df,df_budget, store="All", year="All", week_range="All")
+    financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df,df_budget, store=location, year=year, week_range=week_range)
     
     # print("i am here 3")
     # print(financials_tw_lw_bdg_table)
@@ -120,7 +125,7 @@ def process_financials_file(file_data: Union[io.BytesIO, str], year=None, week_r
     #     }
     # return result
 
-    return financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table
+    return financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table, years, dates, stores
     # return {
     #     table1: financials_weeks,
     #     table2: financials_years,

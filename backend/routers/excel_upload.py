@@ -85,19 +85,12 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             # print("i am here 4")
             excel_data_copy = io.BytesIO(file_content)
 
-            financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table = process_financials_file(
-                excel_data_copy, 
-                location=request.location
-            )
-            
-            sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df, years, dates, stores = process_companywide_file(
-                excel_data_copy, 
-                store_filter='All', 
-                year_filter=None, 
-                quarter_filter='All', 
-                helper4_filter='All'
-            )
-            
+            financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table, years, dates, stores  = process_financials_file(
+                excel_data_copy,  
+                year="All", 
+                week_range="All", 
+                location="All" 
+                )
             
             financials_result = {
             "table1": [{"financials_weeks": [financials_weeks], "financials_years": [financials_years], "financials_stores": [financials_stores]}],
@@ -106,6 +99,9 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             "table4": financials_avg_ticket_table.to_dict(orient='records'),
             "table5": financials_tw_lw_bdg_table.to_dict(orient='records'),
             "fileName": request.fileName, #the full names of the file saved in the uploads folder
+            "locations": stores,
+            "years": years,
+            "dates": dates,
             "dashboardName": "Financials",
             "data":  "Financial Dashboard is not yet implemented."
             }
@@ -125,6 +121,15 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             #     "fileName": "123", #the full names of the file saved in the uploads folder
             #     "data":  "Companywide Dashboard is not yet implemented."
             # }
+            
+            sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df, years, dates, stores = process_companywide_file(
+                excel_data_copy, 
+                store_filter='All', 
+                year_filter=None, 
+                quarter_filter='All', 
+                helper4_filter='All'
+            )
+            
             
             sales_wide_result ={
                 "salesData":sales_df.to_dict(orient='records'),
@@ -256,7 +261,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 "locations": [request.location] if request.location else [],
                 "dateRanges": [],
                 "fileLocation": [request.location] if request.location else [],
-                "dashboardName": request.dashboard,
+                "dashboardName": "Sales Split",
                 "fileName": request.fileName,
                 "data": f"{request.dashboard} Dashboard is not yet implemented."
             }
