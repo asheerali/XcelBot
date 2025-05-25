@@ -1,4 +1,4 @@
-// store/excelSlice.ts - Updated with Product Mix support and all improvements
+// store/excelSlice.ts - Updated with Categories support and all improvements
 
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
@@ -56,6 +56,7 @@ interface FileData {
   analyticsData?: AnalyticsData; // Store analytics data with each file
   uploadDate?: string;
   dashboard?: string;
+  categories?: string[]; // Added to store categories for each file
 }
 
 interface FinancialData {
@@ -64,6 +65,7 @@ interface FinancialData {
   location: string;
   data: TableData;
   uploadDate?: string;
+  categories?: string[]; // Added categories support
 }
 
 interface SalesData {
@@ -73,6 +75,7 @@ interface SalesData {
   data: TableData;
   analyticsData?: AnalyticsData; // Added to store analytics with each sales file
   uploadDate?: string;
+  categories?: string[]; // Added categories support
 }
 
 interface SalesWideData {
@@ -81,6 +84,7 @@ interface SalesWideData {
   location: string;
   data: TableData;
   uploadDate?: string;
+  categories?: string[]; // Added categories support
 }
 
 interface ProductMixData {
@@ -89,6 +93,7 @@ interface ProductMixData {
   location: string;
   data: TableData;
   uploadDate?: string;
+  categories?: string[]; // Added categories support
 }
 
 interface ExcelState {
@@ -102,6 +107,9 @@ interface ExcelState {
   loading: boolean;
   error: string | null;
 
+  // Global categories - aggregated from all files
+  allCategories: string[];
+  
   // Files by type
   files: FileData[];
   financialFiles: FinancialData[];
@@ -116,6 +124,12 @@ interface ExcelState {
   salesWideLocations: string[]; // Locations for sales wide dashboard
   productMixLocations: string[]; // Locations for product mix dashboard
 
+  // Categories by dashboard type
+  salesCategories: string[]; // Categories for sales split dashboard
+  financialCategories: string[]; // Categories for financial dashboard
+  salesWideCategories: string[]; // Categories for sales wide dashboard
+  productMixCategories: string[]; // Categories for product mix dashboard
+
   // Current selected locations by dashboard
   currentSalesLocation: string;
   currentFinancialLocation: string;
@@ -128,12 +142,14 @@ interface ExcelState {
     startDate: string;
     endDate: string;
     location: string;
+    selectedCategories: string[]; // Added for category filtering
   };
 
   financialFilters: {
     store: string;
     year: string;
     dateRange: string;
+    selectedCategories: string[]; // Added for category filtering
   };
 
   salesWideFilters: {
@@ -144,6 +160,7 @@ interface ExcelState {
     date: string;
     year: string;
     quarters: number;
+    selectedCategories: string[]; // Added for category filtering
   };
 
   productMixFilters: {
@@ -153,6 +170,7 @@ interface ExcelState {
     location: string;
     server: string;
     category: string;
+    selectedCategories: string[]; // Added for category filtering
   };
 
   // Added to track the active file
@@ -177,6 +195,7 @@ const initialState: ExcelState = {
   analyticsData: null, // Initialize analytics data as null
   loading: false,
   error: null,
+  allCategories: [], // Initialize global categories
   files: [],
   financialFiles: [],
   salesFiles: [],
@@ -187,6 +206,10 @@ const initialState: ExcelState = {
   financialLocations: [],
   salesWideLocations: [],
   productMixLocations: [],
+  salesCategories: [],
+  financialCategories: [],
+  salesWideCategories: [],
+  productMixCategories: [],
   currentSalesLocation: "",
   currentFinancialLocation: "",
   currentSalesWideLocation: "",
@@ -196,11 +219,13 @@ const initialState: ExcelState = {
     startDate: "",
     endDate: "",
     location: "",
+    selectedCategories: [],
   },
   financialFilters: {
     store: "0001: Midtown East",
     year: "2025",
     dateRange: "1 | 12/30/2024 - 01/05/2025",
+    selectedCategories: [],
   },
   salesWideFilters: {
     dateRangeType: "Last 30 Days",
@@ -210,6 +235,7 @@ const initialState: ExcelState = {
     date: "2 | 01/06/2025 - 01/12/2025",
     year: "2025",
     quarters: 1,
+    selectedCategories: [],
   },
   productMixFilters: {
     dateRangeType: "Last 30 Days",
@@ -218,8 +244,37 @@ const initialState: ExcelState = {
     location: "",
     server: "All",
     category: "All",
+    selectedCategories: [],
   },
   activeFileIndex: -1, // Initialize with no active file
+};
+
+// Helper function to add categories to global and dashboard-specific lists
+const addCategoriesToState = (
+  state: ExcelState,
+  categories: string[],
+  dashboardName?: string
+) => {
+  if (!categories || categories.length === 0) return;
+
+  // Add to global categories
+  const newGlobalCategories = [...new Set([...state.allCategories, ...categories])];
+  state.allCategories = newGlobalCategories;
+
+  // Add to dashboard-specific categories
+  if (dashboardName === "Sales Split") {
+    const newSalesCategories = [...new Set([...state.salesCategories, ...categories])];
+    state.salesCategories = newSalesCategories;
+  } else if (dashboardName === "Financials") {
+    const newFinancialCategories = [...new Set([...state.financialCategories, ...categories])];
+    state.financialCategories = newFinancialCategories;
+  } else if (dashboardName === "Sales Wide") {
+    const newSalesWideCategories = [...new Set([...state.salesWideCategories, ...categories])];
+    state.salesWideCategories = newSalesWideCategories;
+  } else if (dashboardName === "Product Mix" || dashboardName === "Product Mix ") {
+    const newProductMixCategories = [...new Set([...state.productMixCategories, ...categories])];
+    state.productMixCategories = newProductMixCategories;
+  }
 };
 
 // Helper function to add a location to the appropriate dashboard location list
@@ -295,9 +350,18 @@ export const excelSlice = createSlice({
         }
       }
 
+      // Update categories if present in table data
+      if (action.payload.categories) {
+        addCategoriesToState(state, action.payload.categories, action.payload.dashboardName);
+      }
+
       // Update the active file with this data if there is an active file
       if (state.activeFileIndex >= 0) {
         state.files[state.activeFileIndex].data = action.payload;
+        // Update categories for the active file
+        if (action.payload.categories) {
+          state.files[state.activeFileIndex].categories = action.payload.categories;
+        }
       }
     },
     // New action to set analytics data
@@ -333,7 +397,7 @@ export const excelSlice = createSlice({
         state.salesFiles[salesFileIndex].analyticsData = action.payload.data;
       }
     },
-    // Modified to properly categorize locations by dashboard type
+    // Modified to properly categorize locations by dashboard type and handle categories
     addFileData: (
       state,
       action: PayloadAction<{
@@ -341,6 +405,7 @@ export const excelSlice = createSlice({
         fileContent: string;
         location: string;
         data: TableData;
+        categories?: string[];
       }>
     ) => {
       // Check if file already exists for this location
@@ -350,8 +415,9 @@ export const excelSlice = createSlice({
 
       // Get the dashboard type from the data
       const dashboardName = action.payload.data.dashboardName;
+      const categories = action.payload.categories || action.payload.data.categories || [];
 
-      // Create file data with upload timestamp and file content
+      // Create file data with upload timestamp, file content, and categories
       const fileData: FileData = {
         fileName: action.payload.fileName,
         fileContent: action.payload.fileContent, // Store the file content
@@ -359,6 +425,7 @@ export const excelSlice = createSlice({
         data: action.payload.data,
         uploadDate: new Date().toISOString(),
         dashboard: dashboardName,
+        categories: categories, // Store categories with the file
       };
 
       if (existingFileIndex >= 0) {
@@ -373,6 +440,9 @@ export const excelSlice = createSlice({
 
       // Add location to appropriate dashboard lists
       addLocationToDashboardList(state, action.payload.location, dashboardName);
+      
+      // Add categories to state
+      addCategoriesToState(state, categories, dashboardName);
 
       // Update the current display data if it matches the location or if this is the first file
       if (
@@ -386,7 +456,7 @@ export const excelSlice = createSlice({
         state.location = action.payload.location;
       }
     },
-    // Fixed to only add location to financial locations
+    // Fixed to only add location to financial locations and handle categories
     addFinancialData: (
       state,
       action: PayloadAction<{
@@ -394,6 +464,7 @@ export const excelSlice = createSlice({
         fileContent: string;
         location: string;
         data: TableData;
+        categories?: string[];
       }>
     ) => {
       // Check if financial file already exists for this location
@@ -401,13 +472,16 @@ export const excelSlice = createSlice({
         (f) => f.location === action.payload.location
       );
 
-      // Create financial data with upload timestamp and file content
+      const categories = action.payload.categories || action.payload.data.categories || [];
+
+      // Create financial data with upload timestamp, file content, and categories
       const financialData: FinancialData = {
         fileName: action.payload.fileName,
         fileContent: action.payload.fileContent, // Store file content
         location: action.payload.location,
         data: action.payload.data,
         uploadDate: new Date().toISOString(),
+        categories: categories, // Store categories
       };
 
       if (existingIndex >= 0) {
@@ -427,6 +501,9 @@ export const excelSlice = createSlice({
         state.financialLocations.push(action.payload.location);
       }
 
+      // Add categories to state
+      addCategoriesToState(state, categories, "Financials");
+
       // Set current financial location if this is the first file
       if (
         state.financialFiles.length === 1 ||
@@ -436,7 +513,7 @@ export const excelSlice = createSlice({
         state.financialFilters.store = action.payload.location;
       }
     },
-    // Fixed to only add location to sales locations
+    // Fixed to only add location to sales locations and handle categories
     addSalesData: (
       state,
       action: PayloadAction<{
@@ -444,6 +521,7 @@ export const excelSlice = createSlice({
         fileContent: string;
         location: string;
         data: TableData;
+        categories?: string[];
       }>
     ) => {
       // Check if sales file already exists for this location
@@ -451,13 +529,16 @@ export const excelSlice = createSlice({
         (f) => f.location === action.payload.location
       );
 
-      // Create sales data with upload timestamp and file content
+      const categories = action.payload.categories || action.payload.data.categories || [];
+
+      // Create sales data with upload timestamp, file content, and categories
       const salesData: SalesData = {
         fileName: action.payload.fileName,
         fileContent: action.payload.fileContent, // Store file content
         location: action.payload.location,
         data: action.payload.data,
         uploadDate: new Date().toISOString(),
+        categories: categories, // Store categories
       };
 
       if (existingIndex >= 0) {
@@ -477,13 +558,16 @@ export const excelSlice = createSlice({
         state.salesLocations.push(action.payload.location);
       }
 
+      // Add categories to state
+      addCategoriesToState(state, categories, "Sales Split");
+
       // Set current sales location if this is the first file
       if (state.salesFiles.length === 1 || !state.currentSalesLocation) {
         state.currentSalesLocation = action.payload.location;
         state.salesFilters.location = action.payload.location;
       }
     },
-    // Fixed to only add location to sales wide locations
+    // Fixed to only add location to sales wide locations and handle categories
     addSalesWideData: (
       state,
       action: PayloadAction<{
@@ -491,6 +575,7 @@ export const excelSlice = createSlice({
         fileContent: string;
         location: string;
         data: TableData;
+        categories?: string[];
       }>
     ) => {
       // Check if sales wide file already exists for this location
@@ -498,13 +583,16 @@ export const excelSlice = createSlice({
         (f) => f.location === action.payload.location
       );
 
-      // Create sales wide data with upload timestamp and file content
+      const categories = action.payload.categories || action.payload.data.categories || [];
+
+      // Create sales wide data with upload timestamp, file content, and categories
       const salesWideData: SalesWideData = {
         fileName: action.payload.fileName,
         fileContent: action.payload.fileContent, // Store file content
         location: action.payload.location,
         data: action.payload.data,
         uploadDate: new Date().toISOString(),
+        categories: categories, // Store categories
       };
 
       if (existingIndex >= 0) {
@@ -524,6 +612,9 @@ export const excelSlice = createSlice({
         state.salesWideLocations.push(action.payload.location);
       }
 
+      // Add categories to state
+      addCategoriesToState(state, categories, "Sales Wide");
+
       // Set current sales wide location if this is the first file
       if (
         state.salesWideFiles.length === 1 ||
@@ -533,7 +624,7 @@ export const excelSlice = createSlice({
         state.salesWideFilters.location = action.payload.location;
       }
     },
-    // NEW: Add Product Mix data
+    // NEW: Add Product Mix data with categories support
     addProductMixData: (
       state,
       action: PayloadAction<{
@@ -541,6 +632,7 @@ export const excelSlice = createSlice({
         fileContent: string;
         location: string;
         data: TableData;
+        categories?: string[];
       }>
     ) => {
       console.log('🎯 addProductMixData action received:', action.payload);
@@ -552,13 +644,17 @@ export const excelSlice = createSlice({
 
       console.log('Existing Product Mix file index:', existingIndex);
 
-      // Create product mix data with upload timestamp and file content
+      const categories = action.payload.categories || action.payload.data.categories || [];
+      console.log('Categories for Product Mix:', categories);
+
+      // Create product mix data with upload timestamp, file content, and categories
       const productMixData: ProductMixData = {
         fileName: action.payload.fileName,
         fileContent: action.payload.fileContent, // Store file content
         location: action.payload.location,
         data: action.payload.data,
         uploadDate: new Date().toISOString(),
+        categories: categories, // Store categories
       };
 
       console.log('Creating Product Mix data object:', productMixData);
@@ -583,6 +679,9 @@ export const excelSlice = createSlice({
         console.log('Added location to Product Mix locations:', action.payload.location);
       }
 
+      // Add categories to state
+      addCategoriesToState(state, categories, "Product Mix");
+
       // Set current product mix location if this is the first file
       if (
         state.productMixFiles.length === 1 ||
@@ -596,7 +695,8 @@ export const excelSlice = createSlice({
       console.log('Product Mix state after update:', {
         filesCount: state.productMixFiles.length,
         locations: state.productMixLocations,
-        currentLocation: state.currentProductMixLocation
+        currentLocation: state.currentProductMixLocation,
+        categories: state.productMixCategories
       });
     },
     // Now just maintains the allLocations list
@@ -607,6 +707,15 @@ export const excelSlice = createSlice({
       );
       state.allLocations = [
         ...new Set([...state.allLocations, ...newLocations]),
+      ];
+    },
+    // NEW: Set global categories
+    setCategories: (state, action: PayloadAction<string[]>) => {
+      const newCategories = action.payload.filter(
+        (cat) => cat && cat.trim() !== ""
+      );
+      state.allCategories = [
+        ...new Set([...state.allCategories, ...newCategories]),
       ];
     },
     // Below methods now just set their specific location lists
@@ -621,6 +730,19 @@ export const excelSlice = createSlice({
     },
     setProductMixLocations: (state, action: PayloadAction<string[]>) => {
       state.productMixLocations = action.payload;
+    },
+    // NEW: Category setters for each dashboard type
+    setSalesCategories: (state, action: PayloadAction<string[]>) => {
+      state.salesCategories = action.payload;
+    },
+    setFinancialCategories: (state, action: PayloadAction<string[]>) => {
+      state.financialCategories = action.payload;
+    },
+    setSalesWideCategories: (state, action: PayloadAction<string[]>) => {
+      state.salesWideCategories = action.payload;
+    },
+    setProductMixCategories: (state, action: PayloadAction<string[]>) => {
+      state.productMixCategories = action.payload;
     },
     // Enhanced to update active file index and handle dashboard-specific file selection
     selectLocation: (state, action: PayloadAction<string>) => {
@@ -867,10 +989,15 @@ export const {
   addSalesWideData,
   addProductMixData,
   setLocations,
+  setCategories,
   setSalesLocations,
   setFinancialLocations,
   setSalesWideLocations,
   setProductMixLocations,
+  setSalesCategories,
+  setFinancialCategories,
+  setSalesWideCategories,
+  setProductMixCategories,
   selectLocation,
   selectSalesLocation,
   selectFinancialLocation,
@@ -883,7 +1010,7 @@ export const {
   resetExcelData,
 } = excelSlice.actions;
 
-// Thunk action creators
+// Thunk action creators (keeping existing ones)
 export const fetchAnalytics =
   (fileName: string, dateRangeType: string, location: string): AppThunk =>
   async (dispatch, getState) => {
@@ -999,185 +1126,6 @@ export const selectFileAndFetchData =
     }
   };
 
-// Updated to use the correct file for the current dashboard
-export const applyFilters =
-  (dashboardType: string = "Sales Split"): AppThunk =>
-  async (dispatch, getState) => {
-    const state = getState();
-
-    if (state.excel.files.length === 0) {
-      dispatch(setError("No files uploaded"));
-      return;
-    }
-
-    try {
-      dispatch(setLoading(true));
-
-      // Determine which file to use based on the dashboard type
-      let file: FileData | undefined;
-      let location: string = "";
-      let payload: any = {};
-
-      if (dashboardType === "Sales Split") {
-        location =
-          state.excel.salesFilters.location || state.excel.currentSalesLocation;
-        file = state.excel.files.find(
-          (f) => f.location === location && f.dashboard === "Sales Split"
-        );
-
-        // Fall back to the first Sales Split file if we couldn't find one for this location
-        if (!file) {
-          file = state.excel.files.find((f) => f.dashboard === "Sales Split");
-          if (file) location = file.location;
-        }
-
-        if (file) {
-          payload = {
-            fileName: file.fileName,
-            fileContent: file.fileContent,
-            location: location,
-            dateRangeType: state.excel.salesFilters.dateRangeType,
-            startDate: state.excel.salesFilters.startDate,
-            endDate: state.excel.salesFilters.endDate,
-          };
-        }
-      } else if (dashboardType === "Financials") {
-        location =
-          state.excel.financialFilters.store ||
-          state.excel.currentFinancialLocation;
-        file = state.excel.files.find(
-          (f) => f.location === location && f.dashboard === "Financials"
-        );
-
-        // Fall back to the first Financial file
-        if (!file) {
-          file = state.excel.files.find((f) => f.dashboard === "Financials");
-          if (file) location = file.location;
-        }
-
-        if (file) {
-          payload = {
-            fileName: file.fileName,
-            fileContent: file.fileContent,
-            location: location,
-            // Add financial-specific filter parameters as needed
-          };
-        }
-      } else if (dashboardType === "Sales Wide") {
-        location =
-          state.excel.salesWideFilters.location ||
-          state.excel.currentSalesWideLocation;
-        file = state.excel.files.find(
-          (f) => f.location === location && f.dashboard === "Sales Wide"
-        );
-
-        // Fall back to the first Sales Wide file
-        if (!file) {
-          file = state.excel.files.find((f) => f.dashboard === "Sales Wide");
-          if (file) location = file.location;
-        }
-
-        if (file) {
-          payload = {
-            fileName: file.fileName,
-            fileContent: file.fileContent,
-            location: location,
-            dateRangeType: state.excel.salesWideFilters.dateRangeType,
-            startDate: state.excel.salesWideFilters.startDate,
-            endDate: state.excel.salesWideFilters.endDate,
-          };
-        }
-      } else if (dashboardType === "Product Mix") {
-        location =
-          state.excel.productMixFilters.location ||
-          state.excel.currentProductMixLocation;
-        file = state.excel.files.find(
-          (f) => f.location === location && (f.dashboard === "Product Mix" || f.dashboard === "Product Mix ")
-        );
-
-        // Fall back to the first Product Mix file
-        if (!file) {
-          file = state.excel.files.find((f) => f.dashboard === "Product Mix" || f.dashboard === "Product Mix ");
-          if (file) location = file.location;
-        }
-
-        if (file) {
-          payload = {
-            fileName: file.fileName,
-            fileContent: file.fileContent,
-            location: location,
-            server: state.excel.productMixFilters.server,
-            category: state.excel.productMixFilters.category,
-            dateRangeType: state.excel.productMixFilters.dateRangeType,
-            startDate: state.excel.productMixFilters.startDate,
-            endDate: state.excel.productMixFilters.endDate,
-          };
-        }
-      }
-
-      // Use the active file as a last resort
-      if (!file && state.excel.activeFileIndex >= 0) {
-        file = state.excel.files[state.excel.activeFileIndex];
-        location = file.location;
-        payload = {
-          fileName: file.fileName,
-          fileContent: file.fileContent,
-          location: location,
-          dateRangeType: state.excel.salesFilters.dateRangeType,
-          startDate: state.excel.salesFilters.startDate,
-          endDate: state.excel.salesFilters.endDate,
-        };
-      }
-
-      if (!file) {
-        throw new Error(`No ${dashboardType} file available to apply filters`);
-      }
-
-      console.log(`Sending filter request for ${dashboardType}:`, payload);
-
-      // Make the API call to filter endpoint
-      const response = await axios.post("/api/excel/filter", payload);
-
-      if (response.data) {
-        // Handle array response (multiple dashboards)
-        let dashboardsData = [];
-        
-        if (Array.isArray(response.data)) {
-          dashboardsData = response.data;
-        } else {
-          dashboardsData = [response.data];
-        }
-
-        // Process the first matching dashboard or fallback to first dashboard
-        const relevantData = dashboardsData.find(data => 
-          data.dashboardName === dashboardType || 
-          (dashboardType === "Product Mix" && (data.dashboardName === "Product Mix" || data.dashboardName === "Product Mix "))
-        ) || dashboardsData[0];
-
-        // Update the table data
-        dispatch(setTableData(relevantData));
-
-        // Also fetch analytics with the new filters for Sales Split dashboard
-        if (dashboardType === "Sales Split") {
-          dispatch(
-            fetchAnalytics(
-              file.fileName,
-              state.excel.salesFilters.dateRangeType,
-              location
-            )
-          );
-        }
-      }
-    } catch (error) {
-      console.error(`Error applying ${dashboardType} filters:`, error);
-      dispatch(
-        setError(error instanceof Error ? error.message : "Unknown error")
-      );
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
-
 // Selectors for accessing state data
 export const selectExcelFile = (state: { excel: ExcelState }) => state.excel;
 export const selectTableData = (state: { excel: ExcelState }) => state.excel.tableData;
@@ -1186,6 +1134,13 @@ export const selectLoading = (state: { excel: ExcelState }) => state.excel.loadi
 export const selectError = (state: { excel: ExcelState }) => state.excel.error;
 export const selectCurrentLocation = (state: { excel: ExcelState }) => state.excel.location;
 export const selectAllLocations = (state: { excel: ExcelState }) => state.excel.allLocations;
+
+// Categories selectors
+export const selectAllCategories = (state: { excel: ExcelState }) => state.excel.allCategories;
+export const selectSalesCategories = (state: { excel: ExcelState }) => state.excel.salesCategories;
+export const selectFinancialCategories = (state: { excel: ExcelState }) => state.excel.financialCategories;
+export const selectSalesWideCategories = (state: { excel: ExcelState }) => state.excel.salesWideCategories;
+export const selectProductMixCategories = (state: { excel: ExcelState }) => state.excel.productMixCategories;
 
 // Dashboard-specific selectors
 export const selectSalesLocations = (state: { excel: ExcelState }) => state.excel.salesLocations;
@@ -1224,5 +1179,29 @@ export const selectSalesWideDataByLocation = (state: { excel: ExcelState }, loca
 
 export const selectProductMixDataByLocation = (state: { excel: ExcelState }, location: string) =>
   state.excel.productMixFiles.find(f => f.location === location);
+
+// Categories by location selectors
+export const selectCategoriesByLocation = (state: { excel: ExcelState }, location: string, dashboardType?: string) => {
+  let file;
+  
+  switch (dashboardType) {
+    case 'Sales Split':
+      file = state.excel.salesFiles.find(f => f.location === location);
+      break;
+    case 'Financials':
+      file = state.excel.financialFiles.find(f => f.location === location);
+      break;
+    case 'Sales Wide':
+      file = state.excel.salesWideFiles.find(f => f.location === location);
+      break;
+    case 'Product Mix':
+      file = state.excel.productMixFiles.find(f => f.location === location);
+      break;
+    default:
+      file = state.excel.files.find(f => f.location === location);
+  }
+  
+  return file?.categories || [];
+};
 
 export default excelSlice.reducer;

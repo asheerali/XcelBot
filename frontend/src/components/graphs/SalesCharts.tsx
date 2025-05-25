@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import React from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -10,94 +9,32 @@ import {
   Tooltip,
   Legend
 } from 'recharts';
-import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
-import Button from '@mui/material/Button';
-import RefreshIcon from '@mui/icons-material/Refresh';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 
-const API_URL = 'http://localhost:8000/api/excel/analytics';
+// Interface for props
+interface SalesChartsProps {
+  tableData?: {
+    table5?: Array<{Week: string, Sales: number, Orders: number}>;
+    table6?: Array<{Day: string, Sales: number, Orders: number}>;
+    table7?: Array<{[key: string]: string | number}>;
+  };
+  selectedLocation?: string;
+  dateRangeType?: string;
+  height?: number;
+}
 
-const SalesCharts = ({ fileName, dateRangeType, selectedLocation }) => {
-  // State for analytics data
-  const [analyticsData, setAnalyticsData] = useState({
-    salesByWeek: [],
-    salesByDayOfWeek: [],
-    salesByTimeOfDay: [],
-    salesByCategory: []
-  });
-  
-  // State for loading, error, and fetch status
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [hasFetched, setHasFetched] = useState(false);
-  
-  // Memoized fetch function to prevent unnecessary re-renders
-  const fetchAnalyticsData = useCallback(async () => {
-    if (!fileName) {
-      setError('No file selected. Please upload a file first.');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Prepare request payload
-      const payload = {
-        fileName: fileName,
-        dateRangeType: dateRangeType,
-        location: selectedLocation
-      };
-      
-      console.log('Fetching analytics with payload:', payload);
-      
-      // Make API call to backend
-      const response = await axios.post(API_URL, payload);
-      
-      // Process the response
-      if (response.data) {
-        console.log('Received analytics data:', response.data);
-        setAnalyticsData(response.data);
-        setHasFetched(true);
-      } else {
-        throw new Error('Invalid response data');
-      }
-    } catch (err) {
-      console.error('Error fetching analytics:', err);
-      
-      let errorMessage = 'Error fetching analytics data';
-      
-      if (axios.isAxiosError(err)) {
-        if (err.response) {
-          const detail = err.response.data?.detail;
-          errorMessage = `Server error: ${detail || err.response.status}`;
-        } else if (err.request) {
-          errorMessage = 'No response from server. Please check if the backend is running.';
-        }
-      } else if (err.message) {
-        errorMessage = `Error: ${err.message}`;
-      }
-      
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, [fileName, dateRangeType, selectedLocation]);
-  
-  // Fetch analytics data when component mounts or when filters change
-  useEffect(() => {
-    if (fileName) {
-      console.log('SalesCharts - Fetching data with:', { fileName, dateRangeType, selectedLocation });
-      fetchAnalyticsData();
-    }
-  }, [fetchAnalyticsData]);
-  
+const SalesCharts: React.FC<SalesChartsProps> = ({ 
+  tableData, 
+  selectedLocation, 
+  dateRangeType, 
+  height = 250 
+}) => {
   // Custom tooltip formatter
-  const CustomTooltip = ({ active, payload, label }) => {
+  const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
         <div style={{
@@ -108,12 +45,15 @@ const SalesCharts = ({ fileName, dateRangeType, selectedLocation }) => {
           boxShadow: '0 2px 5px rgba(0,0,0,0.15)'
         }}>
           <p style={{ margin: 0, fontWeight: 'bold' }}>{`${label}`}</p>
-          {payload.map((entry, index) => (
+          {payload.map((entry: any, index: number) => (
             <p key={index} style={{ margin: 0, color: entry.color }}>
-              {`${entry.name}: $${parseFloat(entry.value).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-              })}`}
+              {entry.name === 'Orders' 
+                ? `${entry.name}: ${entry.value}` 
+                : `${entry.name}: $${parseFloat(entry.value).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}`
+              }
             </p>
           ))}
         </div>
@@ -123,20 +63,27 @@ const SalesCharts = ({ fileName, dateRangeType, selectedLocation }) => {
   };
   
   // Format currency for axis labels
-  const formatCurrency = (value) => {
+  const formatCurrency = (value: number) => {
     if (value >= 1000) {
       return `$${(value / 1000).toFixed(1)}k`;
     }
     return `$${value}`;
   };
   
-  // Render bar chart
-  const renderBarChart = (data, dataKey, valueKey, label, height = 250) => {
-    // Safety check - make sure data is an array
+  // Format orders for axis labels
+  const formatOrders = (value: number) => {
+    if (value >= 1000) {
+      return `${(value / 1000).toFixed(1)}k`;
+    }
+    return `${value}`;
+  };
+  
+  // Render bar chart for sales
+  const renderSalesBarChart = (data: any[], dataKey: string, valueKey: string, label: string, chartHeight = 250) => {
     const safeData = Array.isArray(data) ? data : [];
     
     return (
-      <ResponsiveContainer width="100%" height={height}>
+      <ResponsiveContainer width="100%" height={chartHeight}>
         <BarChart
           data={safeData}
           margin={{
@@ -171,14 +118,13 @@ const SalesCharts = ({ fileName, dateRangeType, selectedLocation }) => {
       </ResponsiveContainer>
     );
   };
-  
-  // Render stacked bar chart for categories
-  const renderStackedBarChart = (data, height = 300) => {
-    // Safety check - make sure data is an array
+
+  // Render dual-axis chart for sales and orders
+  const renderDualAxisChart = (data: any[], dataKey: string, chartHeight = 250) => {
     const safeData = Array.isArray(data) ? data : [];
     
     return (
-      <ResponsiveContainer width="100%" height={height}>
+      <ResponsiveContainer width="100%" height={chartHeight}>
         <BarChart
           data={safeData}
           margin={{
@@ -190,36 +136,64 @@ const SalesCharts = ({ fileName, dateRangeType, selectedLocation }) => {
         >
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis 
-            dataKey="week"
+            dataKey={dataKey}
             tickSize={5}
             axisLine={{ stroke: '#E0E0E0' }}
             tick={{ fontSize: 12 }}
           />
           <YAxis
+            yAxisId="sales"
             tickCount={5}
             tick={{ fontSize: 12 }}
             tickFormatter={formatCurrency}
             domain={[0, 'auto']}
             axisLine={{ stroke: '#E0E0E0' }}
           />
+          <YAxis
+            yAxisId="orders"
+            orientation="right"
+            tickCount={5}
+            tick={{ fontSize: 12 }}
+            tickFormatter={formatOrders}
+            domain={[0, 'auto']}
+            axisLine={{ stroke: '#E0E0E0' }}
+          />
           <Tooltip content={<CustomTooltip />} />
           <Legend />
-          <Bar dataKey="inHouse" stackId="a" fill="#4B79FF" name="In-House" />
-          <Bar dataKey="catering" stackId="a" fill="#FF4B4B" name="Catering" />
-          <Bar dataKey="doordash" stackId="a" fill="#7F4BFF" name="DoorDash" />
-          <Bar dataKey="grubhub" stackId="a" fill="#4BFF9F" name="GrubHub" />
-          <Bar dataKey="uber" stackId="a" fill="#FFC04B" name="UberEats" />
-          <Bar dataKey="firstParty" stackId="a" fill="#FF9F4B" name="First Party" />
+          <Bar 
+            dataKey="Sales" 
+            yAxisId="sales"
+            fill="#4B79FF" 
+            name="Sales"
+            radius={[4, 4, 0, 0]}
+          />
+          <Bar 
+            dataKey="Orders" 
+            yAxisId="orders"
+            fill="#FF6B6B" 
+            name="Orders"
+            radius={[4, 4, 0, 0]}
+          />
         </BarChart>
       </ResponsiveContainer>
     );
+  };
+  
+  // Process table7 data for time ranges
+  const processTimeRangeData = (data: any[]) => {
+    if (!Array.isArray(data)) return [];
+    
+    return data.map(item => ({
+      TimeRange: item['Time Range'] || item.timeRange || item.TimeRange,
+      Sales: item.Sales || 0,
+      Orders: item.Orders || 0
+    })).filter(item => item.TimeRange);
   };
   
   // Dynamic chart title based on date range
   const getChartTitle = () => {
     if (!dateRangeType) return "Sales by Week";
     
-    // if (dateRangeType.includes("7 Days")) return "Sales - Last 7 Days";
     if (dateRangeType.includes("30 Days")) return "Sales - Last 30 Days";
     if (dateRangeType.includes("Month")) return "Sales by Week - Monthly View";
     if (dateRangeType.includes("Custom")) return "Sales - Custom Period";
@@ -231,7 +205,6 @@ const SalesCharts = ({ fileName, dateRangeType, selectedLocation }) => {
   const getDayOfWeekTitle = () => {
     if (!dateRangeType) return "Sales by Day of Week";
     
-    // if (dateRangeType.includes("7 Days")) return "Daily Sales - Last 7 Days";s
     if (dateRangeType.includes("30 Days")) return "Average Sales by Day of Week - Last 30 Days";
     if (dateRangeType.includes("Month")) return "Average Sales by Day of Week - Monthly";
     if (dateRangeType.includes("3 Months")) return "Total Sales by Day of Week - Last 3 Months";
@@ -276,140 +249,85 @@ const SalesCharts = ({ fileName, dateRangeType, selectedLocation }) => {
     boxSizing: 'border-box'
   };
   
-  // If there's no file uploaded yet
-  if (!fileName) {
+  // Check if we have any data
+  const hasWeeklyData = tableData?.table5 && Array.isArray(tableData.table5) && tableData.table5.length > 0;
+  const hasDayOfWeekData = tableData?.table6 && Array.isArray(tableData.table6) && tableData.table6.length > 0;
+  const hasTimeRangeData = tableData?.table7 && Array.isArray(tableData.table7) && tableData.table7.length > 0;
+  
+  // If there's no data at all
+  if (!hasWeeklyData && !hasDayOfWeekData && !hasTimeRangeData) {
     return (
       <Box sx={chartContainerStyle}>
         <Alert severity="info">
-          Please upload and process an Excel file to view sales analytics.
+          No sales data available. Please upload and process an Excel file to view sales analytics.
         </Alert>
       </Box>
     );
   }
   
-  // If data is loading
-  if (loading) {
-    return (
-      <Box sx={chartContainerStyle} display="flex" justifyContent="center" alignItems="center" height="200px">
-        <CircularProgress />
-        <Typography variant="body1" sx={{ ml: 2 }}>Loading sales analytics...</Typography>
-      </Box>
-    );
-  }
-  
-  // If there's an error
-  if (error) {
-    return (
-      <Box sx={chartContainerStyle}>
-        <Alert 
-          severity="error" 
-          action={
-            <Button color="inherit" size="small" onClick={fetchAnalyticsData}>
-              <RefreshIcon fontSize="small" sx={{ mr: 1 }} />
-              Retry
-            </Button>
-          }
-        >
-          {error}
-        </Alert>
-      </Box>
-    );
-  }
-  
-  // If no data has been fetched yet or empty data was returned
-  if (!hasFetched || 
-      (analyticsData.salesByWeek.length === 0 && 
-       analyticsData.salesByDayOfWeek.length === 0)) {
-    return (
-      <Box sx={chartContainerStyle}>
-        <Alert severity="info">
-          No sales data available for the selected filters. Try adjusting your filters or uploading a different file.
-        </Alert>
-      </Box>
-    );
-  }
+  // Process time range data
+  const timeRangeData = hasTimeRangeData ? processTimeRangeData(tableData!.table7!) : [];
   
   // Render the charts with data
   return (
     <Box sx={chartContainerStyle} className="sales-charts-root">
       {/* Sales by Week Chart */}
-      <Card sx={chartCardStyle}>
-        <Box sx={chartHeaderStyle}>
-          <Typography variant="h6" fontWeight={600} color="#333">
-            {getChartTitle()}
-          </Typography>
-          <Button 
-            size="small" 
-            onClick={fetchAnalyticsData}
-            startIcon={<RefreshIcon />}
-          >
-            Refresh
-          </Button>
-        </Box>
-        <CardContent sx={chartContentStyle}>
-          {analyticsData.salesByWeek.length > 0 ? (
-            renderBarChart(analyticsData.salesByWeek, 'week', 'value', 'Sales', 300)
-          ) : (
-            <Typography color="text.secondary">No weekly data available</Typography>
-          )}
-        </CardContent>
-      </Card>
-      
-      {/* Stacked Categories Chart */}
-      {/* <Card sx={chartCardStyle}>
-        <Box sx={chartHeaderStyle}>
-          <Typography variant="h6" fontWeight={600} color="#333">
-            Sales by Category
-          </Typography>
-        </Box>
-        <CardContent sx={chartContentStyle}>
-          {analyticsData.salesByCategory.length > 0 ? (
-            renderStackedBarChart(analyticsData.salesByCategory, 350)
-          ) : (
-            <Typography color="text.secondary">No category data available</Typography>
-          )}
-        </CardContent>
-      </Card> */}
+      {hasWeeklyData && (
+        <Card sx={chartCardStyle}>
+          <Box sx={chartHeaderStyle}>
+            <Typography variant="h6" fontWeight={600} color="#333">
+              {getChartTitle()}
+            </Typography>
+          </Box>
+          <CardContent sx={chartContentStyle}>
+            {renderDualAxisChart(tableData!.table5!, 'Week', 300)}
+          </CardContent>
+        </Card>
+      )}
       
       {/* Two-column layout for day of week and time of day */}
       <Box sx={chartRowStyle}>
         {/* Day of Week Chart */}
-        <Box sx={{...chartColumnStyle, flex: '1 1 50%'}}>
-          <Card sx={chartCardStyle}>
-            <Box sx={chartHeaderStyle}>
-              <Typography variant="h6" fontWeight={600} color="#333">
-                {getDayOfWeekTitle()}
-              </Typography>
-            </Box>
-            <CardContent sx={chartContentStyle}>
-              {analyticsData.salesByDayOfWeek.length > 0 ? (
-                renderBarChart(analyticsData.salesByDayOfWeek, 'day', 'value', 'Sales')
-              ) : (
-                <Typography color="text.secondary">No day of week data available</Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Box>
+        {hasDayOfWeekData && (
+          <Box sx={{...chartColumnStyle, flex: '1 1 50%'}}>
+            <Card sx={chartCardStyle}>
+              <Box sx={chartHeaderStyle}>
+                <Typography variant="h6" fontWeight={600} color="#333">
+                  {getDayOfWeekTitle()}
+                </Typography>
+              </Box>
+              <CardContent sx={chartContentStyle}>
+                {renderDualAxisChart(tableData!.table6!, 'Day')}
+              </CardContent>
+            </Card>
+          </Box>
+        )}
         
         {/* Time of Day Chart */}
-        <Box sx={{...chartColumnStyle, flex: '1 1 50%'}}>
-          <Card sx={chartCardStyle}>
-            <Box sx={chartHeaderStyle}>
-              <Typography variant="h6" fontWeight={600} color="#333">
-                Sales by Time of Day
-              </Typography>
-            </Box>
-            <CardContent sx={chartContentStyle}>
-              {analyticsData.salesByTimeOfDay.length > 0 ? (
-                renderBarChart(analyticsData.salesByTimeOfDay, 'hour', 'value', 'Sales')
-              ) : (
-                <Typography color="text.secondary">No time of day data available</Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Box>
+        {hasTimeRangeData && timeRangeData.length > 0 && (
+          <Box sx={{...chartColumnStyle, flex: '1 1 50%'}}>
+            <Card sx={chartCardStyle}>
+              <Box sx={chartHeaderStyle}>
+                <Typography variant="h6" fontWeight={600} color="#333">
+                  Sales by Time Range
+                </Typography>
+              </Box>
+              <CardContent sx={chartContentStyle}>
+                {renderDualAxisChart(timeRangeData, 'TimeRange')}
+              </CardContent>
+            </Card>
+          </Box>
+        )}
       </Box>
+      
+      {/* Show info message if some data is missing */}
+      {(!hasWeeklyData || !hasDayOfWeekData || !hasTimeRangeData) && (
+        <Alert severity="info" sx={{ mt: 2 }}>
+          Some analytics data is not available. Charts are shown for available data only.
+        </Alert>
+      )}
     </Box>
   );
 };
+
 export default SalesCharts;

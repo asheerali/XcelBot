@@ -1,4 +1,4 @@
-// FilterSection.tsx - Updated with DateRangeSelector
+// FilterSection.tsx - Updated with dynamic categories from Redux state
 import React, { useState, useEffect, useRef } from 'react';
 import Grid from '@mui/material/Grid';
 import Button from '@mui/material/Button';
@@ -13,20 +13,27 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import Checkbox from '@mui/material/Checkbox';
+import ListItemText from '@mui/material/ListItemText';
 import { format } from 'date-fns';
 
 // Import icons
 import FilterListIcon from '@mui/icons-material/FilterList';
 import PlaceIcon from '@mui/icons-material/Place';
-import RestaurantIcon from '@mui/icons-material/Restaurant';
+import CategoryIcon from '@mui/icons-material/Category';
 import PersonIcon from '@mui/icons-material/Person';
 import CloseIcon from '@mui/icons-material/Close';
 
 // Import DateRangeSelector component
 import DateRangeSelector from './DateRangeSelector';
 
-// Redux imports (if needed)
+// Redux imports
 import { useAppDispatch, useAppSelector } from '../typedHooks';
+import { 
+  selectSalesCategories, 
+  selectAllCategories,
+  updateSalesFilters
+} from '../store/excelSlice';
 
 interface FilterSectionProps {
   dateRangeType: string;
@@ -41,6 +48,10 @@ interface FilterSectionProps {
   selectedLocation: string;
   onLocationChange: (event: SelectChangeEvent) => void;
   onApplyFilters: () => void;
+  // Optional: Allow parent to override which categories to use
+  categoriesOverride?: string[];
+  // Optional: Dashboard type to determine which categories to use
+  dashboardType?: 'Sales Split' | 'Financials' | 'Sales Wide' | 'Product Mix';
 }
 
 const FilterSection: React.FC<FilterSectionProps> = ({
@@ -55,12 +66,65 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   locations,
   selectedLocation,
   onLocationChange,
-  onApplyFilters
+  onApplyFilters,
+  categoriesOverride,
+  dashboardType = 'Sales Split'
 }) => {
-  // State for dining options and employees (keeping from your original component)
-  const [isDiningOpen, setIsDiningOpen] = useState(false);
+  const dispatch = useAppDispatch();
+  
+  // Get categories from Redux state based on dashboard type
+  const salesCategories = useAppSelector(selectSalesCategories);
+  const allCategories = useAppSelector(selectAllCategories);
+  const salesFilters = useAppSelector(state => state.excel.salesFilters);
+  
+  // Determine which categories to use
+  const getCategoriesToUse = () => {
+    if (categoriesOverride) {
+      return categoriesOverride;
+    }
+    
+    switch (dashboardType) {
+      case 'Sales Split':
+        return salesCategories.length > 0 ? salesCategories : [];
+      case 'Financials':
+        return useAppSelector(state => state.excel.financialCategories);
+      case 'Sales Wide':
+        return useAppSelector(state => state.excel.salesWideCategories);
+      case 'Product Mix':
+        return useAppSelector(state => state.excel.productMixCategories);
+      default:
+        return allCategories;
+    }
+  };
+
+  const availableCategories = getCategoriesToUse();
+  
+  // Filter out common non-category fields and system fields
+  const filterCategories = (categories: string[]) => {
+    const excludeFields = [
+      'dashboardName', 'fileLocation', 'data', 'uploadDate', 'fileName', 
+      'location', 'locations', 'dateRanges', 'Week', 'week', 'Grand Total',
+      'store', 'Store', 'id', 'ID', 'index', 'key'
+    ];
+    
+    return categories.filter(category => 
+      category && 
+      typeof category === 'string' && 
+      category.trim() !== '' &&
+      !excludeFields.includes(category) &&
+      !category.toLowerCase().includes('total') &&
+      !category.toLowerCase().includes('grand')
+    );
+  };
+
+  const filteredCategories = filterCategories(availableCategories);
+  
+  // State for category options and employees
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isEmployeeOpen, setIsEmployeeOpen] = useState(false);
-  const [selectedDiningOptions, setSelectedDiningOptions] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    salesFilters.selectedCategories || []
+  );
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   
   // New state for date range dialog
@@ -70,28 +134,21 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     endDate: endDate ? new Date(endDate) : new Date(),
   });
 
-  // DINING OPTIONS - keeping these from your original component
-  const DINING_OPTIONS = [
-    { group: 'Dine in', options: ['Dine In', 'Kiosk Dine-In'] },
-    { group: 'Take out', options: ['Take Out', 'Online Ordering - Takeout', 'Kiosk Takeout'] },
-    { group: 'Delivery', options: ['Delivery', 'Online Ordering - Delivery'] },
-    { group: 'Third Party', options: [
-        'DoorDash - Takeout', 'Uber Eats - Takeout', 'Grubhub - Takeout',
-        'DoorDash - Delivery', 'Uber Eats - Delivery', 'Grubhub - Delivery'
-      ] },
-    { group: 'Other', options: ['Curbside', 'No dining option'] }
-  ];
-
-  // Sample employee names - keeping from your original component
+  // Sample employee names - you can replace this with actual employee data from your backend
   const EMPLOYEE_NAMES = [
     'James Smith', 'Maria Garcia', 'David Johnson', 'Lisa Williams',
     'Robert Brown', 'Sarah Miller', 'Michael Davis', 'Jennifer Wilson',
     'William Jones', 'Jessica Taylor', 'Thomas Moore', 'Emily Anderson'
   ];
 
+  // Update local state when Redux filters change
+  useEffect(() => {
+    setSelectedCategories(salesFilters.selectedCategories || []);
+  }, [salesFilters.selectedCategories]);
+
   // Close handlers for dialogs
-  const handleCloseDining = () => {
-    setIsDiningOpen(false);
+  const handleCloseCategory = () => {
+    setIsCategoryOpen(false);
   };
 
   const handleCloseEmployee = () => {
@@ -102,15 +159,26 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     setIsDateRangeOpen(false);
   };
 
-  // Handler for dining options
-  const handleDiningOptionChange = (option: string) => {
-    setSelectedDiningOptions(prev => {
-      if (prev.includes(option)) {
-        return prev.filter(item => item !== option);
-      } else {
-        return [...prev, option];
-      }
-    });
+  // Handler for category options
+  const handleCategoryChange = (event: SelectChangeEvent<string[]>) => {
+    const value = typeof event.target.value === 'string' 
+      ? event.target.value.split(',') 
+      : event.target.value;
+    
+    setSelectedCategories(value);
+    
+    // Update Redux state
+    dispatch(updateSalesFilters({ selectedCategories: value }));
+  };
+
+  // Handler for individual category selection (for checkbox interface)
+  const handleCategoryToggle = (category: string) => {
+    const newSelection = selectedCategories.includes(category)
+      ? selectedCategories.filter(item => item !== category)
+      : [...selectedCategories, category];
+    
+    setSelectedCategories(newSelection);
+    dispatch(updateSalesFilters({ selectedCategories: newSelection }));
   };
 
   // Handler for employee selection
@@ -125,12 +193,19 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   };
 
   // Clear handlers
-  const handleClearDiningOptions = () => {
-    setSelectedDiningOptions([]);
+  const handleClearCategories = () => {
+    setSelectedCategories([]);
+    dispatch(updateSalesFilters({ selectedCategories: [] }));
   };
 
   const handleClearEmployees = () => {
     setSelectedEmployees([]);
+  };
+
+  // Select all categories
+  const handleSelectAllCategories = () => {
+    setSelectedCategories(filteredCategories);
+    dispatch(updateSalesFilters({ selectedCategories: filteredCategories }));
   };
 
   // Open date range dialog
@@ -186,6 +261,21 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     }
   };
 
+  // Enhanced apply filters to include selected categories
+  const handleApplyFilters = () => {
+    // Update Redux state with current selections
+    dispatch(updateSalesFilters({ 
+      selectedCategories: selectedCategories,
+      location: selectedLocation,
+      dateRangeType: dateRangeType,
+      startDate: startDate,
+      endDate: endDate
+    }));
+    
+    // Call the parent's apply filters function
+    onApplyFilters();
+  };
+
   return (
     <Box>
       <Typography variant="h6" sx={{ mb: 2, fontWeight: 'normal' }}>
@@ -216,7 +306,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           </FormControl>
         </Grid>
 
-        {/* Date Range Button - Replaced select with button that opens dialog */}
+        {/* Date Range Button */}
         <Grid item xs={12} sm={3}>
           <FormControl fullWidth sx={{ height: 80 }}>
             <Button
@@ -250,41 +340,73 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           </FormControl>
         </Grid>
 
-        {/* Dining Options - keeping from your original component */}
+        {/* Categories Filter - Dynamic from backend */}
         <Grid item xs={12} sm={3}>
           <FormControl fullWidth sx={{ height: 80 }}>
-            <InputLabel id="dining-select-label">Dining Options</InputLabel>
+            <InputLabel id="category-select-label">Categories</InputLabel>
             <Select
-              labelId="dining-select-label"
-              id="dining-select"
-              value=""
-              label="Dining Options"
-              open={isDiningOpen}
-              onOpen={() => setIsDiningOpen(true)}
-              onClose={handleCloseDining}
-              renderValue={() => ""}
-              startAdornment={<RestaurantIcon sx={{ mr: 1, ml: -0.5, color: 'primary.main' }} />}
-              endAdornment={
-                selectedDiningOptions.length > 0 && (
-                  <Chip
-                    size="small"
-                    label={selectedDiningOptions.length}
-                    color="primary"
-                    sx={{ mr: 2, height: 24, minWidth: 28 }}
-                  />
-                )
-              }
+              labelId="category-select-label"
+              id="category-select"
+              multiple
+              value={selectedCategories}
+              onChange={handleCategoryChange}
+              label="Categories"
+              renderValue={(selected) => (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {selected.length > 2 ? (
+                    <Chip size="small" label={`${selected.length} selected`} />
+                  ) : (
+                    selected.map((value) => (
+                      <Chip key={value} label={value} size="small" />
+                    ))
+                  )}
+                </Box>
+              )}
+              startAdornment={<CategoryIcon sx={{ mr: 1, ml: -0.5, color: 'primary.main' }} />}
+              disabled={filteredCategories.length === 0}
             >
-              {/* Your existing dining options menu */}
-              {/* ... (keeping the existing code) */}
+              {/* Select All option */}
+              <MenuItem value="select-all" onClick={handleSelectAllCategories}>
+                <Checkbox checked={selectedCategories.length === filteredCategories.length} />
+                <ListItemText primary="Select All" />
+              </MenuItem>
+              
+              {/* Clear All option */}
+              <MenuItem value="clear-all" onClick={handleClearCategories}>
+                <ListItemText primary="Clear All" />
+              </MenuItem>
+              
+              {/* Divider */}
+              <MenuItem disabled>
+                <Typography variant="caption" color="text.secondary">
+                  Available Categories:
+                </Typography>
+              </MenuItem>
+              
+              {/* Category options */}
+              {filteredCategories.length > 0 ? (
+                filteredCategories.map((category) => (
+                  <MenuItem key={category} value={category}>
+                    <Checkbox checked={selectedCategories.includes(category)} />
+                    <ListItemText primary={category} />
+                  </MenuItem>
+                ))
+              ) : (
+                <MenuItem disabled>
+                  <ListItemText 
+                    primary="No categories available" 
+                    secondary="Upload a file to see categories"
+                  />
+                </MenuItem>
+              )}
             </Select>
             <Typography variant="caption" color="text.secondary">
-              {selectedDiningOptions.length} option(s) selected
+              {selectedCategories.length} of {filteredCategories.length} selected
             </Typography>
           </FormControl>
         </Grid>
 
-        {/* Employees - keeping from your original component */}
+        {/* Employees Filter */}
         <Grid item xs={12} sm={3}>
           <FormControl fullWidth sx={{ height: 80 }}>
             <InputLabel id="employee-select-label">Employees</InputLabel>
@@ -309,8 +431,12 @@ const FilterSection: React.FC<FilterSectionProps> = ({
                 )
               }
             >
-              {/* Your existing employees menu */}
-              {/* ... (keeping the existing code) */}
+              {EMPLOYEE_NAMES.map((employee) => (
+                <MenuItem key={employee} onClick={() => handleEmployeeChange(employee)}>
+                  <Checkbox checked={selectedEmployees.includes(employee)} />
+                  <ListItemText primary={employee} />
+                </MenuItem>
+              ))}
             </Select>
             <Typography variant="caption" color="text.secondary">
               {selectedEmployees.length} employee(s) selected
@@ -319,20 +445,23 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         </Grid>
 
         {/* Display selected filters */}
-        {(selectedDiningOptions.length > 0 || selectedEmployees.length > 0) && (
+        {(selectedCategories.length > 0 || selectedEmployees.length > 0) && (
           <Grid item xs={12}>
             <Box display="flex" flexWrap="wrap" gap={1} mt={1}>
-              {selectedDiningOptions.map(option => (
+              {/* Category chips */}
+              {selectedCategories.map(category => (
                 <Chip
-                  key={option}
-                  label={option}
+                  key={category}
+                  label={category}
                   size="small"
-                  onDelete={() => handleDiningOptionChange(option)}
+                  onDelete={() => handleCategoryToggle(category)}
                   deleteIcon={<CloseIcon fontSize="small" />}
-                  icon={<RestaurantIcon fontSize="small" />}
+                  icon={<CategoryIcon fontSize="small" />}
                   sx={{ background: 'rgba(25, 118, 210, 0.08)' }}
                 />
               ))}
+              
+              {/* Employee chips */}
               {selectedEmployees.map(employee => (
                 <Chip
                   key={employee}
@@ -341,7 +470,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
                   onDelete={() => handleEmployeeChange(employee)}
                   deleteIcon={<CloseIcon fontSize="small" />}
                   icon={<PersonIcon fontSize="small" />}
-                  sx={{ background: 'rgba(25, 118, 210, 0.08)' }}
+                  sx={{ background: 'rgba(76, 175, 80, 0.08)' }}
                 />
               ))}
             </Box>
@@ -353,13 +482,46 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           <Button 
             variant="contained" 
             color="primary"
-            onClick={onApplyFilters}
+            onClick={handleApplyFilters}
             sx={{ mt: 1 }}
           >
-            Apply Filters
+            Apply Filters ({selectedCategories.length + selectedEmployees.length} active)
           </Button>
+          
+          {/* Clear all filters button */}
+          {(selectedCategories.length > 0 || selectedEmployees.length > 0) && (
+            <Button 
+              variant="outlined" 
+              color="secondary"
+              onClick={() => {
+                handleClearCategories();
+                handleClearEmployees();
+              }}
+              sx={{ mt: 1, ml: 1 }}
+            >
+              Clear All Filters
+            </Button>
+          )}
         </Grid>
       </Grid>
+
+      {/* Debug info - remove in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+          <Typography variant="caption" display="block">
+            Debug Info:
+          </Typography>
+          <Typography variant="caption" display="block">
+            Available Categories ({filteredCategories.length}): {filteredCategories.join(', ')}
+          </Typography>
+          <Typography variant="caption" display="block">
+            Selected Categories ({selectedCategories.length}): {selectedCategories.join(', ')}
+          </Typography>
+          <Typography variant="caption" display="block">
+            Dashboard Type: {dashboardType}
+          </Typography>
+        </Box>
+      )}
 
       {/* Date Range Picker Dialog */}
       <Dialog

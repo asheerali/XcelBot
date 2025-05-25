@@ -1,4 +1,4 @@
-// Fixed ExcelImport.tsx - Product Mix Dashboard Style with Working Data Tables Tabs
+// Fixed ExcelImport.tsx - Product Mix Dashboard Style with Redux-based Analytics
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -39,11 +39,10 @@ import ErrorIcon from '@mui/icons-material/Error';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 
-
 // Import components
 import FilterSection from './FilterSection';
 import TableDisplay from './TableDisplay';
-import SalesCharts from './graphs/SalesCharts';
+import SalesCharts from './graphs/SalesCharts'; // Updated to use Redux-based version
 import DeliveryPercentageChart from './graphs/DeliveryPercentageChart';
 import InHousePercentageChart from './graphs/InHousePercentageChart';
 import CateringPercentageChart from './graphs/CateringPercentageChart';
@@ -65,7 +64,9 @@ import {
   setLocations,
   selectLocation,
   addSalesWideData,
-  selectSalesWideLocation
+  selectSalesWideLocation,
+  selectCategoriesByLocation
+  
 } from '../store/excelSlice';
 
 // Modern styled components with clean white background
@@ -171,7 +172,7 @@ const ModernLoader = () => (
 
 // API base URLs
 const API_URL = 'http://localhost:8000/api/excel/upload';
-const FILTER_API_URL = 'http://localhost:8000/api/excel/filter';
+const FILTER_API_URL = 'http://localhost:8000/api/salessplit/filter';
 
 // Tab Panel Component
 interface TabPanelProps {
@@ -377,7 +378,7 @@ export function ExcelImport() {
         location: location || null,
         dateRangeType: dateRange
       };
-      
+      console.log('Filter data:', filterData);
       setLoadingMessage('Processing data...');
       
       const response = await axios.post(FILTER_API_URL, filterData);
@@ -802,17 +803,6 @@ export function ExcelImport() {
                       <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
                         📈 Data Sources Active
                       </Typography>
-                      {/* <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                        <Chip 
-                          icon={<BarChartIcon />}
-                          label={`Sales Analysis: ${files.length} files`} 
-                          color="primary"
-                          sx={{ 
-                            borderRadius: 2,
-                            '& .MuiChip-icon': { fontSize: 18 }
-                          }}
-                        />
-                      </Box> */}
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                         📂 Current: {fileName || 'None selected'}
                         {selectedLocation && ` • 📍 ${selectedLocation}`}
@@ -956,7 +946,7 @@ export function ExcelImport() {
                         </Typography>
                       </Box>
 
-                      {/* Analytics Charts Section */}
+                      {/* Analytics Charts Section - UPDATED to use Redux data */}
                       <CleanCard sx={{ p: 3, mb: 3 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                           <AnalyticsIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
@@ -968,7 +958,7 @@ export function ExcelImport() {
                         
                         <div key={`sales-chart-${chartKey}`}>
                           <SalesCharts 
-                            fileName={fileName}
+                            tableData={reduxTableData} // Pass Redux table data instead of fileName/API props
                             dateRangeType={dateRangeType}
                             selectedLocation={selectedLocation}
                             height={250}

@@ -1,4 +1,4 @@
-// src/pages/ExcelUploadPage.tsx - Updated version with full Product Mix dashboard support
+// src/pages/ExcelUploadPage.tsx - Updated to extract and save categories from backend response
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
@@ -169,7 +169,108 @@ interface FileInfo {
   location: string;
   dashboard: string;
   data?: any;
+  categories?: string[]; // Added to store extracted categories
 }
+
+// Helper function to extract categories from response data
+const extractCategoriesFromData = (data: any): string[] => {
+  console.log('🔍 Extracting categories from data:', data);
+  
+  let categories: string[] = [];
+  
+  try {
+    // Check if data is an array (multiple dashboards)
+    if (Array.isArray(data)) {
+      console.log('📊 Processing array of dashboards');
+      
+      // Process each dashboard in the array
+      data.forEach((dashboardData, index) => {
+        console.log(`Processing dashboard ${index + 1}:`, dashboardData);
+        
+        // Extract categories from single dashboard
+        const dashboardCategories = extractCategoriesFromSingleDashboard(dashboardData);
+        
+        // Merge categories (remove duplicates)
+        categories = [...new Set([...categories, ...dashboardCategories])];
+        
+        console.log(`Categories after processing dashboard ${index + 1}:`, categories);
+      });
+    } else {
+      // Single dashboard
+      console.log('📊 Processing single dashboard');
+      categories = extractCategoriesFromSingleDashboard(data);
+    }
+    
+    console.log('✅ Final extracted categories:', categories);
+    return categories;
+    
+  } catch (error) {
+    console.error('❌ Error extracting categories:', error);
+    return [];
+  }
+};
+
+
+// Helper function to extract categories from a single dashboard
+const extractCategoriesFromSingleDashboard = (dashboardData: any): string[] => {
+  let categories: string[] = [];
+  
+  try {
+    console.log('🔍 Processing single dashboard data:', dashboardData);
+    
+    // METHOD 1: Check for direct "Categories" field (uppercase C)
+    if (dashboardData.Categories && Array.isArray(dashboardData.Categories)) {
+      console.log('✅ Found direct Categories array (uppercase):', dashboardData.Categories);
+      categories = [...categories, ...dashboardData.Categories];
+    }
+    
+    // METHOD 2: Check for direct "categories" field (lowercase c)
+    if (dashboardData.categories && Array.isArray(dashboardData.categories)) {
+      console.log('✅ Found direct categories array (lowercase):', dashboardData.categories);
+      categories = [...categories, ...dashboardData.categories];
+    }
+    
+    // METHOD 3: If no direct categories found, extract from table1 data - but filter properly
+    if (categories.length === 0 && dashboardData.table1 && Array.isArray(dashboardData.table1) && dashboardData.table1.length > 0) {
+      console.log('⚠️ No direct categories found, extracting from table1:', dashboardData.table1[0]);
+      const firstRow = dashboardData.table1[0];
+      if (typeof firstRow === 'object' && firstRow !== null) {
+        const tableKeys = Object.keys(firstRow);
+        console.log('Table1 keys:', tableKeys);
+        
+        // Filter out non-category keys - IMPROVED FILTERING
+        const filteredTableKeys = tableKeys.filter(key => {
+          const keyLower = key.toLowerCase();
+          // Exclude common non-category fields
+          const excludePatterns = [
+            'week', 'date', 'time', 'id', 'index', 'total', 'grand', 
+            'sum', 'count', 'avg', 'average', 'min', 'max', 'store',
+            'location', 'file', 'upload', 'dashboard', 'data'
+          ];
+          
+          return !excludePatterns.some(pattern => keyLower.includes(pattern));
+        });
+        
+        console.log('Filtered table categories:', filteredTableKeys);
+        categories = [...categories, ...filteredTableKeys];
+      }
+    }
+    
+    // Remove duplicates and filter out empty strings
+    const finalCategories = [...new Set(categories)].filter(cat => 
+      cat && 
+      typeof cat === 'string' && 
+      cat.trim() !== ''
+    );
+    
+    console.log('Final categories for single dashboard:', finalCategories);
+    return finalCategories;
+    
+  } catch (error) {
+    console.error('Error extracting categories from single dashboard:', error);
+    return [];
+  }
+};
 
 const ExcelUploadPage: React.FC = () => {
   const [files, setFiles] = useState<FileInfo[]>([]);
@@ -294,7 +395,7 @@ const ExcelUploadPage: React.FC = () => {
     });
   };
   
-  // Upload a single file - Complete function with Product Mix support
+  // Upload a single file - Complete function with Product Mix support and categories extraction
   const uploadFile = async (fileInfo: FileInfo, index: number) => {
     if (!fileInfo.location.trim()) {
       // Don't upload files without a location
@@ -365,6 +466,12 @@ const ExcelUploadPage: React.FC = () => {
       
       // Route data based on dashboard type from response
       if (response.data) {
+        console.log('📨 Received response data:', response.data);
+        
+        // Extract categories from the response data
+        const extractedCategories = extractCategoriesFromData(response.data);
+        console.log('🏷️ Extracted categories:', extractedCategories);
+        
         // Check if response.data is an array (multiple dashboards)
         if (Array.isArray(response.data)) {
           console.log('Multiple dashboards detected in response array');
@@ -375,33 +482,39 @@ const ExcelUploadPage: React.FC = () => {
             console.log(`Processing dashboard: "${dashboardName}" from array`);
             console.log('Dashboard data:', dashboardData);
             
+            // Add categories to dashboard data
+            const enhancedDashboardData = {
+              ...dashboardData,
+              categories: extractedCategories
+            };
+            
             if (dashboardName === 'Sales Split') {
               console.log('Sales Split dashboard detected in array - processing data');
-              
+              console.log("response.data[0].fileName", response.data[0].fileName);
               // Add to sales data in Redux
               dispatch(addSalesData({
-                fileName: fileInfo.file.name,
+                fileName: response.data[0].fileName, 
                 fileContent: base64Content,
                 location: fileInfo.location,
-                data: dashboardData
+                data: enhancedDashboardData
               }));
               
               // Also add to regular file data for backward compatibility
               dispatch(addFileData({
-                fileName: fileInfo.file.name,
+                fileName: response.data[0].fileName, 
                 fileContent: base64Content,
                 location: fileInfo.location,
-                data: dashboardData
+                data: enhancedDashboardData
               }));
             } else if (dashboardName === 'Product Mix') {
               console.log('Product Mix dashboard detected in array - processing data');
               
               // Add to product mix data in Redux
               dispatch(addProductMixData({
-                fileName: fileInfo.file.name,
+                fileName: response.data[0].fileName, 
                 fileContent: base64Content,
                 location: fileInfo.location,
-                data: dashboardData
+                data: enhancedDashboardData
               }));
             } else if (dashboardName === 'Financials') {
               console.log('Financials dashboard detected in array - processing data');
@@ -411,7 +524,7 @@ const ExcelUploadPage: React.FC = () => {
                 fileName: fileInfo.file.name,
                 fileContent: base64Content,
                 location: fileInfo.location,
-                data: dashboardData
+                data: enhancedDashboardData
               }));
             } else if (dashboardName === 'Sales Wide') {
               console.log('Sales Wide dashboard detected in array - processing data');
@@ -421,7 +534,7 @@ const ExcelUploadPage: React.FC = () => {
                 fileName: fileInfo.file.name,
                 fileContent: base64Content,
                 location: fileInfo.location,
-                data: dashboardData
+                data: enhancedDashboardData
               }));
             } else {
               console.log(`Unknown dashboard type: "${dashboardName}"`);
@@ -439,6 +552,12 @@ const ExcelUploadPage: React.FC = () => {
           console.log(`Processing single dashboard: "${dashboardName}"`);
           console.log('Single dashboard data:', response.data);
           
+          // Add categories to dashboard data
+          const enhancedDashboardData = {
+            ...response.data,
+            categories: extractedCategories
+          };
+          
           // Dispatch based on dashboard type
           if (dashboardName === 'Financials') {
             console.log('Financials dashboard detected - processing data');
@@ -448,7 +567,7 @@ const ExcelUploadPage: React.FC = () => {
               fileName: fileInfo.file.name,
               fileContent: base64Content,
               location: fileInfo.location,
-              data: response.data
+              data: enhancedDashboardData
             }));
           } else if (dashboardName === 'Sales Split') {
             console.log('Sales Split dashboard detected - processing data');
@@ -458,7 +577,7 @@ const ExcelUploadPage: React.FC = () => {
               fileName: fileInfo.file.name,
               fileContent: base64Content,
               location: fileInfo.location,
-              data: response.data
+              data: enhancedDashboardData
             }));
             
             // Also add to regular file data for backward compatibility
@@ -466,7 +585,7 @@ const ExcelUploadPage: React.FC = () => {
               fileName: fileInfo.file.name,
               fileContent: base64Content,
               location: fileInfo.location,
-              data: response.data
+              data: enhancedDashboardData
             }));
           } else if (dashboardName === 'Sales Wide') {
             console.log('Sales Wide dashboard detected - processing data');
@@ -476,7 +595,7 @@ const ExcelUploadPage: React.FC = () => {
               fileName: fileInfo.file.name,
               fileContent: base64Content,
               location: fileInfo.location,
-              data: response.data
+              data: enhancedDashboardData
             }));
           } else if (dashboardName === 'Product Mix') {
             console.log('Product Mix dashboard detected - processing data');
@@ -486,7 +605,7 @@ const ExcelUploadPage: React.FC = () => {
               fileName: fileInfo.file.name,
               fileContent: base64Content,
               location: fileInfo.location,
-              data: response.data
+              data: enhancedDashboardData
             }));
           } else {
             console.log(`Unknown single dashboard type: "${dashboardName}"`);
@@ -499,18 +618,20 @@ const ExcelUploadPage: React.FC = () => {
           }
         }
         
-        // Update file status to success and store data
+        // Update file status to success and store data with categories
         setFiles(prevFiles => {
           const updatedFiles = [...prevFiles];
           updatedFiles[index] = {
             ...updatedFiles[index],
             status: 'success',
             progress: 100,
-            data: response.data
+            data: response.data,
+            categories: extractedCategories // Store categories in file info
           };
           return updatedFiles;
         });
         
+        console.log('✅ File upload completed successfully with categories:', extractedCategories);
         return true;
       } else {
         throw new Error('Invalid response data');
@@ -658,16 +779,16 @@ const ExcelUploadPage: React.FC = () => {
       
       switch (dashboardName) {
         case 'Financials':
-          navigate('/Financials');
+          navigate('/financials-dashboard');
           break;
         case 'Sales Split':
-          navigate('/manage-reports');
+          navigate('/sales-dashboard');
           break;
         case 'Sales Wide':
-          navigate('/Saleswide');
+          navigate('/sales-wide-dashboard');
           break;
         case 'Product Mix':
-          navigate('/Productmix');
+          navigate('/product-mix-dashboard');
           break;
         default:
           navigate('/dashboard');
@@ -757,7 +878,13 @@ const ExcelUploadPage: React.FC = () => {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               or click to browse files
             </Typography>
-           
+            <Button
+              variant="contained"
+              startIcon={<FileUploadIcon />}
+              onClick={(e) => e.stopPropagation()}
+            >
+              Browse Files
+            </Button>
             <input
               ref={fileInputRef}
               type="file"
@@ -828,6 +955,16 @@ const ExcelUploadPage: React.FC = () => {
                             size="small"
                             color={getStatusColor(fileInfo.status) as any}
                           />
+                          {/* Show categories count if available */}
+                          {fileInfo.categories && fileInfo.categories.length > 0 && (
+                            <Chip
+                              label={`${fileInfo.categories.length} categories`}
+                              size="small"
+                              color="info"
+                              variant="outlined"
+                              icon={<CategoryIcon />}
+                            />
+                          )}
                         </Box>
                       }
                       secondary={
@@ -838,6 +975,42 @@ const ExcelUploadPage: React.FC = () => {
                               {fileInfo.location || 'No location set'}
                             </Typography>
                           </Box>
+                          
+                          {/* Show extracted categories */}
+                          {fileInfo.categories && fileInfo.categories.length > 0 && (
+                            <Box sx={{ mt: 1 }}>
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                                Categories: 
+                              </Typography>
+                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                {fileInfo.categories.slice(0, 5).map((category, catIndex) => (
+                                  <Chip
+                                    key={catIndex}
+                                    label={category}
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{ 
+                                      fontSize: '0.7rem',
+                                      height: '20px',
+                                      '& .MuiChip-label': { px: 1 }
+                                    }}
+                                  />
+                                ))}
+                                {fileInfo.categories.length > 5 && (
+                                  <Chip
+                                    label={`+${fileInfo.categories.length - 5} more`}
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{ 
+                                      fontSize: '0.7rem',
+                                      height: '20px',
+                                      '& .MuiChip-label': { px: 1 }
+                                    }}
+                                  />
+                                )}
+                              </Box>
+                            </Box>
+                          )}
                           
                           {fileInfo.status === 'uploading' && (
                             <Box sx={{ width: '100%', mt: 1 }}>

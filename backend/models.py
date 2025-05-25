@@ -19,8 +19,8 @@ class SalesSplitPmixUploadRequest(BaseModel):
     # fileContent: str  # base64 encoded file content
     dashboard: Optional[str] = None  # Optional type of dashboard (e.g., "Sales", "Inventory")
     dashboardName: Optional[str] = None  # Optional name for the dashboard
-    startDate: str
-    endDate: str
+    startDate: str = None  # Date filter start
+    endDate: str = None    # Date filter end
     location: Union[str, List[str]] = "All"  # must be a string or list of strings
     server: Union[str, List[str]] = "All" # must be a string or list of strings
     category: Union[str, List[str]] = "All"  # must be a string or list of strings

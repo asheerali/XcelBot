@@ -265,8 +265,8 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 "fileName": file_name,
                 "data": f"{request.dashboard} Dashboard is not yet implemented."
             }
-                        
-            # print("i am here in excel upload printing the startdate", request.startDate)
+                       
+            print (sales_split_dashboard, pmix_dashboard)
             return [sales_split_dashboard, pmix_dashboard]
             # return {
             #     "table1": [],
