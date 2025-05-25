@@ -4,48 +4,195 @@ import {
   LabelList, Legend, Tooltip
 } from 'recharts';
 
-const SalesDashboard = () => {
-  // Data for sales by menu group
-  const menuGroupData = [
-    { name: 'Category 1', value: 17 },
-    { name: 'Category 2', value: 12 },
-    { name: 'Category 3', value: 9 },
-    { name: 'Category 4', value: 7 },
-    { name: 'Category 5', value: 4 },
-    { name: 'Category 6', value: 1.5 }
-  ];
+// Interface for the product mix data
+interface ProductMixData {
+  table1?: Array<{
+    net_sales?: number[];
+    orders?: number[];
+    qty_sold?: number[];
+    average_order_value?: number[];
+    average_items_per_order?: number[];
+    unique_orders?: number[];
+    total_quantity?: number[];
+  }>;
+  table2?: Array<{
+    Category: string;
+    Sales: number;
+    Percentage: number;
+  }>;
+  table3?: Array<{
+    'Menu Group': string;
+    Sales: number;
+  }>;
+  table4?: Array<{
+    Server: string;
+    Sales: number;
+  }>;
+  table5?: Array<{
+    Item: string;
+    Server: string;
+    Quantity: number;
+    Sales: number;
+  }>;
+  table6?: Array<{
+    Location: string;
+    Sales: number;
+  }>;
+  table7?: Array<{
+    'Menu Item': string;
+    Price: number;
+  }>;
+  table8?: Array<{
+    Item: string;
+    Change: number;
+    Direction: string;
+    Category: string;
+  }>;
+  table9?: Array<{
+    Item: string;
+    Price: number;
+  }>;
+  servers?: string[];
+  categories?: string[];
+  locations?: string[];
+}
 
-  // Data for first pie chart
-  const category1Data = [
-    { name: 'Sandwiches', value: 49, color: '#69c0b8' },
-    { name: 'Promotional', value: 51, color: '#4296a3' }
-  ];
+interface SalesDashboardProps {
+  productMixData?: ProductMixData;
+}
 
-  // Data for second pie chart
-  const category2Data = [
-    { name: 'Entrees', value: 34, color: '#4296a3' },
-    { name: 'Pnndwiches', value: 17, color: '#69c0b8' },
-    { name: 'Promotional', value: 49, color: '#f0d275' }
-  ];
+const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
+  // Extract summary data from table1
+  const summaryData = productMixData?.table1?.[0] || {};
+  const netSales = summaryData.net_sales?.[0] || 0;
+  const orders = summaryData.orders?.[0] || 0;
+  const qtySold = summaryData.qty_sold?.[0] || 0;
+  const averageOrderValue = summaryData.average_order_value?.[0] || 0;
+  const averageItemsPerOrder = summaryData.average_items_per_order?.[0] || 0;
 
-  // Data for sales by server
-  const serverData = [
-    { name: 'Dianihuva Polanco', value: 65 },
-    { name: 'Brayan Rivas', value: 45 },
-    { name: 'dummy', value: 30 }
-  ];
+  // Transform table3 data for menu group chart (Menu Group -> Sales)
+  const transformMenuGroupData = () => {
+    if (!productMixData?.table3 || productMixData.table3.length === 0) {
+      return [
+        { name: 'No Data', value: 0 }
+      ];
+    }
 
-  // Top selling items data
-  const topSellingItems = [
-    { name: 'Grilled Chicken Breast', dianihuva: 2, brayan: 14, rivas: 18 },
-    { name: 'AM Beef', dianihuva: 1, brayan: 13, rivas: 15 },
-    { name: 'Sophie\'s Spicy Chicken Sandwich', dianihuva: 1, brayan: 9, rivas: 12 },
-    { name: 'AM Chicken', dianihuva: 1, brayan: 7, rivas: 9 },
-    { name: 'AM Guava and Cheese', dianihuva: 3, brayan: 8, rivas: 5 }
-  ];
+    return productMixData.table3.map(item => ({
+      name: item['Menu Group'] || 'Unknown',
+      value: Math.round((item.Sales || 0) / 1000) // Convert to thousands for better display
+    }));
+  };
+
+  // Transform table2 data for pie charts (Category -> Sales/Percentage)
+  const transformCategoryData = () => {
+    if (!productMixData?.table2 || productMixData.table2.length === 0) {
+      return {
+        category1Data: [
+          { name: 'No Data', value: 100, color: '#cccccc' }
+        ],
+        category2Data: [
+          { name: 'No Data', value: 100, color: '#cccccc' }
+        ]
+      };
+    }
+
+    // Color palette for categories
+    const colors = ['#69c0b8', '#4296a3', '#f0d275', '#e74c3c', '#9b59b6', '#3498db'];
+    
+    // Create category data with actual percentages
+    const allCategoryData = productMixData.table2.map((item, index) => ({
+      name: item.Category || 'Unknown',
+      value: Math.round(item.Percentage || 0),
+      color: colors[index % colors.length]
+    }));
+
+    // If we have multiple categories, split them. Otherwise, show all in first chart
+    if (allCategoryData.length > 1) {
+      const midPoint = Math.ceil(allCategoryData.length / 2);
+      return {
+        category1Data: allCategoryData.slice(0, midPoint),
+        category2Data: allCategoryData.slice(midPoint)
+      };
+    } else {
+      return {
+        category1Data: allCategoryData,
+        category2Data: [{ name: 'Other', value: 0, color: '#cccccc' }]
+      };
+    }
+  };
+
+  // Transform table4 data for server performance (Server -> Sales)
+  const transformServerData = () => {
+    if (!productMixData?.table4 || productMixData.table4.length === 0) {
+      return [
+        { name: 'No Server Data', value: 0 }
+      ];
+    }
+
+    // Filter out system entries and calculate percentages
+    const validServers = productMixData.table4.filter(item => 
+      item.Server && !item.Server.includes('DO NOT CHANGE')
+    );
+
+    if (validServers.length === 0) {
+      // If only system entries, show the system entry but with a clean name
+      const systemEntry = productMixData.table4[0];
+      return [
+        { name: 'System/Integration', value: 100 }
+      ];
+    }
+
+    const totalSales = validServers.reduce((sum, item) => sum + (item.Sales || 0), 0);
+    
+    return validServers.map(item => ({
+      name: item.Server || 'Unknown',
+      value: totalSales > 0 ? Math.round(((item.Sales || 0) / totalSales) * 100) : 0
+    }));
+  };
+
+  // Transform table5 data for top selling items
+  const transformTopSellingItems = () => {
+    if (!productMixData?.table5 || productMixData.table5.length === 0) {
+      return [
+        { name: 'No Items', total: 0 }
+      ];
+    }
+
+    // Group by item and sum quantities
+    const itemMap = new Map();
+    
+    productMixData.table5.forEach(item => {
+      const itemName = item.Item || 'Unknown';
+      const quantity = item.Quantity || 0;
+      
+      if (quantity > 0) { // Only include items with actual quantities
+        itemMap.set(itemName, (itemMap.get(itemName) || 0) + quantity);
+      }
+    });
+
+    // Convert to array and sort by quantity
+    const topItems = Array.from(itemMap.entries())
+      .map(([itemName, quantity]) => ({
+        name: itemName,
+        total: quantity
+      }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5); // Top 5 items
+
+    return topItems.length > 0 ? topItems : [{ name: 'No Items', total: 0 }];
+  };
+
+  // Get transformed data
+  const menuGroupData = transformMenuGroupData();
+  const { category1Data, category2Data } = transformCategoryData();
+  const serverData = transformServerData();
+  const topSellingItems = transformTopSellingItems();
 
   // Custom label for pie charts
   const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+    if (percent === 0) return null;
+    
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
     const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
@@ -65,111 +212,15 @@ const SalesDashboard = () => {
     );
   };
 
-  // Custom server bar chart
-  const ServerBarChart = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {serverData.map((item, index) => (
-        <div key={index} style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
-            <div style={{ fontSize: '14px', fontWeight: '500' }}>{item.name}</div>
-          </div>
-          <div style={{ 
-            width: '100%', 
-            height: '24px', 
-            backgroundColor: 'rgba(76, 176, 176, 0.1)', 
-            borderRadius: '12px',
-            overflow: 'hidden'
-          }}>
-            <div 
-              style={{ 
-                height: '100%', 
-                width: `${item.value}%`, 
-                backgroundColor: '#4CB0B0', 
-                borderRadius: '12px',
-                transition: 'width 0.8s ease'
-              }}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-
-  // Custom top selling items chart
-  const TopSellingItemsChart = () => (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
-      {topSellingItems.map((item, index) => (
-        <div key={index} style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          marginBottom: '16px',
-        }}>
-          <div style={{ width: '45%', paddingRight: '8px' }}>
-            <div style={{ fontSize: '14px', transition: 'color 0.2s ease' }} className="item-name">
-              {item.name}
-            </div>
-          </div>
-          <div style={{ width: '55%', display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
-            {/* Dianihuva bar */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '12%' }}>
-              <div 
-                style={{ 
-                  height: `${item.dianihuva * 6}px`, 
-                  width: '100%',
-                  minHeight: '5px',
-                  maxWidth: '20px',
-                  backgroundColor: '#4CB0B0',
-                  borderRadius: '3px 3px 0 0',
-                  transition: 'height 0.8s ease'
-                }}
-              />
-            </div>
-            
-            {/* Brayan bar */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '12%' }}>
-              <div 
-                style={{ 
-                  height: `${item.brayan * 6}px`, 
-                  width: '100%',
-                  minHeight: '5px',
-                  maxWidth: '20px',
-                  backgroundColor: '#4CB0B0',
-                  borderRadius: '3px 3px 0 0',
-                  transition: 'height 0.8s ease'
-                }}
-              />
-            </div>
-            
-            {/* Rivas bar */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '12%' }}>
-              <div 
-                style={{ 
-                  height: `${item.rivas * 6}px`, 
-                  width: '100%',
-                  minHeight: '5px',
-                  maxWidth: '20px',
-                  backgroundColor: '#4CB0B0',
-                  borderRadius: '3px 3px 0 0',
-                  transition: 'height 0.8s ease'
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      ))}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'flex-end', 
-        gap: '16px',
-        paddingTop: '8px', 
-        borderTop: '1px solid #e0e0e0'
-      }}>
-        <div style={{ fontSize: '12px', fontWeight: '500' }}>Dianihuva</div>
-        <div style={{ fontSize: '12px', fontWeight: '500' }}>Brayan</div>
-        <div style={{ fontSize: '12px', fontWeight: '500' }}>Rivas</div>
-      </div>
-    </div>
-  );
+  // Format currency
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value);
+  };
 
   // Category legend component
   const CategoryLegend = ({ data }) => (
@@ -226,7 +277,9 @@ const SalesDashboard = () => {
             }}
             className="stat-card"
             >
-              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#1e88e5' }}>$46.46</div>
+              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#1e88e5' }}>
+                {formatCurrency(netSales)}
+              </div>
               <div style={{ fontSize: '16px', color: '#666' }}>Net Sales</div>
             </div>
 
@@ -242,7 +295,7 @@ const SalesDashboard = () => {
             }}
             className="stat-card"
             >
-              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#7cb342' }}>7</div>
+              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#7cb342' }}>{orders}</div>
               <div style={{ fontSize: '16px', color: '#666' }}>Orders</div>
             </div>
 
@@ -258,12 +311,45 @@ const SalesDashboard = () => {
             }}
             className="stat-card"
             >
-              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#fb8c00' }}>11</div>
+              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#fb8c00' }}>{qtySold}</div>
               <div style={{ fontSize: '16px', color: '#666' }}>Qty Sold</div>
             </div>
           </div>
 
-          {/* Menu Group Chart below stats cards */}
+          {/* Additional Stats Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '24px' }}>
+            <div style={{ 
+              padding: '20px', 
+              borderRadius: '8px', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'flex-start',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+              backgroundColor: 'white',
+            }}>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#9c27b0' }}>
+                {formatCurrency(averageOrderValue)}
+              </div>
+              <div style={{ fontSize: '14px', color: '#666' }}>Avg Order Value</div>
+            </div>
+
+            <div style={{ 
+              padding: '20px', 
+              borderRadius: '8px', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'flex-start',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+              backgroundColor: 'white',
+            }}>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f44336' }}>
+                {averageItemsPerOrder.toFixed(1)}
+              </div>
+              <div style={{ fontSize: '14px', color: '#666' }}>Avg Items/Order</div>
+            </div>
+          </div>
+
+          {/* Menu Group Chart */}
           <div style={{ 
             padding: '16px', 
             borderRadius: '8px',
@@ -273,7 +359,7 @@ const SalesDashboard = () => {
             <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '8px' }}>
               Sales by Menu Group
             </div>
-            <div style={{ height: '250px' }}>
+            <div style={{ height: '200px' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={menuGroupData}
@@ -281,13 +367,14 @@ const SalesDashboard = () => {
                 >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.1)" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                  <YAxis domain={[0, 20]} ticks={[0, 5, 10, 15, 20]} axisLine={false} tickLine={false} />
+                  <YAxis axisLine={false} tickLine={false} />
                   <Tooltip 
                     contentStyle={{ 
                       borderRadius: 8, 
                       boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
                       border: 'none' 
-                    }} 
+                    }}
+                    formatter={(value) => [`${value}k`, 'Sales']}
                   />
                   <Bar 
                     dataKey="value" 
@@ -316,19 +403,19 @@ const SalesDashboard = () => {
             </div>
             <div style={{ 
               display: 'grid', 
-              gridTemplateColumns: 'repeat(2, 1fr)', 
+              gridTemplateColumns: 'repeat(1, 1fr)', 
               gap: '16px'
             }}>
-              {/* First pie chart */}
+              {/* Main pie chart */}
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <div style={{ height: '200px' }}>
+                <div style={{ height: '300px' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={category1Data}
                         cx="50%"
                         cy="50%"
-                        outerRadius={80}
+                        outerRadius={100}
                         dataKey="value"
                         labelLine={false}
                         label={renderCustomizedLabel}
@@ -342,30 +429,6 @@ const SalesDashboard = () => {
                 </div>
                 <CategoryLegend data={category1Data} />
               </div>
-
-              {/* Second pie chart */}
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <div style={{ height: '200px' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={category2Data}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        dataKey="value"
-                        labelLine={false}
-                        label={renderCustomizedLabel}
-                      >
-                        {category2Data.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <CategoryLegend data={category2Data} />
-              </div>
             </div>
           </div>
         </div>
@@ -373,7 +436,7 @@ const SalesDashboard = () => {
 
       {/* Second row - Sales by Server and Top Selling Items */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
-        {/* Sales by Server - Fixed without empty space */}
+        {/* Sales by Server */}
         <div style={{ width: 'calc(50% - 12px)', minWidth: '300px' }}>
           <div style={{ 
             padding: '16px', 
@@ -385,11 +448,14 @@ const SalesDashboard = () => {
             <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '16px' }}>
               Sales by Server
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {serverData.map((item, index) => (
                 <div key={index} style={{ display: 'flex', flexDirection: 'column', marginBottom: '4px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
-                    <div style={{ fontSize: '14px', fontWeight: '500' }}>{item.name}</div>
+                    <div style={{ fontSize: '14px', fontWeight: '500', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {item.name}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#666', marginLeft: 'auto' }}>{item.value}%</div>
                   </div>
                   <div style={{ 
                     width: '100%', 
@@ -414,7 +480,7 @@ const SalesDashboard = () => {
           </div>
         </div>
 
-        {/* Top Selling Items - Reduced gap between items */}
+        {/* Top Selling Items */}
         <div style={{ width: 'calc(50% - 12px)', minWidth: '300px', flexGrow: 1 }}>
           <div style={{ 
             padding: '16px', 
@@ -429,116 +495,82 @@ const SalesDashboard = () => {
             
             <div style={{ 
               display: 'flex',
-              flexDirection: 'row'
+              flexDirection: 'column',
+              gap: '16px'
             }}>
-              {/* Item names on left side with reduced gaps */}
-              <div style={{ 
-                width: '40%', 
-                borderRight: '1px solid #f5f5f5',
-                paddingRight: '10px'
-              }}>
-                {topSellingItems.map((item, index) => (
-                  <div key={index} style={{ 
-                    borderBottom: '1px solid #eee',
-                    paddingTop: '8px',
-                    paddingBottom: '8px',
-                    fontSize: '16px',
-                    fontWeight: '400'
+              {topSellingItems.map((item, index) => {
+                const maxQuantity = Math.max(...topSellingItems.map(i => i.total));
+                const barWidth = maxQuantity > 0 ? (item.total / maxQuantity) * 100 : 0;
+                
+                return (
+                  <div key={index} style={{
+                    borderBottom: index < topSellingItems.length - 1 ? '1px solid #eee' : 'none',
+                    paddingBottom: '12px'
                   }}>
-                    {item.name}
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      marginBottom: '8px'
+                    }}>
+                      <div style={{ 
+                        fontSize: '14px', 
+                        fontWeight: '500',
+                        maxWidth: '200px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {item.name}
+                      </div>
+                      <div style={{ 
+                        fontSize: '14px', 
+                        fontWeight: 'bold',
+                        color: '#4CB0B0'
+                      }}>
+                        {item.total}
+                      </div>
+                    </div>
+                    <div style={{
+                      width: '100%',
+                      height: '8px',
+                      backgroundColor: 'rgba(76, 176, 176, 0.1)',
+                      borderRadius: '4px',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${barWidth}%`,
+                        backgroundColor: '#4CB0B0',
+                        borderRadius: '4px',
+                        transition: 'width 0.8s ease'
+                      }} />
+                    </div>
                   </div>
-                ))}
-              </div>
-              
-              {/* Bar graph on right side */}
-              <div style={{ 
-                width: '60%', 
-                position: 'relative',
-                height: '230px'
-              }}>
-                {/* Horizontal grid lines */}
-                {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} style={{
-                    position: 'absolute',
-                    left: '0',
-                    right: '0',
-                    top: `${i * 46}px`,
-                    height: '1px',
-                    backgroundColor: '#eee',
-                    zIndex: 1
-                  }}></div>
-                ))}
-                
-                {/* Dianihuva Bar */}
-                <div style={{
-                  position: 'absolute',
-                  left: '25%',
-                  bottom: '30px',
-                  width: '36px',
-                  height: '80px',
-                  backgroundColor: '#1c7d7e',
-                  zIndex: 2
-                }}></div>
-                
-                {/* Brayan Bar */}
-                <div style={{
-                  position: 'absolute',
-                  left: '50%',
-                  bottom: '30px',
-                  width: '36px',
-                  height: '150px',
-                  backgroundColor: '#1c7d7e',
-                  zIndex: 2
-                }}></div>
-                
-                {/* Rivas Bar */}
-                <div style={{
-                  position: 'absolute',
-                  left: '75%',
-                  bottom: '30px',
-                  width: '36px',
-                  height: '200px',
-                  backgroundColor: '#1c7d7e',
-                  zIndex: 2
-                }}></div>
-                
-                {/* Server names at the bottom */}
-                <div style={{
-                  position: 'absolute',
-                  left: '15%',
-                  right: '0',
-                  bottom: '5px',
-                  display: 'flex',
-                  justifyContent: 'space-around'
-                }}>
-                  <div style={{ fontSize: '15px' }}>Dianihuva</div>
-                  <div style={{ fontSize: '15px' }}>Brayan</div>
-                  <div style={{ fontSize: '15px' }}>Rivas</div>
-                </div>
-              </div>
+                );
+              })}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Add CSS for hover effects */}
+      <style>
+        {`
+          .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+          }
+          .legend-item:hover {
+            background-color: rgba(76, 176, 176, 0.1);
+          }
+          .item-name:hover {
+            color: #4CB0B0;
+            font-weight: 500;
+          }
+        `}
+      </style>
     </div>
   );
 };
-
-// Add CSS to make the component more interactive
-const style = document.createElement('style');
-style.textContent = `
-  .stat-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-  }
-  .legend-item:hover {
-    background-color: rgba(76, 176, 176, 0.1);
-  }
-  .item-name:hover {
-    color: #4CB0B0;
-    font-weight: 500;
-  }
-`;
-document.head.appendChild(style);
 
 export default SalesDashboard;

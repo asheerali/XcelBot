@@ -38,7 +38,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import BarChartIcon from '@mui/icons-material/BarChart';
+
 
 // Import components
 import FilterSection from './FilterSection';
@@ -802,7 +802,7 @@ export function ExcelImport() {
                       <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
                         📈 Data Sources Active
                       </Typography>
-                      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                      {/* <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                         <Chip 
                           icon={<BarChartIcon />}
                           label={`Sales Analysis: ${files.length} files`} 
@@ -812,7 +812,7 @@ export function ExcelImport() {
                             '& .MuiChip-icon': { fontSize: 18 }
                           }}
                         />
-                      </Box>
+                      </Box> */}
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                         📂 Current: {fileName || 'None selected'}
                         {selectedLocation && ` • 📍 ${selectedLocation}`}

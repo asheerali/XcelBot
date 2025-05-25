@@ -29,6 +29,7 @@ import {
   MenuList,
   Popover,
   useMediaQuery,
+  Alert,
 } from "@mui/material";
 
 // Icons
@@ -44,11 +45,17 @@ import SearchIcon from "@mui/icons-material/Search";
 import CloseIcon from "@mui/icons-material/Close";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
-import MenuAnalysisDashboard from "../components/SalesDashboard";
 
-// Import Redux hooks (assuming you have these set up)
-import { useAppDispatch, useAppSelector } from "../typedHooks";
+// Updated imports for the dashboard components
+import MenuAnalysisDashboard from "../components/SalesDashboard";
 import MenuAnalysisDashboardtwo from "../components/MenuAnalysisDashboardtwo";
+
+// Import Redux hooks
+import { useAppDispatch, useAppSelector } from "../typedHooks";
+import {
+  selectProductMixLocation,
+  updateProductMixFilters
+} from "../store/excelSlice";
 
 // TabPanel Component
 interface TabPanelProps {
@@ -146,7 +153,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
           cursor: "pointer",
           minHeight: "40px",
           position: "relative",
-          height: "40px", // Fixed height to maintain consistency
+          height: "40px",
           overflow: "hidden",
         }}
       >
@@ -334,58 +341,6 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   );
 };
 
-// Sample data for filters
-const LOCATIONS = [
-  "Midtown East",
-  "Downtown West",
-  "Uptown North",
-  "Southside",
-  "West Village",
-  "Upper East",
-  "Financial District",
-];
-const DATE_RANGES = [
-  "10 | 03/03/2025 - 03/09/2025",
-  "11 | 03/10/2025 - 03/16/2025",
-  "12 | 03/17/2025 - 03/23/2025",
-  "13 | 03/24/2025 - 03/30/2025",
-  "14 | 03/31/2025 - 04/06/2025",
-  "15 | 04/07/2025 - 04/13/2025",
-];
-const SERVERS = [
-  "John Smith",
-  "Maria Garcia",
-  "David Johnson",
-  "Lisa Williams",
-  "Robert Brown",
-  "Linda Chen",
-  "Michael Rodriguez",
-];
-const MENU_ITEMS = [
-  "Burger",
-  "Pizza",
-  "Pasta",
-  "Salad",
-  "Chicken Sandwich",
-  "French Fries",
-  "Coca Cola",
-  "Dessert",
-  "Ice Cream",
-  "Coffee",
-];
-const DINING_OPTIONS = [
-  "Dine In",
-  "Take Out",
-  "Delivery",
-  "Catering",
-  "Drive Thru",
-  "Online Order",
-  "DoorDash",
-  "Uber Eats",
-  "GrubHub",
-  "Pickup",
-];
-
 // Main Dashboard Component
 export default function ProductMixDashboard() {
   const theme = useTheme();
@@ -393,36 +348,79 @@ export default function ProductMixDashboard() {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isTablet = useMediaQuery(theme.breakpoints.down("md"));
 
+  // Get Product Mix data from Redux
+  const {
+    productMixFiles,
+    productMixLocations,
+    currentProductMixLocation,
+    productMixFilters
+  } = useAppSelector((state) => state.excel);
+
+  // Find current data for the selected location
+  const currentProductMixData = productMixFiles.find(f => f.location === currentProductMixLocation)?.data;
+
   // State variables
   const [tabValue, setTabValue] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Filter states using multiselect arrays
-  const [locations, setLocations] = useState<string[]>([LOCATIONS[0]]);
+  // Extract filter options from actual data
+  const locations = productMixLocations.length > 0 ? productMixLocations : ['No locations available'];
+  const servers = currentProductMixData?.servers?.filter(server => !server.includes('DO NOT CHANGE')) || ['No servers available'];
+  const categories = currentProductMixData?.categories || ['In-House', 'DD', '1P', 'GH', 'Catering', 'UB', 'Others'];
+  const menuItems = currentProductMixData?.table7?.map(item => item['Menu Item']).filter(Boolean) || ['No menu items available'];
+
+  // Date ranges - you can customize these based on your needs
+  const DATE_RANGES = [
+    "10 | 03/03/2025 - 03/09/2025",
+    "11 | 03/10/2025 - 03/16/2025",
+    "12 | 03/17/2025 - 03/23/2025",
+    "13 | 03/24/2025 - 03/30/2025",
+    "14 | 03/31/2025 - 04/06/2025",
+    "15 | 04/07/2025 - 04/13/2025",
+  ];
+
+  // Filter states using multiselect arrays - Initialize with actual data
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([currentProductMixLocation || locations[0]]);
   const [dateRanges, setDateRanges] = useState<string[]>([DATE_RANGES[1]]);
-  const [servers, setServers] = useState<string[]>([]);
-  const [menuItems, setMenuItems] = useState<string[]>([]);
-  const [diningOptions, setDiningOptions] = useState<string[]>([]);
+  const [selectedServers, setSelectedServers] = useState<string[]>([]);
+  const [selectedMenuItems, setSelectedMenuItems] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+  // Update selected locations when currentProductMixLocation changes
+  useEffect(() => {
+    if (currentProductMixLocation && !selectedLocations.includes(currentProductMixLocation)) {
+      setSelectedLocations([currentProductMixLocation]);
+    }
+  }, [currentProductMixLocation, selectedLocations]);
 
   // Handlers for filter changes
   const handleLocationChange = (newValue: string[]) => {
-    setLocations(newValue);
+    setSelectedLocations(newValue);
+    // Update Redux state
+    if (newValue.length > 0) {
+      dispatch(selectProductMixLocation(newValue[0]));
+      dispatch(updateProductMixFilters({ location: newValue[0] }));
+    }
   };
 
   const handleDateRangeChange = (newValue: string[]) => {
     setDateRanges(newValue);
+    dispatch(updateProductMixFilters({ dateRange: newValue[0] || '' }));
   };
 
   const handleServerChange = (newValue: string[]) => {
-    setServers(newValue);
+    setSelectedServers(newValue);
+    dispatch(updateProductMixFilters({ server: newValue.join(',') }));
   };
 
   const handleMenuItemChange = (newValue: string[]) => {
-    setMenuItems(newValue);
+    setSelectedMenuItems(newValue);
+    dispatch(updateProductMixFilters({ menuItem: newValue.join(',') }));
   };
 
-  const handleDiningOptionChange = (newValue: string[]) => {
-    setDiningOptions(newValue);
+  const handleCategoryChange = (newValue: string[]) => {
+    setSelectedCategories(newValue);
+    dispatch(updateProductMixFilters({ category: newValue.join(',') }));
   };
 
   // Handle tab change
@@ -439,19 +437,13 @@ export default function ProductMixDashboard() {
     }, 1500);
   };
 
-  // Calculate grid sizing based on mobile/tablet status and current tab
+  // Calculate grid sizing based on mobile/tablet status
   const getGridSizes = () => {
-    // On mobile, always use full width for each filter
     if (isMobile) {
       return { xs: 12 };
-    }
-    // On tablet, use half width for each filter
-    else if (isTablet) {
+    } else if (isTablet) {
       return { xs: 12, sm: 6 };
-    }
-    // On desktop/laptop
-    else {
-      // Use 25% width (3 out of 12 grid columns) to fit 4 filters in one row
+    } else {
       return { xs: 12, sm: 6, md: 3 };
     }
   };
@@ -513,6 +505,27 @@ export default function ProductMixDashboard() {
           </Tooltip>
         </Box>
       </Box>
+
+      {/* Alert message when no data is available */}
+      {!currentProductMixData && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          No Product Mix data available. Please upload files with "Product Mix" dashboard type from the Excel Upload page.
+        </Alert>
+      )}
+
+      {/* Show current data summary */}
+      {currentProductMixData && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          <Typography variant="body2">
+            <strong>Data loaded:</strong> {currentProductMixData.fileName} | 
+            <strong> Location:</strong> {currentProductMixLocation} | 
+            <strong> Net Sales:</strong> ${(currentProductMixData.table1?.[0]?.net_sales?.[0] || 0).toLocaleString()} | 
+            <strong> Orders:</strong> {currentProductMixData.table1?.[0]?.orders?.[0] || 0} | 
+            <strong> Items Sold:</strong> {currentProductMixData.table1?.[0]?.qty_sold?.[0] || 0}
+          </Typography>
+        </Alert>
+      )}
+
       {/* Filters Section */}
       <Card elevation={3} sx={{ mb: 3, borderRadius: 2, overflow: "hidden" }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
@@ -549,20 +562,20 @@ export default function ProductMixDashboard() {
           </Box>
 
           <Grid container spacing={2}>
-            {/* Location filter - always visible */}
+            {/* Location filter */}
             <Grid item {...gridSizes}>
               <MultiSelect
                 id="location-select"
                 label="Location"
-                options={LOCATIONS}
-                value={locations}
+                options={locations}
+                value={selectedLocations}
                 onChange={handleLocationChange}
                 icon={<PlaceIcon />}
                 placeholder="Select locations"
               />
             </Grid>
 
-            {/* Date Range filter - always visible */}
+            {/* Date Range filter */}
             <Grid item {...gridSizes}>
               <MultiSelect
                 id="date-range-select"
@@ -581,8 +594,8 @@ export default function ProductMixDashboard() {
                 <MultiSelect
                   id="server-select"
                   label="Server"
-                  options={SERVERS}
-                  value={servers}
+                  options={servers}
+                  value={selectedServers}
                   onChange={handleServerChange}
                   icon={<PersonIcon />}
                   placeholder="Select servers"
@@ -591,52 +604,52 @@ export default function ProductMixDashboard() {
                 <MultiSelect
                   id="menu-item-select"
                   label="Menu Item"
-                  options={MENU_ITEMS}
-                  value={menuItems}
+                  options={menuItems}
+                  value={selectedMenuItems}
                   onChange={handleMenuItemChange}
                   icon={<RestaurantMenuIcon />}
-                  placeholder="disabled filter"
+                  placeholder="Select menu items"
                 />
               )}
             </Grid>
 
-            {/* Dining Option filter - always visible */}
+            {/* Category filter */}
             <Grid item {...gridSizes}>
               <MultiSelect
-                id="dining-option-select"
+                id="category-select"
                 label="Category"
-                options={DINING_OPTIONS}
-                value={diningOptions}
-                onChange={handleDiningOptionChange}
+                options={categories}
+                value={selectedCategories}
+                onChange={handleCategoryChange}
                 icon={<FastfoodIcon />}
-                placeholder="Select dining category"
+                placeholder="Select categories"
               />
             </Grid>
           </Grid>
 
           {/* Active filters display */}
-          {(locations.length > 0 ||
+          {(selectedLocations.length > 0 ||
             dateRanges.length > 0 ||
-            servers.length > 0 ||
-            menuItems.length > 0 ||
-            diningOptions.length > 0) && (
+            selectedServers.length > 0 ||
+            selectedMenuItems.length > 0 ||
+            selectedCategories.length > 0) && (
             <Box sx={{ mt: 2 }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 Active Filters:
               </Typography>
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                {locations.length > 0 && (
+                {selectedLocations.length > 0 && (
                   <Chip
                     label={
-                      locations.length === 1
-                        ? `Location: ${locations[0]}`
-                        : `Locations: ${locations.length} selected`
+                      selectedLocations.length === 1
+                        ? `Location: ${selectedLocations[0]}`
+                        : `Locations: ${selectedLocations.length} selected`
                     }
                     color="primary"
                     variant="outlined"
                     size="small"
                     icon={<PlaceIcon />}
-                    onDelete={() => setLocations([])}
+                    onDelete={() => setSelectedLocations([])}
                   />
                 )}
 
@@ -655,98 +668,133 @@ export default function ProductMixDashboard() {
                   />
                 )}
 
-                {tabValue === 0 && servers.length > 0 && (
+                {tabValue === 0 && selectedServers.length > 0 && (
                   <Chip
                     label={
-                      servers.length === 1
-                        ? `Server: ${servers[0]}`
-                        : `Servers: ${servers.length} selected`
+                      selectedServers.length === 1
+                        ? `Server: ${selectedServers[0]}`
+                        : `Servers: ${selectedServers.length} selected`
                     }
                     color="info"
                     variant="outlined"
                     size="small"
                     icon={<PersonIcon />}
-                    onDelete={() => setServers([])}
+                    onDelete={() => setSelectedServers([])}
                   />
                 )}
 
-                {tabValue === 1 && menuItems.length > 0 && (
+                {tabValue === 1 && selectedMenuItems.length > 0 && (
                   <Chip
                     label={
-                      menuItems.length === 1
-                        ? `Menu Item: ${menuItems[0]}`
-                        : `Menu Items: ${menuItems.length} selected`
+                      selectedMenuItems.length === 1
+                        ? `Menu Item: ${selectedMenuItems[0]}`
+                        : `Menu Items: ${selectedMenuItems.length} selected`
                     }
                     color="success"
                     variant="outlined"
                     size="small"
                     icon={<RestaurantMenuIcon />}
-                    onDelete={() => setMenuItems([])}
+                    onDelete={() => setSelectedMenuItems([])}
                   />
                 )}
 
-                {diningOptions.length > 0 && (
+                {selectedCategories.length > 0 && (
                   <Chip
                     label={
-                      diningOptions.length === 1
-                        ? `Dining Option: ${diningOptions[0]}`
-                        : `Dining Options: ${diningOptions.length} selected`
+                      selectedCategories.length === 1
+                        ? `Category: ${selectedCategories[0]}`
+                        : `Categories: ${selectedCategories.length} selected`
                     }
                     color="error"
                     variant="outlined"
                     size="small"
                     icon={<FastfoodIcon />}
-                    onDelete={() => setDiningOptions([])}
+                    onDelete={() => setSelectedCategories([])}
                   />
                 )}
               </Box>
             </Box>
           )}
         </CardContent>
-      </Card>{" "}
-      {/* Tabs */}
-      <Card sx={{ borderRadius: 2, mb: 3, overflow: "hidden" }} elevation={3}>
-        <Tabs
-          value={tabValue}
-          onChange={handleTabChange}
-          variant="fullWidth"
-          sx={{
-            "& .MuiTab-root": {
-              fontWeight: 500,
-              textTransform: "none",
-              fontSize: "1rem",
-              py: 1.5,
-            },
-            "& .Mui-selected": {
-              color: "#4285f4",
-              fontWeight: 600,
-            },
-            "& .MuiTabs-indicator": {
-              backgroundColor: "#4285f4",
-              height: 3,
-            },
-          }}
-        >
-          <Tab label="Overview" />
-          <Tab label="Detailed Analysis" />
-        </Tabs>
-
-        {/* Server Performance Tab */}
-        <TabPanel value={tabValue} index={0}>
-          <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
-            <MenuAnalysisDashboard />
-          </Box>
-        </TabPanel>
-
-        {/* Menu Analysis Tab */}
-        <TabPanel value={tabValue} index={1}>
-          <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
-            <MenuAnalysisDashboardtwo />
-          </Box>
-        </TabPanel>
       </Card>
-      {/* Placeholder for dashboard content */}
-      <Box sx={{ mt: 2 }}></Box>
+
+      {/* Only render dashboard content if data is available */}
+      {currentProductMixData && (
+        <>
+          {/* Tabs */}
+          <Card sx={{ borderRadius: 2, mb: 3, overflow: "hidden" }} elevation={3}>
+            <Tabs
+              value={tabValue}
+              onChange={handleTabChange}
+              variant="fullWidth"
+              sx={{
+                "& .MuiTab-root": {
+                  fontWeight: 500,
+                  textTransform: "none",
+                  fontSize: "1rem",
+                  py: 1.5,
+                },
+                "& .Mui-selected": {
+                  color: "#4285f4",
+                  fontWeight: 600,
+                },
+                "& .MuiTabs-indicator": {
+                  backgroundColor: "#4285f4",
+                  height: 3,
+                },
+              }}
+            >
+              <Tab label="Server Performance" />
+              <Tab label="Menu Analysis" />
+            </Tabs>
+
+            {/* Server Performance Tab */}
+            <TabPanel value={tabValue} index={0}>
+              <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+                <MenuAnalysisDashboard productMixData={currentProductMixData} />
+              </Box>
+            </TabPanel>
+
+            {/* Menu Analysis Tab */}
+            <TabPanel value={tabValue} index={1}>
+              <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+                <MenuAnalysisDashboardtwo productMixData={currentProductMixData} />
+              </Box>
+            </TabPanel>
+          </Card>
+        </>
+      )}
+
+      {/* Show message if no data available */}
+      {!currentProductMixData && productMixFiles.length === 0 && (
+        <Card sx={{ borderRadius: 2, mb: 3, p: 3 }}>
+          <Typography variant="h6" color="error" gutterBottom>
+            No Product Mix data available
+          </Typography>
+          <Typography variant="body1" paragraph>
+            Please upload files with "Product Mix" dashboard type from the Excel Upload page.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            Expected data structure:
+          </Typography>
+          <Box component="ul" sx={{ pl: 2 }}>
+            <Typography component="li" variant="body2">Net Sales, Orders, Quantity Sold</Typography>
+            <Typography component="li" variant="body2">Sales by Category and Menu Group</Typography>
+            <Typography component="li" variant="body2">Server Performance Data</Typography>
+            <Typography component="li" variant="body2">Top Selling Items</Typography>
+            <Typography component="li" variant="body2">Menu Item Prices</Typography>
+            <Typography component="li" variant="body2">Performance Metrics and Trends</Typography>
+          </Box>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            sx={{ mt: 2 }}
+            href="/upload-excel"
+          >
+            Go to Upload Page
+          </Button>
+        </Card>
+      )}
     </Box>
   );
 }
