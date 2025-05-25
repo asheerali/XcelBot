@@ -150,7 +150,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             
             print("result", financials_result) 
             
-            return financials_result
+            return [financials_result, sales_wide_result]
             # return {"message": "Financial Dashboard is not yet implemented."}
                 # return {
             #     "table1": [],
