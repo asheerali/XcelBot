@@ -127,21 +127,21 @@ RUN sed -i 's/"strict": true/"strict": false/g' tsconfig.json && \
     sed -i 's/"strictNullChecks": true/"strictNullChecks": false/g' tsconfig.json
 
 # Recreate vite.config.js cleanly
-RUN sh -c 'cat > vite.config.js << "EOF"
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+# RUN sh -c 'cat > vite.config.js << "EOF"
+# import { defineConfig } from "vite";
+# import react from "@vitejs/plugin-react";
 
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    hmr: {
-      overlay: false
-    },
-    host: true,
-    port: 5173
-  }
-});
-EOF'
+# export default defineConfig({
+#   plugins: [react()],
+#   server: {
+#     hmr: {
+#       overlay: false
+#     },
+#     host: true,
+#     port: 5173
+#   }
+# });
+# EOF'
 
 
 # Expose Vite dev server port
