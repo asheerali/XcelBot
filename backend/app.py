@@ -17,33 +17,15 @@ from financials_dashboard.financials_processor import process_financials_file
 # Initialize FastAPI app
 app = FastAPI()
 
-# ENHANCED CORS Configuration - Fixed to properly handle preflight requests
+# Enable CORS for React frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",  # Vite development server
-        "http://localhost:3000",  # Create React App development server
-        "http://127.0.0.1:5173",  # Alternative localhost format
-        "http://127.0.0.1:3000"   # Alternative localhost format
-    ],
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
-    allow_headers=[
-        "Accept",
-        "Accept-Language",
-        "Content-Language", 
-        "Content-Type",
-        "Authorization",
-        "X-Requested-With",
-        "Access-Control-Request-Method",
-        "Access-Control-Request-Headers",
-        "Origin",
-        "Cache-Control",
-        "Pragma"
-    ],
-    expose_headers=["*"],
-    max_age=3600  # Cache preflight requests for 1 hour
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
 
 # Directory to save uploaded files
 UPLOAD_DIR = "uploads"
@@ -52,28 +34,21 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 @app.get("/")
 async def root():
     return {"message": "Welcome to the Excel Processing API!"}
+    
+# Filter endpoint
+# NEW ENDPOINT: Analytics endpoint
+# Health check endpoint
 
-# Add a specific OPTIONS handler for troubleshooting
-@app.options("/api/{path:path}")
-async def options_handler(path: str):
-    """Handle OPTIONS requests for CORS preflight"""
-    return {"message": "OK"}
-
-# Include routers
 app.include_router(excel_upload.router)
 app.include_router(sales_split_filter.router)
+# app.include_router(excel_analytics.router)
 app.include_router(pmix_filter.router)
 app.include_router(financials_filter.router)
 app.include_router(companywide_filter.router)
 app.include_router(health.router)
 
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "app:app", 
-        host="0.0.0.0", 
-        port=8000, 
-        reload=True,
-        # Add these for better CORS debugging
-        log_level="debug"
-    )
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+    

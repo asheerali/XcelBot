@@ -58,7 +58,102 @@
 # CMD ["npm", "run", "dev"]
 
 
+# # part 2
+# # Use Node.js 18+ instead of 16
+# FROM node:18-alpine
 
+# # Set working directory
+# WORKDIR /app
+
+# # Copy package files
+# COPY package*.json ./
+
+# # Install dependencies
+# RUN npm install --legacy-peer-deps
+
+# # Copy the rest of the app
+# COPY . .
+
+# # Optional: adjust tsconfig if needed
+# RUN sed -i 's/"strict": true/"strict": false/g' tsconfig.json && \
+#     sed -i 's/"noImplicitAny": true/"noImplicitAny": false/g' tsconfig.json && \
+#     sed -i 's/"strictNullChecks": true/"strictNullChecks": false/g' tsconfig.json
+
+# # Recreate vite.config.js cleanly
+# RUN cat <<EOF > vite.config.js
+# import { defineConfig } from "vite";
+# import react from "@vitejs/plugin-react";
+
+# export default defineConfig({
+#   plugins: [react()],
+#   server: {
+#     hmr: {
+#       overlay: false
+#     },
+#     host: true,
+#     port: 5173
+#   }
+# });
+# EOF
+
+# # Expose Vite dev server port
+# EXPOSE 5173
+
+# # Run the app
+# CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+
+
+
+# # part 3
+# # Use Node.js 18+ instead of 16
+# FROM node:18-alpine
+
+# # Set working directory
+# WORKDIR /app
+
+# # Copy package files
+# COPY package*.json ./
+
+# # Install dependencies
+# RUN npm install --legacy-peer-deps
+
+# # Copy the rest of the app
+# COPY . .
+
+# # Optional: adjust tsconfig if needed
+# RUN sed -i 's/"strict": true/"strict": false/g' tsconfig.json && \
+#     sed -i 's/"noImplicitAny": true/"noImplicitAny": false/g' tsconfig.json && \
+#     sed -i 's/"strictNullChecks": true/"strictNullChecks": false/g' tsconfig.json
+
+# # Recreate vite.config.js cleanly
+# # RUN sh -c 'cat > vite.config.js << "EOF"
+# # import { defineConfig } from "vite";
+# # import react from "@vitejs/plugin-react";
+
+# # export default defineConfig({
+# #   plugins: [react()],
+# #   server: {
+# #     hmr: {
+# #       overlay: false
+# #     },
+# #     host: true,
+# #     port: 5173
+# #   }
+# # });
+# # EOF'
+
+
+
+# # Expose Vite dev server port
+# EXPOSE 5173
+
+# # Run the app
+# CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+
+
+# part 3
 # Use Node.js 18+ instead of 16
 FROM node:18-alpine
 
@@ -80,24 +175,34 @@ RUN sed -i 's/"strict": true/"strict": false/g' tsconfig.json && \
     sed -i 's/"strictNullChecks": true/"strictNullChecks": false/g' tsconfig.json
 
 # Recreate vite.config.js cleanly
-RUN cat <<EOF > vite.config.js
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+# RUN sh -c 'cat > vite.config.js << "EOF"
+# import { defineConfig } from "vite";
+# import react from "@vitejs/plugin-react";
 
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    hmr: {
-      overlay: false
-    },
-    host: true,
-    port: 5173
-  }
-});
-EOF
+# export default defineConfig({
+#   plugins: [react()],
+#   server: {
+#     hmr: {
+#       overlay: false
+#     },
+#     host: true,
+#     port: 5173
+#   }
+# });
+# EOF'
+# Build production version of the app
+RUN npm run build
+
+# Install a simple static file server
+RUN npm install -g serve
+
 
 # Expose Vite dev server port
 EXPOSE 5173
 
 # Run the app
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+# Serve the build directory
+CMD ["serve", "-s", "dist", "-l", "5173"]
+
