@@ -658,16 +658,16 @@ const ExcelUploadPage: React.FC = () => {
       
       switch (dashboardName) {
         case 'Financials':
-          navigate('/financials-dashboard');
+          navigate('/Financials');
           break;
         case 'Sales Split':
-          navigate('/sales-dashboard');
+          navigate('/manage-reports');
           break;
         case 'Sales Wide':
-          navigate('/sales-wide-dashboard');
+          navigate('/Saleswide');
           break;
         case 'Product Mix':
-          navigate('/product-mix-dashboard');
+          navigate('/Productmix');
           break;
         default:
           navigate('/dashboard');
@@ -757,13 +757,7 @@ const ExcelUploadPage: React.FC = () => {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               or click to browse files
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<FileUploadIcon />}
-              onClick={(e) => e.stopPropagation()}
-            >
-              Browse Files
-            </Button>
+           
             <input
               ref={fileInputRef}
               type="file"
