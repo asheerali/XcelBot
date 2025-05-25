@@ -27,11 +27,12 @@ class SalesSplitPmixUploadRequest(BaseModel):
     
 class FinancialCompanyWideUploadRequest(BaseModel):
     fileName: str
-    location: Union[str, List[str]] = "All" # Location filter can be a single string or a list of strings
+    dashboardName: Optional[str] = None  # Optional name for the dashboard
     dashboard: Optional[str] = None  # Optional type of dashboard (e.g., "Sales", "Inventory")
+    location: Union[str, List[str]] = "All" # Location filter can be a single string or a list of strings
     year: Union[Any, List[Any]] = "All"  # Year filter can be a single value or a list of values
     weekRange: Union[str, List[str]] = "All"  # Week range filter can be a single value or a list of values
-    quarter: Union[str, List[str]] = "All"  # Quarter filter can be a single value or a list of values
+    quarter: Union[int, List[int]] = "All"  # Quarter filter can be a single value or a list of values
 
 class ExcelFilterRequest(BaseModel):
     fileName: str  # Name of the previously uploaded file
