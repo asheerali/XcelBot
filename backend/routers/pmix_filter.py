@@ -9,7 +9,7 @@ import traceback
 
 
 # Import from local modules
-from models import ExcelUploadRequest, ExcelUploadResponse, SalesAnalyticsResponse
+from models import ExcelUploadRequest, DashboardResponse, SalesSplitPmixUploadRequest
 from excel_processor import process_excel_file
 from utils import find_file_in_directory
 from sales_analytics import generate_sales_analytics
@@ -26,8 +26,8 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 # Upload endpoint
-@router.post("/pmix/filter", response_model=ExcelUploadResponse)
-async def upload_excel(request: ExcelUploadRequest = Body(...)):
+@router.post("/pmix/filter", response_model=DashboardResponse)
+async def upload_excel(request: SalesSplitPmixUploadRequest = Body(...)):
     """
     Endpoint to upload and process an Excel file.
     Supports optional date range and location filtering.
@@ -40,24 +40,57 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         file_location = os.path.join(UPLOAD_DIR, fileName)
 
         location_filter = request.location if request.location else 'All'
-        order_date_filter = request.startDate if request.startDate else None
+        start_date = request.startDate if request.startDate else None
+        end_date = request.endDate if request.endDate else None
         server_filter = request.server if request.server else 'All'
-        dining_option_filter = request.diningOption if request.diningOption else 'All'
-        menu_item_filter = request.menuItem if request.menuItem else 'All'
+        category_filter = request.category if request.category else 'All'
+      
+
         
-        net_sales, orders, qty_sold, sales_by_category_df, sales_by_menu_group_df, sales_by_server_df, top_selling_items_df, sales_by_location_df, average_price_by_item_df, average_order_value, average_items_per_order, price_changes_df, top_items_df, unique_orders, total_quantity = process_pmix_file(file_location, 
-                                                                                                                                                                                                                                                                                                             location_filter=location_filter, 
-                                                                                                                                                                                                                                                                                                             order_date_filter=order_date_filter, 
-                                                                                                                                                                                                                                                                                                             server_filter=server_filter, 
-                                                                                                                                                                                                                                                                                                             dining_option_filter=dining_option_filter,  
-                                                                                                                                                                                                                                                                                                             menu_item_filter=menu_item_filter)
+        net_sales, orders, qty_sold, sales_by_category_df, sales_by_menu_group_df, sales_by_server_df, top_selling_items_df, sales_by_location_df, average_price_by_item_df, average_order_value, average_items_per_order, price_changes_df, top_items_df, unique_orders, total_quantity, locations, server, category = process_pmix_file(file_location, 
+                                                                                                                                                                                                                                                                                                                location_filter=location_filter,
+                                                                                                                                                                                                                                                                                                                start_date=start_date, 
+                                                                                                                                                                                                                                                                                                                end_date=end_date,
+                                                                                                                                                                                                                                                                                                                server_filter=server_filter,
+                                                                                                                                                                                                                                                                                                                category_filter=category_filter
+                                                                                                                                                                                                                                                                                                                )
 
-
-        result ={
-            "table1": [{"net_sales": [net_sales], "orders": [orders], 
-                        "qty_sold": [qty_sold],"average_order_value": [average_order_value], 
-                        "average_items_per_order": [average_items_per_order], "unique_orders": [unique_orders], 
-                        "total_quantity": [total_quantity]}],
+            
+        # result ={
+        #     "table1": [{"net_sales": [net_sales], "orders": [orders], 
+        #                 "qty_sold": [qty_sold],"average_order_value": [average_order_value], 
+        #                 "average_items_per_order": [average_items_per_order], "unique_orders": [unique_orders], 
+        #                 "total_quantity": [total_quantity]}],
+        #     "table2": sales_by_category_df.to_dict(orient='records'),
+        #     "table3": sales_by_menu_group_df.to_dict(orient='records'),
+        #     "table4": sales_by_server_df.to_dict(orient='records'),
+        #     "table5": top_selling_items_df.to_dict(orient='records'),
+        #     "table6": sales_by_location_df.to_dict(orient='records'),
+        #     "table7": average_price_by_item_df.to_dict(orient='records'),
+        #     "table8": price_changes_df.to_dict(orient='records'),
+        #     "table9": top_items_df.to_dict(orient='records'),
+        #     "locations": result['locations'],
+        #     "dateRanges": result['dateRanges'],
+        #     "fileLocation": result['fileLocation'],
+        #     "fileName": request.fileName,
+        #     "dashboardName": "Product Mix ",
+        #     "data":  "Dashboard is not yet implemented."
+        #     }
+            
+        pmix_dashboard = {
+            # "table1": [{"net_sales": [net_sales], "orders": [orders], 
+            #             "qty_sold": [qty_sold],"average_order_value": [average_order_value], 
+            #             "average_items_per_order": [average_items_per_order], "unique_orders": [unique_orders], 
+            #             "total_quantity": [total_quantity]}],
+                "table1": [{
+                            "net_sales": [float(net_sales)],
+                            "orders": [int(orders)],
+                            "qty_sold": [int(qty_sold)],
+                            "average_order_value": [float(average_order_value)],
+                            "average_items_per_order": [float(average_items_per_order)],
+                            "unique_orders": [int(unique_orders)],
+                            "total_quantity": [int(total_quantity)]
+                        }],
             "table2": sales_by_category_df.to_dict(orient='records'),
             "table3": sales_by_menu_group_df.to_dict(orient='records'),
             "table4": sales_by_server_df.to_dict(orient='records'),
@@ -66,15 +99,19 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             "table7": average_price_by_item_df.to_dict(orient='records'),
             "table8": price_changes_df.to_dict(orient='records'),
             "table9": top_items_df.to_dict(orient='records'),
-            "locations": result['locations'],
-            "dateRanges": result['dateRanges'],
-            "fileLocation": result['fileLocation'],
+            # "locations": locations,
+            # "servers": server,
+            # "categories": category,
+            "dateRanges": [],
+            "fileLocation": ['fileLocation', 'fileLocationa'],
             "fileName": request.fileName,
             "dashboardName": "Product Mix ",
             "data":  "Dashboard is not yet implemented."
             }
+            # print("i am here in excel upload printing  the result", result)
             
-        return result
+          
+        return pmix_dashboard
             # return {"message": "Financial Dashboard is not yet implemented."}
        
     except Exception as e:

@@ -10,11 +10,12 @@ import traceback
 from routers import excel_upload
 
 # Import from local modules
-from models import ExcelUploadRequest, ExcelFilterRequest, ExcelUploadResponse, SalesAnalyticsResponse
+from models import ExcelUploadRequest, ExcelFilterRequest, ExcelUploadResponse, DashboardResponse, SalesSplitPmixUploadRequest
 from excel_processor import process_excel_file
 from utils import find_file_in_directory
 from sales_analytics import generate_sales_analytics
 from financials_dashboard.financials_processor import process_financials_file
+from sales_split_dashboard.sales_split_prcoessor import process_sales_split_file
 
 # Directory to save uploaded files
 UPLOAD_DIR = "../uploads"
@@ -26,108 +27,49 @@ router = APIRouter(
 )
 
 
-@router.post("/excel/filter", response_model=ExcelUploadResponse)
-async def filter_excel_data(request: ExcelFilterRequest = Body(...)):
+@router.post("/excel/filter", response_model=DashboardResponse)
+async def filter_excel_data(request: SalesSplitPmixUploadRequest = Body(...)):
     """
     Endpoint to filter previously processed Excel data by date range and location.
     """
     try:
-        print(f"Received filter request for file: {request.fileName}")
-        print(f"Date range type: {request.dateRangeType}")
-        print(f"Location: {request.location}")
+        # print(f"Received file upload: {request.fileName}")
         
-        # Build a pattern to match the location in filenames if provided
-        location_pattern = ""
-        if request.location:
-            location_slug = request.location.replace(' ', '_').lower()
-            location_pattern = f"_{location_slug}_"
-            
-        # Check if we have the file in the uploads directory
-        file_path = find_file_in_directory(UPLOAD_DIR, request.fileName, location_pattern)
+        fileName = request.fileName
         
-        # If not found using the location pattern, try without it
-        if not file_path:
-            file_path = find_file_in_directory(UPLOAD_DIR, request.fileName)
+        location_filter = request.location if request.location else 'All'
+        start_date = request.startDate if request.startDate else None
+        end_date = request.endDate if request.endDate else None
+        server_filter = request.server if request.server else 'All'
+        category_filter = request.category if request.category else 'All'
         
-        # If still not found, check if fileContent is provided
-        if not file_path and not request.fileContent:
-            print(f"File not found in uploads directory: {request.fileName}")
-            print(f"Files in directory: {os.listdir(UPLOAD_DIR)}")
-            raise HTTPException(
-                status_code=404, 
-                detail=f"File not found: {request.fileName}. Please upload the file again."
+        # fileName = "20250514_200147_midtown_east_dashboard2_template1.xlsx"
+        file_location = os.path.join(UPLOAD_DIR, fileName)
+        pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay, categories = process_sales_split_file(
+                file_location, 
+                location=location_filter,
+                start_date=start_date,
+                end_date=end_date,
             )
-        
-        # If fileContent is provided, use that instead
-        if request.fileContent:
-            # Decode base64 file content
-            file_content = base64.b64decode(request.fileContent)
-            excel_data = io.BytesIO(file_content)
-        else:
-            # Read the file from disk
-            with open(file_path, "rb") as f:
-                file_content = f.read()
-            excel_data = io.BytesIO(file_content)
-        
-        # Handle date range types
-        start_date = request.startDate
-        end_date = request.endDate
-        
-        if request.dateRangeType and not (request.startDate and request.endDate):
-            # Calculate date range based on type
-            now = datetime.now()
             
-            if request.dateRangeType == "Last 7 Days":
-                start_date = (now - timedelta(days=7)).strftime("%Y-%m-%d")
-                end_date = now.strftime("%Y-%m-%d")
-            
-            elif request.dateRangeType == "Last 30 Days":
-                start_date = (now - timedelta(days=30)).strftime("%Y-%m-%d")
-                end_date = now.strftime("%Y-%m-%d")
-            
-            elif "This Month" in request.dateRangeType:
-                start_date = now.replace(day=1).strftime("%Y-%m-%d")
-                end_date = now.strftime("%Y-%m-%d")
-                
-            elif "Last Month" in request.dateRangeType:
-                last_month = now.replace(day=1) - timedelta(days=1)
-                start_date = last_month.replace(day=1).strftime("%Y-%m-%d")
-                end_date = last_month.strftime("%Y-%m-%d")
-                
-            elif request.dateRangeType == "Last 3 Months":
-                start_date = (now - timedelta(days=90)).strftime("%Y-%m-%d")
-                end_date = now.strftime("%Y-%m-%d")
-                
-            print(f"Using date range: {start_date} to {end_date} based on type: {request.dateRangeType}")
-        
-        # Process Excel file with filters
-        result = process_excel_file(
-            excel_data, 
-            start_date=start_date,
-            end_date=end_date,
-            location=request.location
-        )
-        
-        # Ensure each table exists in the result, even if empty
-        for table in ['table1', 'table2', 'table3', 'table4', 'table5']:
-            if table not in result:
-                result[table] = []
-        
-        # If location is provided, make sure it's in the locations list
-        if 'locations' not in result:
-            result['locations'] = []
-            
-        if request.location and request.location not in result['locations']:
-            result['locations'].append(request.location)
-            
-        if 'dateRanges' not in result:
-            result['dateRanges'] = []
-            
-        # Add fileLocation field to the response
-        result['fileLocation'] = request.location
-        
-        # Return the properly structured response
-        return ExcelUploadResponse(**result)
+            # response accepted from the FE
+               # For now, return empty data for unsupported dashboards
+        sales_split_dashboard = {
+                "table1": pivot_table.to_dict(orient='records'),
+                "table2": in_house_table.to_dict(orient='records'),
+                "table3": week_over_week_table.to_dict(orient='records'),
+                "table4": category_summary_table.to_dict(orient='records'),
+                "table5": salesByWeek.to_dict(orient='records'),
+                "table6": salesByDayOfWeek.to_dict(orient='records'),
+                "table7": salesByTimeOfDay.to_dict(orient='records'),
+                "categories": categories,
+                "dashboardName": "Sales Split",
+                "fileName": request.fileName,
+                "data": f"{request.dashboard} Dashboard is not yet implemented."
+            }
+                        
+            # Return the properly structured response
+        return sales_split_dashboard
         
     except Exception as e:
         # Log the full exception for debugging

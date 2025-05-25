@@ -93,7 +93,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 )
             
             financials_result = {
-            "table1": [{"financials_weeks": [financials_weeks], "financials_years": [financials_years], "financials_stores": [financials_stores]}],
+            "table1": [{"financials_weeks": [], "financials_years": [], "financials_stores": []}],
             "table2": financials_sales_table.to_dict(orient='records'),
             "table3": financials_orders_table.to_dict(orient='records'),
             "table4": financials_avg_ticket_table.to_dict(orient='records'),
@@ -183,9 +183,10 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             default_start_date = (default_end_date1 - relativedelta(months=2)).strftime('%Y-%m-%d')                                                                                                                                                                                                                                                                                                            
 
             default_start_date = "2025-01-01"
-            default_end_date = "2025-05-31"
+            default_end_date = "2025-05-31" #2025-05-17
 
             start_date = request.startDate
+            
             end_date = request.endDate
             start_date = start_date if start_date else default_start_date
             end_date = end_date if end_date else default_end_date
@@ -238,7 +239,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             # # print("i am here in excel upload printing start_date", start_date)
 
             # Process Excel file with optional filters
-            pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay = process_sales_split_file(
+            pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay, categories = process_sales_split_file(
                 excel_data, 
                 start_date=start_date,
                 end_date=end_date,
@@ -256,17 +257,13 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 "table5": salesByWeek.to_dict(orient='records'),
                 "table6": salesByDayOfWeek.to_dict(orient='records'),
                 "table7": salesByTimeOfDay.to_dict(orient='records'),
-                "table8": [],
-                "table9": [],
-                "locations": [request.location] if request.location else [],
-                "dateRanges": [],
-                "fileLocation": [request.location] if request.location else [],
+                "categories": categories,
                 "dashboardName": "Sales Split",
                 "fileName": request.fileName,
                 "data": f"{request.dashboard} Dashboard is not yet implemented."
             }
                         
-
+            # print("i am here in excel upload printing the startdate", request.startDate)
             return [sales_split_dashboard, pmix_dashboard]
             # return {
             #     "table1": [],

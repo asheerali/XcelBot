@@ -31,17 +31,24 @@ def process_financials_file(file_data: Union[io.BytesIO, str], year="All", week_
                 print("Reading Excel from BytesIO object.")
                 # df = pd.read_excel(file_data, sheet_name="Database")
                 df = pd.read_excel(file_data, sheet_name="Actuals")
-                df_budget = pd.read_excel(file_data, sheet_name="Budget")
+                file_data.seek(0)
+                # df_budget = pd.read_excel(file_data, sheet_name="Budget")
+                df_budget = pd.read_excel(file_data, sheet_name="Budget", header=1)
+
             elif isinstance(file_data, str):
                 print("Reading Excel from file path.")
                 # df = pd.read_excel(file_data, sheet_name="Database")
                 df = pd.read_excel(file_data, sheet_name="Actuals")
-                df_budget = pd.read_excel(file_data, sheet_name="Budget")
+                # df_budget = pd.read_excel(file_data, sheet_name="Budget")
+                df_budget = pd.read_excel(file_data, sheet_name="Budget", header=1)
+
           
             if df.empty:
                 raise ValueError("The sheet 'Actuals' is empty or missing.")
     except ValueError as e:
         raise ValueError("Sheet named 'Actuals' not found in the uploaded Excel file.")
+
+    # df_budget = pd.read_excel(file_bytes, sheet_name="Budget", header=1)
 
         # Strip whitespace from column names
     df.columns = df.columns.str.strip()
@@ -99,11 +106,9 @@ def process_financials_file(file_data: Union[io.BytesIO, str], year="All", week_
     df_budget["Store"] = df_budget["Store"].str.replace(r'^\d{4}:\s*', '', regex=True)
     df_budget["Store"].unique()  # Display unique values in the 'stores' column
 
-    
     years = df["Year"].unique().tolist()  # Display unique values in the 'Year' column
     dates = df["Helper 4"].unique().tolist()  # Display unique values in the 'Helper 4' column
     stores = df["Store"].unique().tolist()  # Display unique values in the 'stores' column
-
 
     financials_weeks, financials_years, financials_stores = financials_filters(df)
     
