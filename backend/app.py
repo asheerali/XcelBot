@@ -6,7 +6,7 @@ import os
 from datetime import datetime, timedelta
 import traceback
 
-from routers import excel_upload, excel_analytics, excel_filter, health, companywide_filter, pmix_filter, financials_filter
+from routers import excel_upload, sales_split_filter, health, companywide_filter, pmix_filter, financials_filter
 # Import from local modules
 from models import ExcelUploadRequest, ExcelFilterRequest, ExcelUploadResponse, SalesAnalyticsResponse
 from excel_processor import process_excel_file
@@ -40,7 +40,7 @@ async def root():
 # Health check endpoint
 
 app.include_router(excel_upload.router)
-app.include_router(excel_filter.router)
+app.include_router(sales_split_filter.router)
 # app.include_router(excel_analytics.router)
 app.include_router(pmix_filter.router)
 app.include_router(financials_filter.router)

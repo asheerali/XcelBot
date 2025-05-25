@@ -23,11 +23,11 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 router = APIRouter(
     prefix="/api",
-    tags=["excel_filter"],
+    tags=["sales_split_filter"],
 )
 
 
-@router.post("/excel/filter", response_model=DashboardResponse)
+@router.post("/salessplit/filter", response_model=DashboardResponse)
 async def filter_excel_data(request: SalesSplitPmixUploadRequest = Body(...)):
     """
     Endpoint to filter previously processed Excel data by date range and location.
