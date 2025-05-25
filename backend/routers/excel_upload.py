@@ -31,7 +31,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 # Upload endpoint
-@router.post("/excel/upload", response_model=DashboardResponse)
+@router.post("/excel/upload", response_model=DualDashboardResponse)
 # @router.post("/excel/upload")
 async def upload_excel(request: ExcelUploadRequest = Body(...)):
 # async def upload_excel(request: Request):
@@ -42,7 +42,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         
     # request = await request.json()
 
-    print("i am here in excel upload printhign the request", request)	
+    # print("i am here in excel upload printhign the request", request)	
     try:
         print(f"Received file upload: {request.fileName}")
         # Decode base64 file content
@@ -62,7 +62,10 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         if request.location:
             location_slug = f"{request.location.replace(' ', '_').lower()}_"
             
-        file_path = os.path.join(UPLOAD_DIR, f"{timestamp}_{location_slug}{request.fileName}")
+        file_name =  f"{timestamp}_{location_slug}{request.fileName}"
+        file_path = os.path.join(UPLOAD_DIR,file_name)
+        
+        print("i am here in excel upload printing the file path and file name",file_name, file_path)
         
         with open(file_path, "wb") as f:
             f.write(file_content)
@@ -85,32 +88,23 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             # print("i am here 4")
             excel_data_copy = io.BytesIO(file_content)
 
-            financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table = process_financials_file(
-                excel_data_copy, 
-                location=request.location
-            )
-            
-            sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df, years, dates, stores = process_companywide_file(
-                excel_data_copy, 
-                store_filter='All', 
-                year_filter=None, 
-                quarter_filter='All', 
-                helper4_filter='All'
-            )
-            
+            financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table, years, dates, stores  = process_financials_file(
+                excel_data_copy,  
+                year="All", 
+                week_range="All", 
+                location="All" 
+                )
             
             financials_result = {
-            "table1": [{"financials_weeks": [financials_weeks], "financials_years": [financials_years], "financials_stores": [financials_stores]}],
+            "table1": [{"financials_weeks": [], "financials_years": [], "financials_stores": []}],
             "table2": financials_sales_table.to_dict(orient='records'),
             "table3": financials_orders_table.to_dict(orient='records'),
             "table4": financials_avg_ticket_table.to_dict(orient='records'),
             "table5": financials_tw_lw_bdg_table.to_dict(orient='records'),
-            "table6": [],
-            "table7": [],
-            "locations": ["test"],
-            "dateRanges": ["test"],
-            "fileLocation":["test"],
-            "fileName": "123", #the full names of the file saved in the uploads folder
+            "fileName": file_name, #the full names of the file saved in the uploads folder
+            "locations": stores,
+            "years": years,
+            "dates": dates,
             "dashboardName": "Financials",
             "data":  "Financial Dashboard is not yet implemented."
             }
@@ -131,6 +125,15 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             #     "data":  "Companywide Dashboard is not yet implemented."
             # }
             
+            sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df, years, dates, stores = process_companywide_file(
+                excel_data_copy, 
+                store_filter='All', 
+                year_filter=None, 
+                quarter_filter='All', 
+                helper4_filter='All'
+            )
+            
+            
             sales_wide_result ={
                 "salesData":sales_df.to_dict(orient='records'),
                 "ordersData":order_df.to_dict(orient='records'),
@@ -144,13 +147,13 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 "dates": dates,
                 "fileLocation":["test"],
                 "dashboardName": "Sales Wide",
-                "fileName": request.fileName, #the full names of the file saved in the uploads folder
+                "fileName": file_name, #the full names of the file saved in the uploads folder
                 "data": "Sales Wide Dashboard data."
             }
             
-            print("result", financials_result) 
+            # print("result", financials_result) 
             
-            return financials_result
+            return [financials_result, sales_wide_result]
             # return {"message": "Financial Dashboard is not yet implemented."}
                 # return {
             #     "table1": [],
@@ -183,9 +186,10 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             default_start_date = (default_end_date1 - relativedelta(months=2)).strftime('%Y-%m-%d')                                                                                                                                                                                                                                                                                                            
 
             default_start_date = "2025-01-01"
-            default_end_date = "2025-05-31"
+            default_end_date = "2025-05-31" #2025-05-17
 
             start_date = request.startDate
+            
             end_date = request.endDate
             start_date = start_date if start_date else default_start_date
             end_date = end_date if end_date else default_end_date
@@ -197,7 +201,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                                                                                                                                                                                                                                                                                                                 location_filter=location_filter, 
                                                                                                                                                                                                                                                                                                                 server_filter=server_filter)
 
-            print("i am here in excel upload printing before the result" )
+            # print("i am here in excel upload printing before the result" )
             pmix_dashboard = {
             # "table1": [{"net_sales": [net_sales], "orders": [orders], 
             #             "qty_sold": [qty_sold],"average_order_value": [average_order_value], 
@@ -225,7 +229,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             "categories": category,
             "dateRanges": [],
             "fileLocation": ['fileLocation', 'fileLocationa'],
-            "fileName": request.fileName,
+            "fileName": file_name,
             "dashboardName": "Product Mix ",
             "data":  "Dashboard is not yet implemented."
             }
@@ -238,7 +242,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             # # print("i am here in excel upload printing start_date", start_date)
 
             # Process Excel file with optional filters
-            pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay = process_sales_split_file(
+            pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay, categories = process_sales_split_file(
                 excel_data, 
                 start_date=start_date,
                 end_date=end_date,
@@ -256,16 +260,13 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 "table5": salesByWeek.to_dict(orient='records'),
                 "table6": salesByDayOfWeek.to_dict(orient='records'),
                 "table7": salesByTimeOfDay.to_dict(orient='records'),
-                "table8": [],
-                "table9": [],
-                "locations": [request.location] if request.location else [],
-                "dateRanges": [],
-                "fileLocation": [request.location] if request.location else [],
-                "dashboardName": request.dashboard,
-                "fileName": request.fileName,
+                "categories": categories,
+                "dashboardName": "Sales Split",
+                "fileName": file_name,
                 "data": f"{request.dashboard} Dashboard is not yet implemented."
             }
-               
+                        
+            # print("i am here in excel upload printing the startdate", request.startDate)
             return [sales_split_dashboard, pmix_dashboard]
             # return {
             #     "table1": [],

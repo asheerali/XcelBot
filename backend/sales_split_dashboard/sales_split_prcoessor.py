@@ -117,6 +117,8 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
     # Apply the mapping
     df["Category"] = np.select(conditions, choices, default="")
     df["Category"] = df["Category"].replace({"": "Others"})
+    
+    categories = df["Category"].unique().tolist()
 
  
  
@@ -156,4 +158,4 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
      
     
  
-    return pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay
+    return pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay, categories

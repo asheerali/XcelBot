@@ -9,7 +9,7 @@ from financials_dashboard.financials_utils import financials_filters, day_of_the
 
 
 
-def process_financials_file(file_data: Union[io.BytesIO, str], year=None, week_range=None, location=None):
+def process_financials_file(file_data: Union[io.BytesIO, str], year="All", week_range="All", location="All"):
     """
     Process the uploaded Excel file and transform the data.
     Returns data tables for the frontend including the 1P column.
@@ -23,26 +23,35 @@ def process_financials_file(file_data: Union[io.BytesIO, str], year=None, week_r
     # Read the Excel file
     # df = pd.read_excel(file_data)
     
-    print("Type of file_data:", type(file_data))
+    # print("Type of file_data:", type(file_data))
 
     try:
             if isinstance(file_data, io.BytesIO):
                 file_data.seek(0)
                 print("Reading Excel from BytesIO object.")
-                df = pd.read_excel(file_data, sheet_name="Database")
+                # df = pd.read_excel(file_data, sheet_name="Database")
+                df = pd.read_excel(file_data, sheet_name="Actuals")
+                file_data.seek(0)
+                # df_budget = pd.read_excel(file_data, sheet_name="Budget")
+                df_budget = pd.read_excel(file_data, sheet_name="Budget", header=1)
+
             elif isinstance(file_data, str):
                 print("Reading Excel from file path.")
-                df = pd.read_excel(file_data, sheet_name="Database")
+                # df = pd.read_excel(file_data, sheet_name="Database")
+                df = pd.read_excel(file_data, sheet_name="Actuals")
+                # df_budget = pd.read_excel(file_data, sheet_name="Budget")
+                df_budget = pd.read_excel(file_data, sheet_name="Budget", header=1)
+
           
             if df.empty:
-                raise ValueError("The sheet 'Database' is empty or missing.")
+                raise ValueError("The sheet 'Actuals' is empty or missing.")
     except ValueError as e:
-        raise ValueError("Sheet named 'Database' not found in the uploaded Excel file.")
+        raise ValueError("Sheet named 'Actuals' not found in the uploaded Excel file.")
 
-    
-    # Strip whitespace from column names
+    # df_budget = pd.read_excel(file_bytes, sheet_name="Budget", header=1)
+
+        # Strip whitespace from column names
     df.columns = df.columns.str.strip()
-    # print("i am here 2")
 
     # Define columns to exclude from filling
     exclude_cols = ['Store', 'Ly Date', 'Date', 'Day', 'Week', 'Month', 'Quarter', 'Year',
@@ -56,15 +65,57 @@ def process_financials_file(file_data: Union[io.BytesIO, str], year=None, week_r
 
     # Fill excluded (metadata/helper) columns with empty string
     df[exclude_cols] = df[exclude_cols].fillna('')
+    df["Store"] = df["Store"].str.replace(r'^\d{4}:\s*', '', regex=True)
+
+
+    # Strip whitespace from column names
+    df_budget.columns = df_budget.columns.str.strip()
+
+    # Identify all column names
+    cols = list(df_budget.columns)
+
+    # Replace only the first occurrence of "Net Sales" with "Net Sales 1"
+    found = False
+    for i, col in enumerate(cols):
+        if col.strip() == "Net Sales" and not found:
+            cols[i] = "Net Sales 1"
+            found = True
+
+    # Assign the modified column names back
+    df_budget.columns = cols
+
+
+    # Define columns to exclude from numeric NaN filling
+    exclude_cols = [
+        'Store', 'Ly Date', 'Date', 'Day', 'Week', 'Month', 'Quarter', 'Year',
+        'Helper 1', 'Helper 2', 'Helper 3', 'Helper 4', 'Helper'  # Include any actual column names in your sheet
+    ]
+
+    # Ensure all exclude columns that are present in df_budget
+    exclude_cols = [col for col in exclude_cols if col in df_budget.columns]
+
+    # Get all columns that should be filled with 0
+    fill_cols = [col for col in df_budget.columns if col not in exclude_cols]
+
+    # Replace NaN with 0 only in selected columns
+    df_budget[fill_cols] = df_budget[fill_cols].fillna(0)
+
+    # Fill excluded (metadata/helper) columns with empty string
+    df_budget[exclude_cols] = df_budget[exclude_cols].fillna('')
+
+    df_budget["Store"] = df_budget["Store"].str.replace(r'^\d{4}:\s*', '', regex=True)
+    df_budget["Store"].unique()  # Display unique values in the 'stores' column
+
+    years = df["Year"].unique().tolist()  # Display unique values in the 'Year' column
+    dates = df["Helper 4"].unique().tolist()  # Display unique values in the 'Helper 4' column
+    stores = df["Store"].unique().tolist()  # Display unique values in the 'stores' column
 
     financials_weeks, financials_years, financials_stores = financials_filters(df)
     
     financials_sales_table, financials_orders_table, financials_avg_ticket_table = day_of_the_week_tables(df)
     
-    if location == None:
-        financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df, store="Midtown East", year=2025, week_range="1 | 12/30/2024 - 01/05/2025")
-    else:
-        financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df, store=location, year=2025, week_range="1 | 12/30/2024 - 01/05/2025")
+    financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df,df_budget, store=location, year=year, week_range=week_range)
+    
     # print("i am here 3")
     # print(financials_tw_lw_bdg_table)
     
@@ -79,7 +130,7 @@ def process_financials_file(file_data: Union[io.BytesIO, str], year=None, week_r
     #     }
     # return result
 
-    return financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table
+    return financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table, years, dates, stores
     # return {
     #     table1: financials_weeks,
     #     table2: financials_years,

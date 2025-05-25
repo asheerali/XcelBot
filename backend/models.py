@@ -1,5 +1,5 @@
 from pydantic import BaseModel, RootModel
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Union
 
 # Pydantic models
 class ExcelUploadRequest(BaseModel):
@@ -12,17 +12,27 @@ class ExcelUploadRequest(BaseModel):
     server: Optional[str] = None  # Optional server filter
     diningOption: Optional[str] = None  # Optional dining option filter
     menuItem: Optional[str] = None  # Optional menu item filter
+    category: Optional[str] = None  # Optional sales category filter
 
-    
-class FinancialUploadRequest(BaseModel):
+class SalesSplitPmixUploadRequest(BaseModel):
     fileName: str
-    fileContent: str  # base64 encoded file content
-    startDate: Optional[str] = None  # Optional date filter start
-    endDate: Optional[str] = None    # Optional date filter end
-    location: Optional[str] = None   # Optional location filter
+    # fileContent: str  # base64 encoded file content
     dashboard: Optional[str] = None  # Optional type of dashboard (e.g., "Sales", "Inventory")
-    year: Optional[int] = None  # Optional year filter
-    weekRange: Optional[str] = None  # Optional week range filter
+    dashboardName: Optional[str] = None  # Optional name for the dashboard
+    startDate: str
+    endDate: str
+    location: Union[str, List[str]] = "All"  # must be a string or list of strings
+    server: Union[str, List[str]] = "All" # must be a string or list of strings
+    category: Union[str, List[str]] = "All"  # must be a string or list of strings
+    
+class FinancialCompanyWideUploadRequest(BaseModel):
+    fileName: str
+    dashboardName: Optional[str] = None  # Optional name for the dashboard
+    dashboard: Optional[str] = None  # Optional type of dashboard (e.g., "Sales", "Inventory")
+    location: Union[str, List[str]] = "All" # Location filter can be a single string or a list of strings
+    year: Union[Any, List[Any]] = "All"  # Year filter can be a single value or a list of values
+    weekRange: Union[str, List[str]] = "All"  # Week range filter can be a single value or a list of values
+    quarter: Union[int, List[int]] = "All"  # Quarter filter can be a single value or a list of values
 
 class ExcelFilterRequest(BaseModel):
     fileName: str  # Name of the previously uploaded file

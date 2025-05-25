@@ -216,17 +216,53 @@ def day_of_the_week_tables(df):
     return sales_table, orders_table, avg_ticket_table
 
 
-# def calculate_tw_lw_bdg_comparison(df, store, year, week_range):
-def calculate_tw_lw_bdg_comparison(df, store="0001: Midtown East", year=2025, week_range="1 | 12/30/2024 - 01/05/2025"):
+
+def calculate_tw_lw_bdg_comparison(df, df_budget, store='All', year='All', week_range='All'):
+    # Clean both dataframes columns
     df.columns = df.columns.str.strip()
+    df_budget.columns = df_budget.columns.str.strip()
     
-    # Filter data
-    mask = (
-        (df['Store'].str.strip() == store) &
-        (df['Year'] == year) &
-        (df['Helper 4'].str.strip() == week_range)
-    )
-    filtered_df = df[mask].copy()
+    # Make copies of the dataframes
+    filtered_df = df.copy()
+    filtered_budget_df = df_budget.copy()
+    
+    # Apply filters to main dataframe
+    if store != 'All':
+        if isinstance(store, list):
+            filtered_df = filtered_df[filtered_df['Store'].isin(store)]
+        else:
+            filtered_df = filtered_df[filtered_df['Store'] == store]
+    
+    if year != 'All':
+        if isinstance(year, list):
+            filtered_df = filtered_df[filtered_df['Year'].isin(year)]
+        else:
+            filtered_df = filtered_df[filtered_df['Year'] == year]
+    
+    if week_range != 'All':
+        if isinstance(week_range, list):
+            filtered_df = filtered_df[filtered_df['Helper 4'].isin(week_range)]
+        else:
+            filtered_df = filtered_df[filtered_df['Helper 4'] == week_range]
+    
+    # Apply filters to budget dataframe
+    if store != 'All':
+        if isinstance(store, list):
+            filtered_budget_df = filtered_budget_df[filtered_budget_df['Store'].isin(store)]
+        else:
+            filtered_budget_df = filtered_budget_df[filtered_budget_df['Store'] == store]
+    
+    if year != 'All':
+        if isinstance(year, list):
+            filtered_budget_df = filtered_budget_df[filtered_budget_df['Year'].isin(year)]
+        else:
+            filtered_budget_df = filtered_budget_df[filtered_budget_df['Year'] == year]
+    
+    if week_range != 'All':
+        if isinstance(week_range, list):
+            filtered_budget_df = filtered_budget_df[filtered_budget_df['Helper 2'].isin(week_range)]
+        else:
+            filtered_budget_df = filtered_budget_df[filtered_budget_df['Helper 2'] == week_range]
     
     # Clean function
     def clean_currency(df, col):
@@ -235,40 +271,42 @@ def calculate_tw_lw_bdg_comparison(df, store="0001: Midtown East", year=2025, we
             errors='coerce'
         ).fillna(0)
     
-    # Define matching columns
+    # Define matching columns - UPDATED COLUMN NAMES
     metrics = {
-        'Net Sales': ('Tw Sales', 'Lw Sales', 'Budget Sales'),
-        'Orders': ('Tw Orders', 'Lw Orders', 'Budget Orders'),
-        'Lbr hrs': ('Tw Labor Hrs', 'Lw Labor Hrs', 'Budget Labor Hrs'),
-        'Lbr Pay': ('Tw Reg Pay', 'Lw Reg Pay', 'Budget Labor Pay'),
-        'SPMH': ('Tw SPMH', 'Lw SPMH', 'Budget SPMH'),
-        'LPMH': ('Tw LPMH', 'Lw LPMH', 'Budget LPMH'),
-        'Tw Johns': ('TW', 'LW', 'Budget Johns'),
-        'Terra': ('TW .1', 'LW .1', 'Budget Terra'),
-        'Metro': ('TW .2', 'LW .2', 'Budget Metro'),
-        'Victory': ('TW .3', 'LW .3', 'Budget Victory'),
-        'Central Kitchen': ('TW .4', 'LW .4', 'Budget CK'),
-        'Other': ('TW .5', 'LW .5', 'Budget Other'),
+        'Net Sales': ('Tw Sales', 'Lw Sales', 'Net Sales'),
+        'Orders': ('Tw Orders', 'Lw Orders', 'Orders'),
+        'Lbr hrs': ('Tw Labor Hrs', 'Lw Labor Hrs', 'LB Hours'),
+        'Lbr Pay': ('Tw Reg Pay', 'Lw Reg Pay', 'Labor $ Cost'),
+        'SPMH': ('Tw SPMH', 'Lw SPMH', 'SPMH'),
+        'LPMH': ('Tw LPMH', 'Lw LPMH', 'LPMH'),
+        'Johns': ('TW Johns', 'LW Johns', 'Johns'),
+        'Terra': ('TW Terra', 'LW Terra', 'Terra'),
+        'Metro': ('TW Metro', 'LW Metro', 'Metro'),
+        'Victory': ('TW Victory', 'LW Victory', 'Victory'),
+        'Central Kitchen': ('TW Central Kitchen', 'LW Central Kitchen', 'Central Kitchen'),
+        'Other': ('TW Other', 'LW Other', 'Other'),
     }
     
     # Process actual data columns
     for tw_col, lw_col, _ in metrics.values():
-        filtered_df[tw_col] = clean_currency(filtered_df, tw_col)
-        filtered_df[lw_col] = clean_currency(filtered_df, lw_col)
+        if tw_col in filtered_df.columns:
+            filtered_df[tw_col] = clean_currency(filtered_df, tw_col)
+        if lw_col in filtered_df.columns:
+            filtered_df[lw_col] = clean_currency(filtered_df, lw_col)
     
-    # Process budget data columns
+    # Process budget data columns from df_budget
     budget_values = {}
     for metric, (_, _, bdg_col) in metrics.items():
-        if filtered_df.empty:
+        if filtered_budget_df.empty:
             budget_values[metric] = 0
         else:
-            budget_values[metric] = clean_currency(filtered_df, bdg_col).sum() if bdg_col in filtered_df.columns else 0
+            budget_values[metric] = clean_currency(filtered_budget_df, bdg_col).sum() if bdg_col in filtered_budget_df.columns else 0
     
     # Calculate values
     rows = []
     for label, (tw_col, lw_col, _) in metrics.items():
-        tw = filtered_df[tw_col].sum()
-        lw = filtered_df[lw_col].sum()
+        tw = filtered_df[tw_col].sum() if tw_col in filtered_df.columns else 0
+        lw = filtered_df[lw_col].sum() if lw_col in filtered_df.columns else 0
         bdg = budget_values[label]
         
         tw_lw_pct = ((tw - lw) / lw * 100) if lw != 0 else 0
@@ -284,10 +322,10 @@ def calculate_tw_lw_bdg_comparison(df, store="0001: Midtown East", year=2025, we
         ))
     
     # Additional Calculations
-    tw_lbr_pay = filtered_df['Tw Reg Pay'].sum()
-    tw_net_sales = filtered_df['Tw Sales'].sum()
-    lw_lbr_pay = filtered_df['Lw Reg Pay'].sum()
-    lw_net_sales = filtered_df['Lw Sales'].sum()
+    tw_lbr_pay = filtered_df['Tw Reg Pay'].sum() if 'Tw Reg Pay' in filtered_df.columns else 0
+    tw_net_sales = filtered_df['Tw Sales'].sum() if 'Tw Sales' in filtered_df.columns else 0
+    lw_lbr_pay = filtered_df['Lw Reg Pay'].sum() if 'Lw Reg Pay' in filtered_df.columns else 0
+    lw_net_sales = filtered_df['Lw Sales'].sum() if 'Lw Sales' in filtered_df.columns else 0
     bdg_lbr_pay = budget_values['Lbr Pay']
     bdg_net_sales = budget_values['Net Sales']
     
@@ -308,10 +346,13 @@ def calculate_tw_lw_bdg_comparison(df, store="0001: Midtown East", year=2025, we
         f"{lbr_tw_bdg_diff:.2f}"
     ))
     
-    # TTL calculations
-    tw_ttl = sum(filtered_df[col].sum() for col in ['TW', 'TW .1', 'TW .2', 'TW .3', 'TW .4', 'TW .5'])
-    lw_ttl = sum(filtered_df[col].sum() for col in ['LW', 'LW .1', 'LW .2', 'LW .3', 'LW .4', 'LW .5'])
-    bdg_ttl = sum(budget_values[m] for m in ['Tw Johns', 'Terra', 'Metro', 'Victory', 'Central Kitchen', 'Other'])
+    # TTL calculations - UPDATED COLUMN NAMES
+    tw_food_columns = ['TW Johns', 'TW Terra', 'TW Metro', 'TW Victory', 'TW Central Kitchen', 'TW Other']
+    lw_food_columns = ['LW Johns', 'LW Terra', 'LW Metro', 'LW Victory', 'LW Central Kitchen', 'LW Other']
+    
+    tw_ttl = sum(filtered_df[col].sum() for col in tw_food_columns if col in filtered_df.columns)
+    lw_ttl = sum(filtered_df[col].sum() for col in lw_food_columns if col in filtered_df.columns)
+    bdg_ttl = sum(budget_values[m] for m in ['Johns', 'Terra', 'Metro', 'Victory', 'Central Kitchen', 'Other'])
     
     ttl_tw_lw_diff = ((tw_ttl - lw_ttl) / lw_ttl * 100) if lw_ttl != 0 else 0
     ttl_tw_bdg_diff = ((tw_ttl - bdg_ttl) / bdg_ttl * 100) if bdg_ttl != 0 else 0
@@ -377,8 +418,11 @@ def calculate_tw_lw_bdg_comparison(df, store="0001: Midtown East", year=2025, we
     ))
     
     # Calculate Avg Ticket values
-    tw_avg_ticket = tw_net_sales / filtered_df['Tw Orders'].sum() if filtered_df['Tw Orders'].sum() != 0 else 0
-    lw_avg_ticket = lw_net_sales / filtered_df['Lw Orders'].sum() if filtered_df['Lw Orders'].sum() != 0 else 0
+    tw_orders = filtered_df['Tw Orders'].sum() if 'Tw Orders' in filtered_df.columns else 0
+    lw_orders = filtered_df['Lw Orders'].sum() if 'Lw Orders' in filtered_df.columns else 0
+    
+    tw_avg_ticket = tw_net_sales / tw_orders if tw_orders != 0 else 0
+    lw_avg_ticket = lw_net_sales / lw_orders if lw_orders != 0 else 0
     bdg_avg_ticket = bdg_net_sales / budget_values['Orders'] if budget_values['Orders'] != 0 else 0
     
     avg_ticket_tw_lw_diff = ((tw_avg_ticket - lw_avg_ticket) / lw_avg_ticket * 100) if lw_avg_ticket != 0 else 0
@@ -400,4 +444,3 @@ def calculate_tw_lw_bdg_comparison(df, store="0001: Midtown East", year=2025, we
         columns=["Metric", "This Week", "Last Week", "Tw/Lw (+/-)", "Budget", "Tw/Bdg (+/-)"]
     )
     return result
-
