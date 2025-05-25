@@ -23,7 +23,7 @@ def process_financials_file(file_data: Union[io.BytesIO, str], year="All", week_
     # Read the Excel file
     # df = pd.read_excel(file_data)
     
-    print("Type of file_data:", type(file_data))
+    # print("Type of file_data:", type(file_data))
 
     try:
             if isinstance(file_data, io.BytesIO):

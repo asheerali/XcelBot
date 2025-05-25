@@ -42,7 +42,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         
     # request = await request.json()
 
-    print("i am here in excel upload printhign the request", request)	
+    # print("i am here in excel upload printhign the request", request)	
     try:
         print(f"Received file upload: {request.fileName}")
         # Decode base64 file content
@@ -62,7 +62,10 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         if request.location:
             location_slug = f"{request.location.replace(' ', '_').lower()}_"
             
-        file_path = os.path.join(UPLOAD_DIR, f"{timestamp}_{location_slug}{request.fileName}")
+        file_name =  f"{timestamp}_{location_slug}{request.fileName}"
+        file_path = os.path.join(UPLOAD_DIR,file_name)
+        
+        print("i am here in excel upload printing the file path and file name",file_name, file_path)
         
         with open(file_path, "wb") as f:
             f.write(file_content)
@@ -98,7 +101,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             "table3": financials_orders_table.to_dict(orient='records'),
             "table4": financials_avg_ticket_table.to_dict(orient='records'),
             "table5": financials_tw_lw_bdg_table.to_dict(orient='records'),
-            "fileName": request.fileName, #the full names of the file saved in the uploads folder
+            "fileName": file_name, #the full names of the file saved in the uploads folder
             "locations": stores,
             "years": years,
             "dates": dates,
@@ -144,11 +147,11 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 "dates": dates,
                 "fileLocation":["test"],
                 "dashboardName": "Sales Wide",
-                "fileName": request.fileName, #the full names of the file saved in the uploads folder
+                "fileName": file_name, #the full names of the file saved in the uploads folder
                 "data": "Sales Wide Dashboard data."
             }
             
-            print("result", financials_result) 
+            # print("result", financials_result) 
             
             return [financials_result, sales_wide_result]
             # return {"message": "Financial Dashboard is not yet implemented."}
@@ -198,7 +201,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                                                                                                                                                                                                                                                                                                                 location_filter=location_filter, 
                                                                                                                                                                                                                                                                                                                 server_filter=server_filter)
 
-            print("i am here in excel upload printing before the result" )
+            # print("i am here in excel upload printing before the result" )
             pmix_dashboard = {
             # "table1": [{"net_sales": [net_sales], "orders": [orders], 
             #             "qty_sold": [qty_sold],"average_order_value": [average_order_value], 
@@ -226,7 +229,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             "categories": category,
             "dateRanges": [],
             "fileLocation": ['fileLocation', 'fileLocationa'],
-            "fileName": request.fileName,
+            "fileName": file_name,
             "dashboardName": "Product Mix ",
             "data":  "Dashboard is not yet implemented."
             }
@@ -259,7 +262,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 "table7": salesByTimeOfDay.to_dict(orient='records'),
                 "categories": categories,
                 "dashboardName": "Sales Split",
-                "fileName": request.fileName,
+                "fileName": file_name,
                 "data": f"{request.dashboard} Dashboard is not yet implemented."
             }
                         
