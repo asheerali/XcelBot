@@ -27,7 +27,7 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import BarChartIcon from '@mui/icons-material/BarChart';
 
-const drawerWidth = 270;
+const drawerWidth = 260;
 const gradientBackground = 'linear-gradient(180deg, #050b1b 0%, #150949 100%)';
 
 const CustomSidebar = ({ logo, title = 'INSIGHTiQ', onSignOut }) => {

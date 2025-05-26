@@ -937,21 +937,7 @@ export function ExcelImport() {
                         {selectedLocation && ` • 📍 ${selectedLocation}`}
                       </Typography>
                     </Box>
-                    <Button 
-                      variant="outlined" 
-                      onClick={() => window.location.href = '/upload-excel'}
-                      startIcon={<CloudUploadIcon />}
-                      sx={{ 
-                        borderRadius: 2,
-                        borderWidth: 2,
-                        '&:hover': {
-                          borderWidth: 2,
-                          transform: 'translateY(-1px)',
-                        }
-                      }}
-                    >
-                      Upload More
-                    </Button>
+                   
                   </Box>
                 </Grid>
                 

@@ -1,27 +1,33 @@
-// FilterSection.tsx - Fixed version without hook violations
-import React, { useState, useEffect, useRef } from 'react';
-import Grid from '@mui/material/Grid';
-import Button from '@mui/material/Button';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import Select, { SelectChangeEvent } from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import Chip from '@mui/material/Chip';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
-import Checkbox from '@mui/material/Checkbox';
-import ListItemText from '@mui/material/ListItemText';
+// FilterSection.tsx - Updated with default date range and "All" dining options functionality
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  Grid,
+  Button,
+  Typography,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Checkbox,
+  ListItemText,
+  SelectChangeEvent
+} from '@mui/material';
 import { format } from 'date-fns';
 
 // Import icons
 import FilterListIcon from '@mui/icons-material/FilterList';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import PlaceIcon from '@mui/icons-material/Place';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import CategoryIcon from '@mui/icons-material/Category';
-import PersonIcon from '@mui/icons-material/Person';
 import CloseIcon from '@mui/icons-material/Close';
 
 // Import DateRangeSelector component
@@ -51,9 +57,7 @@ interface FilterSectionProps {
   selectedLocation: string;
   onLocationChange: (event: SelectChangeEvent) => void;
   onApplyFilters: () => void;
-  // Optional: Allow parent to override which categories to use
   categoriesOverride?: string[];
-  // Optional: Dashboard type to determine which categories to use
   dashboardType?: 'Sales Split' | 'Financials' | 'Sales Wide' | 'Product Mix';
 }
 
@@ -75,7 +79,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
 }) => {
   const dispatch = useAppDispatch();
   
-  // Get categories from Redux state based on dashboard type - ALL AT TOP LEVEL
+  // Get categories from Redux state based on dashboard type
   const salesCategories = useAppSelector(selectSalesCategories);
   const allCategories = useAppSelector(selectAllCategories);
   const financialCategories = useAppSelector(selectFinancialCategories);
@@ -83,7 +87,14 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   const productMixCategories = useAppSelector(selectProductMixCategories);
   const salesFilters = useAppSelector(state => state.excel.salesFilters);
   
-  // Determine which categories to use - MOVED TO USEMEMO TO AVOID RECALCULATION
+  // Loading state
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Default date range: 1/1/2010 to 1/1/2025
+  const DEFAULT_START_DATE = new Date(2010, 0, 1); // January 1, 2010
+  const DEFAULT_END_DATE = new Date(2025, 0, 1);   // January 1, 2025
+  
+  // Determine which categories to use
   const availableCategories = React.useMemo(() => {
     if (categoriesOverride) {
       return categoriesOverride;
@@ -126,45 +137,65 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     [availableCategories, filterCategories]
   );
   
-  // State for category options and employees
-  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
-  const [isEmployeeOpen, setIsEmployeeOpen] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(
-    salesFilters.selectedCategories || []
-  );
-  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+  // State for category selection - Initialize with all categories selected by default
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   
-  // New state for date range dialog
+  // State for date range
+  const [localStartDate, setLocalStartDate] = useState<string>(
+    startDate || format(DEFAULT_START_DATE, 'MM/dd/yyyy')
+  );
+  const [localEndDate, setLocalEndDate] = useState<string>(
+    endDate || format(DEFAULT_END_DATE, 'MM/dd/yyyy')
+  );
+  
+  // State for date range dialog
   const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
   const [selectedRange, setSelectedRange] = useState({
-    startDate: startDate ? new Date(startDate) : new Date(),
-    endDate: endDate ? new Date(endDate) : new Date(),
+    startDate: startDate ? new Date(startDate) : DEFAULT_START_DATE,
+    endDate: endDate ? new Date(endDate) : DEFAULT_END_DATE,
   });
 
-  // Sample employee names - you can replace this with actual employee data from your backend
-  const EMPLOYEE_NAMES = [
-    'James Smith', 'Maria Garcia', 'David Johnson', 'Lisa Williams',
-    'Robert Brown', 'Sarah Miller', 'Michael Davis', 'Jennifer Wilson',
-    'William Jones', 'Jessica Taylor', 'Thomas Moore', 'Emily Anderson'
-  ];
-
-  // Update local state when Redux filters change
+  // Initialize with default date range and all categories selected
   useEffect(() => {
-    setSelectedCategories(salesFilters.selectedCategories || []);
-  }, [salesFilters.selectedCategories]);
+    // Set default dates if not already set
+    if (!startDate) {
+      setLocalStartDate(format(DEFAULT_START_DATE, 'MM/dd/yyyy'));
+    }
+    if (!endDate) {
+      setLocalEndDate(format(DEFAULT_END_DATE, 'MM/dd/yyyy'));
+    }
+  }, [startDate, endDate]);
 
-  // Close handlers for dialogs
-  const handleCloseCategory = () => {
-    setIsCategoryOpen(false);
-  };
+  // Update local state when Redux filters change or when categories become available
+  useEffect(() => {
+    if (salesFilters.selectedCategories && salesFilters.selectedCategories.length > 0) {
+      setSelectedCategories(salesFilters.selectedCategories);
+    } else if (filteredCategories.length > 0) {
+      // Select all categories by default when they become available
+      console.log('🎯 FilterSection: Setting all categories as default selection:', filteredCategories);
+      setSelectedCategories(filteredCategories);
+      dispatch(updateSalesFilters({ selectedCategories: filteredCategories }));
+    }
+  }, [salesFilters.selectedCategories, filteredCategories, dispatch]);
 
-  const handleCloseEmployee = () => {
-    setIsEmployeeOpen(false);
-  };
-
-  const handleCloseDateRange = () => {
-    setIsDateRangeOpen(false);
-  };
+  // Inject the rotating animation styles for the refresh icon
+  React.useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      @keyframes rotating {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .rotating {
+        animation: rotating 2s linear infinite;
+      }
+    `;
+    document.head.appendChild(styleElement);
+    
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
 
   // Handler for category options
   const handleCategoryChange = (event: SelectChangeEvent<string[]>) => {
@@ -179,9 +210,21 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     });
     
     setSelectedCategories(value);
-    
-    // Update Redux state
     dispatch(updateSalesFilters({ selectedCategories: value }));
+  };
+
+  // Handler for "All" option in dining categories
+  const handleSelectAllCategories = () => {
+    const isAllSelected = selectedCategories.length === filteredCategories.length;
+    const newSelection = isAllSelected ? [] : filteredCategories;
+    
+    console.log('✅ FilterSection: Toggle all categories:', {
+      wasAllSelected: isAllSelected,
+      newSelection
+    });
+    
+    setSelectedCategories(newSelection);
+    dispatch(updateSalesFilters({ selectedCategories: newSelection }));
   };
 
   // Handler for individual category selection (for checkbox interface)
@@ -200,17 +243,6 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     dispatch(updateSalesFilters({ selectedCategories: newSelection }));
   };
 
-  // Handler for employee selection
-  const handleEmployeeChange = (employee: string) => {
-    setSelectedEmployees(prev => {
-      if (prev.includes(employee)) {
-        return prev.filter(item => item !== employee);
-      } else {
-        return [...prev, employee];
-      }
-    });
-  };
-
   // Clear handlers
   const handleClearCategories = () => {
     console.log('🧹 FilterSection: Clearing all categories');
@@ -218,15 +250,13 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     dispatch(updateSalesFilters({ selectedCategories: [] }));
   };
 
-  const handleClearEmployees = () => {
-    setSelectedEmployees([]);
-  };
-
-  // Select all categories
-  const handleSelectAllCategories = () => {
-    console.log('✅ FilterSection: Selecting all categories:', filteredCategories);
-    setSelectedCategories(filteredCategories);
-    dispatch(updateSalesFilters({ selectedCategories: filteredCategories }));
+  // Handle refresh - simulate data loading
+  const handleRefresh = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      onApplyFilters();
+    }, 1500);
   };
 
   // Open date range dialog
@@ -239,36 +269,31 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     setSelectedRange(range);
   };
 
-  // Apply date range and format to MM/DD/YYYY for your backend
+  // Apply date range - ONLY sets the date range locally, doesn't send to backend
   const applyDateRange = () => {
-    // Convert dates to MM/DD/YYYY format for your existing handlers
     const formattedStartDate = format(selectedRange.startDate, 'MM/dd/yyyy');
     const formattedEndDate = format(selectedRange.endDate, 'MM/dd/yyyy');
     
-    // Create synthetic events for your existing handlers
-    const startEvent = {
-      target: { value: formattedStartDate }
-    } as React.ChangeEvent<HTMLInputElement>;
+    console.log('📅 FilterSection: Setting date range locally:', {
+      startDate: formattedStartDate,
+      endDate: formattedEndDate
+    });
     
-    const endEvent = {
-      target: { value: formattedEndDate }
-    } as React.ChangeEvent<HTMLInputElement>;
+    // Update local state only
+    setLocalStartDate(formattedStartDate);
+    setLocalEndDate(formattedEndDate);
     
-    // Call the existing handlers
-    onStartDateChange(startEvent);
-    onEndDateChange(endEvent);
+    // Update Redux state for persistence
+    dispatch(updateSalesFilters({ 
+      startDate: formattedStartDate,
+      endDate: formattedEndDate,
+      dateRangeType: 'Custom Date Range'
+    }));
     
-    // Set the date range type to custom
-    const customEvent = {
-      target: { value: 'Custom Date Range' }
-    } as SelectChangeEvent;
-    onDateRangeChange(customEvent);
-    
-    // Close the dialog
     setIsDateRangeOpen(false);
     
-    // Apply filters
-    onApplyFilters();
+    // Note: We don't call onApplyFilters here - user needs to click "Apply Filters" button
+    console.log('📅 Date range set. User must click "Apply Filters" to send to backend.');
   };
 
   // Format display date
@@ -282,217 +307,274 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     }
   };
 
-  // Enhanced apply filters to include selected categories
+  // Enhanced apply filters - sends data to backend with all current filter states
   const handleApplyFilters = () => {
-    console.log('🎯 FilterSection: Applying filters with categories:', {
+    console.log('🎯 FilterSection: Applying filters to backend with:', {
       selectedCategories,
       filteredCategories,
       selectedLocation,
-      dateRangeType,
-      startDate,
-      endDate
+      dateRangeType: 'Custom Date Range',
+      startDate: localStartDate,
+      endDate: localEndDate
     });
 
     // Update Redux state with current selections
     dispatch(updateSalesFilters({ 
       selectedCategories: selectedCategories,
       location: selectedLocation,
-      dateRangeType: dateRangeType,
-      startDate: startDate,
-      endDate: endDate
+      dateRangeType: 'Custom Date Range',
+      startDate: localStartDate,
+      endDate: localEndDate
     }));
     
-    // Call the parent's apply filters function
+    // Create synthetic events to update parent component state before calling API
+    const startEvent = {
+      target: { value: localStartDate }
+    } as React.ChangeEvent<HTMLInputElement>;
+    
+    const endEvent = {
+      target: { value: localEndDate }
+    } as React.ChangeEvent<HTMLInputElement>;
+    
+    const dateRangeEvent = {
+      target: { value: 'Custom Date Range' }
+    } as SelectChangeEvent;
+    
+    // Update parent component state
+    onStartDateChange(startEvent);
+    onEndDateChange(endEvent);
+    onDateRangeChange(dateRangeEvent);
+    
+    // Call the parent's apply filters function to send to backend
     onApplyFilters();
   };
 
+  // Check if all categories are selected
+  const isAllCategoriesSelected = selectedCategories.length === filteredCategories.length && filteredCategories.length > 0;
+
   return (
-    <Box>
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: 'normal' }}>
-        Filters
-      </Typography>
-
-      <Grid container spacing={2} alignItems="flex-start" sx={{ mb: 2 }}>
-        {/* Location filter */}
-        <Grid item xs={12} sm={3}>
-          <FormControl fullWidth sx={{ height: 80 }}>
-            <InputLabel id="location-select-label">Location</InputLabel>
-            <Select
-              labelId="location-select-label"
-              id="location-select"
-              value={selectedLocation || ''}
-              label="Location"
-              onChange={onLocationChange}
-              startAdornment={<PlaceIcon sx={{ mr: 1, ml: -0.5, color: 'primary.main' }} />}
-              disabled={locations.length === 0}
-            >
-              {locations.map((location) => (
-                <MenuItem key={location} value={location}>{location}</MenuItem>
-              ))}
-            </Select>
-            <Typography variant="caption" color="text.secondary">
-              Select a location
+    <Grid elevation={3} sx={{ borderRadius: 2 }}>
+      <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FilterListIcon color="primary" />
+            <Typography variant="h6" sx={{ fontWeight: 500 }}>
+              Filters
             </Typography>
-          </FormControl>
-        </Grid>
+          </Box>
+          <Button 
+            variant="outlined" 
+            size="small" 
+            color="primary"
+            disabled={isLoading}
+            onClick={handleRefresh}
+            startIcon={isLoading ? <RefreshIcon className="rotating" /> : <RefreshIcon />}
+          >
+            {isLoading ? 'Loading...' : 'Refresh Data'}
+          </Button>
+        </Box>
 
-        {/* Date Range Button */}
-        <Grid item xs={12} sm={3}>
-          <FormControl fullWidth sx={{ height: 80 }}>
+        <Grid container spacing={2}>
+          {/* Location filter */}
+          <Grid item xs={12} sm={6} md={4}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="location-select-label">Location</InputLabel>
+              <Select
+                labelId="location-select-label"
+                id="location-select"
+                value={selectedLocation || ''}
+                label="Location"
+                onChange={onLocationChange}
+                startAdornment={<PlaceIcon sx={{ mr: 1, ml: -0.5, color: 'primary.light' }} />}
+                disabled={locations.length === 0}
+              >
+                {locations.map((location) => (
+                  <MenuItem key={location} value={location}>{location}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* Date Range Button */}
+          <Grid item xs={12} sm={6} md={4}>
             <Button
               variant="outlined"
               onClick={openDateRangePicker}
-              startIcon={<FilterListIcon />}
+              startIcon={<CalendarTodayIcon />}
+              fullWidth
               sx={{ 
-                height: 56, 
+                height: 40, 
                 justifyContent: 'flex-start',
                 textTransform: 'none',
                 borderColor: 'rgba(0, 0, 0, 0.23)',
-                color: 'text.primary'
+                color: 'text.primary',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                }
               }}
             >
-              {startDate && endDate ? (
-                <Box sx={{ textAlign: 'left' }}>
-                  <Typography variant="body1" component="div">
-                    {formatDisplayDate(startDate)} - {formatDisplayDate(endDate)}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {dateRangeType}
-                  </Typography>
-                </Box>
-              ) : (
-                "Select Date Range"
-              )}
-            </Button>
-            <Typography variant="caption" color="text.secondary">
-              Click to select a date range
-            </Typography>
-          </FormControl>
-        </Grid>
-
-        {/* Categories Filter - Dynamic from backend */}
-        <Grid item xs={12} sm={3}>
-          <FormControl fullWidth sx={{ height: 60 }}>
-            <InputLabel id="category-select-label">Dining Options</InputLabel>
-            <Select
-              labelId="category-select-label"
-              id="category-select"
-              multiple
-              value={selectedCategories}
-              onChange={handleCategoryChange}
-              label="Dining Options"
-              renderValue={(selected) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {selected.length > 2 ? (
-                    <Chip size="small" label={`${selected.length} selected`} />
-                  ) : (
-                    selected.map((value) => (
-                      <Chip key={value} label={value} size="small" />
-                    ))
-                  )}
-                </Box>
-              )}
-              startAdornment={<CategoryIcon sx={{ mr: 1, ml: -0.5, color: 'primary.main' }} />}
-              disabled={filteredCategories.length === 0}
-            >
-              {/* Select All option */}
-              {/* <MenuItem value="select-all" onClick={handleSelectAllCategories}>
-                <Checkbox checked={selectedCategories.length === filteredCategories.length} />
-                <ListItemText primary="All" />
-              </MenuItem> */}
-              
-              {/* Clear All option */}
-             
-              
-              {/* Divider */}
-              <MenuItem disabled>
-                <Typography variant="caption" color="text.secondary">
-                  Available Dining Options:
+              <Box sx={{ textAlign: 'left' }}>
+                <Typography variant="body2" component="div">
+                  {formatDisplayDate(localStartDate)} - {formatDisplayDate(localEndDate)}
                 </Typography>
-              </MenuItem>
-              
-              {/* Category options */}
-              {filteredCategories.length > 0 ? (
-                filteredCategories.map((category) => (
-                  <MenuItem key={category} value={category}>
-                    <Checkbox checked={selectedCategories.includes(category)} />
-                    <ListItemText primary={category} />
+              </Box>
+            </Button>
+          </Grid>
+
+          {/* Dining Options Filter with "All" option */}
+          <Grid item xs={12} sm={6} md={4}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="category-select-label">Dining Options</InputLabel>
+              <Select
+                labelId="category-select-label"
+                id="category-select"
+                multiple
+                value={selectedCategories}
+                onChange={handleCategoryChange}
+                label="Dining Options"
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.length === filteredCategories.length && filteredCategories.length > 0 ? (
+                      <Chip size="small" label="All" color="primary" />
+                    ) : selected.length > 2 ? (
+                      <Chip size="small" label={`${selected.length} selected`} />
+                    ) : (
+                      selected.map((value) => (
+                        <Chip key={value} label={value} size="small" />
+                      ))
+                    )}
+                  </Box>
+                )}
+                startAdornment={<CategoryIcon sx={{ mr: 1, ml: -0.5, color: 'primary.light' }} />}
+                disabled={filteredCategories.length === 0}
+              >
+                {/* "All" option */}
+                {filteredCategories.length > 0 && (
+                  <MenuItem value="all" onClick={(e) => {
+                    e.preventDefault();
+                    handleSelectAllCategories();
+                  }}>
+                    <Checkbox 
+                      checked={isAllCategoriesSelected}
+                      indeterminate={selectedCategories.length > 0 && selectedCategories.length < filteredCategories.length}
+                    />
+                    <ListItemText 
+                      primary="All" 
+                      sx={{ fontWeight: 'bold' }}
+                    />
                   </MenuItem>
-                ))
-              ) : (
-                <MenuItem disabled>
-                  <ListItemText 
-                    primary="No dining options available" 
-                    secondary="Upload a file to see available options"
-                  />
-                </MenuItem>
-              )}
-            </Select>
-            <Typography variant="caption" color="text.secondary">
-              {selectedCategories.length} of {filteredCategories.length} selected
-            </Typography>
-          </FormControl>
+                )}
+                
+                {filteredCategories.length > 0 ? (
+                  filteredCategories.map((category) => (
+                    <MenuItem key={category} value={category}>
+                      <Checkbox checked={selectedCategories.includes(category)} />
+                      <ListItemText primary={category} />
+                    </MenuItem>
+                  ))
+                ) : (
+                  <MenuItem disabled>
+                    <ListItemText 
+                      primary="No dining options available" 
+                      secondary="Upload a file to see available options"
+                    />
+                  </MenuItem>
+                )}
+              </Select>
+            </FormControl>
+          </Grid>
         </Grid>
 
-       
-
-        {/* Display selected filters */}
-        {(selectedCategories.length > 0 || selectedEmployees.length > 0) && (
-          <Grid item xs={12}>
-            <Box display="flex" flexWrap="wrap" gap={1} mt={1}>
-              {/* Category chips */}
-              {selectedCategories.map(category => (
-                <Chip
-                  key={category}
-                  label={`${category} (Dining)`}
-                  size="small"
-                  onDelete={() => handleCategoryToggle(category)}
-                  deleteIcon={<CloseIcon fontSize="small" />}
-                  icon={<CategoryIcon fontSize="small" />}
-                  sx={{ background: 'rgba(25, 118, 210, 0.08)' }}
+        {/* Active filters display */}
+        {(selectedLocation || selectedCategories.length > 0 || (localStartDate && localEndDate)) && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Active Filters:
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {selectedLocation && (
+                <Chip 
+                  label={`Location: ${selectedLocation}`} 
+                  color="primary" 
+                  variant="outlined" 
+                  size="small" 
+                  icon={<PlaceIcon />} 
+                  onDelete={() => {
+                    const event = { target: { value: '' } } as SelectChangeEvent;
+                    onLocationChange(event);
+                  }}
                 />
-              ))}
+              )}
               
-          
+              <Chip 
+                label={`Date Range: ${formatDisplayDate(localStartDate)} - ${formatDisplayDate(localEndDate)}`} 
+                color="secondary" 
+                variant="outlined" 
+                size="small" 
+                icon={<CalendarTodayIcon />} 
+                onDelete={() => {
+                  setLocalStartDate(format(DEFAULT_START_DATE, 'MM/dd/yyyy'));
+                  setLocalEndDate(format(DEFAULT_END_DATE, 'MM/dd/yyyy'));
+                }}
+              />
+              
+              {selectedCategories.length > 0 && (
+                <Chip 
+                  label={
+                    isAllCategoriesSelected 
+                      ? 'Dining: All' 
+                      : selectedCategories.length === 1 
+                        ? `Dining: ${selectedCategories[0]}` 
+                        : `Dining: ${selectedCategories.length} selected`
+                  } 
+                  color="error" 
+                  variant="outlined" 
+                  size="small" 
+                  icon={<CategoryIcon />} 
+                  onDelete={handleClearCategories}
+                />
+              )}
             </Box>
-          </Grid>
+          </Box>
         )}
 
         {/* Apply Filters Button */}
-        <Grid item xs={12}>
+        <Box sx={{ mt: 3, display: 'flex', gap: 1 }}>
           <Button 
             variant="contained" 
             color="primary"
             onClick={handleApplyFilters}
-            sx={{ mt: 1 }}
             disabled={locations.length === 0}
+            sx={{ px: 3 }}
           >
-            Apply Filters ({selectedCategories.length + selectedEmployees.length} active)
+            Apply Filters 
           </Button>
           
           {/* Clear all filters button */}
-          {(selectedCategories.length > 0 || selectedEmployees.length > 0) && (
+          {(selectedLocation || selectedCategories.length > 0) && (
             <Button 
               variant="outlined" 
               color="secondary"
               onClick={() => {
                 handleClearCategories();
-                handleClearEmployees();
+                const locationEvent = { target: { value: '' } } as SelectChangeEvent;
+                onLocationChange(locationEvent);
+                setLocalStartDate(format(DEFAULT_START_DATE, 'MM/dd/yyyy'));
+                setLocalEndDate(format(DEFAULT_END_DATE, 'MM/dd/yyyy'));
               }}
-              sx={{ mt: 1, ml: 1 }}
             >
               Clear All Filters
             </Button>
           )}
-        </Grid>
-      </Grid>
-
-     
+        </Box>
+        
+    
+      </CardContent>
 
       {/* Date Range Picker Dialog */}
       <Dialog
         open={isDateRangeOpen}
-        onClose={handleCloseDateRange}
+        onClose={() => setIsDateRangeOpen(false)}
         maxWidth="lg"
         fullWidth
       >
@@ -501,8 +583,8 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           <DateRangeSelector
             initialState={[
               {
-                startDate: startDate ? new Date(startDate) : new Date(),
-                endDate: endDate ? new Date(endDate) : new Date(),
+                startDate: localStartDate ? new Date(localStartDate) : DEFAULT_START_DATE,
+                endDate: localEndDate ? new Date(localEndDate) : DEFAULT_END_DATE,
                 key: 'selection'
               }
             ]}
@@ -510,13 +592,13 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDateRange}>Cancel</Button>
+          <Button onClick={() => setIsDateRangeOpen(false)}>Cancel</Button>
           <Button onClick={applyDateRange} variant="contained" color="primary">
-            Apply
+            Set Date Range
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Grid>
   );
 };
 
