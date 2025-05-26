@@ -177,8 +177,10 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             print("Dashboard type: Sales Split / Product Mix Dashboard")
             
             excel_data_copy = io.BytesIO(file_content)
-
-            location_filter = request.location if request.location else 'All'
+            if request.location == "Multiple Locations":
+                location_filter = "All"
+            else:
+                location_filter = request.location if request.location else 'All'
             server_filter = request.server if request.server else 'All'
             # Set dynamic dates
             default_end_date1 = date.today()
