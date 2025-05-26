@@ -318,7 +318,7 @@ const TableDisplay: React.FC<TableDisplayProps> = ({
             {...a11yProps(2)}
           />
           <CleanTab 
-            label="Category Summary" 
+            label="Category Pivot" 
             icon={<CategoryIcon />}
             iconPosition="start"
             {...a11yProps(3)}
@@ -359,7 +359,7 @@ const TableDisplay: React.FC<TableDisplayProps> = ({
         <TabPanel value={currentTabValue} index={3} forceRender>
           <DataTable
             title="Category Summary"
-            data={memoizedTableData.table5}
+            data={memoizedTableData.table1}
             icon={<CategoryIcon />}
           />
         </TabPanel>

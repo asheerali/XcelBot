@@ -190,7 +190,7 @@ const TotalSalesChart: React.FC<TotalSalesChartProps> = ({ tableData }) => {
           Total Sales
         </Typography>
         
-        <Box sx={{ width: '100%', height: 400 }}>
+        <Box sx={{ width: '100%', height: 300 }}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
               data={dataWithTrendLine}

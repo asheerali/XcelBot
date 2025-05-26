@@ -1120,80 +1120,64 @@ export function ExcelImport() {
                       <Grid container spacing={4}>
                         {/* Row 1: 1P, DD, GH and UB + In-House */}
                         <Grid item xs={12} lg={12}>
-                          <ChartWrapper 
-                            title="1P, DD, GH and UB (Percentage of In-House)" 
-                            size="medium"
-                          >
+                          
                             <DeliveryPercentageChart 
                               tableData={reduxTableData} 
-                              height={150} 
+                              height={100} 
                             />
-                          </ChartWrapper>
+                          
                         </Grid>
                         
                         <Grid item xs={12} lg={12}>
-                          <ChartWrapper 
-                            title="In-House" 
-                            size="medium"
-                          >
+                         
                             <InHousePercentageChart 
                               tableData={reduxTableData} 
-                              height={150} 
+                              height={100} 
                             />
-                          </ChartWrapper>
+                        
                         </Grid>
 
                         {/* Row 2: Catering + Total Sales */}
                         <Grid item xs={12} lg={12}>
-                          <ChartWrapper 
-                            title="Catering" 
-                            size="medium"
-                          >
+                          
                             <CateringPercentageChart 
                               tableData={reduxTableData} 
-                              height={150} 
+                              height={100} 
                             />
-                          </ChartWrapper>
+                      
                         </Grid>
                         
                         <Grid item xs={12} lg={12}>
-                          <ChartWrapper 
-                            title="Total Sales" 
-                            size="medium"
-                          >
+                          
                             <TotalSalesChart 
                               tableData={reduxTableData} 
-                              height={150} 
+                              height={100} 
                             />
-                          </ChartWrapper>
+                          
                         </Grid>
 
                         {/* Row 3: WOW Trends - Full width if data available */}
                         {reduxTableData.table4 && reduxTableData.table4.length > 0 && (
                           <Grid item xs={12}>
-                            <ChartWrapper 
-                              title="Week-over-Week (WOW) Trends" 
-                              size="large"
-                            >
+                           
+                      
+                          
                               <WowTrendsChart 
                                 tableData={reduxTableData} 
                                 height={420} 
                               />
-                            </ChartWrapper>
+                           
                           </Grid>
                         )}
 
                         {/* Row 4: 1P / 3P - Full width */}
                         <Grid item xs={12}>
-                          <ChartWrapper 
-                            title="1P / 3P" 
-                            size="large"
-                          >
+                          
                             <PercentageFirstThirdPartyChart 
                               tableData={reduxTableData} 
                               height={420} 
                             />
-                          </ChartWrapper>
+                        
                         </Grid>
                       </Grid>
                     </Box>

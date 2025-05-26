@@ -779,16 +779,16 @@ const ExcelUploadPage: React.FC = () => {
       
       switch (dashboardName) {
         case 'Financials':
-          navigate('/financials-dashboard');
+          navigate('/Financials');
           break;
         case 'Sales Split':
-          navigate('/sales-dashboard');
+          navigate('/manage-reports');
           break;
         case 'Sales Wide':
-          navigate('/sales-wide-dashboard');
+          navigate('/Saleswide');
           break;
         case 'Product Mix':
-          navigate('/product-mix-dashboard');
+          navigate('/Productmix');
           break;
         default:
           navigate('/dashboard');
@@ -976,41 +976,7 @@ const ExcelUploadPage: React.FC = () => {
                             </Typography>
                           </Box>
                           
-                          {/* Show extracted categories */}
-                          {fileInfo.categories && fileInfo.categories.length > 0 && (
-                            <Box sx={{ mt: 1 }}>
-                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                                Categories: 
-                              </Typography>
-                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                {fileInfo.categories.slice(0, 5).map((category, catIndex) => (
-                                  <Chip
-                                    key={catIndex}
-                                    label={category}
-                                    size="small"
-                                    variant="outlined"
-                                    sx={{ 
-                                      fontSize: '0.7rem',
-                                      height: '20px',
-                                      '& .MuiChip-label': { px: 1 }
-                                    }}
-                                  />
-                                ))}
-                                {fileInfo.categories.length > 5 && (
-                                  <Chip
-                                    label={`+${fileInfo.categories.length - 5} more`}
-                                    size="small"
-                                    variant="outlined"
-                                    sx={{ 
-                                      fontSize: '0.7rem',
-                                      height: '20px',
-                                      '& .MuiChip-label': { px: 1 }
-                                    }}
-                                  />
-                                )}
-                              </Box>
-                            </Box>
-                          )}
+                         
                           
                           {fileInfo.status === 'uploading' && (
                             <Box sx={{ width: '100%', mt: 1 }}>

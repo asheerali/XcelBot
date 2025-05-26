@@ -206,7 +206,7 @@ const DeliveryPercentageChart: React.FC<DeliveryPercentageChartProps> = ({ table
           1P, DD, GH and UB (Percentage of In-House)
         </Typography>
         
-        <Box sx={{ width: '100%', height: 400 }}>
+        <Box sx={{ width: '100%', height: 300 }}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
               data={chartData}
