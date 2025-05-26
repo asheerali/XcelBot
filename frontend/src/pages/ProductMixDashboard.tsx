@@ -768,23 +768,7 @@ export default function ProductMixDashboard() {
       {/* Show message if no data available */}
       {!currentProductMixData && productMixFiles.length === 0 && (
         <Card sx={{ borderRadius: 2, mb: 3, p: 3 }}>
-          <Typography variant="h6" color="error" gutterBottom>
-            No Product Mix data available
-          </Typography>
-          <Typography variant="body1" paragraph>
-            Please upload files with "Product Mix" dashboard type from the Excel Upload page.
-          </Typography>
-          <Typography variant="body2" color="text.secondary" paragraph>
-            Expected data structure:
-          </Typography>
-          <Box component="ul" sx={{ pl: 2 }}>
-            <Typography component="li" variant="body2">Net Sales, Orders, Quantity Sold</Typography>
-            <Typography component="li" variant="body2">Sales by Category and Menu Group</Typography>
-            <Typography component="li" variant="body2">Server Performance Data</Typography>
-            <Typography component="li" variant="body2">Top Selling Items</Typography>
-            <Typography component="li" variant="body2">Menu Item Prices</Typography>
-            <Typography component="li" variant="body2">Performance Metrics and Trends</Typography>
-          </Box>
+         
           <Button 
             variant="contained" 
             color="primary" 

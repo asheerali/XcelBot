@@ -318,7 +318,7 @@ const TableDisplay: React.FC<TableDisplayProps> = ({
             {...a11yProps(2)}
           />
           <CleanTab 
-            label="Category Pivot" 
+            label="Pivot" 
             icon={<CategoryIcon />}
             iconPosition="start"
             {...a11yProps(3)}

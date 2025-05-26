@@ -878,13 +878,7 @@ const ExcelUploadPage: React.FC = () => {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               or click to browse files
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<FileUploadIcon />}
-              onClick={(e) => e.stopPropagation()}
-            >
-              Browse Files
-            </Button>
+       
             <input
               ref={fileInputRef}
               type="file"

@@ -396,15 +396,13 @@ const FilterSection: React.FC<FilterSectionProps> = ({
               disabled={filteredCategories.length === 0}
             >
               {/* Select All option */}
-              <MenuItem value="select-all" onClick={handleSelectAllCategories}>
+              {/* <MenuItem value="select-all" onClick={handleSelectAllCategories}>
                 <Checkbox checked={selectedCategories.length === filteredCategories.length} />
-                <ListItemText primary="Select All" />
-              </MenuItem>
+                <ListItemText primary="All" />
+              </MenuItem> */}
               
               {/* Clear All option */}
-              <MenuItem value="clear-all" onClick={handleClearCategories}>
-                <ListItemText primary="Clear All" />
-              </MenuItem>
+             
               
               {/* Divider */}
               <MenuItem disabled>
