@@ -1,4 +1,4 @@
-// Fixed ExcelImport.tsx - Corrected Redux actions and error handling
+// Fixed ExcelImport.tsx - Improved chart layout and alignment
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -93,6 +93,71 @@ const CleanCard = styled(Card)(({ theme }) => ({
   animation: `${slideIn} 0.6s ease-out`,
   '&:hover': {
     boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+  }
+}));
+
+// FIXED: Improved Chart Container with proper height and responsive design
+const ChartContainer = styled(Card)(({ theme }) => ({
+  background: '#ffffff',
+  borderRadius: 12,
+  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+  border: '1px solid #e0e0e0',
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  overflow: 'visible', // FIXED: Allow content to overflow properly
+  display: 'flex',
+  flexDirection: 'column',
+  '&:hover': {
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+  },
+  // FIXED: Responsive heights for different chart types
+  '&.chart-small': {
+    minHeight: '420px', // Increased from 350px
+    [theme.breakpoints.down('md')]: {
+      minHeight: '380px',
+    },
+    [theme.breakpoints.down('sm')]: {
+      minHeight: '350px',
+    }
+  },
+  '&.chart-medium': {
+    minHeight: '480px', // New medium size
+    [theme.breakpoints.down('md')]: {
+      minHeight: '420px',
+    },
+    [theme.breakpoints.down('sm')]: {
+      minHeight: '380px',
+    }
+  },
+  '&.chart-large': {
+    minHeight: '520px', // Increased from 400px
+    [theme.breakpoints.down('md')]: {
+      minHeight: '480px',
+    },
+    [theme.breakpoints.down('sm')]: {
+      minHeight: '420px',
+    }
+  }
+}));
+
+// FIXED: Improved Chart Content Container
+const ChartContent = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(3),
+  display: 'flex',
+  flexDirection: 'column',
+  height: '100%',
+  flex: 1,
+  overflow: 'visible', // FIXED: Allow content to show properly
+  // FIXED: Ensure proper spacing for chart elements
+  '& > *:not(:last-child)': {
+    marginBottom: theme.spacing(2),
+  },
+  // FIXED: Chart wrapper styling
+  '& .chart-wrapper': {
+    flex: 1,
+    minHeight: 0, // Allow flex child to shrink
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'visible',
   }
 }));
 
@@ -197,7 +262,7 @@ function TabPanel(props: TabPanelProps) {
     >
       {value === index && (
         <Fade in={value === index} timeout={500}>
-          <Box sx={{ pt: 3 }}>
+          <Box sx={{ pt: 0 }}> {/* FIXED: Removed top padding to better utilize space */}
             {children}
           </Box>
         </Fade>
@@ -205,6 +270,43 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
+
+// FIXED: Improved Chart Wrapper Component
+interface ChartWrapperProps {
+  title: string;
+  children: React.ReactNode;
+  size?: 'small' | 'medium' | 'large';
+  className?: string;
+}
+
+const ChartWrapper: React.FC<ChartWrapperProps> = ({ 
+  title, 
+  children, 
+  size = 'small',
+  className = ''
+}) => (
+  <ChartContainer className={`chart-${size} ${className}`}>
+    <ChartContent>
+      <Typography 
+        variant="h6" 
+        sx={{ 
+          fontWeight: 600,
+          color: '#374151',
+          mb: 2,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1
+        }}
+      >
+        <TrendingUpIcon sx={{ fontSize: 20, color: 'primary.main' }} />
+        {title}
+      </Typography>
+      <Box className="chart-wrapper">
+        {children}
+      </Box>
+    </ChartContent>
+  </ChartContainer>
+);
 
 // Main Component
 export function ExcelImport() {
@@ -899,7 +1001,7 @@ export function ExcelImport() {
                     color="inherit" 
                     size="small"
                     onClick={() => {
-                      setError('');
+                      setLocalError('');
                       dispatch(setError(null));
                     }}
                   >
@@ -960,12 +1062,12 @@ export function ExcelImport() {
               </Box>
             </TabPanel>
 
-            {/* Detailed Analysis Tab */}
+            {/* FIXED: Detailed Analysis Tab with improved chart layout */}
             <TabPanel value={salesSplitTab} index={1}>
               <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
                 {fileProcessed && reduxTableData.table1 && reduxTableData.table1.length > 0 ? (
                   <Fade in timeout={600}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                         <InsightsIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
                         <Typography variant="h5" sx={{ fontWeight: 600 }}>
@@ -1009,42 +1111,89 @@ export function ExcelImport() {
                         />
                       </CleanCard>
 
-                      {/* Detailed Charts Grid */}
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                      {/* FIXED: Detailed Charts Grid with improved layout and responsive heights */}
+                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#374151' }}>
                         📈 Detailed Charts
                       </Typography>
-                      <Grid container spacing={3}>
-                        <Grid item xs={12} lg={6}>
-                          <CleanCard sx={{ p: 3, height: 350 }}>
-                            <DeliveryPercentageChart tableData={reduxTableData} height={270} />
-                          </CleanCard>
+                      
+                      {/* FIXED: Grid layout with proper spacing and responsive design */}
+                      <Grid container spacing={4}>
+                        {/* Row 1: 1P, DD, GH and UB + In-House */}
+                        <Grid item xs={12} lg={12}>
+                          <ChartWrapper 
+                            title="1P, DD, GH and UB (Percentage of In-House)" 
+                            size="medium"
+                          >
+                            <DeliveryPercentageChart 
+                              tableData={reduxTableData} 
+                              height={150} 
+                            />
+                          </ChartWrapper>
                         </Grid>
-                        <Grid item xs={12} lg={6}>
-                          <CleanCard sx={{ p: 3, height: 350 }}>
-                            <InHousePercentageChart tableData={reduxTableData} height={270} />
-                          </CleanCard>
+                        
+                        <Grid item xs={12} lg={12}>
+                          <ChartWrapper 
+                            title="In-House" 
+                            size="medium"
+                          >
+                            <InHousePercentageChart 
+                              tableData={reduxTableData} 
+                              height={150} 
+                            />
+                          </ChartWrapper>
                         </Grid>
-                        <Grid item xs={12} lg={6}>
-                          <CleanCard sx={{ p: 3, height: 350 }}>
-                            <CateringPercentageChart tableData={reduxTableData} height={270} />
-                          </CleanCard>
+
+                        {/* Row 2: Catering + Total Sales */}
+                        <Grid item xs={12} lg={12}>
+                          <ChartWrapper 
+                            title="Catering" 
+                            size="medium"
+                          >
+                            <CateringPercentageChart 
+                              tableData={reduxTableData} 
+                              height={150} 
+                            />
+                          </ChartWrapper>
                         </Grid>
-                        <Grid item xs={12} lg={6}>
-                          <CleanCard sx={{ p: 3, height: 350 }}>
-                            <TotalSalesChart tableData={reduxTableData} height={270} />
-                          </CleanCard>
+                        
+                        <Grid item xs={12} lg={12}>
+                          <ChartWrapper 
+                            title="Total Sales" 
+                            size="medium"
+                          >
+                            <TotalSalesChart 
+                              tableData={reduxTableData} 
+                              height={150} 
+                            />
+                          </ChartWrapper>
                         </Grid>
+
+                        {/* Row 3: WOW Trends - Full width if data available */}
                         {reduxTableData.table4 && reduxTableData.table4.length > 0 && (
                           <Grid item xs={12}>
-                            <CleanCard sx={{ p: 3, height: 400 }}>
-                              <WowTrendsChart tableData={reduxTableData} height={320} />
-                            </CleanCard>
+                            <ChartWrapper 
+                              title="Week-over-Week (WOW) Trends" 
+                              size="large"
+                            >
+                              <WowTrendsChart 
+                                tableData={reduxTableData} 
+                                height={420} 
+                              />
+                            </ChartWrapper>
                           </Grid>
                         )}
+
+                        {/* Row 4: 1P / 3P - Full width */}
                         <Grid item xs={12}>
-                          <CleanCard sx={{ p: 3, height: 350 }}>
-                            <PercentageFirstThirdPartyChart tableData={reduxTableData} height={270} />
-                          </CleanCard>
+                          <ChartWrapper 
+                            title="1P / 3P" 
+                            size="large"
+                          >
+                            <PercentageFirstThirdPartyChart 
+                              tableData={reduxTableData} 
+                              height={420} 
+                            />
+                          </ChartWrapper>
                         </Grid>
                       </Grid>
                     </Box>
@@ -1064,6 +1213,13 @@ export function ExcelImport() {
           </CleanCard>
         )}
       </Box>
+
+      {/* Loading Overlay */}
+      {(isLoadingData || reduxLoading) && (
+        <LoadingOverlay open={true}>
+          <ModernLoader />
+        </LoadingOverlay>
+      )}
 
       {renderTutorial()}
       {renderSuccessNotification()}

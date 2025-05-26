@@ -372,7 +372,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
 
         {/* Categories Filter - Dynamic from backend */}
         <Grid item xs={12} sm={3}>
-          <FormControl fullWidth sx={{ height: 80 }}>
+          <FormControl fullWidth sx={{ height: 60 }}>
             <InputLabel id="category-select-label">Dining Options</InputLabel>
             <Select
               labelId="category-select-label"
@@ -436,43 +436,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           </FormControl>
         </Grid>
 
-        {/* Employees Filter */}
-        <Grid item xs={12} sm={3}>
-          <FormControl fullWidth sx={{ height: 80 }}>
-            <InputLabel id="employee-select-label">Employees</InputLabel>
-            <Select
-              labelId="employee-select-label"
-              id="employee-select"
-              value=""
-              label="Employees"
-              open={isEmployeeOpen}
-              onOpen={() => setIsEmployeeOpen(true)}
-              onClose={handleCloseEmployee}
-              renderValue={() => ""}
-              startAdornment={<PersonIcon sx={{ mr: 1, ml: -0.5, color: 'primary.main' }} />}
-              endAdornment={
-                selectedEmployees.length > 0 && (
-                  <Chip
-                    size="small"
-                    label={selectedEmployees.length}
-                    color="primary"
-                    sx={{ mr: 2, height: 24, minWidth: 28 }}
-                  />
-                )
-              }
-            >
-              {EMPLOYEE_NAMES.map((employee) => (
-                <MenuItem key={employee} onClick={() => handleEmployeeChange(employee)}>
-                  <Checkbox checked={selectedEmployees.includes(employee)} />
-                  <ListItemText primary={employee} />
-                </MenuItem>
-              ))}
-            </Select>
-            <Typography variant="caption" color="text.secondary">
-              {selectedEmployees.length} employee(s) selected
-            </Typography>
-          </FormControl>
-        </Grid>
+       
 
         {/* Display selected filters */}
         {(selectedCategories.length > 0 || selectedEmployees.length > 0) && (
@@ -491,18 +455,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
                 />
               ))}
               
-              {/* Employee chips */}
-              {selectedEmployees.map(employee => (
-                <Chip
-                  key={employee}
-                  label={employee}
-                  size="small"
-                  onDelete={() => handleEmployeeChange(employee)}
-                  deleteIcon={<CloseIcon fontSize="small" />}
-                  icon={<PersonIcon fontSize="small" />}
-                  sx={{ background: 'rgba(76, 175, 80, 0.08)' }}
-                />
-              ))}
+          
             </Box>
           </Grid>
         )}
@@ -536,23 +489,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         </Grid>
       </Grid>
 
-      {/* Debug info - remove in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
-          <Typography variant="caption" display="block">
-            Debug Info:
-          </Typography>
-          <Typography variant="caption" display="block">
-            Available Categories ({filteredCategories.length}): {filteredCategories.join(', ')}
-          </Typography>
-          <Typography variant="caption" display="block">
-            Selected Categories ({selectedCategories.length}): {selectedCategories.join(', ')}
-          </Typography>
-          <Typography variant="caption" display="block">
-            Dashboard Type: {dashboardType}
-          </Typography>
-        </Box>
-      )}
+     
 
       {/* Date Range Picker Dialog */}
       <Dialog
