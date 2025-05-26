@@ -66,7 +66,7 @@ import {
 } from '../store/excelSlice';
 
 // API URL for Excel upload
-const API_URL = 'http://localhost:8000/api/excel/upload';
+const API_URL = 'http://3.149.94.190:8000/api/excel/upload';
 
 // Styled component for the drop zone
 const DropZone = styled(Paper)(({ theme }) => ({

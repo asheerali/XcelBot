@@ -170,8 +170,8 @@ const ModernLoader = () => (
 );
 
 // API base URLs
-const API_URL = 'http://localhost:8000/api/excel/upload';
-const FILTER_API_URL = 'http://localhost:8000/api/excel/filter';
+const API_URL = 'http://3.149.94.190:8000/api/excel/upload';
+const FILTER_API_URL = 'http://3.149.94.190:8000/api/excel/filter';
 
 // Tab Panel Component
 interface TabPanelProps {

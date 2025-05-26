@@ -12,6 +12,8 @@ export default defineConfig({
     allowedHosts: [
       "xcelbot-latest-r3m7.onrender.com", // Render's domain
       "localhost",
+      "http://3.149.94.190/",
+      "http://3.149.94.190:8000"
     ],
   },
 
