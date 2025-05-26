@@ -15,5 +15,8 @@ export default defineConfig({
       "http://3.149.94.190/",
       "http://3.149.94.190:8000/"
     ]
-  }
+  },
+    build: {
+    outDir: "dist_fe", // output directory for the build
+  },
 });
