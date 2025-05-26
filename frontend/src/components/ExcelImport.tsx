@@ -1,4 +1,4 @@
-// Fixed ExcelImport.tsx - Product Mix Dashboard Style with Redux-based Analytics
+// Fixed ExcelImport.tsx - Corrected Redux actions and error handling
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -42,7 +42,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 // Import components
 import FilterSection from './FilterSection';
 import TableDisplay from './TableDisplay';
-import SalesCharts from './graphs/SalesCharts'; // Updated to use Redux-based version
+import SalesCharts from './graphs/SalesCharts';
 import DeliveryPercentageChart from './graphs/DeliveryPercentageChart';
 import InHousePercentageChart from './graphs/InHousePercentageChart';
 import CateringPercentageChart from './graphs/CateringPercentageChart';
@@ -53,21 +53,24 @@ import PercentageFirstThirdPartyChart from './graphs/PercentageFirstThirdPartyCh
 import SalesDashboard from './SalesDashboard';
 import SalesSplitDashboard from './SalesSplitDashboard';
 
-// Import Redux hooks
+// Import Redux hooks and actions with proper error handling
 import { useAppDispatch, useAppSelector } from '../typedHooks';
 import { 
+  excelSlice,  // Import the slice itself to access actions
   setExcelFile, 
-  setLoading, 
-  setError, 
   setTableData,
   addFileData,
   setLocations,
   selectLocation,
   addSalesWideData,
   selectSalesWideLocation,
-  selectCategoriesByLocation
-  
+  selectCategoriesByLocation,
+  selectSalesFilters,
+  updateSalesFilters
 } from '../store/excelSlice';
+
+// Extract actions from the slice to ensure they're properly defined
+const { setLoading, setError } = excelSlice.actions;
 
 // Modern styled components with clean white background
 const slideIn = keyframes`
@@ -222,13 +225,16 @@ export function ExcelImport() {
     currentSalesWideLocation
   } = useAppSelector((state) => state.excel);
   
+  // Get salesFilters from Redux state
+  const salesFilters = useAppSelector(selectSalesFilters);
+  
   const dispatch = useAppDispatch();
   
   // Local state - simplified to remove main tabs since everything is Sales Split
   const [file, setFile] = useState<File | null>(null);
-  const [error, setError] = useState<string>('');
-  const [salesSplitTab, setSalesSplitTab] = useState<number>(0); // Main tabs for the dashboard
-  const [tableTab, setTableTab] = useState<number>(0); // NEW: Separate state for table tabs
+  const [error, setLocalError] = useState<string>(''); // Renamed to avoid confusion
+  const [salesSplitTab, setSalesSplitTab] = useState<number>(0);
+  const [tableTab, setTableTab] = useState<number>(0);
   const [viewMode, setViewMode] = useState<string>('tabs');
   const [showTutorial, setShowTutorial] = useState<boolean>(false);
   const [selectedLocation, setSelectedLocation] = useState<string>(currentLocation || '');
@@ -303,12 +309,11 @@ export function ExcelImport() {
     return interval;
   };
 
-  // Handle tab changes - now only for the main Product Mix style tabs
+  // Handle tab changes
   const handleSalesSplitTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setSalesSplitTab(newValue);
   };
 
-  // NEW: Handle table tab changes
   const handleTableTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTableTab(newValue);
   };
@@ -330,26 +335,41 @@ export function ExcelImport() {
     setChartKey(prevKey => prevKey + 1);
   };
 
-  // Apply filters with enhanced loading
-  const handleApplyFilters = async (location = selectedLocation, dateRange = dateRangeType) => {
+  // FIXED: Updated handleApplyFilters function with proper error handling and Redux actions
+  const handleApplyFilters = (location = selectedLocation, dateRange = dateRangeType) => {
+    console.log('🎯 ExcelImport: Starting handleApplyFilters with:', {
+      location,
+      dateRange,
+      salesFilters: salesFilters || 'undefined',
+      filesCount: files?.length || 0
+    });
+
+    // Check if we have any files loaded
     if (!files || files.length === 0) {
-      setError('No files uploaded. Please upload Excel files first.');
+      setLocalError('No files uploaded. Please upload Excel files first.');
       return;
     }
     
+    // Find the file for the selected location
     const fileForLocation = files.find(f => f.location === location);
+    
     if (!fileForLocation) {
-      setError(`No file found for location: ${location}`);
+      setLocalError(`No file found for location: ${location}`);
       return;
     }
 
     try {
-      setIsLoadingData(true);
-      setLoadingMessage('Applying filters...');
-      const progressInterval = simulateProgress(2000);
+      // FIXED: Use proper Redux actions with null checks
+      if (setLoading && typeof setLoading === 'function') {
+        dispatch(setLoading(true));
+      }
       
-      dispatch({ type: 'excel/setLoading', payload: true });
-      dispatch({ type: 'excel/setError', payload: null });
+      if (setError && typeof setError === 'function') {
+        dispatch(setError(null));
+      }
+      
+      // Clear local error state
+      setLocalError('');
       
       // Format dates correctly for API
       let formattedStartDate: string | null = null;
@@ -369,59 +389,90 @@ export function ExcelImport() {
         }
       }
       
+      // Get the file content from the selected file
       const selectedFile = fileForLocation;
+      
+      // Get selected categories from salesFilters with proper null checking
+      const selectedCategories = salesFilters?.selectedCategories || [];
+      
+      console.log('🎯 ExcelImport: Applying filters with categories:', {
+        selectedCategories,
+        location,
+        dateRange,
+        fileName: selectedFile.fileName,
+        salesFiltersExists: !!salesFilters
+      });
+      
+      // Prepare filter data with selected categories
       const filterData = {
         fileName: selectedFile.fileName,
-        fileContent: fileContent,
         startDate: formattedStartDate,
         endDate: formattedEndDate,
         location: location || null,
-        dateRangeType: dateRange
+        dateRangeType: dateRange,
+        selectedCategories: selectedCategories,
+        categories: selectedCategories.join(',')
       };
-      console.log('Filter data:', filterData);
-      setLoadingMessage('Processing data...');
       
-      const response = await axios.post(FILTER_API_URL, filterData);
+      console.log('📤 Sending filter request with categories:', filterData);
       
-      if (response.data) {
-        dispatch({ type: 'excel/setTableData', payload: response.data });
-        setError('');
-        setChartKey(prevKey => prevKey + 1);
-        setLoadingMessage('Complete!');
-        
-        // Brief delay to show completion
-        setTimeout(() => {
-          setIsLoadingData(false);
-          clearInterval(progressInterval);
-        }, 500);
-      } else {
-        throw new Error('Invalid response data');
-      }
+      // Call filter API
+      axios.post(FILTER_API_URL, filterData)
+        .then(response => {
+          console.log('📥 Received filter response:', response.data);
+          
+          if (response.data) {
+            dispatch(setTableData(response.data));
+            setLocalError('');
+            setChartKey(prevKey => prevKey + 1);
+            
+            console.log('✅ Filter applied successfully');
+          } else {
+            throw new Error('Invalid response data');
+          }
+        })
+        .catch(err => {
+          console.error('❌ Filter error:', err);
+          
+          let errorMessage = 'Error filtering data';
+          if (axios.isAxiosError(err)) {
+            if (err.response) {
+              const detail = err.response.data?.detail;
+              errorMessage = `Server error: ${detail || err.response.status}`;
+              
+              if (detail && typeof detail === 'string' && detail.includes('isinf')) {
+                errorMessage = 'Backend error: Please update the backend code to use numpy.isinf instead of pandas.isinf';
+              } else if (err.response.status === 404) {
+                errorMessage = 'API endpoint not found. Is the server running?';
+              }
+            } else if (err.request) {
+              errorMessage = 'No response from server. Please check if the backend is running.';
+            }
+          }
+          
+          setLocalError(errorMessage);
+          if (setError && typeof setError === 'function') {
+            dispatch(setError(errorMessage));
+          }
+        })
+        .finally(() => {
+          if (setLoading && typeof setLoading === 'function') {
+            dispatch(setLoading(false));
+          }
+        });
       
     } catch (err: any) {
       console.error('Filter error:', err);
-      setIsLoadingData(false);
+      const errorMessage = 'Error applying filters: ' + (err.message || 'Unknown error');
+      setLocalError(errorMessage);
       
-      let errorMessage = 'Error filtering data';
-      if (axios.isAxiosError(err)) {
-        if (err.response) {
-          const detail = err.response.data?.detail;
-          errorMessage = `Server error: ${detail || err.response.status}`;
-          
-          if (detail && typeof detail === 'string' && detail.includes('isinf')) {
-            errorMessage = 'Backend error: Please update the backend code to use numpy.isinf instead of pandas.isinf';
-          } else if (err.response.status === 404) {
-            errorMessage = 'API endpoint not found. Is the server running?';
-          }
-        } else if (err.request) {
-          errorMessage = 'No response from server. Please check if the backend is running.';
-        }
+      if (setError && typeof setError === 'function') {
+        dispatch(setError(errorMessage));
       }
       
-      setError(errorMessage);
-      dispatch({ type: 'excel/setError', payload: errorMessage });
-    } finally {
-      dispatch({ type: 'excel/setLoading', payload: false });
+      if (setLoading && typeof setLoading === 'function') {
+        dispatch(setLoading(false));
+      }
     }
   };
 
@@ -467,7 +518,7 @@ export function ExcelImport() {
   // Upload and process file with enhanced loading
   const handleUpload = async (locationName?: string) => {
     if (!file) {
-      setError('Please select a file first');
+      setLocalError('Please select a file first');
       return;
     }
 
@@ -476,23 +527,26 @@ export function ExcelImport() {
       setLoadingMessage('Uploading file...');
       const progressInterval = simulateProgress(3000);
       
-      dispatch({ type: 'excel/setLoading', payload: true });
-      dispatch({ type: 'excel/setError', payload: null });
-      setError('');
+      if (setLoading && typeof setLoading === 'function') {
+        dispatch(setLoading(true));
+      }
+      
+      if (setError && typeof setError === 'function') {
+        dispatch(setError(null));
+      }
+      
+      setLocalError('');
       
       const base64File = await toBase64(file);
       const base64Content = base64File.split(',')[1];
       
       setLoadingMessage('Processing Excel data...');
       
-      dispatch({ 
-        type: 'excel/setExcelFile', 
-        payload: {
-          fileName: file.name,
-          fileContent: base64Content,
-          location: locationName
-        }
-      });
+      dispatch(setExcelFile({
+        fileName: file.name,
+        fileContent: base64Content,
+        location: locationName
+      }));
       
       const response = await axios.post(API_URL, {
         fileName: file.name,
@@ -504,30 +558,25 @@ export function ExcelImport() {
       
       if (response.data) {
         if (locationName) {
-          dispatch({ 
-            type: 'excel/addFileData', 
-            payload: {
-              fileName: file.name,
-              location: locationName,
-              data: response.data
-            }
-          });
+          dispatch(addFileData({
+            fileName: file.name,
+            fileContent: base64Content,
+            location: locationName,
+            data: response.data
+          }));
           
-          dispatch({ 
-            type: 'excel/setLocations', 
-            payload: locationName ? [locationName] : response.data.locations || []
-          });
+          dispatch(setLocations(locationName ? [locationName] : response.data.locations || []));
         }
         
-        dispatch({ type: 'excel/setTableData', payload: response.data });
+        dispatch(setTableData(response.data));
         setShowSuccessNotification(true);
         
         if (locationName) {
           setSelectedLocation(locationName);
-          dispatch({ type: 'excel/selectLocation', payload: locationName });
+          dispatch(selectLocation(locationName));
         } else if (response.data.locations && response.data.locations.length > 0) {
           setSelectedLocation(response.data.locations[0]);
-          dispatch({ type: 'excel/selectLocation', payload: response.data.locations[0] });
+          dispatch(selectLocation(response.data.locations[0]));
         }
         
         if (response.data.dateRanges && response.data.dateRanges.length > 0) {
@@ -580,10 +629,14 @@ export function ExcelImport() {
         errorMessage = `Error: ${err.message}`;
       }
       
-      setError(errorMessage);
-      dispatch({ type: 'excel/setError', payload: errorMessage });
+      setLocalError(errorMessage);
+      if (setError && typeof setError === 'function') {
+        dispatch(setError(errorMessage));
+      }
     } finally {
-      dispatch({ type: 'excel/setLoading', payload: false });
+      if (setLoading && typeof setLoading === 'function') {
+        dispatch(setLoading(false));
+      }
     }
   };
 
@@ -712,46 +765,20 @@ export function ExcelImport() {
 
   return (
     <>
-      {/* Loading Overlay */}
-      <LoadingOverlay open={isLoadingData || reduxLoading}>
-        <Box sx={{ textAlign: 'center' }}>
-          <ModernLoader />
-          {loadingMessage && (
-            <Box sx={{ mt: 2, minWidth: 300 }}>
-              <LinearProgress 
-                variant="determinate" 
-                value={loadingProgress}
-                sx={{ 
-                  borderRadius: 1,
-                  height: 8,
-                  backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                  '& .MuiLinearProgress-bar': {
-                    borderRadius: 1,
-                  }
-                }}
-              />
-              <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
-                {loadingMessage} ({Math.round(loadingProgress)}%)
-              </Typography>
-            </Box>
-          )}
-        </Box>
-      </LoadingOverlay>
-
       {/* Clean white background */}
       <Box sx={{ 
         background: '#ffffff',
         minHeight: '100vh',
         p: 3
       }}>
-        {/* Product Mix Dashboard Header - matching the style from images */}
+        {/* Product Mix Dashboard Header */}
         <Box mb={4}>
           <Typography 
             variant="h4" 
             component="h1" 
             sx={{ 
               fontWeight: 600,
-              color: 'rgb(9, 43, 117)', // Same blue color as in ProductMixDashboard
+              color: 'rgb(9, 43, 117)',
               fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
               mb: 2
             }}
@@ -873,7 +900,7 @@ export function ExcelImport() {
                     size="small"
                     onClick={() => {
                       setError('');
-                      dispatch({ type: 'excel/setError', payload: null });
+                      dispatch(setError(null));
                     }}
                   >
                     Dismiss
@@ -966,7 +993,7 @@ export function ExcelImport() {
                         </div>
                       </CleanCard>
 
-                      {/* Data Tables Section - FIXED: Now passes the correct handler */}
+                      {/* Data Tables Section */}
                       <CleanCard sx={{ p: 3, mb: 3 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                           <TableChartIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
@@ -978,7 +1005,7 @@ export function ExcelImport() {
                           tableData={reduxTableData}
                           viewMode="tabs"
                           activeTab={tableTab}
-                          onTabChange={handleTableTabChange} // FIXED: Now passes the correct handler
+                          onTabChange={handleTableTabChange}
                         />
                       </CleanCard>
 

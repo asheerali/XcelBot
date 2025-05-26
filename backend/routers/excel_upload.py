@@ -242,7 +242,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             # # print("i am here in excel upload printing start_date", start_date)
 
             # Process Excel file with optional filters
-            pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay, categories = process_sales_split_file(
+            pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay, categories, locations = process_sales_split_file(
                 excel_data, 
                 start_date=start_date,
                 end_date=end_date,
@@ -260,6 +260,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 "table5": salesByWeek.to_dict(orient='records'),
                 "table6": salesByDayOfWeek.to_dict(orient='records'),
                 "table7": salesByTimeOfDay.to_dict(orient='records'),
+                "locations": locations,
                 "categories": categories,
                 "dashboardName": "Sales Split",
                 "fileName": file_name,

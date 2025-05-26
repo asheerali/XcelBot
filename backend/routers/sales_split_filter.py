@@ -45,7 +45,7 @@ async def filter_excel_data(request: SalesSplitPmixUploadRequest = Body(...)):
         
         # fileName = "20250514_200147_midtown_east_dashboard2_template1.xlsx"
         file_location = os.path.join(UPLOAD_DIR, fileName)
-        pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay, categories = process_sales_split_file(
+        pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay, categories, locations = process_sales_split_file(
                 file_location, 
                 location=location_filter,
                 start_date=start_date,
@@ -62,12 +62,14 @@ async def filter_excel_data(request: SalesSplitPmixUploadRequest = Body(...)):
                 "table5": salesByWeek.to_dict(orient='records'),
                 "table6": salesByDayOfWeek.to_dict(orient='records'),
                 "table7": salesByTimeOfDay.to_dict(orient='records'),
+                "locations": locations,
                 "categories": categories,
                 "dashboardName": "Sales Split",
                 "fileName": request.fileName,
                 "data": f"{request.dashboard} Dashboard is not yet implemented."
             }
                         
+        print(f"Sales Split Dashboard: {sales_split_dashboard}")            
             # Return the properly structured response
         return sales_split_dashboard
         

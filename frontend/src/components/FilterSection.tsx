@@ -1,4 +1,4 @@
-// FilterSection.tsx - Updated with dynamic categories from Redux state
+// FilterSection.tsx - Fixed version without hook violations
 import React, { useState, useEffect, useRef } from 'react';
 import Grid from '@mui/material/Grid';
 import Button from '@mui/material/Button';
@@ -32,6 +32,9 @@ import { useAppDispatch, useAppSelector } from '../typedHooks';
 import { 
   selectSalesCategories, 
   selectAllCategories,
+  selectFinancialCategories,
+  selectSalesWideCategories,
+  selectProductMixCategories,
   updateSalesFilters
 } from '../store/excelSlice';
 
@@ -72,13 +75,16 @@ const FilterSection: React.FC<FilterSectionProps> = ({
 }) => {
   const dispatch = useAppDispatch();
   
-  // Get categories from Redux state based on dashboard type
+  // Get categories from Redux state based on dashboard type - ALL AT TOP LEVEL
   const salesCategories = useAppSelector(selectSalesCategories);
   const allCategories = useAppSelector(selectAllCategories);
+  const financialCategories = useAppSelector(selectFinancialCategories);
+  const salesWideCategories = useAppSelector(selectSalesWideCategories);
+  const productMixCategories = useAppSelector(selectProductMixCategories);
   const salesFilters = useAppSelector(state => state.excel.salesFilters);
   
-  // Determine which categories to use
-  const getCategoriesToUse = () => {
+  // Determine which categories to use - MOVED TO USEMEMO TO AVOID RECALCULATION
+  const availableCategories = React.useMemo(() => {
     if (categoriesOverride) {
       return categoriesOverride;
     }
@@ -87,20 +93,18 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       case 'Sales Split':
         return salesCategories.length > 0 ? salesCategories : [];
       case 'Financials':
-        return useAppSelector(state => state.excel.financialCategories);
+        return financialCategories.length > 0 ? financialCategories : [];
       case 'Sales Wide':
-        return useAppSelector(state => state.excel.salesWideCategories);
+        return salesWideCategories.length > 0 ? salesWideCategories : [];
       case 'Product Mix':
-        return useAppSelector(state => state.excel.productMixCategories);
+        return productMixCategories.length > 0 ? productMixCategories : [];
       default:
         return allCategories;
     }
-  };
-
-  const availableCategories = getCategoriesToUse();
+  }, [categoriesOverride, dashboardType, salesCategories, financialCategories, salesWideCategories, productMixCategories, allCategories]);
   
   // Filter out common non-category fields and system fields
-  const filterCategories = (categories: string[]) => {
+  const filterCategories = React.useCallback((categories: string[]) => {
     const excludeFields = [
       'dashboardName', 'fileLocation', 'data', 'uploadDate', 'fileName', 
       'location', 'locations', 'dateRanges', 'Week', 'week', 'Grand Total',
@@ -115,9 +119,12 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       !category.toLowerCase().includes('total') &&
       !category.toLowerCase().includes('grand')
     );
-  };
+  }, []);
 
-  const filteredCategories = filterCategories(availableCategories);
+  const filteredCategories = React.useMemo(() => 
+    filterCategories(availableCategories), 
+    [availableCategories, filterCategories]
+  );
   
   // State for category options and employees
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
@@ -165,6 +172,12 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       ? event.target.value.split(',') 
       : event.target.value;
     
+    console.log('🏷️ FilterSection: Category selection changed:', {
+      previousSelection: selectedCategories,
+      newSelection: value,
+      availableCategories: filteredCategories
+    });
+    
     setSelectedCategories(value);
     
     // Update Redux state
@@ -176,6 +189,12 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     const newSelection = selectedCategories.includes(category)
       ? selectedCategories.filter(item => item !== category)
       : [...selectedCategories, category];
+    
+    console.log('🔄 FilterSection: Category toggled:', {
+      category,
+      action: selectedCategories.includes(category) ? 'removed' : 'added',
+      newSelection
+    });
     
     setSelectedCategories(newSelection);
     dispatch(updateSalesFilters({ selectedCategories: newSelection }));
@@ -194,6 +213,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
 
   // Clear handlers
   const handleClearCategories = () => {
+    console.log('🧹 FilterSection: Clearing all categories');
     setSelectedCategories([]);
     dispatch(updateSalesFilters({ selectedCategories: [] }));
   };
@@ -204,6 +224,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
 
   // Select all categories
   const handleSelectAllCategories = () => {
+    console.log('✅ FilterSection: Selecting all categories:', filteredCategories);
     setSelectedCategories(filteredCategories);
     dispatch(updateSalesFilters({ selectedCategories: filteredCategories }));
   };
@@ -263,6 +284,15 @@ const FilterSection: React.FC<FilterSectionProps> = ({
 
   // Enhanced apply filters to include selected categories
   const handleApplyFilters = () => {
+    console.log('🎯 FilterSection: Applying filters with categories:', {
+      selectedCategories,
+      filteredCategories,
+      selectedLocation,
+      dateRangeType,
+      startDate,
+      endDate
+    });
+
     // Update Redux state with current selections
     dispatch(updateSalesFilters({ 
       selectedCategories: selectedCategories,
@@ -343,14 +373,14 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         {/* Categories Filter - Dynamic from backend */}
         <Grid item xs={12} sm={3}>
           <FormControl fullWidth sx={{ height: 80 }}>
-            <InputLabel id="category-select-label">Categories</InputLabel>
+            <InputLabel id="category-select-label">Dining Options</InputLabel>
             <Select
               labelId="category-select-label"
               id="category-select"
               multiple
               value={selectedCategories}
               onChange={handleCategoryChange}
-              label="Categories"
+              label="Dining Options"
               renderValue={(selected) => (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                   {selected.length > 2 ? (
@@ -379,7 +409,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
               {/* Divider */}
               <MenuItem disabled>
                 <Typography variant="caption" color="text.secondary">
-                  Available Categories:
+                  Available Dining Options:
                 </Typography>
               </MenuItem>
               
@@ -394,8 +424,8 @@ const FilterSection: React.FC<FilterSectionProps> = ({
               ) : (
                 <MenuItem disabled>
                   <ListItemText 
-                    primary="No categories available" 
-                    secondary="Upload a file to see categories"
+                    primary="No dining options available" 
+                    secondary="Upload a file to see available options"
                   />
                 </MenuItem>
               )}
@@ -452,7 +482,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
               {selectedCategories.map(category => (
                 <Chip
                   key={category}
-                  label={category}
+                  label={`${category} (Dining)`}
                   size="small"
                   onDelete={() => handleCategoryToggle(category)}
                   deleteIcon={<CloseIcon fontSize="small" />}
@@ -484,6 +514,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
             color="primary"
             onClick={handleApplyFilters}
             sx={{ mt: 1 }}
+            disabled={locations.length === 0}
           >
             Apply Filters ({selectedCategories.length + selectedEmployees.length} active)
           </Button>
