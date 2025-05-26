@@ -5,6 +5,7 @@ import {
   Legend, Tooltip
 } from 'recharts';
 import { Box, Typography, Card, CardContent, Grid } from '@mui/material';
+import { color } from '@mui/system';
 
 interface SalesSplitDashboardProps {
   tableData?: any;
@@ -374,7 +375,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
       {/* First row - Total Sales and Sales Category */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px' }}>
         {/* Total Sales (from Table1) */}
-        <div style={{ 
+        {/* <div style={{ 
           width: 'calc(50% - 12px)', 
           minWidth: '300px',
           flexGrow: 1,
@@ -385,7 +386,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
           transition: 'transform 0.3s ease, box-shadow 0.3s ease',
         }} className="stat-card">
           <div style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '16px', color: '#333' }}>
-            Total Sales (Table1)
+            Total Sales
           </div>
           <div style={{ height: '250px' }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -417,7 +418,76 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
           <div style={{ fontSize: '22px', fontWeight: '600', marginTop: '8px', color: '#4D8D8D' }}>
             ${totalSalesValue.toFixed(1)}k
           </div>
-        </div>
+        </div> */}
+<div style={{ 
+  width: 'calc(50% - 12px)', 
+  minWidth: '300px',
+  flexGrow: 1,
+  padding: '24px', 
+  borderRadius: '12px',
+  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+  backgroundColor: 'white',
+  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center'
+}} className="stat-card">
+  <div style={{ 
+    fontSize: '24px', 
+    fontWeight: 'bold', 
+    marginBottom: '16px', 
+    color: '#333',
+    textAlign: 'left',
+    width: '100%'
+  }}>
+    Total Sales
+  </div>
+  
+  {/* Chart container */}
+  <div style={{ 
+    height: '250px', 
+    width: '100%',
+    marginBottom: '20px'
+  }}>
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart
+        data={chartData.totalSalesData}
+        margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+      >
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.1)" />
+        <XAxis dataKey="week" axisLine={false} tickLine={false} />
+        <YAxis axisLine={false} tickLine={false} />
+        <Tooltip 
+          formatter={(value) => [`${value}k`, 'Sales']}
+          contentStyle={{ 
+            borderRadius: 8, 
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            border: 'none' 
+          }} 
+        />
+        <Bar 
+          dataKey="sales" 
+          fill="#4D8D8D" 
+          barSize={30} 
+          radius={[4, 4, 0, 0]}
+          animationDuration={1500}
+        />
+      </BarChart>
+    </ResponsiveContainer>
+  </div>
+  
+  {/* Large centered total value below the chart */}
+  <div style={{ 
+    fontSize: '48px', 
+    fontWeight: '700', 
+    color: '#4D8D8D',
+    textAlign: 'center',
+    lineHeight: '4.1',
+    width: '100%'
+  }}>
+    <span style={{color: "black"} }>Sales : </span> ${totalSalesValue.toFixed(1)}k
+  </div>
+</div>
 
         {/* Sales Category (from Table1) */}
         <div style={{ 
@@ -431,7 +501,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
           transition: 'transform 0.3s ease, box-shadow 0.3s ease',
         }} className="stat-card">
           <div style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '16px', color: '#333' }}>
-            Sales Category (Table1)
+            Sales Category
           </div>
           <div style={{ height: '250px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {chartData.categoryData.length > 0 ? (
@@ -479,7 +549,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
           transition: 'transform 0.3s ease, box-shadow 0.3s ease',
         }} className="stat-card">
           <div style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '16px', color: '#333' }}>
-            In-House Analysis (Table3)
+            In-House Analysis 
           </div>
           <div style={{ height: '250px' }}>
             {chartData.inHousePercentData.length > 0 ? (
@@ -533,7 +603,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
           transition: 'transform 0.3s ease, box-shadow 0.3s ease',
         }} className="stat-card">
           <div style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '16px', color: '#333' }}>
-            In-House % of Total (Table1)
+            In-House % of Total
           </div>
           <div style={{ height: '250px' }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -604,7 +674,8 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
           transition: 'transform 0.3s ease, box-shadow 0.3s ease',
         }} className="stat-card">
           <div style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '16px', color: '#333' }}>
-            Week-over-Week Trends ({chartData.availableColumns.table2.length > 0 ? 'Table2' : 'Table4'})
+            Week-over-Week Trends 
+            {/* ({chartData.availableColumns.table2.length > 0 ? 'Table2' : 'Table4'}) */}
           </div>
           <div style={{ height: '300px', overflow: 'auto' }}>
             <ResponsiveContainer width="100%" height="100%">

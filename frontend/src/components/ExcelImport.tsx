@@ -790,10 +790,10 @@ export function ExcelImport() {
           🎉 Welcome to the Sales Analyzer!
         </Typography>
         <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
-          <strong>📊 Overview</strong>: Interactive dashboard overview<br />
-          <strong>📈 Detailed Analysis</strong>: Advanced sales insights<br />
+          <strong>Overview</strong>: Interactive dashboard overview<br />
+          <strong>Detailed Analysis</strong>: Advanced sales insights<br />
           <br />
-          💡 <strong>Tip:</strong> Use the filters to analyze specific time periods and locations!
+          <strong>Tip:</strong> Use the filters to analyze specific time periods and locations!
         </Typography>
       </Alert>
     </Snackbar>
@@ -885,7 +885,7 @@ export function ExcelImport() {
               mb: 2
             }}
           >
-            Product Mix Dashboard
+            Sales Split Dashboard
           </Typography>
           <Typography variant="subtitle1" color="text.secondary">
             {files.length > 0
@@ -930,10 +930,10 @@ export function ExcelImport() {
                   <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
                     <Box>
                       <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                        📈 Data Sources Active
+                        Data Sources Active
                       </Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        📂 Current: {fileName || 'None selected'}
+                        Current: {fileName || 'None selected'}
                         {selectedLocation && ` • 📍 ${selectedLocation}`}
                       </Typography>
                     </Box>
@@ -1057,7 +1057,7 @@ export function ExcelImport() {
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                         <InsightsIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
                         <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                          🔍 Detailed Analysis
+                          Detailed Analysis
                         </Typography>
                       </Box>
 
@@ -1066,7 +1066,7 @@ export function ExcelImport() {
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                           <AnalyticsIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
                           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                            📊 Sales Analytics {selectedLocation ? `for ${selectedLocation}` : ''}
+                            Sales Analytics {selectedLocation ? `for ${selectedLocation}` : ''}
                           </Typography>
                         </Box>
                         <Divider sx={{ mb: 3 }} />
@@ -1086,7 +1086,7 @@ export function ExcelImport() {
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                           <TableChartIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
                           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                            📋 Data Tables
+                            Data Tables
                           </Typography>
                         </Box>
                         <TableDisplay 
@@ -1099,7 +1099,7 @@ export function ExcelImport() {
 
                       {/* FIXED: Detailed Charts Grid with improved layout and responsive heights */}
                       <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#374151' }}>
-                        📈 Detailed Charts
+                        Detailed Charts
                       </Typography>
                       
                       {/* FIXED: Grid layout with proper spacing and responsive design */}
@@ -1171,7 +1171,7 @@ export function ExcelImport() {
                 ) : (
                   <Box sx={{ textAlign: 'center', py: 6 }}>
                     <Typography variant="h6" color="text.secondary" gutterBottom>
-                      📊 No detailed data available
+                      No detailed data available
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Upload files to see detailed analysis
