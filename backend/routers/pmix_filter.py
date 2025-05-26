@@ -35,10 +35,10 @@ async def upload_excel(request: SalesSplitPmixUploadRequest = Body(...)):
     try:
         # print(f"Received file upload: {request.fileName}")
         
-        fileName = request.fileName
+       
         # fileName = "20250514_200147_midtown_east_dashboard2_template1.xlsx"
         file_location = os.path.join(UPLOAD_DIR, fileName)
-
+        fileName = request.fileName
         location_filter = request.location if request.location else 'All'
         start_date = request.startDate if request.startDate else None
         end_date = request.endDate if request.endDate else None
