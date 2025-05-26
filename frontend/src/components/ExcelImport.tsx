@@ -52,6 +52,8 @@ import WowTrendsChart from './graphs/WowTrendsChart';
 import PercentageFirstThirdPartyChart from './graphs/PercentageFirstThirdPartyChart';
 import SalesDashboard from './SalesDashboard';
 import SalesSplitDashboard from './SalesSplitDashboard';
+import { API_URL_Local } from '../constants';
+
 
 // Import Redux hooks and actions with proper error handling
 import { useAppDispatch, useAppSelector } from '../typedHooks';
@@ -239,8 +241,11 @@ const ModernLoader = () => (
 );
 
 // API base URLs
-const API_URL = 'http://localhost:8000/api/excel/upload';
-const FILTER_API_URL = 'http://localhost:8000/api/salessplit/filter';
+// const API_URL = 'http://localhost:8000/api/excel/upload';
+const API_URL = API_URL_Local + '/api/excel/upload';
+
+// const FILTER_API_URL = 'http://localhost:8000/api/salessplit/filter';
+const FILTER_API_URL = API_URL_Local + '/api/salessplit/filter';
 
 // Tab Panel Component
 interface TabPanelProps {

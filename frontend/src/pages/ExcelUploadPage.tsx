@@ -64,9 +64,12 @@ import {
   addSalesWideData,
   addProductMixData  // Added for Product Mix dashboard
 } from '../store/excelSlice';
+import { API_URL_Local } from '../constants';
+
 
 // API URL for Excel upload
-const API_URL = 'http://localhost:8000/api/excel/upload';
+// const API_URL = 'http://localhost:8000/api/excel/upload';
+const API_URL = API_URL_Local + '/api/excel/upload';
 
 // Styled component for the drop zone
 const DropZone = styled(Paper)(({ theme }) => ({
