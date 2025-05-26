@@ -137,7 +137,10 @@ def overview_tables(df, location_filter='All', start_date=None, end_date=None  ,
     
     # Round sales values to 2 decimal places
     sales_by_server['Sales'] = sales_by_server['Sales'].round(2)
-    
+        
+    # Get top 5 servers by sales
+    sales_by_server = sales_by_server.sort_values(by='Sales', ascending=False).head(5)
+    # If there are less than 5 servers, fill the rest with empty rows    
     # -------------------------------------------------------
     # 5. Top Selling Items
     # -------------------------------------------------------

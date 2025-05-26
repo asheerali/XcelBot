@@ -54,7 +54,7 @@ import MenuAnalysisDashboardtwo from "../components/MenuAnalysisDashboardtwo";
 import { useAppDispatch, useAppSelector } from "../typedHooks";
 import {
   selectProductMixLocation,
-  updateProductMixFilters
+  updateProductMixFilters,
 } from "../store/excelSlice";
 
 // TabPanel Component
@@ -353,21 +353,38 @@ export default function ProductMixDashboard() {
     productMixFiles,
     productMixLocations,
     currentProductMixLocation,
-    productMixFilters
+    productMixFilters,
   } = useAppSelector((state) => state.excel);
 
   // Find current data for the selected location
-  const currentProductMixData = productMixFiles.find(f => f.location === currentProductMixLocation)?.data;
+  const currentProductMixData = productMixFiles.find(
+    (f) => f.location === currentProductMixLocation
+  )?.data;
 
   // State variables
   const [tabValue, setTabValue] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
   // Extract filter options from actual data
-  const locations = productMixLocations.length > 0 ? productMixLocations : ['No locations available'];
-  const servers = currentProductMixData?.servers?.filter(server => !server.includes('DO NOT CHANGE')) || ['No servers available'];
-  const categories = currentProductMixData?.categories || ['In-House', 'DD', '1P', 'GH', 'Catering', 'UB', 'Others'];
-  const menuItems = currentProductMixData?.table7?.map(item => item['Menu Item']).filter(Boolean) || ['No menu items available'];
+  const locations =
+    productMixLocations.length > 0
+      ? productMixLocations
+      : ["No locations available"];
+  const servers = currentProductMixData?.servers?.filter(
+    (server) => !server.includes("DO NOT CHANGE")
+  ) || ["No servers available"];
+  const categories = currentProductMixData?.categories || [
+    "In-House",
+    "DD",
+    "1P",
+    "GH",
+    "Catering",
+    "UB",
+    "Others",
+  ];
+  const menuItems = currentProductMixData?.table7
+    ?.map((item) => item["Menu Item"])
+    .filter(Boolean) || ["No menu items available"];
 
   // Date ranges - you can customize these based on your needs
   const DATE_RANGES = [
@@ -380,7 +397,9 @@ export default function ProductMixDashboard() {
   ];
 
   // Filter states using multiselect arrays - Initialize with actual data
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([currentProductMixLocation || locations[0]]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([
+    currentProductMixLocation || locations[0],
+  ]);
   const [dateRanges, setDateRanges] = useState<string[]>([DATE_RANGES[1]]);
   const [selectedServers, setSelectedServers] = useState<string[]>([]);
   const [selectedMenuItems, setSelectedMenuItems] = useState<string[]>([]);
@@ -388,7 +407,10 @@ export default function ProductMixDashboard() {
 
   // Update selected locations when currentProductMixLocation changes
   useEffect(() => {
-    if (currentProductMixLocation && !selectedLocations.includes(currentProductMixLocation)) {
+    if (
+      currentProductMixLocation &&
+      !selectedLocations.includes(currentProductMixLocation)
+    ) {
       setSelectedLocations([currentProductMixLocation]);
     }
   }, [currentProductMixLocation, selectedLocations]);
@@ -405,22 +427,22 @@ export default function ProductMixDashboard() {
 
   const handleDateRangeChange = (newValue: string[]) => {
     setDateRanges(newValue);
-    dispatch(updateProductMixFilters({ dateRange: newValue[0] || '' }));
+    dispatch(updateProductMixFilters({ dateRange: newValue[0] || "" }));
   };
 
   const handleServerChange = (newValue: string[]) => {
     setSelectedServers(newValue);
-    dispatch(updateProductMixFilters({ server: newValue.join(',') }));
+    dispatch(updateProductMixFilters({ server: newValue.join(",") }));
   };
 
   const handleMenuItemChange = (newValue: string[]) => {
     setSelectedMenuItems(newValue);
-    dispatch(updateProductMixFilters({ menuItem: newValue.join(',') }));
+    dispatch(updateProductMixFilters({ menuItem: newValue.join(",") }));
   };
 
   const handleCategoryChange = (newValue: string[]) => {
     setSelectedCategories(newValue);
-    dispatch(updateProductMixFilters({ category: newValue.join(',') }));
+    dispatch(updateProductMixFilters({ category: newValue.join(",") }));
   };
 
   // Handle tab change
@@ -509,7 +531,8 @@ export default function ProductMixDashboard() {
       {/* Alert message when no data is available */}
       {!currentProductMixData && (
         <Alert severity="info" sx={{ mb: 3 }}>
-          No Product Mix data available. Please upload files with "Product Mix" dashboard type from the Excel Upload page.
+          No Product Mix data available. Please upload files with "Product Mix"
+          dashboard type from the Excel Upload page.
         </Alert>
       )}
 
@@ -517,11 +540,16 @@ export default function ProductMixDashboard() {
       {currentProductMixData && (
         <Alert severity="success" sx={{ mb: 3 }}>
           <Typography variant="body2">
-            <strong>Data loaded:</strong> {currentProductMixData.fileName} | 
-            <strong> Location:</strong> {currentProductMixLocation} | 
-            <strong> Net Sales:</strong> ${(currentProductMixData.table1?.[0]?.net_sales?.[0] || 0).toLocaleString()} | 
-            <strong> Orders:</strong> {currentProductMixData.table1?.[0]?.orders?.[0] || 0} | 
-            <strong> Items Sold:</strong> {currentProductMixData.table1?.[0]?.qty_sold?.[0] || 0}
+            <strong>Data loaded:</strong> {currentProductMixData.fileName} |
+            <strong> Location:</strong> {currentProductMixLocation} |
+            <strong> Net Sales:</strong> $
+            {(
+              currentProductMixData.table1?.[0]?.net_sales?.[0] || 0
+            ).toLocaleString()}{" "}
+            |<strong> Orders:</strong>{" "}
+            {currentProductMixData.table1?.[0]?.orders?.[0] || 0} |
+            <strong> Items Sold:</strong>{" "}
+            {currentProductMixData.table1?.[0]?.qty_sold?.[0] || 0}
           </Typography>
         </Alert>
       )}
@@ -588,6 +616,18 @@ export default function ProductMixDashboard() {
               />
             </Grid>
 
+            {/* Category filter */}
+            <Grid item {...gridSizes}>
+              <MultiSelect
+                id="category-select"
+                label="Category"
+                options={categories}
+                value={selectedCategories}
+                onChange={handleCategoryChange}
+                icon={<FastfoodIcon />}
+                placeholder="Select categories"
+              />
+            </Grid>
             {/* Server/Menu filter - conditional based on tab */}
             <Grid item {...gridSizes}>
               {tabValue === 0 ? (
@@ -601,29 +641,19 @@ export default function ProductMixDashboard() {
                   placeholder="Select servers"
                 />
               ) : (
-                <MultiSelect
-                  id="menu-item-select"
-                  label="Menu Item"
-                  options={menuItems}
-                  value={selectedMenuItems}
-                  onChange={handleMenuItemChange}
-                  icon={<RestaurantMenuIcon />}
-                  placeholder="Select menu items"
-                />
+                // (
+                //   <MultiSelect
+                //     id="menu-item-select"
+                //     label="Menu Item"
+                //     options={menuItems}
+                //     value={selectedMenuItems}
+                //     onChange={handleMenuItemChange}
+                //     icon={<RestaurantMenuIcon />}
+                //     placeholder="Select menu items"
+                //   />
+                // )
+                <></>
               )}
-            </Grid>
-
-            {/* Category filter */}
-            <Grid item {...gridSizes}>
-              <MultiSelect
-                id="category-select"
-                label="Category"
-                options={categories}
-                value={selectedCategories}
-                onChange={handleCategoryChange}
-                icon={<FastfoodIcon />}
-                placeholder="Select categories"
-              />
             </Grid>
           </Grid>
 
@@ -722,7 +752,10 @@ export default function ProductMixDashboard() {
       {currentProductMixData && (
         <>
           {/* Tabs */}
-          <Card sx={{ borderRadius: 2, mb: 3, overflow: "hidden" }} elevation={3}>
+          <Card
+            sx={{ borderRadius: 2, mb: 3, overflow: "hidden" }}
+            elevation={3}
+          >
             <Tabs
               value={tabValue}
               onChange={handleTabChange}
@@ -758,7 +791,9 @@ export default function ProductMixDashboard() {
             {/* Menu Analysis Tab */}
             <TabPanel value={tabValue} index={1}>
               <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
-                <MenuAnalysisDashboardtwo productMixData={currentProductMixData} />
+                <MenuAnalysisDashboardtwo
+                  productMixData={currentProductMixData}
+                />
               </Box>
             </TabPanel>
           </Card>
@@ -768,10 +803,9 @@ export default function ProductMixDashboard() {
       {/* Show message if no data available */}
       {!currentProductMixData && productMixFiles.length === 0 && (
         <Card sx={{ borderRadius: 2, mb: 3, p: 3 }}>
-         
-          <Button 
-            variant="contained" 
-            color="primary" 
+          <Button
+            variant="contained"
+            color="primary"
             sx={{ mt: 2 }}
             href="/upload-excel"
           >

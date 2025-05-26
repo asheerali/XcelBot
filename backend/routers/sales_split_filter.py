@@ -37,7 +37,10 @@ async def filter_excel_data(request: SalesSplitPmixUploadRequest = Body(...)):
         
         fileName = request.fileName
         print(f"Processing file: {request}")
-        location_filter = request.location if request.location else 'All'
+        if request.location == "Multiple Locations":
+            location_filter = "All"
+        else:
+            location_filter = request.location if request.location else 'All'
         start_date = request.startDate if request.startDate else None
         end_date = request.endDate if request.endDate else None
         server_filter = request.server if request.server else 'All'
