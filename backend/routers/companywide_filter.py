@@ -6,14 +6,15 @@ import traceback
 # Import from local modules
 from models import FinancialCompanyWideUploadRequest, ExcelUploadResponse , DashboardResponse
 from companywide_dashboard.companywide_processor import process_companywide_file
+from constants import UPLOAD_DIR
 
 router = APIRouter(
     prefix="/api",
     tags=["companywide_filter"],
 )
 
-UPLOAD_DIR = "./uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+# UPLOAD_DIR = "./uploads"
+# os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 # Upload endpoint

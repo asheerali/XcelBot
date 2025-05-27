@@ -16,10 +16,11 @@ from utils import find_file_in_directory
 from sales_analytics import generate_sales_analytics
 from financials_dashboard.financials_processor import process_financials_file
 from sales_split_dashboard.sales_split_prcoessor import process_sales_split_file
+from constants import UPLOAD_DIR
 
 # Directory to save uploaded files
-UPLOAD_DIR = "./uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+# UPLOAD_DIR = "./uploads"
+# os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 router = APIRouter(
     prefix="/api",

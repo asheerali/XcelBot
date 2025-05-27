@@ -19,6 +19,7 @@ from financials_dashboard.financials_processor import process_financials_file
 from companywide_dashboard.companywide_processor import process_companywide_file
 from pmix_dashboard.pmix_processor import process_pmix_file
 from sales_split_dashboard.sales_split_prcoessor import process_sales_split_file
+from  constants import UPLOAD_DIR
 
 
 router = APIRouter(
@@ -26,7 +27,7 @@ router = APIRouter(
     tags=["excel_upload"],
 )
 
-UPLOAD_DIR = "./uploads"
+# UPLOAD_DIR = "./uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 

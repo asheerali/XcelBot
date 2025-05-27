@@ -15,14 +15,15 @@ from utils import find_file_in_directory
 from sales_analytics import generate_sales_analytics
 
 from pmix_dashboard.pmix_processor import process_pmix_file
+from constants import UPLOAD_DIR
 
 router = APIRouter(
     prefix="/api",
     tags=["pmix_filter"],
 )
 
-UPLOAD_DIR = "./uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+# UPLOAD_DIR = "./uploads"
+# os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 # Upload endpoint
