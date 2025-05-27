@@ -18,7 +18,7 @@ from financials_dashboard.financials_processor import process_financials_file
 from sales_split_dashboard.sales_split_prcoessor import process_sales_split_file
 
 # Directory to save uploaded files
-UPLOAD_DIR = "../uploads"
+UPLOAD_DIR = "./uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 router = APIRouter(

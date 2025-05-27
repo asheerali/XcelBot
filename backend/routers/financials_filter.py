@@ -12,7 +12,7 @@ router = APIRouter(
     tags=["financials_filter"],
 )
 
-UPLOAD_DIR = "../uploads"
+UPLOAD_DIR = "./uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
@@ -24,7 +24,7 @@ async def upload_excel(request: FinancialCompanyWideUploadRequest = Body(...)):
     Supports optional date range and location filtering.
     """
     try:
-        # print(f"Received file upload: {request.fileName}")
+        print(f"Received request for the financials filter:", request)
         
         fileName = request.fileName
         # fileName = "20250514_200147_midtown_east_dashboard2_template1.xlsx"

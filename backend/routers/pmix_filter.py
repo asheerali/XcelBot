@@ -21,7 +21,7 @@ router = APIRouter(
     tags=["pmix_filter"],
 )
 
-UPLOAD_DIR = "../uploads"
+UPLOAD_DIR = "./uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
