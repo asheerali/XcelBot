@@ -40,6 +40,8 @@ async def upload_excel(request: FinancialCompanyWideUploadRequest = Body(...)):
         # location = request.location if request.location else "All"
         start_date = request.startDate if request.startDate else None
         end_date = request.endDate if request.endDate else None
+        
+        print("this is the year", year)
 
 
         financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table, years, dates, stores  = process_financials_file(
@@ -47,6 +49,8 @@ async def upload_excel(request: FinancialCompanyWideUploadRequest = Body(...)):
                 year=year, 
                 week_range=week_range, 
                 location=location_filter, 
+                start_date=start_date,
+                end_date=end_date
                 )
             
         financials_result = {
