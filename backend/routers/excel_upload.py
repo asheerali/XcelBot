@@ -302,7 +302,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 status_code=400,
                 detail=f"You uploaded the file in the wrong dashboard i.e. ({request.dashboard}) or the file is not properly structured. Please check the help center for more details."
             )
-        
+
         # Raise HTTP exception
         raise HTTPException(status_code=500, detail=f"Error processing file: {error_message}")
 

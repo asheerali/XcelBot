@@ -1,4 +1,4 @@
-// src/pages/Financials.tsx - Updated with DateRangeSelector and backend integration
+// src/pages/Financials.tsx - Updated with DateRangeSelector matching FilterSection pattern
 
 import React, { useState, useEffect } from 'react';
 import Box from '@mui/material/Box';
@@ -29,6 +29,7 @@ import Divider from '@mui/material/Divider';
 import Popover from '@mui/material/Popover';
 import MenuList from '@mui/material/MenuList';
 import CircularProgress from '@mui/material/CircularProgress';
+import { format } from 'date-fns';
 
 // Import axios for API calls
 import axios from 'axios';
@@ -325,142 +326,6 @@ const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
   );
 };
 
-// Date Range Selector Component
-interface DateRangeSelectorComponentProps {
-  label: string;
-  onDateRangeSelect: (dateRange: any) => void;
-}
-
-const DateRangeSelectorComponent: React.FC<DateRangeSelectorComponentProps> = ({
-  label,
-  onDateRangeSelect
-}) => {
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedRange, setSelectedRange] = useState<string>('Select date range');
-  const open = Boolean(anchorEl);
-
-  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleDateRangeSelect = (range: any) => {
-    // Format the display text
-    const startDate = range.startDate.toLocaleDateString();
-    const endDate = range.endDate.toLocaleDateString();
-    setSelectedRange(`${startDate} - ${endDate}`);
-    
-    // Pass the range to parent
-    onDateRangeSelect(range);
-    
-    // Close the popover
-    handleClose();
-  };
-
-  const handleClear = (event: React.MouseEvent) => {
-    event.stopPropagation();
-    setSelectedRange('Select date range');
-    onDateRangeSelect(null);
-  };
-
-  return (
-    <Box sx={{ position: 'relative', width: '100%' }}>
-      <Typography 
-        variant="body2" 
-        sx={{ 
-          mb: 1, 
-          color: '#666',
-          fontSize: '0.875rem',
-          fontWeight: 500
-        }}
-      >
-        {label}
-      </Typography>
-      
-      <Box
-        onClick={handleClick}
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          border: '2px solid #e0e0e0',
-          borderRadius: '8px',
-          padding: '12px 16px',
-          cursor: 'pointer',
-          backgroundColor: '#fff',
-          minHeight: '48px',
-          position: 'relative',
-          '&:hover': {
-            borderColor: '#1976d2',
-          }
-        }}
-      >
-        <Box sx={{ color: '#1976d2', mr: 1.5, display: 'flex', alignItems: 'center' }}>
-          <CalendarTodayIcon />
-        </Box>
-        
-        <Typography 
-          variant="body1" 
-          sx={{ 
-            flexGrow: 1,
-            color: selectedRange === 'Select date range' ? '#999' : '#333',
-            fontSize: '0.95rem'
-          }}
-        >
-          {selectedRange}
-        </Typography>
-        
-        {selectedRange !== 'Select date range' && (
-          <IconButton
-            size="small"
-            onClick={handleClear}
-            sx={{
-              width: 20,
-              height: 20,
-              backgroundColor: '#666',
-              color: 'white',
-              fontSize: '12px',
-              mr: 1,
-              '&:hover': {
-                backgroundColor: '#333',
-              }
-            }}
-          >
-            <CloseIcon sx={{ fontSize: '12px' }} />
-          </IconButton>
-        )}
-        
-        <SearchIcon sx={{ color: '#666', fontSize: '1.2rem' }} />
-      </Box>
-
-      <Popover
-        open={open}
-        anchorEl={anchorEl}
-        onClose={handleClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
-        }}
-        PaperProps={{
-          sx: {
-            mt: 1,
-            borderRadius: 2,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-          }
-        }}
-      >
-        <DateRangeSelector onSelect={handleDateRangeSelect} />
-      </Popover>
-    </Box>
-  );
-};
-
 // Helper functions remain the same
 const extractFinancialMetrics = (table5Data: any[]) => {
   if (!table5Data || table5Data.length === 0) return [];
@@ -525,9 +390,24 @@ export function Financials() {
   const [tabValue, setTabValue] = useState(0);
   const [statsData, setStatsData] = useState([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([currentFinancialLocation || '']);
-  const [selectedDateRange, setSelectedDateRange] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [filterError, setFilterError] = useState<string>('');
+  
+  // Date range state - matching FilterSection pattern
+  const DEFAULT_START_DATE = new Date(2010, 0, 1); // January 1, 2010
+  const DEFAULT_END_DATE = new Date(2025, 0, 1);   // January 1, 2025
+  
+  const [localStartDate, setLocalStartDate] = useState<string>(
+    format(DEFAULT_START_DATE, 'MM/dd/yyyy')
+  );
+  const [localEndDate, setLocalEndDate] = useState<string>(
+    format(DEFAULT_END_DATE, 'MM/dd/yyyy')
+  );
+  const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
+  const [selectedRange, setSelectedRange] = useState({
+    startDate: DEFAULT_START_DATE,
+    endDate: DEFAULT_END_DATE,
+  });
   
   // Current table data from Redux or from current financial data
   const [currentTableData, setCurrentTableData] = useState<any>({
@@ -568,8 +448,47 @@ export function Financials() {
     setSelectedLocations(newLocations);
   };
 
-  const handleDateRangeSelect = (dateRange: any) => {
-    setSelectedDateRange(dateRange);
+  // Date range handling - matching FilterSection pattern
+  const openDateRangePicker = () => {
+    setIsDateRangeOpen(true);
+  };
+
+  const handleDateRangeSelect = (range: any) => {
+    setSelectedRange(range);
+  };
+
+  const applyDateRange = () => {
+    const formattedStartDate = format(selectedRange.startDate, 'MM/dd/yyyy');
+    const formattedEndDate = format(selectedRange.endDate, 'MM/dd/yyyy');
+    
+    console.log('📅 Financials: Setting date range locally:', {
+      startDate: formattedStartDate,
+      endDate: formattedEndDate
+    });
+    
+    // Update local state only
+    setLocalStartDate(formattedStartDate);
+    setLocalEndDate(formattedEndDate);
+    
+    // Update Redux state for persistence
+    dispatch(updateFinancialFilters({ 
+      dateRange: `${formattedStartDate} - ${formattedEndDate}`
+    }));
+    
+    setIsDateRangeOpen(false);
+    
+    console.log('📅 Date range set. User must click "Apply Filters" to send to backend.');
+  };
+
+  // Format display date
+  const formatDisplayDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      return format(date, 'MMM dd, yyyy');
+    } catch (e) {
+      return dateStr;
+    }
   };
 
   // Apply filters with backend API call
@@ -590,8 +509,8 @@ export function Financials() {
         fileName: currentFile.fileName,
         fileContent: currentFile.fileContent,
         location: selectedLocations[0] || '',
-        startDate: selectedDateRange?.startDateStr || null,
-        endDate: selectedDateRange?.endDateStr || null,
+        startDate: localStartDate,
+        endDate: localEndDate,
         dashboard: 'Financials'
       };
 
@@ -617,7 +536,7 @@ export function Financials() {
         // Update Redux filters
         dispatch(updateFinancialFilters({ 
           store: selectedLocations[0],
-          dateRange: selectedDateRange ? `${selectedDateRange.startDateStr} - ${selectedDateRange.endDateStr}` : ''
+          dateRange: `${localStartDate} - ${localEndDate}`
         }));
 
         // Update current location if changed
@@ -773,7 +692,7 @@ export function Financials() {
         </Alert>
       )}
 
-      {/* Filter Card - Updated with DateRangeSelector */}
+      {/* Filter Card - Updated with DateRangeSelector matching FilterSection */}
       <Card 
         elevation={2} 
         sx={{ 
@@ -837,7 +756,7 @@ export function Financials() {
             </Button>
           </Box>
 
-          {/* Filter Inputs Row - Updated with DateRangeSelector */}
+          {/* Filter Inputs Row - Updated with DateRangeSelector matching FilterSection */}
           <Grid container spacing={3} sx={{ mb: 2 }}>
             {/* Location Filter */}
             <Grid item xs={12} md={6}>
@@ -852,12 +771,44 @@ export function Financials() {
               />
             </Grid>
 
-            {/* Date Range Filter - Updated to use DateRangeSelector */}
+            {/* Date Range Button - Updated to match FilterSection pattern */}
             <Grid item xs={12} md={6}>
-              <DateRangeSelectorComponent
-                label="Date Range"
-                onDateRangeSelect={handleDateRangeSelect}
-              />
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  mb: 1, 
+                  color: '#666',
+                  fontSize: '0.875rem',
+                  fontWeight: 500
+                }}
+              >
+                Date Range
+              </Typography>
+              <Button
+                variant="outlined"
+                onClick={openDateRangePicker}
+                startIcon={<CalendarTodayIcon />}
+                fullWidth
+                sx={{ 
+                  height: 48, 
+                  justifyContent: 'flex-start',
+                  textTransform: 'none',
+                  borderColor: '#e0e0e0',
+                  borderWidth: '2px',
+                  color: 'text.primary',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  '&:hover': {
+                    borderColor: '#1976d2',
+                  }
+                }}
+              >
+                <Box sx={{ textAlign: 'left', flexGrow: 1 }}>
+                  <Typography variant="body1" component="div" sx={{ fontSize: '0.95rem' }}>
+                    {formatDisplayDate(localStartDate)} - {formatDisplayDate(localEndDate)}
+                  </Typography>
+                </Box>
+              </Button>
             </Grid>
           </Grid>
 
@@ -876,7 +827,7 @@ export function Financials() {
                 deleteIcon={<CloseIcon sx={{ fontSize: '1rem' }} />}
                 sx={{
                   borderRadius: '20px',
-                  height: '21px',
+                  height: '32px',
                   fontSize: '0.875rem',
                   '& .MuiChip-icon': {
                     fontSize: '1rem'
@@ -885,30 +836,25 @@ export function Financials() {
               />
             )}
             
-            {selectedDateRange && (
-              <Chip
-                icon={<CalendarTodayIcon sx={{ fontSize: '1rem' }} />}
-                label={`Date Range: ${selectedDateRange.startDate.toLocaleDateString()} - ${selectedDateRange.endDate.toLocaleDateString()}`}
-                onDelete={() => setSelectedDateRange(null)}
-                sx={{
-                  borderRadius: '20px',
-                  height: '32px',
-                  fontSize: '0.875rem',
-                  backgroundColor: '#e8d5f2',
-                  color: '#7b1fa2',
-                  border: '1px solid #ce93d8',
-                  '& .MuiChip-icon': {
-                    color: '#7b1fa2',
-                    fontSize: '1rem'
-                  },
-                  '& .MuiChip-deleteIcon': {
-                    color: '#7b1fa2',
-                    fontSize: '1rem'
-                  }
-                }}
-                deleteIcon={<CloseIcon sx={{ fontSize: '1rem' }} />}
-              />
-            )}
+            <Chip
+              icon={<CalendarTodayIcon sx={{ fontSize: '1rem' }} />}
+              label={`Date Range: ${formatDisplayDate(localStartDate)} - ${formatDisplayDate(localEndDate)}`}
+              onDelete={() => {
+                setLocalStartDate(format(DEFAULT_START_DATE, 'MM/dd/yyyy'));
+                setLocalEndDate(format(DEFAULT_END_DATE, 'MM/dd/yyyy'));
+              }}
+              color="secondary"
+              variant="outlined"
+              deleteIcon={<CloseIcon sx={{ fontSize: '1rem' }} />}
+              sx={{
+                borderRadius: '20px',
+                height: '32px',
+                fontSize: '0.875rem',
+                '& .MuiChip-icon': {
+                  fontSize: '1rem'
+                }
+              }}
+            />
           </Box>
         </CardContent>
       </Card>
@@ -920,12 +866,8 @@ export function Financials() {
             <strong>Data loaded:</strong> {currentFinancialData.fileName} | 
             <strong> Location:</strong> {currentFinancialLocation} | 
             <strong> Metrics:</strong> {table5Data.length} available
-            {selectedDateRange && (
-              <>
-                {' | '}
-                <strong> Date Range:</strong> {selectedDateRange.startDate.toLocaleDateString()} - {selectedDateRange.endDate.toLocaleDateString()}
-              </>
-            )}
+            {' | '}
+            <strong> Date Range:</strong> {formatDisplayDate(localStartDate)} - {formatDisplayDate(localEndDate)}
           </Typography>
         </Alert>
       )}
@@ -1195,6 +1137,34 @@ export function Financials() {
           </Box>
         </TabPanel>
       </Card>
+
+      {/* Date Range Picker Dialog - Added to match FilterSection */}
+      <Dialog
+        open={isDateRangeOpen}
+        onClose={() => setIsDateRangeOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>Select Date Range</DialogTitle>
+        <DialogContent>
+          <DateRangeSelector
+            initialState={[
+              {
+                startDate: selectedRange.startDate,
+                endDate: selectedRange.endDate,
+                key: 'selection'
+              }
+            ]}
+            onSelect={handleDateRangeSelect}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsDateRangeOpen(false)}>Cancel</Button>
+          <Button onClick={applyDateRange} variant="contained" color="primary">
+            Set Date Range
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
