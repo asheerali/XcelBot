@@ -26,6 +26,7 @@ import PaymentIcon from '@mui/icons-material/Payment';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import BarChartIcon from '@mui/icons-material/BarChart';
+import LogoutIcon from '@mui/icons-material/Logout';
 
 const drawerWidth = 260;
 const gradientBackground = 'linear-gradient(180deg, #050b1b 0%, #150949 100%)';
@@ -46,7 +47,6 @@ const CustomSidebar = ({ logo, title = 'INSIGHTiQ', onSignOut }) => {
     { title: 'User Permissions', path: '/UserPermissions', icon: <AdminPanelSettingsIcon /> },
     { title: 'Payments', path: '/Payments', icon: <PaymentIcon /> },
     { title: 'Help Center', path: '/HelpCenter', icon: <HelpIcon /> },
-
   ];
 
   const handleDrawerToggle = () => {
@@ -146,83 +146,119 @@ const CustomSidebar = ({ logo, title = 'INSIGHTiQ', onSignOut }) => {
 
   const drawerContent = (
     <>
+      {/* Header Section - Aligned with navigation items */}
       <Box
         sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          p: open ? 2 : 1,
           borderBottom: `1px solid ${alpha('#ffffff', 0.2)}`,
           boxShadow: `0 1px 3px ${alpha('#000000', 0.08)}`,
           backgroundColor: 'transparent',
           position: 'sticky',
           top: 0,
-          zIndex: 1
+          zIndex: 1,
+          minHeight: 64,
+          mx: 1, // Match the margin of navigation items
+          mt: 1  // Add top margin to match nav items spacing
         }}
       >
-        {logo ? (
-          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-            {logo}
-            {open && (
-              <Typography
-                variant="h6"
-                sx={{
-                  ml: 1,
-                  fontWeight: 'bold',
-                  color: '#ffffff',
-                  transition: 'opacity 0.3s ease'
-                }}
-              >
-                {title}
-              </Typography>
-            )}
-          </Box>
-        ) : (
-          <Typography
-            variant="h6"
+        <ListItemButton
+          sx={{
+            minHeight: 48,
+            justifyContent: open ? 'initial' : 'center',
+            px: 2.5,
+            borderRadius: '10px',
+            cursor: 'default', // No pointer cursor for the header
+            '&:hover': {
+              backgroundColor: 'transparent' // No hover effect for header
+            }
+          }}
+        >
+          <ListItemIcon
             sx={{
-              fontWeight: 'bold',
-              color: '#ffffff',
-              opacity: open ? 1 : 0,
-              transition: 'opacity 0.3s ease'
+              minWidth: 0,
+              mr: open ? 2 : 'auto',
+              justifyContent: 'center',
+              color: '#ffffff'
             }}
           >
-            {open ? title : ''}
-          </Typography>
-        )}
+            {logo}
+          </ListItemIcon>
+          <ListItemText
+            primary={title}
+            sx={{
+              transition: 'opacity 0.3s ease',
+              opacity: open ? 1 : 0,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              '& .MuiTypography-root': {
+                fontWeight: 'bold',
+                color: '#ffffff',
+                fontSize: '1.25rem'
+              }
+            }}
+          />
+        </ListItemButton>
       </Box>
 
-      <List sx={{ p: 1, mt: 1 }}>{renderNavItems(navItems)}</List>
+      {/* Navigation Items */}
+      <List sx={{ p: 1, mt: 1, flexGrow: 1 }}>
+        {renderNavItems(navItems)}
+      </List>
 
-      <Box sx={{ flexGrow: 1 }} />
-      <Divider sx={{ borderColor: alpha('#ffffff', 0.3) }} />
+      {/* Divider */}
+      <Divider sx={{ borderColor: alpha('#ffffff', 0.3), mx: 1 }} />
 
-      <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
+      {/* Sign Out Section - Styled like nav items */}
+      <Box sx={{ p: 1 }}>
         {onSignOut && (
-          <Tooltip title={open ? '' : 'Sign Out'} placement="right">
-            <Button
-              variant="outlined"
-              color="inherit"
+          <ListItem disablePadding>
+            <ListItemButton
               onClick={onSignOut}
-              fullWidth={open}
               sx={{
-                justifyContent: 'center',
-                minWidth: 0,
-                width: open ? '100%' : '40px',
-                height: '40px',
-                padding: open ? undefined : '8px',
+                minHeight: 48,
+                justifyContent: open ? 'initial' : 'center',
+                px: 2.5,
+                mx: 0,
+                mb: 0.5,
                 borderRadius: '10px',
-                color: '#ffffff',
-                borderColor: alpha('#ffffff', 0.5),
-                transition: 'all 0.3s ease-in-out',
+                transition: theme.transitions.create(['background-color'], {
+                  duration: 300,
+                  easing: theme.transitions.easing.easeInOut
+                }),
                 '&:hover': {
-                  backgroundColor: alpha('#ffffff', 0.15)
+                  backgroundColor: alpha('#ffffff', 0.08)
                 }
               }}
             >
-              {open ? 'Sign Out' : ''}
-            </Button>
-          </Tooltip>
+              <Tooltip title={open ? '' : 'Sign Out'} placement="right" arrow>
+                <ListItemIcon
+                  sx={{
+                    minWidth: 0,
+                    mr: open ? 2 : 'auto',
+                    justifyContent: 'center',
+                    color: '#e0e0e0',
+                    transition: 'color 0.3s ease'
+                  }}
+                >
+                  <LogoutIcon />
+                </ListItemIcon>
+              </Tooltip>
+              <ListItemText
+                primary="Sign Out"
+                sx={{
+                  transition: 'opacity 0.3s ease',
+                  opacity: open ? 1 : 0,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  '& .MuiTypography-root': {
+                    fontWeight: 400,
+                    color: '#f0f0f0'
+                  }
+                }}
+              />
+            </ListItemButton>
+          </ListItem>
         )}
       </Box>
     </>
@@ -262,7 +298,9 @@ const CustomSidebar = ({ logo, title = 'INSIGHTiQ', onSignOut }) => {
               width: drawerWidth,
               backgroundImage: gradientBackground,
               color: '#ffffff',
-              borderRight: 'none'
+              borderRight: 'none',
+              display: 'flex',
+              flexDirection: 'column'
             }
           }}
         >
@@ -285,6 +323,8 @@ const CustomSidebar = ({ logo, title = 'INSIGHTiQ', onSignOut }) => {
                 backgroundImage: gradientBackground,
                 color: '#ffffff',
                 borderRight: 'none',
+                display: 'flex',
+                flexDirection: 'column',
                 transition: theme.transitions.create('width', {
                   duration: 500,
                   easing: theme.transitions.easing.easeInOut
@@ -294,7 +334,6 @@ const CustomSidebar = ({ logo, title = 'INSIGHTiQ', onSignOut }) => {
           >
             {drawerContent}
           </Drawer>
-
           <IconButton
             onClick={handleDrawerToggle}
             sx={{
