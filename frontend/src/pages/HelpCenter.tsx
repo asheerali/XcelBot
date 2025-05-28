@@ -15,7 +15,7 @@ import EmailIcon from '@mui/icons-material/Email';
 
 // Styled components for modern design
 const HeroSection = styled(Box)(({ theme }) => ({
-  background: `linear-gradient(135deg, 
+  background: `linear-gradient(135deg, #1976d220 0%, #9c27b015 50%,, 
     ${theme.palette.primary.main}20 0%, 
     ${theme.palette.secondary.main}15 50%, 
     ${theme.palette.primary.light}10 100%)`,
