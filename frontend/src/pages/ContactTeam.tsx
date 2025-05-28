@@ -84,6 +84,18 @@ const ProfileSection = styled(Box)(({ theme }) => ({
   position: 'relative'
 }));
 
+const ContactSection = styled(Box)(({ theme }) => ({
+  marginTop: theme.spacing(10),
+  padding: theme.spacing(6, 4),
+  background: `linear-gradient(135deg, 
+    ${alpha(theme.palette.grey[50], 0.8)} 0%, 
+    ${alpha(theme.palette.primary.main, 0.05)} 100%)`,
+  borderRadius: '20px',
+  textAlign: 'center',
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+  backdropFilter: 'blur(10px)'
+}));
+
 const AvatarWrapper = styled(Box)(({ theme }) => ({
   width: 80,
   height: 80,
@@ -394,31 +406,52 @@ export function ContactTeam() {
           </Grid>
         </Box>
 
-        {/* Additional Contact Information
-        <Box sx={{ mt: 8, textAlign: 'center' }}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 4,
-              borderRadius: '20px',
-              background: `linear-gradient(135deg, 
-                ${alpha('#1976d2', 0.05)} 0%, 
-                ${alpha('#9c27b0', 0.05)} 100%)`,
-              border: `1px solid ${alpha('#1976d2', 0.1)}`
+       <ContactSection>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
+            <EmailIcon sx={{ fontSize: 32, color: 'primary.main', mr: 2 }} />
+            <Typography 
+              variant="h5" 
+              sx={{ 
+                fontWeight: 600,
+                color: '#1a237e'
+              }}
+            >
+              Still Need Help?
+            </Typography>
+          </Box>
+          
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              color: 'text.secondary',
+              fontSize: '1.1rem',
+              lineHeight: 1.6,
+              mb: 3
             }}
           >
-            <LocationOnIcon sx={{ fontSize: 32, color: 'primary.main', mb: 2 }} />
-            <Typography variant="h6" sx={{ fontWeight: 600, color: '#1a237e', mb: 1 }}>
-              Our Location
+            Can't find what you're looking for? Our dedicated support team is always ready to assist you.
+          </Typography>
+          
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 1 }}>
+            <Typography variant="body1" color="text.secondary">
+              Email us at
             </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-              123 Innovation Drive, Tech Valley, CA 94000
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                fontWeight: 600,
+                color: 'primary.main',
+                background: alpha('#1976d2', 0.1),
+                px: 2,
+                py: 0.5,
+                borderRadius: '8px',
+                fontSize: '1.1rem'
+              }}
+            >
+              support@kpi360.ai
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              We're always excited to meet new partners and discuss how we can help transform your business with AI-powered insights.
-            </Typography>
-          </Paper>
-        </Box> */}
+          </Box>
+        </ContactSection>
       </Container>
     </Box>
   );

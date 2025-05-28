@@ -117,6 +117,17 @@ const ContactForm = styled(Paper)(({ theme }) => ({
   border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
   backdropFilter: 'blur(10px)',
 }));
+const ContactSection = styled(Box)(({ theme }) => ({
+  marginTop: theme.spacing(10),
+  padding: theme.spacing(6, 4),
+  background: `linear-gradient(135deg, 
+    ${alpha(theme.palette.grey[50], 0.8)} 0%, 
+    ${alpha(theme.palette.primary.main, 0.05)} 100%)`,
+  borderRadius: '20px',
+  textAlign: 'center',
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+  backdropFilter: 'blur(10px)'
+}));
 
 const ModernButton = styled(Button)(({ theme }) => ({
   borderRadius: '12px',
@@ -419,7 +430,52 @@ export function ContactUs() {
         </Grid>
       </Grid>
 
-      
+      <ContactSection>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
+            <EmailIcon sx={{ fontSize: 32, color: 'primary.main', mr: 2 }} />
+            <Typography 
+              variant="h5" 
+              sx={{ 
+                fontWeight: 600,
+                color: '#1a237e'
+              }}
+            >
+              Still Need Help?
+            </Typography>
+          </Box>
+          
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              color: 'text.secondary',
+              fontSize: '1.1rem',
+              lineHeight: 1.6,
+              mb: 3
+            }}
+          >
+            Can't find what you're looking for? Our dedicated support team is always ready to assist you.
+          </Typography>
+          
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 1 }}>
+            <Typography variant="body1" color="text.secondary">
+              Email us at
+            </Typography>
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                fontWeight: 600,
+                color: 'primary.main',
+                background: alpha('#1976d2', 0.1),
+                px: 2,
+                py: 0.5,
+                borderRadius: '8px',
+                fontSize: '1.1rem'
+              }}
+            >
+              support@kpi360.ai
+            </Typography>
+          </Box>
+        </ContactSection>
     </Container>
   );
 }
