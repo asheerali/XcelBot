@@ -282,16 +282,16 @@ const DASHBOARD_OPTIONS = [
      height: "150px"
   },
   { 
-    value: "Sales Split and Financials", 
-    label: "Sales Split & Financials", 
+    value: "Sales Split and Product Mix", 
+    label: "Sales Split & Product Mix", 
     icon: <AnalyticsIcon />, 
     description: " ",
     color: "#e91e63",
      height: "150px"
   },
   { 
-    value: "Sales Wide and Product Mix", 
-    label: "Sales Wide & Product Mix", 
+    value: "Financials and Sales Wide", 
+    label: "Financials & Sales Wide", 
     icon: <AssessmentIcon />, 
     description: " ",
     color: "#00bcd4",

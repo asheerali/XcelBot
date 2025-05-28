@@ -49,6 +49,8 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         # print("Type of file_content:", type(file_content))
         file_content = base64.b64decode(request.fileContent)
         print("Type of file_content:", type(file_content))
+        
+        print("i am here printing the request in the excel upload", request)
         # print("response", request)
         
         # Create BytesIO object for pandas
@@ -58,11 +60,11 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         location_slug = ""
         
-        # If location is provided, include it in the filename
-        if request.location:
-            location_slug = f"{request.location.replace(' ', '_').lower()}_"
+        # # If location is provided, include it in the filename
+        # if request.location:
+        #     location_slug = f"{request.location.replace(' ', '_').lower()}_"
             
-        file_name =  f"{timestamp}_{location_slug}{request.fileName}"
+        file_name =  f"{timestamp}_{request.fileName}"
         file_path = os.path.join(UPLOAD_DIR,file_name)
         
         print("i am here in excel upload printing the file path and file name",file_name, file_path)
@@ -181,6 +183,8 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 location_filter = "All"
             else:
                 location_filter = request.location if request.location else 'All'
+                
+            print("i am here in excel upload printing the location filter", location_filter)
             server_filter = request.server if request.server else 'All'
             # Set dynamic dates
             default_end_date1 = date.today()
@@ -248,7 +252,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 excel_data, 
                 start_date=start_date,
                 end_date=end_date,
-                location="All"
+                location=location_filter
             )
             
             
