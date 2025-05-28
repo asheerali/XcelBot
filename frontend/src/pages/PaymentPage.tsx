@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Typography,
@@ -25,8 +25,8 @@ import {
   Chip,
   Container,
   alpha,
-  keyframes
-} from '@mui/material';
+  keyframes,
+} from "@mui/material";
 import {
   CreditCard as CreditCardIcon,
   Business as BuildingIcon,
@@ -44,8 +44,11 @@ import {
   Assignment,
   Security as SecurityIcon,
   Verified as VerifiedIcon,
-  Email as EmailIcon
-} from '@mui/icons-material';
+  Email as EmailIcon,
+  Inventory,
+  Inventory2,
+  ScheduleRounded,
+} from "@mui/icons-material";
 
 // Animations
 const slideIn = keyframes`
@@ -61,13 +64,14 @@ const slideIn = keyframes`
 
 const float = keyframes`
   0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
+  50% { transform: translateY(-5px); }
 `;
 
 // Define types for our data structures
-type PlanKey = 'basic' | 'advanced';
-type BillingPeriod = 'monthly' | 'annual';
-type PaymentMethodType = 'creditCard' | 'invoice' | 'paypal';
+// type PlanKey = "basic" | "advanced";
+type PlanKey = "advanced";
+type BillingPeriod = "monthly" | "annual";
+type PaymentMethodType = "creditCard" | "invoice" | "paypal";
 
 interface Feature {
   name: string;
@@ -87,7 +91,7 @@ interface PlanDetails {
 }
 
 interface PlansType {
-  basic: PlanDetails;
+  // basic: PlanDetails;
   advanced: PlanDetails;
 }
 
@@ -98,21 +102,22 @@ const HeroSection = styled(Box)(({ theme }) => ({
     ${theme.palette.secondary.main}15 50%, 
     ${theme.palette.primary.light}10 100%)`,
   padding: theme.spacing(6, 0, 4),
-  borderRadius: '0 0 24px 24px',
-  position: 'relative',
-  overflow: 'hidden',
+  borderRadius: "0 0 24px 24px",
+  position: "relative",
+  overflow: "hidden",
   marginBottom: theme.spacing(6),
-  '&::before': {
+  "&::before": {
     content: '""',
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    background: 'url("data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><circle cx=\'20\' cy=\'20\' r=\'2\' fill=\'%23ffffff\' opacity=\'0.1\'/><circle cx=\'80\' cy=\'40\' r=\'1.5\' fill=\'%23ffffff\' opacity=\'0.1\'/><circle cx=\'60\' cy=\'80\' r=\'1\' fill=\'%23ffffff\' opacity=\'0.1\'/></svg>")',
-    backgroundSize: '100px 100px',
-    pointerEvents: 'none'
-  }
+    background:
+      "url(\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='20' cy='20' r='2' fill='%23ffffff' opacity='0.1'/><circle cx='80' cy='40' r='1.5' fill='%23ffffff' opacity='0.1'/><circle cx='60' cy='80' r='1' fill='%23ffffff' opacity='0.1'/></svg>\")",
+    backgroundSize: "100px 100px",
+    pointerEvents: "none",
+  },
 }));
 
 const ModernStepper = styled(Stepper)(({ theme }) => ({
@@ -120,204 +125,206 @@ const ModernStepper = styled(Stepper)(({ theme }) => ({
     ${theme.palette.background.paper} 0%, 
     ${alpha(theme.palette.primary.main, 0.02)} 100%)`,
   padding: theme.spacing(3),
-  borderRadius: '20px',
+  borderRadius: "20px",
   border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+  boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
   marginBottom: theme.spacing(4),
-  '& .MuiStepLabel-root': {
-    '& .MuiStepIcon-root': {
-      fontSize: '1.8rem',
-      '&.Mui-active': {
+  "& .MuiStepLabel-root": {
+    "& .MuiStepIcon-root": {
+      fontSize: "1.8rem",
+      "&.Mui-active": {
         color: theme.palette.primary.main,
       },
-      '&.Mui-completed': {
+      "&.Mui-completed": {
         color: theme.palette.success.main,
-      }
-    }
-  }
+      },
+    },
+  },
 }));
 
 const ModernPlanCard = styled(Card)(({ theme }) => ({
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  borderRadius: '20px',
+  height: "100%",
+  display: "flex",
+  flexDirection: "column",
+  borderRadius: "20px",
   border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
   background: `linear-gradient(145deg, 
     ${theme.palette.background.paper} 0%, 
     ${alpha(theme.palette.primary.main, 0.02)} 100%)`,
-  backdropFilter: 'blur(10px)',
-  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-  position: 'relative',
-  overflow: 'hidden',
-  cursor: 'pointer',
+  backdropFilter: "blur(10px)",
+  transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+  position: "relative",
+  overflow: "hidden",
+  cursor: "pointer",
   animation: `${slideIn} 0.6s ease forwards`,
-  '&::before': {
+  "&::before": {
     content: '""',
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    height: '4px',
+    height: "4px",
     background: `linear-gradient(90deg, 
       ${theme.palette.primary.main}, 
       ${theme.palette.secondary.main})`,
-    transform: 'translateY(-4px)',
-    transition: 'transform 0.4s ease'
+    transform: "translateY(-4px)",
+    transition: "transform 0.4s ease",
   },
-  '&:hover': {
-    transform: 'translateY(-12px) scale(1.02)',
+  "&:hover": {
+    transform: "translateY(-12px) scale(1.02)",
     boxShadow: `0 20px 40px -8px ${alpha(theme.palette.primary.main, 0.25)}`,
-    '&::before': {
-      transform: 'translateY(0)'
-    }
-  }
+    "&::before": {
+      transform: "translateY(0)",
+    },
+  },
 }));
 
 const PopularBadge = styled(Chip)(({ theme }) => ({
-  position: 'absolute',
-  top: -12,
-  left: '50%',
-  transform: 'translateX(-50%)',
-  fontWeight: 'bold',
+  position: "absolute",
+  top: +15,
+  left: "50%",
+  transform: "translateX(-20%)",
+  fontWeight: "bold",
   background: `linear-gradient(135deg, 
     ${theme.palette.warning.main} 0%, 
     ${theme.palette.warning.dark} 100%)`,
-  color: 'white',
+  color: "white",
   zIndex: 2,
-  '& .MuiChip-icon': {
-    color: 'white'
+  "& .MuiChip-icon": {
+    color: "white",
   },
-  animation: `${float} 3s ease-in-out infinite`
+  animation: `${float} 3s ease-in-out infinite`,
 }));
 
 const SelectedBadge = styled(Box)(({ theme }) => ({
-  position: 'absolute',
+  position: "absolute",
   top: theme.spacing(2),
   right: theme.spacing(2),
   backgroundColor: theme.palette.success.main,
   color: theme.palette.success.contrastText,
-  borderRadius: '50px',
+  borderRadius: "50px",
   padding: theme.spacing(0.5, 1.5),
-  display: 'flex',
-  alignItems: 'center',
-  fontSize: '0.875rem',
+  display: "flex",
+  alignItems: "center",
+  fontSize: "0.875rem",
   fontWeight: 600,
   boxShadow: `0 4px 12px ${alpha(theme.palette.success.main, 0.3)}`,
-  zIndex: 2
+  zIndex: 2,
 }));
 
 const ModernToggleGroup = styled(ToggleButtonGroup)(({ theme }) => ({
-  borderRadius: '12px',
+  borderRadius: "12px",
   border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
   background: theme.palette.background.paper,
-  '& .MuiToggleButton-root': {
-    border: 'none',
-    borderRadius: '10px !important',
+  "& .MuiToggleButton-root": {
+    border: "none",
+    borderRadius: "10px !important",
     padding: theme.spacing(1.5, 3),
     fontWeight: 600,
-    textTransform: 'none',
-    '&.Mui-selected': {
+    textTransform: "none",
+    "&.Mui-selected": {
       background: `linear-gradient(135deg, 
         ${theme.palette.primary.main} 0%, 
         ${theme.palette.primary.dark} 100%)`,
-      color: 'white',
+      color: "white",
       boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
-      '&:hover': {
+      "&:hover": {
         background: `linear-gradient(135deg, 
           ${theme.palette.primary.dark} 0%, 
           ${theme.palette.primary.main} 100%)`,
-      }
-    }
-  }
+      },
+    },
+  },
 }));
 
 const ModernCard = styled(Card)(({ theme }) => ({
-  borderRadius: '20px',
+  borderRadius: "20px",
   border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
   background: `linear-gradient(145deg, 
     ${theme.palette.background.paper} 0%, 
     ${alpha(theme.palette.primary.main, 0.02)} 100%)`,
-  backdropFilter: 'blur(10px)',
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: `0 12px 24px ${alpha(theme.palette.primary.main, 0.15)}`
-  }
+  backdropFilter: "blur(10px)",
+  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+  "&:hover": {
+    transform: "translateY(-2px)",
+    boxShadow: `0 12px 24px ${alpha(theme.palette.primary.main, 0.15)}`,
+  },
 }));
 
-const PaymentMethodCard = styled(ModernCard)(({ theme, selected }: { selected: boolean }) => ({
-  cursor: 'pointer',
-  border: selected 
-    ? `2px solid ${theme.palette.primary.main}` 
-    : `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-  '&::before': {
-    content: selected ? '""' : 'none',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '4px',
-    background: `linear-gradient(90deg, 
+const PaymentMethodCard = styled(ModernCard)(
+  ({ theme, selected }: { selected: boolean }) => ({
+    cursor: "pointer",
+    border: selected
+      ? `2px solid ${theme.palette.primary.main}`
+      : `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+    "&::before": {
+      content: selected ? '""' : "none",
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      height: "4px",
+      background: `linear-gradient(90deg, 
       ${theme.palette.primary.main}, 
       ${theme.palette.secondary.main})`,
-    borderRadius: '20px 20px 0 0'
-  }
-}));
+      borderRadius: "20px 20px 0 0",
+    },
+  })
+);
 
 const ModernTextField = styled(TextField)(({ theme }) => ({
-  '& .MuiOutlinedInput-root': {
-    borderRadius: '12px',
+  "& .MuiOutlinedInput-root": {
+    borderRadius: "12px",
     background: alpha(theme.palette.background.paper, 0.8),
-    '& fieldset': {
+    "& fieldset": {
       borderColor: alpha(theme.palette.primary.main, 0.2),
     },
-    '&:hover fieldset': {
+    "&:hover fieldset": {
       borderColor: alpha(theme.palette.primary.main, 0.4),
     },
-    '&.Mui-focused fieldset': {
+    "&.Mui-focused fieldset": {
       borderColor: theme.palette.primary.main,
-      borderWidth: '2px'
-    }
-  }
+      borderWidth: "2px",
+    },
+  },
 }));
 
 const ModernButton = styled(Button)(({ theme }) => ({
-  borderRadius: '12px',
+  borderRadius: "12px",
   padding: theme.spacing(1.5, 3),
   fontWeight: 600,
-  textTransform: 'none',
-  fontSize: '1rem',
-  transition: 'all 0.3s ease',
-  '&.MuiButton-contained': {
+  textTransform: "none",
+  fontSize: "1rem",
+  transition: "all 0.3s ease",
+  "&.MuiButton-contained": {
     background: `linear-gradient(135deg, 
       ${theme.palette.primary.main} 0%, 
       ${theme.palette.primary.dark} 100%)`,
     boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
-    '&:hover': {
+    "&:hover": {
       background: `linear-gradient(135deg, 
         ${theme.palette.primary.dark} 0%, 
         ${theme.palette.primary.main} 100%)`,
       boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
-      transform: 'translateY(-2px)'
-    }
+      transform: "translateY(-2px)",
+    },
   },
-  '&.MuiButton-outlined': {
+  "&.MuiButton-outlined": {
     borderColor: alpha(theme.palette.primary.main, 0.3),
-    borderWidth: '2px',
-    '&:hover': {
+    borderWidth: "2px",
+    "&:hover": {
       borderColor: theme.palette.primary.main,
       background: alpha(theme.palette.primary.main, 0.05),
-      transform: 'translateY(-1px)'
-    }
-  }
+      transform: "translateY(-1px)",
+    },
+  },
 }));
 
 const FloatingElement = styled(Box)(({ theme }) => ({
-  position: 'absolute',
-  width: '6px',
-  height: '6px',
-  borderRadius: '50%',
+  position: "absolute",
+  width: "6px",
+  height: "6px",
+  borderRadius: "50%",
   background: theme.palette.primary.main,
   opacity: 0.3,
   animation: `${float} 6s ease-in-out infinite`,
@@ -326,85 +333,101 @@ const FloatingElement = styled(Box)(({ theme }) => ({
 const IconWrapper = styled(Box)(({ theme }) => ({
   width: 60,
   height: 60,
-  borderRadius: '16px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
+  borderRadius: "16px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
   marginBottom: theme.spacing(2),
   background: `linear-gradient(135deg, 
     ${alpha(theme.palette.primary.main, 0.1)} 0%, 
     ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
-  backdropFilter: 'blur(10px)',
+  backdropFilter: "blur(10px)",
   border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-  transition: 'all 0.3s ease'
+  transition: "all 0.3s ease",
 }));
 
 const SuccessSection = styled(Box)(({ theme }) => ({
-  textAlign: 'center',
+  textAlign: "center",
   padding: theme.spacing(8, 0),
   background: `linear-gradient(135deg, 
     ${alpha(theme.palette.success.main, 0.05)} 0%, 
     ${alpha(theme.palette.primary.main, 0.05)} 100%)`,
-  borderRadius: '20px',
-  position: 'relative',
-  overflow: 'hidden'
+  borderRadius: "20px",
+  position: "relative",
+  overflow: "hidden",
 }));
 
 export default function PaymentPage() {
   const [activeStep, setActiveStep] = useState<number>(0);
-  const [selectedPlan, setSelectedPlan] = useState<PlanKey>('basic');
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>('creditCard');
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey>("advanced");
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
+  const [paymentMethod, setPaymentMethod] =
+    useState<PaymentMethodType>("creditCard");
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
-  
+
   const plans: PlansType = {
-    basic: {
-      title: 'Basic Plan',
-      subtitle: 'Essential analytics for your business',
-      monthlyPrice: 35,
-      annualPrice: 350,
-      features: [
-        { name: 'Sales Split Dashboard', included: true, icon: <BarChart /> },
-        { name: 'Financial Dashboard', included: true, icon: <Timeline /> },
-        { name: 'Sales Wide Dashboard', included: true, icon: <PieChart /> },
-        { name: 'Product Mix Dashboard', included: true, icon: <TableChart /> },
-        { name: 'Order Sheet Dashboard', included: false, icon: <Assignment /> },
-      ],
-      description: 'Perfect for small to medium businesses looking for core analytics capabilities.',
-      icon: <StarIcon />
-    },
+    // basic: {
+    //   title: 'Basic Plan',
+    //   subtitle: 'Essential analytics for your business',
+    //   monthlyPrice: 35,
+    //   annualPrice: 350,
+    //   features: [
+    //     { name: 'Sales Split Dashboard', included: true, icon: <BarChart /> },
+    //     { name: 'Financial Dashboard', included: true, icon: <Timeline /> },
+    //     { name: 'Sales Wide Dashboard', included: true, icon: <PieChart /> },
+    //     { name: 'Product Mix Dashboard', included: true, icon: <TableChart /> },
+    //     { name: 'Order Sheet Dashboard', included: false, icon: <Assignment /> },
+    //   ],
+    //   description: 'Perfect for small to medium businesses looking for core analytics capabilities.',
+    //   icon: <StarIcon />
+    // },
     advanced: {
-      title: 'Advanced Plan',
-      subtitle: 'Complete analytics suite',
+      title: "Advanced Plan",
+      subtitle: "Complete analytics suite",
       monthlyPrice: 50,
       annualPrice: 500,
       features: [
-        { name: 'Sales Split Dashboard', included: true, icon: <BarChart /> },
-        { name: 'Financial Dashboard', included: true, icon: <Timeline /> },
-        { name: 'Sales Wide Dashboard', included: true, icon: <PieChart /> },
-        { name: 'Product Mix Dashboard', included: true, icon: <TableChart /> },
-        { name: 'Order Sheet Dashboard', included: true, icon: <Assignment /> },
+        { name: "Sales Split", included: true, icon: <BarChart /> },
+        { name: "Product Mix", included: true, icon: <TableChart /> },
+        { name: "Financial", included: true, icon: <Timeline /> },
+        { name: "CompanWide", included: true, icon: <PieChart /> },
+        { name: "Order Sheet", included: true, icon: <Assignment /> },
+        // inventpory icon
+        { name: "Inventory", included: true, icon: <Inventory2 /> },
+        // Scheduler
+        { name: "Scheduler", included: true, icon: <ScheduleRounded /> },
       ],
-      description: 'Full access to all dashboards including advanced order sheet analytics.',
+      description:
+        "Full access to all dashboards including advanced order sheet analytics.",
       icon: <RocketIcon />,
-      popular: true
-    }
+      popular: true,
+    },
   };
 
-  const steps: string[] = ['Select Plan', 'Billing Information', 'Payment Method', 'Review & Confirm'];
+  const steps: string[] = [
+    "Select Plan",
+    "Billing Information",
+    "Payment Method",
+    "Review & Confirm",
+  ];
 
   const handlePlanChange = (plan: PlanKey): void => {
     setSelectedPlan(plan);
   };
 
-  const handleBillingPeriodChange = (event: React.MouseEvent<HTMLElement>, newPeriod: BillingPeriod | null): void => {
+  const handleBillingPeriodChange = (
+    event: React.MouseEvent<HTMLElement>,
+    newPeriod: BillingPeriod | null
+  ): void => {
     if (newPeriod !== null) {
       setBillingPeriod(newPeriod);
     }
   };
 
-  const handlePaymentMethodChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
+  const handlePaymentMethodChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ): void => {
     setPaymentMethod(event.target.value as PaymentMethodType);
   };
 
@@ -422,7 +445,7 @@ export default function PaymentPage() {
 
   const handleSubmit = (): void => {
     setIsProcessing(true);
-    
+
     // Simulate payment processing
     setTimeout(() => {
       setIsProcessing(false);
@@ -447,63 +470,68 @@ export default function PaymentPage() {
           onChange={handleBillingPeriodChange}
           aria-label="billing period"
         >
-          <ToggleButton value="monthly">
-            Monthly
-          </ToggleButton>
-          <ToggleButton value="annual">
-            Annual (Save 2 months!)
-          </ToggleButton>
+          <ToggleButton value="monthly">Monthly</ToggleButton>
+          <ToggleButton value="annual">Annual (Save 2 months!)</ToggleButton>
         </ModernToggleGroup>
       </Box>
 
-      {billingPeriod === 'annual' && (
-        <Alert 
-          severity="success" 
-          sx={{ 
-            mb: 3, 
-            borderRadius: '12px',
+      {billingPeriod === "annual" && (
+        <Alert
+          severity="success"
+          sx={{
+            mb: 3,
+            borderRadius: "12px",
             background: `linear-gradient(135deg, 
-              ${alpha('#4caf50', 0.1)} 0%, 
-              ${alpha('#81c784', 0.1)} 100%)`
+              ${alpha("#4caf50", 0.1)} 0%, 
+              ${alpha("#81c784", 0.1)} 100%)`,
           }}
         >
           <Typography variant="body2" fontWeight={500}>
-            💰 Save 2 months with annual billing! Pay for 10 months and get 12 months of access.
+            💰 Save 2 months with annual billing! Pay for 10 months and get 12
+            months of access.
           </Typography>
         </Alert>
       )}
-      
+
       <Grid container spacing={4} justifyContent="center">
         {Object.entries(plans).map(([key, plan], index) => (
           <Grid item xs={12} md={6} key={key}>
             <ModernPlanCard
               onClick={() => handlePlanChange(key as PlanKey)}
               sx={{
-                borderColor: selectedPlan === key ? 'primary.main' : 'transparent',
+                borderColor:
+                  selectedPlan === key ? "primary.main" : "transparent",
                 borderWidth: selectedPlan === key ? 2 : 1,
-                animationDelay: `${index * 100}ms`
+                animationDelay: `${index * 100}ms`,
               }}
             >
               {plan.popular && (
-                <PopularBadge 
-                  icon={<StarIcon />} 
-                  label="Most Popular" 
+                <PopularBadge
+                  icon={<StarIcon />}
+                  label="Most Popular"
                   color="warning"
                 />
               )}
-              
+
               {selectedPlan === key && (
                 <SelectedBadge>
-                  <CheckIcon sx={{ fontSize: '1rem', mr: 0.5 }} />
+                  <CheckIcon sx={{ fontSize: "1rem", mr: 0.5 }} />
                   Selected
                 </SelectedBadge>
               )}
-              
-              <CardContent sx={{ p: 4, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+
+              <CardContent
+                sx={{
+                  p: 4,
+                  flexGrow: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
                 <Box display="flex" alignItems="center" mb={3}>
                   <IconWrapper>
-                    {React.cloneElement(plan.icon as React.ReactElement, { 
-                      sx: { fontSize: 28, color: 'primary.main' }
+                    {React.cloneElement(plan.icon as React.ReactElement, {
+                      sx: { fontSize: 28, color: "primary.main" },
                     })}
                   </IconWrapper>
                   <Box ml={2}>
@@ -515,46 +543,82 @@ export default function PaymentPage() {
                     </Typography>
                   </Box>
                 </Box>
-                
+
                 <Box textAlign="center" mb={3}>
-                  <Typography variant="h3" component="div" fontWeight="bold" color="primary.main">
-                    ${billingPeriod === 'monthly' ? plan.monthlyPrice : plan.annualPrice}
+                  <Typography
+                    variant="h3"
+                    component="div"
+                    fontWeight="bold"
+                    color="primary.main"
+                  >
+                    $
+                    {billingPeriod === "monthly"
+                      ? plan.monthlyPrice
+                      : plan.annualPrice}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {billingPeriod === 'monthly' ? '/month' : '/year'}
+                    {billingPeriod === "monthly" ? "/month" : "/year"}
                   </Typography>
-                  {billingPeriod === 'annual' && (
-                    <Typography variant="body2" color="success.main" fontWeight="medium">
+                  {billingPeriod === "annual" && (
+                    <Typography
+                      variant="body2"
+                      color="success.main"
+                      fontWeight="medium"
+                    >
                       Save ${plan.monthlyPrice * 2}!
                     </Typography>
                   )}
                 </Box>
-                
-                <Typography variant="body2" color="text.secondary" mb={3} sx={{ minHeight: 40 }}>
+
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  mb={3}
+                  sx={{ minHeight: 40 }}
+                >
                   {plan.description}
                 </Typography>
-                
+
                 <Divider sx={{ my: 2 }} />
-                
+
                 <Box mt={3} flexGrow={1}>
                   {plan.features.map((feature, index) => (
                     <Box key={index} display="flex" alignItems="center" mb={2}>
                       {feature.included ? (
-                        <CheckIcon color="success" fontSize="small" sx={{ mr: 2 }} />
+                        <CheckIcon
+                          color="success"
+                          fontSize="small"
+                          sx={{ mr: 2 }}
+                        />
                       ) : (
-                        <CloseIcon color="error" fontSize="small" sx={{ mr: 2 }} />
+                        <CloseIcon
+                          color="error"
+                          fontSize="small"
+                          sx={{ mr: 2 }}
+                        />
                       )}
                       {feature.icon && (
-                        <Box sx={{ mr: 1.5, display: 'flex', alignItems: 'center' }}>
-                          {React.cloneElement(feature.icon as React.ReactElement, { 
-                            fontSize: 'small',
-                            color: feature.included ? 'action' : 'disabled'
-                          })}
+                        <Box
+                          sx={{
+                            mr: 1.5,
+                            display: "flex",
+                            alignItems: "center",
+                          }}
+                        >
+                          {React.cloneElement(
+                            feature.icon as React.ReactElement,
+                            {
+                              fontSize: "small",
+                              color: feature.included ? "action" : "disabled",
+                            }
+                          )}
                         </Box>
                       )}
-                      <Typography 
-                        variant="body2" 
-                        color={feature.included ? 'text.primary' : 'text.secondary'}
+                      <Typography
+                        variant="body2"
+                        color={
+                          feature.included ? "text.primary" : "text.secondary"
+                        }
                         fontWeight={feature.included ? 500 : 400}
                       >
                         {feature.name}
@@ -562,7 +626,7 @@ export default function PaymentPage() {
                     </Box>
                   ))}
                 </Box>
-                
+
                 <Box mt={4}>
                   <ModernButton
                     fullWidth
@@ -570,7 +634,7 @@ export default function PaymentPage() {
                     size="large"
                     onClick={() => handlePlanChange(key as PlanKey)}
                   >
-                    {selectedPlan === key ? '✓ Selected' : 'Select Plan'}
+                    {selectedPlan === key ? "✓ Selected" : "Select Plan"}
                   </ModernButton>
                 </Box>
               </CardContent>
@@ -589,7 +653,7 @@ export default function PaymentPage() {
       <Typography color="text.secondary" mb={4} fontSize="1.1rem">
         Please provide your billing details
       </Typography>
-      
+
       <ModernCard elevation={0} sx={{ p: 4 }}>
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
@@ -695,24 +759,35 @@ export default function PaymentPage() {
       <Typography color="text.secondary" mb={4} fontSize="1.1rem">
         Choose your preferred payment method
       </Typography>
-      
+
       <Grid container spacing={3}>
         <Grid item xs={12} md={4}>
           <PaymentMethodCard
-            selected={paymentMethod === 'creditCard'}
-            onClick={() => setPaymentMethod('creditCard')}
-            sx={{ p: 3, height: '100%' }}
+            selected={paymentMethod === "creditCard"}
+            onClick={() => setPaymentMethod("creditCard")}
+            sx={{ p: 3, height: "100%" }}
           >
-            <Box display="flex" flexDirection="column" alignItems="center" mb={3}>
+            <Box
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              mb={3}
+            >
               <IconWrapper>
-                <CreditCardIcon sx={{ fontSize: 28, color: 'primary.main' }} />
+                <CreditCardIcon sx={{ fontSize: 28, color: "primary.main" }} />
               </IconWrapper>
-              <Typography variant="h6" fontWeight="bold">Credit Card</Typography>
-              <Typography variant="body2" color="text.secondary" textAlign="center">
+              <Typography variant="h6" fontWeight="bold">
+                Credit Card
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                textAlign="center"
+              >
                 Secure payment with your credit card
               </Typography>
             </Box>
-            
+
             <FormControl component="fieldset" fullWidth>
               <RadioGroup
                 value={paymentMethod}
@@ -725,8 +800,8 @@ export default function PaymentPage() {
                 />
               </RadioGroup>
             </FormControl>
-            
-            {paymentMethod === 'creditCard' && (
+
+            {paymentMethod === "creditCard" && (
               <Box mt={3}>
                 <Grid container spacing={2}>
                   <Grid item xs={12}>
@@ -774,23 +849,34 @@ export default function PaymentPage() {
             )}
           </PaymentMethodCard>
         </Grid>
-        
+
         <Grid item xs={12} md={4}>
           <PaymentMethodCard
-            selected={paymentMethod === 'invoice'}
-            onClick={() => setPaymentMethod('invoice')}
-            sx={{ p: 3, height: '100%' }}
+            selected={paymentMethod === "invoice"}
+            onClick={() => setPaymentMethod("invoice")}
+            sx={{ p: 3, height: "100%" }}
           >
-            <Box display="flex" flexDirection="column" alignItems="center" mb={3}>
+            <Box
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              mb={3}
+            >
               <IconWrapper>
-                <BuildingIcon sx={{ fontSize: 28, color: 'primary.main' }} />
+                <BuildingIcon sx={{ fontSize: 28, color: "primary.main" }} />
               </IconWrapper>
-              <Typography variant="h6" fontWeight="bold">Invoice</Typography>
-              <Typography variant="body2" color="text.secondary" textAlign="center">
+              <Typography variant="h6" fontWeight="bold">
+                Invoice
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                textAlign="center"
+              >
                 Pay via invoice for business accounts
               </Typography>
             </Box>
-            
+
             <FormControl component="fieldset" fullWidth>
               <RadioGroup
                 value={paymentMethod}
@@ -803,11 +889,12 @@ export default function PaymentPage() {
                 />
               </RadioGroup>
             </FormControl>
-            
-            {paymentMethod === 'invoice' && (
+
+            {paymentMethod === "invoice" && (
               <Box mt={3}>
                 <Typography variant="body2" color="text.secondary" paragraph>
-                  An invoice will be sent to your billing email address. Please make payment within 30 days.
+                  An invoice will be sent to your billing email address. Please
+                  make payment within 30 days.
                 </Typography>
                 <ModernTextField
                   label="Purchase Order Number (if applicable)"
@@ -820,23 +907,34 @@ export default function PaymentPage() {
             )}
           </PaymentMethodCard>
         </Grid>
-        
+
         <Grid item xs={12} md={4}>
           <PaymentMethodCard
-            selected={paymentMethod === 'paypal'}
-            onClick={() => setPaymentMethod('paypal')}
-            sx={{ p: 3, height: '100%' }}
+            selected={paymentMethod === "paypal"}
+            onClick={() => setPaymentMethod("paypal")}
+            sx={{ p: 3, height: "100%" }}
           >
-            <Box display="flex" flexDirection="column" alignItems="center" mb={3}>
+            <Box
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              mb={3}
+            >
               <IconWrapper>
-                <WalletIcon sx={{ fontSize: 28, color: 'primary.main' }} />
+                <WalletIcon sx={{ fontSize: 28, color: "primary.main" }} />
               </IconWrapper>
-              <Typography variant="h6" fontWeight="bold">PayPal</Typography>
-              <Typography variant="body2" color="text.secondary" textAlign="center">
+              <Typography variant="h6" fontWeight="bold">
+                PayPal
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                textAlign="center"
+              >
                 Quick and secure PayPal payment
               </Typography>
             </Box>
-            
+
             <FormControl component="fieldset" fullWidth>
               <RadioGroup
                 value={paymentMethod}
@@ -849,9 +947,8 @@ export default function PaymentPage() {
                 />
               </RadioGroup>
             </FormControl>
-            
-            
-            {paymentMethod === 'paypal' && (
+
+            {paymentMethod === "paypal" && (
               <Box mt={3}>
                 <Typography variant="body2" color="text.secondary">
                   You will be redirected to PayPal to complete your payment.
@@ -866,63 +963,73 @@ export default function PaymentPage() {
 
   const renderReviewAndConfirm = () => {
     const plan = plans[selectedPlan];
-    const price = billingPeriod === 'monthly' ? plan.monthlyPrice : plan.annualPrice;
-    
+    const price =
+      billingPeriod === "monthly" ? plan.monthlyPrice : plan.annualPrice;
+
     return (
       <Box my={4}>
         <Typography variant="h5" fontWeight="bold" mb={2}>
           Review & Confirm
         </Typography>
-        
+
         <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
           <Typography variant="h6" fontWeight="bold" mb={2}>
             Order Summary
           </Typography>
-          
-          <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="flex-start"
+            mb={2}
+          >
             <Box>
               <Box display="flex" alignItems="center">
-                {React.cloneElement(plan.icon as React.ReactElement, { sx: { mr: 1 } })}
-                <Typography fontWeight="medium">
-                  {plan.title}
-                </Typography>
+                {React.cloneElement(plan.icon as React.ReactElement, {
+                  sx: { mr: 1 },
+                })}
+                <Typography fontWeight="medium">{plan.title}</Typography>
               </Box>
               <Typography variant="body2" color="text.secondary" mt={0.5}>
-                {billingPeriod === 'monthly' ? 'Monthly' : 'Annual'} subscription
+                {billingPeriod === "monthly" ? "Monthly" : "Annual"}{" "}
+                subscription
               </Typography>
             </Box>
-            <Typography fontWeight="bold">
-              ${price}
-            </Typography>
+            <Typography fontWeight="bold">${price}</Typography>
           </Box>
-          
+
           <Divider sx={{ my: 2 }} />
-          
+
           <Box display="flex" justifyContent="space-between" mb={1}>
             <Typography fontWeight="medium">Subtotal</Typography>
             <Typography fontWeight="medium">${price}</Typography>
           </Box>
-          
+
           <Box display="flex" justifyContent="space-between" mb={1}>
             <Typography variant="body2">Tax</Typography>
             <Typography variant="body2">$0.00</Typography>
           </Box>
-          
+
           <Divider sx={{ my: 2 }} />
-          
+
           <Box display="flex" justifyContent="space-between" mb={2}>
             <Typography fontWeight="bold">Total</Typography>
-            <Typography fontWeight="bold" color="primary">${price}</Typography>
+            <Typography fontWeight="bold" color="primary">
+              ${price}
+            </Typography>
           </Box>
-          
+
           <Alert severity="info" sx={{ mt: 2 }}>
-            You will be charged ${price} {billingPeriod === 'monthly' ? 'monthly' : 'annually'}. You can cancel anytime.
+            You will be charged ${price}{" "}
+            {billingPeriod === "monthly" ? "monthly" : "annually"}. You can
+            cancel anytime.
           </Alert>
         </Paper>
-        
+
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Typography variant="body2" color="text.secondary">
-            By clicking "Complete Payment", you agree to our Terms of Service and Privacy Policy.
+            By clicking "Complete Payment", you agree to our Terms of Service
+            and Privacy Policy.
           </Typography>
         </Box>
       </Box>
@@ -931,17 +1038,19 @@ export default function PaymentPage() {
 
   const renderSuccess = () => (
     <Box textAlign="center" py={6}>
-      <Box sx={{ 
-        width: 64, 
-        height: 64, 
-        borderRadius: '50%', 
-        backgroundColor: 'success.main', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        mx: 'auto'
-      }}>
-        <CheckIcon sx={{ color: 'white', fontSize: 36 }} />
+      <Box
+        sx={{
+          width: 64,
+          height: 64,
+          borderRadius: "50%",
+          backgroundColor: "success.main",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          mx: "auto",
+        }}
+      >
+        <CheckIcon sx={{ color: "white", fontSize: 36 }} />
       </Box>
       <Typography variant="h4" fontWeight="bold" mt={3} mb={2}>
         Payment Successful!
@@ -955,10 +1064,10 @@ export default function PaymentPage() {
       <Typography variant="body2" mb={4}>
         A confirmation email has been sent to your email address.
       </Typography>
-      <Button 
+      <Button
         variant="contained"
         size="large"
-        onClick={() => window.location.href = '/dashboard'}
+        onClick={() => (window.location.href = "/dashboard")}
       >
         Go to Dashboard
       </Button>
@@ -988,16 +1097,17 @@ export default function PaymentPage() {
     <Box maxWidth="lg" mx="auto" px={2}>
       <Box mb={6} textAlign="center">
         {/* <Typography variant="h3" fontWeight="bold" mb={1}> */}
-                   <Typography 
-                            variant="h4" 
-                            component="h1" 
-                            sx={{ 
-                              fontWeight: 600,
-                              color: '#1a237e',
-                              fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }
-                            }}
-                          >
-          Complete Your Purchase</Typography>
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{
+            fontWeight: 600,
+            color: "#1a237e",
+            fontSize: { xs: "1.5rem", sm: "2rem", md: "2.5rem" },
+          }}
+        >
+          Complete Your Purchase
+        </Typography>
         <Typography color="text.secondary">
           You're just a few steps away from accessing our analytics platform
         </Typography>
@@ -1030,13 +1140,17 @@ export default function PaymentPage() {
           <Button
             onClick={handleNext}
             disabled={isProcessing}
-            endIcon={activeStep !== steps.length - 1 ? <ChevronRightIcon /> : undefined}
+            endIcon={
+              activeStep !== steps.length - 1 ? <ChevronRightIcon /> : undefined
+            }
             variant="contained"
           >
             {isProcessing ? (
               <CircularProgress size={24} color="inherit" />
+            ) : activeStep === steps.length - 1 ? (
+              "Complete Payment"
             ) : (
-              activeStep === steps.length - 1 ? 'Complete Payment' : 'Continue'
+              "Continue"
             )}
           </Button>
         </Box>

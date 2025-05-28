@@ -33,6 +33,8 @@ class FinancialCompanyWideUploadRequest(BaseModel):
     year: Union[Any, List[Any]] = "All"  # Year filter can be a single value or a list of values
     weekRange: Union[str, List[str]] = "All"  # Week range filter can be a single value or a list of values
     quarter: Union[int, List[int]] = "All"  # Quarter filter can be a single value or a list of values
+    startDate: str = None  # Date filter start
+    endDate: str = None    # Date filter end
 
 class ExcelFilterRequest(BaseModel):
     fileName: str  # Name of the previously uploaded file
