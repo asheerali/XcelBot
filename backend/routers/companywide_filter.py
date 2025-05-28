@@ -45,13 +45,13 @@ async def upload_excel(request: FinancialCompanyWideUploadRequest = Body(...)):
             
             
         sales_wide_result ={
-                "salesData":sales_df.to_dict(orient='records'),
-                "ordersData":order_df.to_dict(orient='records'),
-                "avgTicketData":avg_ticket_df.to_dict(orient='records'),
-                "cogsData":cogs_df.to_dict(orient='records'),
-                "laborCostData":reg_pay_df.to_dict(orient='records'),
-                "laborHrsData":lb_hrs_df.to_dict(orient='records'),
-                "spmhData":spmh_df.to_dict(orient='records'),
+                "table1":sales_df.to_dict(orient='records'),
+                "table2":order_df.to_dict(orient='records'),
+                "table3":avg_ticket_df.to_dict(orient='records'),
+                "table4":cogs_df.to_dict(orient='records'),
+                "table5":reg_pay_df.to_dict(orient='records'),
+                "table6":lb_hrs_df.to_dict(orient='records'),
+                "table7":spmh_df.to_dict(orient='records'),
                 # "locations": stores,
                 # "years": years,
                 # "dates": dates,
