@@ -27,20 +27,30 @@ async def upload_excel(request: FinancialCompanyWideUploadRequest = Body(...)):
         # print(f"Received file upload: {request.fileName}")
         
         fileName = request.fileName
+        print("i am here in the financials filter endpoint", request)
         # fileName = "20250514_200147_midtown_east_dashboard2_template1.xlsx"
         file_location = os.path.join(UPLOAD_DIR, fileName)
         
         year = request.year if request.year else "All"
         week_range = request.weekRange if request.weekRange else "All"
-        location = request.location if request.location else "All"
+        if request.location == "Multiple Locations":
+            location_filter = "All"
+        else:
+            location_filter = request.location if request.location else 'All'
+        # location = request.location if request.location else "All"
+        start_date = request.startDate if request.startDate else None
+        end_date = request.endDate if request.endDate else None
         
+        print("this is the year", year)
 
 
         financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table, years, dates, stores  = process_financials_file(
                 file_location,  
                 year=year, 
                 week_range=week_range, 
-                location=location, 
+                location=location_filter, 
+                start_date=start_date,
+                end_date=end_date
                 )
             
         financials_result = {

@@ -3,6 +3,7 @@ import numpy as np
 from datetime import datetime
 
 
+
 def create_sales_pivot_tables(df, location_filter='All', start_date=None, end_date=None):
     """
     Create pivot tables showing:
@@ -40,8 +41,7 @@ def create_sales_pivot_tables(df, location_filter='All', start_date=None, end_da
         else:
             filtered_df = filtered_df[filtered_df['Location'] == location_filter]
     
-    # Apply date range filter
-    from datetime import datetime
+
     if start_date is not None:
         if isinstance(start_date, str):
             start_date = datetime.strptime(start_date, '%Y-%m-%d').date()

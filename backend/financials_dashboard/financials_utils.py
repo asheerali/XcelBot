@@ -1,5 +1,14 @@
 import pandas as pd
 import numpy as np
+from datetime import datetime
+
+def parse_date(date_str):
+    for fmt in ('%Y-%m-%d', '%m/%d/%Y'):
+        try:
+            return datetime.strptime(date_str, fmt).date()
+        except ValueError:
+            continue
+    raise ValueError("Date must be in one of the following formats: 'YYYY-MM-DD' or 'MM/DD/YYYY'")
 
 
 def financials_filters(df):
@@ -19,13 +28,30 @@ def financials_filters(df):
     return unique_weeks, unique_years, unique_stores
 
 
-def day_of_the_week_tables(df):
+def day_of_the_week_tables(df, store='All', start_date=None, end_date=None):
 
 
     # sales_table
     # Clean column names
     df.columns = df.columns.str.strip()
+        
+    if start_date is not None:
+        if isinstance(start_date, str):
+            start_date = parse_date(start_date)
+        df = df[df['Date'] >= start_date]
 
+    if end_date is not None:
+        if isinstance(end_date, str):
+            end_date = parse_date(end_date)
+        df = df[df['Date'] <= end_date]
+    
+    # Apply filters to main dataframe
+    if store != 'All':
+        if isinstance(store, list):
+            df = df[df['Store'].isin(store)]
+        else:
+            df = df[df['Store'] == store]
+     
     # Define columns to clean
     sales_cols = ['Tw Sales', 'Lw Sales', 'Ly Sales']
     df[sales_cols] = df[sales_cols].fillna(0)
@@ -217,7 +243,7 @@ def day_of_the_week_tables(df):
 
 
 
-def calculate_tw_lw_bdg_comparison(df, df_budget, store='All', year='All', week_range='All'):
+def calculate_tw_lw_bdg_comparison(df, df_budget, store='All', year='All', week_range='All', start_date=None, end_date=None):
     # Clean both dataframes columns
     df.columns = df.columns.str.strip()
     df_budget.columns = df_budget.columns.str.strip()
@@ -225,6 +251,18 @@ def calculate_tw_lw_bdg_comparison(df, df_budget, store='All', year='All', week_
     # Make copies of the dataframes
     filtered_df = df.copy()
     filtered_budget_df = df_budget.copy()
+    
+    if start_date is not None:
+        if isinstance(start_date, str):
+            start_date = parse_date(start_date)
+        filtered_df = filtered_df[filtered_df['Date'] >= start_date]
+        filtered_budget_df = filtered_budget_df[filtered_budget_df['Date'] >= start_date]
+
+    if end_date is not None:
+        if isinstance(end_date, str):
+            end_date = parse_date(end_date)
+        filtered_df = filtered_df[filtered_df['Date'] <= end_date]
+        filtered_budget_df = filtered_budget_df[filtered_budget_df['Date'] <= end_date]
     
     # Apply filters to main dataframe
     if store != 'All':
