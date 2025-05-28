@@ -113,7 +113,7 @@ const pulse = keyframes`
 
 // Styled components
 const PageContainer = styled(Container)(({ theme }) => ({
-  minHeight: '100vh',
+  minHeight: "100vh",
   background: `linear-gradient(135deg, 
     ${alpha(theme.palette.grey[50], 0.3)} 0%, 
     ${alpha(theme.palette.primary.main, 0.02)} 100%)`,
@@ -129,61 +129,71 @@ const HeaderCard = styled(Card)(({ theme }) => ({
   color: theme.palette.text.primary,
   marginBottom: theme.spacing(4),
   borderRadius: theme.spacing(3),
-  overflow: 'hidden',
-  position: 'relative',
+  overflow: "hidden",
+  position: "relative",
   border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-  boxShadow: 'none',
-  '&::before': {
+  boxShadow: "none",
+  "&::before": {
     content: '""',
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
     background: 'url("data:image/svg+xml,")',
-    backgroundSize: '100px 100px',
-    pointerEvents: 'none',
+    backgroundSize: "100px 100px",
+    pointerEvents: "none",
   },
 }));
 
 const DashboardCard = styled(Card, {
-  shouldForwardProp: (prop) => prop !== 'selected',
+  shouldForwardProp: (prop) => prop !== "selected",
 })<{ selected?: boolean }>(({ theme, selected }) => ({
-  height: '80%',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  textAlign: 'center',
+  height: "80%",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  textAlign: "center",
   padding: theme.spacing(2),
   borderRadius: theme.spacing(2),
-  cursor: 'pointer',
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  position: 'relative',
-  overflow: 'hidden',
-  border: selected ? `3px solid ${theme.palette.primary.main}` : `1px solid ${theme.palette.divider}`,
-  background: selected 
-    ? `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.primary.light, 0.05)} 100%)`
+  cursor: "pointer",
+  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+  position: "relative",
+  overflow: "hidden",
+  border: selected
+    ? `3px solid ${theme.palette.primary.main}`
+    : `1px solid ${theme.palette.divider}`,
+  background: selected
+    ? `linear-gradient(135deg, ${alpha(
+        theme.palette.primary.main,
+        0.1
+      )} 0%, ${alpha(theme.palette.primary.light, 0.05)} 100%)`
     : theme.palette.background.paper,
-  '&:hover': {
-    transform: 'translateY(-4px)',
+  "&:hover": {
+    transform: "translateY(-4px)",
     boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.15)}`,
   },
-  '&::before': selected ? {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '4px',
-    background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-  } : {},
+  "&::before": selected
+    ? {
+        content: '""',
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: "4px",
+        background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+      }
+    : {},
 }));
 
 const DashboardIconAvatar = styled(Avatar)(({ theme }) => ({
   width: 60,
   height: 60,
   marginBottom: theme.spacing(1.5),
-  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
+  background: `linear-gradient(135deg, ${alpha(
+    theme.palette.primary.main,
+    0.1
+  )} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
   border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
 }));
 
@@ -192,14 +202,20 @@ const ModernDropZone = styled(Paper)(({ theme }) => ({
   border: `2px dashed ${theme.palette.primary.main}`,
   borderRadius: theme.spacing(2),
   padding: theme.spacing(4), // REDUCED from theme.spacing(8) to theme.spacing(4)
-  textAlign: 'center',
-  cursor: 'pointer',
-  transition: 'all 0.3s ease',
-  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.02)} 0%, ${alpha(theme.palette.secondary.main, 0.02)} 100%)`,
-  '&:hover': {
+  textAlign: "center",
+  cursor: "pointer",
+  transition: "all 0.3s ease",
+  background: `linear-gradient(135deg, ${alpha(
+    theme.palette.primary.main,
+    0.02
+  )} 0%, ${alpha(theme.palette.secondary.main, 0.02)} 100%)`,
+  "&:hover": {
     borderColor: theme.palette.primary.dark,
-    background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
-    transform: 'translateY(-2px)',
+    background: `linear-gradient(135deg, ${alpha(
+      theme.palette.primary.main,
+      0.05
+    )} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
+    transform: "translateY(-2px)",
   },
 }));
 
@@ -209,7 +225,7 @@ const DashboardSelectionCard = styled(Card)(({ theme }) => ({
     ${theme.palette.background.paper} 0%, 
     ${alpha(theme.palette.primary.main, 0.02)} 100%)`,
   border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-  backdropFilter: 'blur(10px)',
+  backdropFilter: "blur(10px)",
 }));
 
 const FileCard = styled(Card)(({ theme }) => ({
@@ -217,10 +233,10 @@ const FileCard = styled(Card)(({ theme }) => ({
   borderRadius: theme.spacing(2),
   background: theme.palette.background.paper,
   border: `1px solid ${theme.palette.divider}`,
-  transition: 'all 0.3s ease',
-  '&:hover': {
+  transition: "all 0.3s ease",
+  "&:hover": {
     boxShadow: theme.shadows[4],
-    transform: 'translateY(-2px)',
+    transform: "translateY(-2px)",
   },
 }));
 
@@ -228,74 +244,74 @@ const ProcessButton = styled(Button)(({ theme }) => ({
   borderRadius: theme.spacing(3),
   padding: theme.spacing(1.5, 4),
   fontWeight: 600,
-  fontSize: '1rem',
-  textTransform: 'none',
+  fontSize: "1rem",
+  textTransform: "none",
   background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-  '&:hover': {
+  "&:hover": {
     background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
-    transform: 'translateY(-2px)',
+    transform: "translateY(-2px)",
   },
 }));
 
 const SelectedBadge = styled(Chip)(({ theme }) => ({
-  position: 'absolute',
+  position: "absolute",
   top: theme.spacing(1),
   right: theme.spacing(1),
   background: theme.palette.primary.main,
-  color: 'white',
+  color: "white",
   fontWeight: 600,
-  fontSize: '0.75rem',
+  fontSize: "0.75rem",
 }));
 
 // Dashboard options with modern icons and colors - UPDATED with combination cards
 const DASHBOARD_OPTIONS = [
-  { 
-    value: "Sales Split", 
-    label: "Sales Split", 
-    icon: <GridViewIcon />, 
-    description: "",
-    color: "#4285f4",
-    height: "150px"
-  },
-  { 
-    value: "Financials", 
-    label: "Financials", 
-    icon: <AttachMoneyIcon />, 
-    description: "",
-    color: "#9c27b0",
-     height: "150px"
-  },
-  { 
-    value: "Sales Wide", 
-    label: "Sales Wide", 
-    icon: <TrendingUpIcon />, 
-    description: "",
-    color: "#f57c00",
-     height: "150px"
-  },
-  { 
-    value: "Product Mix", 
-    label: "Product Mix", 
-    icon: <RestaurantIcon />, 
-    description: "",
-    color: "#689f38",
-     height: "150px"
-  },
-  { 
-    value: "Sales Split and Product Mix", 
-    label: "Sales Split & Product Mix", 
-    icon: <AnalyticsIcon />, 
+  {
+    value: "Sales Split and Product Mix",
+    label: "Sales Split & Product Mix",
+    icon: <AnalyticsIcon />,
     description: " ",
     color: "#e91e63",
-     height: "150px"
+    height: "150px",
   },
-  { 
-    value: "Financials and Sales Wide", 
-    label: "Financials & Sales Wide", 
-    icon: <AssessmentIcon />, 
+  {
+    value: "Financials and Sales Wide",
+    label: "Financials & Sales Wide",
+    icon: <AssessmentIcon />,
     description: " ",
     color: "#00bcd4",
-     height: "150px"
+    height: "150px",
+  },
+  {
+    value: "Sales Split",
+    label: "Sales Split",
+    icon: <GridViewIcon />,
+    description: "",
+    color: "#4285f4",
+    height: "150px",
+  },
+  {
+    value: "Product Mix",
+    label: "Product Mix",
+    icon: <RestaurantIcon />,
+    description: "",
+    color: "#689f38",
+    height: "150px",
+  },
+  {
+    value: "Financials",
+    label: "Financials",
+    icon: <AttachMoneyIcon />,
+    description: "",
+    color: "#9c27b0",
+    height: "150px",
+  },
+  {
+    value: "Sales Wide",
+    label: "Companywide Sales",
+    icon: <TrendingUpIcon />,
+    description: "",
+    color: "#f57c00",
+    height: "150px",
   },
 ];
 
@@ -341,7 +357,8 @@ const extractCategoriesFromData = (data: any): string[] => {
   try {
     if (Array.isArray(data)) {
       data.forEach((dashboardData, index) => {
-        const dashboardCategories = extractCategoriesFromSingleDashboard(dashboardData);
+        const dashboardCategories =
+          extractCategoriesFromSingleDashboard(dashboardData);
         categories = [...new Set([...categories, ...dashboardCategories])];
       });
     } else {
@@ -379,9 +396,25 @@ const extractCategoriesFromSingleDashboard = (dashboardData: any): string[] => {
         const filteredTableKeys = tableKeys.filter((key) => {
           const keyLower = key.toLowerCase();
           const excludePatterns = [
-            "week", "date", "time", "id", "index", "total", "grand", "sum", 
-            "count", "avg", "average", "min", "max", "store", "location", 
-            "file", "upload", "dashboard", "data",
+            "week",
+            "date",
+            "time",
+            "id",
+            "index",
+            "total",
+            "grand",
+            "sum",
+            "count",
+            "avg",
+            "average",
+            "min",
+            "max",
+            "store",
+            "location",
+            "file",
+            "upload",
+            "dashboard",
+            "data",
           ];
           return !excludePatterns.some((pattern) => keyLower.includes(pattern));
         });
@@ -405,14 +438,18 @@ const ExcelUploadPage: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
-  const [currentEditingIndex, setCurrentEditingIndex] = useState<number | null>(null);
+  const [currentEditingIndex, setCurrentEditingIndex] = useState<number | null>(
+    null
+  );
   const [locationInput, setLocationInput] = useState<string[]>([]); // UPDATED: Changed to array
   const [locationError, setLocationError] = useState("");
   const [selectedDashboard, setSelectedDashboard] = useState("Financials");
-  
+
   // UPDATED: Changed to multiple locations
-  const [selectedLocations, setSelectedLocations] = useState<string[]>(["Midtown East"]);
-  
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([
+    "Midtown East",
+  ]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const navigate = useNavigate();
@@ -594,9 +631,12 @@ const ExcelUploadPage: React.FC = () => {
       // Process responses for each location
       responses.forEach((response, locationIndex) => {
         const location = fileInfo.locations[locationIndex];
-        
+
         if (response.data) {
-          console.log(`📨 Received response data for ${location}:`, response.data);
+          console.log(
+            `📨 Received response data for ${location}:`,
+            response.data
+          );
 
           const extractedCategories = extractCategoriesFromData(response.data);
           console.log("🏷️ Extracted categories:", extractedCategories);
@@ -658,7 +698,8 @@ const ExcelUploadPage: React.FC = () => {
               }
             });
           } else {
-            const dashboardName = response.data.dashboardName?.trim() || fileInfo.dashboard;
+            const dashboardName =
+              response.data.dashboardName?.trim() || fileInfo.dashboard;
             const enhancedDashboardData = {
               ...response.data,
               categories: extractedCategories,
@@ -733,7 +774,6 @@ const ExcelUploadPage: React.FC = () => {
 
       console.log("✅ File upload completed successfully for all locations");
       return true;
-
     } catch (err) {
       console.error("Upload error:", err);
 
@@ -744,7 +784,8 @@ const ExcelUploadPage: React.FC = () => {
           const detail = err.response.data?.detail;
           errorMessage = `Server error: ${detail || err.response.status}`;
         } else if (err.request) {
-          errorMessage = "No response from server. Please check if the backend is running.";
+          errorMessage =
+            "No response from server. Please check if the backend is running.";
         }
       } else if (err instanceof Error) {
         errorMessage = `Error: ${err.message}`;
@@ -771,7 +812,9 @@ const ExcelUploadPage: React.FC = () => {
     );
 
     if (pendingFiles.length === 0) {
-      setGeneralError("No files ready for upload. Please add locations to files.");
+      setGeneralError(
+        "No files ready for upload. Please add locations to files."
+      );
       return;
     }
 
@@ -801,12 +844,14 @@ const ExcelUploadPage: React.FC = () => {
     }
 
     let finalLocations = [...locationInput];
-    
+
     // Apply the same exclusion logic
     if (locationInput.includes("Multiple Locations")) {
       finalLocations = ["Multiple Locations"];
     } else {
-      finalLocations = locationInput.filter(location => location !== "Multiple Locations");
+      finalLocations = locationInput.filter(
+        (location) => location !== "Multiple Locations"
+      );
     }
 
     if (currentEditingIndex !== null) {
@@ -836,21 +881,25 @@ const ExcelUploadPage: React.FC = () => {
   // UPDATED: Handle multiple location changes with exclusion logic
   const handleLocationsChange = (event: any, newValue: string[]) => {
     let filteredValue = [...newValue];
-    
+
     // If "Multiple Locations" is selected, remove all other locations
     if (newValue.includes("Multiple Locations")) {
       filteredValue = ["Multiple Locations"];
     } else {
       // If any other location is selected, remove "Multiple Locations"
-      filteredValue = newValue.filter(location => location !== "Multiple Locations");
+      filteredValue = newValue.filter(
+        (location) => location !== "Multiple Locations"
+      );
     }
-    
+
     setSelectedLocations(filteredValue);
 
     // Update all pending files with new locations
     setFiles((prevFiles) =>
       prevFiles.map((file) =>
-        file.status === "pending" ? { ...file, locations: [...filteredValue] } : file
+        file.status === "pending"
+          ? { ...file, locations: [...filteredValue] }
+          : file
       )
     );
   };
@@ -909,26 +958,26 @@ const ExcelUploadPage: React.FC = () => {
       {/* Modern Header */}
       <Fade in timeout={800}>
         <HeaderCard>
-          <CardContent sx={{ p: 2.5, position: 'relative', zIndex: 1 }}>
-            <Typography 
-              variant="h3" 
-              component="h1" 
-              sx={{ 
-                fontWeight: 700, 
+          <CardContent sx={{ p: 2.5, position: "relative", zIndex: 1 }}>
+            <Typography
+              variant="h3"
+              component="h1"
+              sx={{
+                fontWeight: 700,
                 mb: 2,
-                color: 'text.primary',
-                textAlign: 'center'
+                color: "text.primary",
+                textAlign: "center",
               }}
             >
               Choose Your Dashboard Type
             </Typography>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                color: 'text.secondary',
+            <Typography
+              variant="h6"
+              sx={{
+                color: "text.secondary",
                 fontWeight: 400,
                 lineHeight: 1.6,
-                textAlign: 'center'
+                textAlign: "center",
               }}
             >
               Select the dashboard type that best fits your data analysis needs
@@ -942,65 +991,83 @@ const ExcelUploadPage: React.FC = () => {
         <DashboardSelectionCard sx={{ mb: 4 }}>
           <CardContent sx={{ p: 4 }}>
             {/* Dashboard Selection */}
-            <Typography variant="h5" sx={{ mb: 3, fontWeight: 600, color: 'text.primary' }}>
+            <Typography
+              variant="h5"
+              sx={{ mb: 3, fontWeight: 600, color: "text.primary" }}
+            >
               Dashboard & Location Settings
             </Typography>
-            
-           <Grid container spacing={3}>
-  {DASHBOARD_OPTIONS.map((option, index) => (
-    <Grid item xs={12} sm={2} md={2} key={option.value}>
-      <Fade in timeout={1200 + index * 200}>
-        <DashboardCard
-          selected={selectedDashboard === option.value}
-          onClick={() => handleDashboardChange(option.value)}
-          sx={{ height: option.height || "100%" }} // Apply height here
-        >
-          {selectedDashboard === option.value && (
-            <SelectedBadge label="Selected" />
-          )}
-          
-          <DashboardIconAvatar sx={{ bgcolor: alpha(option.color, 0.1) }}>
-            <Box sx={{ color: option.color, fontSize: 24 }}>
-              {option.icon}
-            </Box>
-          </DashboardIconAvatar>
-          
-          <Typography 
-            variant="subtitle1"
-            sx={{ 
-              fontWeight: 600, 
-              mb: 0.5,
-              color: selectedDashboard === option.value ? 'primary.main' : 'text.primary'
-            }}
-          >
-            {option.label}
-          </Typography>
-          
-          <Typography 
-            variant="caption"
-            color="text.secondary"
-            sx={{ lineHeight: 1.3 }}
-          >
-            {option.description}
-          </Typography>
-        </DashboardCard>
-      </Fade>
-    </Grid>
-  ))}
-</Grid>
+
+            <Grid container spacing={3}>
+              {DASHBOARD_OPTIONS.map((option, index) => (
+                <Grid item xs={12} sm={2} md={2} key={option.value}>
+                  <Fade in timeout={1200 + index * 200}>
+                    <DashboardCard
+                      selected={selectedDashboard === option.value}
+                      onClick={() => handleDashboardChange(option.value)}
+                      sx={{ height: option.height || "100%" }} // Apply height here
+                    >
+                      {selectedDashboard === option.value && (
+                        <SelectedBadge label="Selected" />
+                      )}
+
+                      <DashboardIconAvatar
+                        sx={{ bgcolor: alpha(option.color, 0.1) }}
+                      >
+                        <Box sx={{ color: option.color, fontSize: 24 }}>
+                          {option.icon}
+                        </Box>
+                      </DashboardIconAvatar>
+
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
+                          fontWeight: 600,
+                          mb: 0.5,
+                          color:
+                            selectedDashboard === option.value
+                              ? "primary.main"
+                              : "text.primary",
+                        }}
+                      >
+                        {option.label}
+                      </Typography>
+
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ lineHeight: 1.3 }}
+                      >
+                        {option.description}
+                      </Typography>
+                    </DashboardCard>
+                  </Fade>
+                </Grid>
+              ))}
+            </Grid>
 
             {/* UPDATED: Multiple Location Settings */}
-            <Box sx={{ mt: 4, pt: 3, borderTop: `1px solid ${alpha(theme.palette.divider, 0.5)}` }}>
-            
+            <Box
+              sx={{
+                mt: 4,
+                pt: 3,
+                borderTop: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
+              }}
+            >
               <Grid container spacing={3} alignItems="center">
                 <Grid item xs={12} md={8}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <LocationOnIcon sx={{ mr: 1, color: 'text.secondary' }} />
-                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                      Default Locations (Multiple Selection - "Multiple Locations" excludes others)
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                    <LocationOnIcon sx={{ mr: 1, color: "text.secondary" }} />
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ fontWeight: 500 }}
+                    >
+                      Default Locations (Multiple Selection - "Multiple
+                      Locations" excludes others)
                     </Typography>
                   </Box>
-                  
+
                   {/* UPDATED: Multiple location selection with exclusion logic */}
                   <Autocomplete
                     multiple
@@ -1014,7 +1081,7 @@ const ExcelUploadPage: React.FC = () => {
                           variant="outlined"
                           label={option}
                           {...getTagProps({ index })}
-                          sx={{ margin: '2px' }}
+                          sx={{ margin: "2px" }}
                         />
                       ))
                     }
@@ -1024,16 +1091,18 @@ const ExcelUploadPage: React.FC = () => {
                         placeholder="Select or type locations"
                         variant="outlined"
                         sx={{
-                          '& .MuiOutlinedInput-root': {
+                          "& .MuiOutlinedInput-root": {
                             borderRadius: 2,
-                            backgroundColor: 'background.paper',
-                          }
+                            backgroundColor: "background.paper",
+                          },
                         }}
                         InputProps={{
                           ...params.InputProps,
                           startAdornment: (
                             <>
-                              <LocationCityIcon sx={{ mr: 1, color: 'primary.main' }} />
+                              <LocationCityIcon
+                                sx={{ mr: 1, color: "primary.main" }}
+                              />
                               {params.InputProps.startAdornment}
                             </>
                           ),
@@ -1042,25 +1111,31 @@ const ExcelUploadPage: React.FC = () => {
                     )}
                   />
                 </Grid>
-                
+
                 <Grid item xs={12} md={4}>
-                  <Typography 
-                    variant="body2" 
-                    color="text.secondary" 
-                    sx={{ 
-                      fontStyle: 'italic',
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      fontStyle: "italic",
                       p: 2,
                       backgroundColor: alpha(theme.palette.info.main, 0.05),
                       borderRadius: 2,
-                      border: `1px solid ${alpha(theme.palette.info.main, 0.1)}`
+                      border: `1px solid ${alpha(
+                        theme.palette.info.main,
+                        0.1
+                      )}`,
                     }}
                   >
-                    {selectedLocations.length === 0 
+                    {selectedLocations.length === 0
                       ? "Select locations to apply to all new files automatically."
                       : selectedLocations.includes("Multiple Locations")
-                        ? "Files will be processed for multiple locations. 'Multiple Locations' excludes other specific location selections."
-                        : `New files will be processed for ${selectedLocations.length} location${selectedLocations.length > 1 ? 's' : ''}. You can modify individual files after upload.`
-                    }
+                      ? "Files will be processed for multiple locations. 'Multiple Locations' excludes other specific location selections."
+                      : `New files will be processed for ${
+                          selectedLocations.length
+                        } location${
+                          selectedLocations.length > 1 ? "s" : ""
+                        }. You can modify individual files after upload.`}
                   </Typography>
                 </Grid>
               </Grid>
@@ -1071,7 +1146,7 @@ const ExcelUploadPage: React.FC = () => {
 
       {/* UPDATED: File Upload Area with reduced height */}
       <Grow in timeout={1600}>
-        <Card sx={{ mb: 4, borderRadius: 3, overflow: 'hidden' }}>
+        <Card sx={{ mb: 4, borderRadius: 3, overflow: "hidden" }}>
           <CardContent sx={{ p: 0 }}>
             <ModernDropZone
               onDrop={handleDrop}
@@ -1079,25 +1154,27 @@ const ExcelUploadPage: React.FC = () => {
               onDragLeave={handleDragLeave}
               onClick={() => fileInputRef.current?.click()}
               sx={{
-                borderColor: isDragging ? 'primary.dark' : 'primary.main',
-                transform: isDragging ? 'scale(1.02)' : 'scale(1)',
-                animation: isDragging ? `${pulse} 1s infinite` : 'none',
+                borderColor: isDragging ? "primary.dark" : "primary.main",
+                transform: isDragging ? "scale(1.02)" : "scale(1)",
+                animation: isDragging ? `${pulse} 1s infinite` : "none",
               }}
             >
-              <CloudUploadIcon 
-                sx={{ 
+              <CloudUploadIcon
+                sx={{
                   fontSize: 48, // REDUCED from 64 to 48
-                  color: 'primary.main', 
+                  color: "primary.main",
                   mb: 1.5, // REDUCED from mb: 2 to mb: 1.5
-                  animation: isDragging ? `${pulse} 0.5s infinite` : 'none'
-                }} 
+                  animation: isDragging ? `${pulse} 0.5s infinite` : "none",
+                }}
               />
-              
+
               <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
                 Drag & Drop Excel Files Here
               </Typography>
-              
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}> {/* REDUCED from mb: 3 to mb: 2 */}
+
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+                {" "}
+                {/* REDUCED from mb: 3 to mb: 2 */}
                 or click to browse files
               </Typography>
 
@@ -1126,12 +1203,12 @@ const ExcelUploadPage: React.FC = () => {
       {/* General Error Alert */}
       {generalError && (
         <Fade in>
-          <Alert 
-            severity="error" 
-            sx={{ 
-              mb: 3, 
+          <Alert
+            severity="error"
+            sx={{
+              mb: 3,
               borderRadius: 2,
-              '& .MuiAlert-icon': { fontSize: 24 }
+              "& .MuiAlert-icon": { fontSize: 24 },
             }}
             onClose={() => setGeneralError(null)}
           >
@@ -1143,7 +1220,7 @@ const ExcelUploadPage: React.FC = () => {
       {/* Files List */}
       {files.length > 0 && (
         <Grow in timeout={1800}>
-          <Card sx={{ borderRadius: 3, overflow: 'hidden' }}>
+          <Card sx={{ borderRadius: 3, overflow: "hidden" }}>
             <CardContent sx={{ p: 4 }}>
               <Box
                 sx={{
@@ -1156,11 +1233,13 @@ const ExcelUploadPage: React.FC = () => {
                 <Typography variant="h5" sx={{ fontWeight: 600 }}>
                   Uploaded Files ({files.length})
                 </Typography>
-                
+
                 <ProcessButton
                   variant="contained"
                   onClick={uploadAllFiles}
-                  disabled={files.every((f) => f.status !== "pending" || f.locations.length === 0)}
+                  disabled={files.every(
+                    (f) => f.status !== "pending" || f.locations.length === 0
+                  )}
                   startIcon={<CloudUploadIcon />}
                   endIcon={<ArrowForwardIcon />}
                 >
@@ -1175,15 +1254,29 @@ const ExcelUploadPage: React.FC = () => {
                       <CardContent sx={{ p: 3 }}>
                         <Grid container spacing={2} alignItems="center">
                           <Grid item xs={12} md={8}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 2,
+                                mb: 2,
+                              }}
+                            >
                               {getStatusIcon(fileInfo.status)}
-                              
+
                               <Box sx={{ flexGrow: 1 }}>
-                                <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                                <Typography
+                                  variant="h6"
+                                  sx={{ fontWeight: 600, mb: 1 }}
+                                >
                                   {fileInfo.file.name}
                                 </Typography>
-                                
-                                <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+
+                                <Stack
+                                  direction="row"
+                                  spacing={1}
+                                  sx={{ mb: 1 }}
+                                >
                                   <Chip
                                     label={fileInfo.dashboard}
                                     size="small"
@@ -1194,51 +1287,86 @@ const ExcelUploadPage: React.FC = () => {
                                   <Chip
                                     label={fileInfo.status}
                                     size="small"
-                                    color={getStatusColor(fileInfo.status) as any}
+                                    color={
+                                      getStatusColor(fileInfo.status) as any
+                                    }
                                   />
-                                  {fileInfo.categories && fileInfo.categories.length > 0 && (
-                                    <Chip
-                                      label={`${fileInfo.categories.length} categories`}
-                                      size="small"
-                                      color="info"
-                                      variant="outlined"
-                                      icon={<CategoryIcon />}
-                                    />
-                                  )}
+                                  {fileInfo.categories &&
+                                    fileInfo.categories.length > 0 && (
+                                      <Chip
+                                        label={`${fileInfo.categories.length} categories`}
+                                        size="small"
+                                        color="info"
+                                        variant="outlined"
+                                        icon={<CategoryIcon />}
+                                      />
+                                    )}
                                 </Stack>
 
                                 {/* UPDATED: Display multiple locations */}
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 1,
+                                    flexWrap: "wrap",
+                                  }}
+                                >
                                   <PlaceIcon fontSize="small" color="action" />
                                   {fileInfo.locations.length === 0 ? (
-                                    <Typography variant="body2" color="text.secondary">
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                    >
                                       No locations set
                                     </Typography>
                                   ) : fileInfo.locations.length === 1 ? (
-                                    <Typography variant="body2" color="text.secondary">
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                    >
                                       {fileInfo.locations[0]}
                                     </Typography>
                                   ) : (
                                     <>
-                                      <Typography variant="body2" color="text.secondary">
+                                      <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                      >
                                         {fileInfo.locations.length} locations:
                                       </Typography>
-                                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                                        {fileInfo.locations.slice(0, 3).map((location, locIndex) => (
-                                          <Chip
-                                            key={locIndex}
-                                            label={location}
-                                            size="small"
-                                            variant="outlined"
-                                            sx={{ fontSize: '0.75rem', height: '20px' }}
-                                          />
-                                        ))}
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          gap: 0.5,
+                                          flexWrap: "wrap",
+                                        }}
+                                      >
+                                        {fileInfo.locations
+                                          .slice(0, 3)
+                                          .map((location, locIndex) => (
+                                            <Chip
+                                              key={locIndex}
+                                              label={location}
+                                              size="small"
+                                              variant="outlined"
+                                              sx={{
+                                                fontSize: "0.75rem",
+                                                height: "20px",
+                                              }}
+                                            />
+                                          ))}
                                         {fileInfo.locations.length > 3 && (
                                           <Chip
-                                            label={`+${fileInfo.locations.length - 3} more`}
+                                            label={`+${
+                                              fileInfo.locations.length - 3
+                                            } more`}
                                             size="small"
                                             variant="outlined"
-                                            sx={{ fontSize: '0.75rem', height: '20px' }}
+                                            sx={{
+                                              fontSize: "0.75rem",
+                                              height: "20px",
+                                            }}
                                           />
                                         )}
                                       </Box>
@@ -1250,7 +1378,9 @@ const ExcelUploadPage: React.FC = () => {
 
                             {fileInfo.status === "uploading" && (
                               <Box sx={{ width: "100%", mt: 2 }}>
-                                <Box sx={{ display: "flex", alignItems: "center" }}>
+                                <Box
+                                  sx={{ display: "flex", alignItems: "center" }}
+                                >
                                   <Box sx={{ width: "100%", mr: 1 }}>
                                     <LinearProgress
                                       variant="determinate"
@@ -1258,15 +1388,22 @@ const ExcelUploadPage: React.FC = () => {
                                       sx={{
                                         height: 8,
                                         borderRadius: 4,
-                                        backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                                        '& .MuiLinearProgress-bar': {
+                                        backgroundColor: alpha(
+                                          theme.palette.primary.main,
+                                          0.1
+                                        ),
+                                        "& .MuiLinearProgress-bar": {
                                           borderRadius: 4,
-                                        }
+                                        },
                                       }}
                                     />
                                   </Box>
                                   <Box sx={{ minWidth: 35 }}>
-                                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                      sx={{ fontWeight: 600 }}
+                                    >
                                       {`${Math.round(fileInfo.progress)}%`}
                                     </Typography>
                                   </Box>
@@ -1275,14 +1412,21 @@ const ExcelUploadPage: React.FC = () => {
                             )}
 
                             {fileInfo.error && (
-                              <Alert severity="error" sx={{ mt: 2, borderRadius: 2 }}>
+                              <Alert
+                                severity="error"
+                                sx={{ mt: 2, borderRadius: 2 }}
+                              >
                                 {fileInfo.error}
                               </Alert>
                             )}
                           </Grid>
 
                           <Grid item xs={12} md={4}>
-                            <Stack direction="row" spacing={1} justifyContent="flex-end">
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              justifyContent="flex-end"
+                            >
                               {fileInfo.status === "success" && (
                                 <Button
                                   variant="contained"
@@ -1310,11 +1454,14 @@ const ExcelUploadPage: React.FC = () => {
                               <IconButton
                                 color="error"
                                 onClick={() => removeFile(index)}
-                                sx={{ 
+                                sx={{
                                   borderRadius: 2,
-                                  '&:hover': {
-                                    backgroundColor: alpha(theme.palette.error.main, 0.1)
-                                  }
+                                  "&:hover": {
+                                    backgroundColor: alpha(
+                                      theme.palette.error.main,
+                                      0.1
+                                    ),
+                                  },
                                 }}
                               >
                                 <DeleteIcon />
@@ -1341,36 +1488,50 @@ const ExcelUploadPage: React.FC = () => {
         PaperProps={{
           sx: {
             borderRadius: 3,
-            background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
-          }
+            background: "linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)",
+          },
         }}
       >
         <DialogTitle sx={{ pb: 1 }}>
-          <Typography variant="h5" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
             <LocationOnIcon color="primary" />
             Set File Locations
           </Typography>
         </DialogTitle>
-        
+
         <DialogContent sx={{ pt: 2 }}>
-          <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary', lineHeight: 1.6 }}>
-            Please specify one or more locations for this file. Note: Selecting "Multiple Locations" will exclude other specific location choices.
+          <Typography
+            variant="body1"
+            sx={{ mb: 3, color: "text.secondary", lineHeight: 1.6 }}
+          >
+            Please specify one or more locations for this file. Note: Selecting
+            "Multiple Locations" will exclude other specific location choices.
           </Typography>
-          
+
           {/* UPDATED: Multiple location selection in dialog with exclusion logic */}
           <Autocomplete
             multiple
             value={locationInput}
             onChange={(event, newValue) => {
               let filteredValue = [...newValue];
-              
+
               // Apply exclusion logic: "Multiple Locations" excludes all others
               if (newValue.includes("Multiple Locations")) {
                 filteredValue = ["Multiple Locations"];
               } else {
-                filteredValue = newValue.filter(location => location !== "Multiple Locations");
+                filteredValue = newValue.filter(
+                  (location) => location !== "Multiple Locations"
+                );
               }
-              
+
               setLocationInput(filteredValue);
               setLocationError("");
             }}
@@ -1382,7 +1543,7 @@ const ExcelUploadPage: React.FC = () => {
                   variant="outlined"
                   label={option}
                   {...getTagProps({ index })}
-                  sx={{ margin: '2px' }}
+                  sx={{ margin: "2px" }}
                 />
               ))
             }
@@ -1394,17 +1555,20 @@ const ExcelUploadPage: React.FC = () => {
                 fullWidth
                 margin="normal"
                 error={!!locationError}
-                helperText={locationError || "Choose locations to help organize your data. 'Multiple Locations' excludes other selections."}
+                helperText={
+                  locationError ||
+                  "Choose locations to help organize your data. 'Multiple Locations' excludes other selections."
+                }
                 sx={{
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 2,
-                  }
+                  },
                 }}
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
                     <>
-                      <LocationOnIcon sx={{ mr: 1, color: 'primary.main' }} />
+                      <LocationOnIcon sx={{ mr: 1, color: "primary.main" }} />
                       {params.InputProps.startAdornment}
                     </>
                   ),
@@ -1413,16 +1577,16 @@ const ExcelUploadPage: React.FC = () => {
             )}
           />
         </DialogContent>
-        
+
         <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button 
+          <Button
             onClick={handleLocationCancel}
             sx={{ borderRadius: 2, px: 3 }}
           >
             Cancel
           </Button>
-          <Button 
-            onClick={handleLocationSave} 
+          <Button
+            onClick={handleLocationSave}
             variant="contained"
             sx={{ borderRadius: 2, px: 3 }}
             startIcon={<CheckCircleIcon />}

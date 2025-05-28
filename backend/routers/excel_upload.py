@@ -84,7 +84,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         #     return ExcelUploadResponse(success=True, message="File processed successfully", data=result)
 
         # if request.dashboard in ["Financials", "Companywide", "Sales Wide"]:
-        if request.dashboard == "Financials" or request.dashboard == "Sales Wide" or request.dashboard == "Companywide":
+        if request.dashboard == "Financials" or request.dashboard == "Sales Wide" or request.dashboard == "Companywide" or request.dashboard == "Financials and Sales Wide":
 
             print("Dashboard type: ", request.dashboard)
             # print("i am here 4")
@@ -175,7 +175,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             #     "data":  f"{request.dashboard} Dashboard is not yet implemented."
             # }
         
-        if request.dashboard == "Sales Split" or request.dashboard == "Product Mix":
+        if request.dashboard == "Sales Split" or request.dashboard == "Product Mix" or request.dashboard == "Sales Split and Product Mix":
             print("Dashboard type: Sales Split / Product Mix Dashboard")
             
             excel_data_copy = io.BytesIO(file_content)
