@@ -1,4 +1,4 @@
-// src/pages/Financials.tsx - Updated with integrated filters using financial-specific Redux state
+// src/pages/Financials.tsx - Updated with DateRangeSelector and backend integration
 
 import React, { useState, useEffect } from 'react';
 import Box from '@mui/material/Box';
@@ -15,6 +15,34 @@ import { useTheme } from '@mui/material/styles';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import IconButton from '@mui/material/IconButton';
+import TextField from '@mui/material/TextField';
+import Checkbox from '@mui/material/Checkbox';
+import ListItemText from '@mui/material/ListItemText';
+import Divider from '@mui/material/Divider';
+import Popover from '@mui/material/Popover';
+import MenuList from '@mui/material/MenuList';
+import CircularProgress from '@mui/material/CircularProgress';
+
+// Import axios for API calls
+import axios from 'axios';
+
+// Icons
+import PlaceIcon from '@mui/icons-material/Place';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import CloseIcon from '@mui/icons-material/Close';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import SearchIcon from '@mui/icons-material/Search';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import RefreshIcon from '@mui/icons-material/Refresh';
+
+// Import components
 import FinancialTable from '../components/FinancialTable';
 import DayOfWeekAnalysis from '../components/DayOfWeekAnalysis';
 import WeekOverWeekChart from '../components/graphs/WeekOverWeekChart';
@@ -22,16 +50,29 @@ import BudgetChart from '../components/graphs/BudgetChart';
 import SalesChart from '../components/graphs/SalesChart';
 import OrdersChart from '../components/graphs/OrdersChart';
 import AvgTicketChart from '../components/graphs/AvgTicketChart';
+import DateRangeSelector from '../components/DateRangeSelector';
 
 // Import Redux hooks
 import { useAppDispatch, useAppSelector } from '../typedHooks';
 import { 
   selectFinancialLocation, 
-  updateFinancialFilters 
+  updateFinancialFilters,
+  setTableData,
+  setLoading,
+  setError
 } from '../store/excelSlice';
 
-// Tab Panel Component
-function TabPanel(props) {
+// API URLs
+const FINANCIAL_FILTER_API_URL = 'http://localhost:8000/api/financials/filter';
+
+// TabPanel Component
+interface TabPanelProps {
+  children?: React.ReactNode;
+  value: number;
+  index: number;
+}
+
+function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
 
   return (
@@ -51,19 +92,430 @@ function TabPanel(props) {
   );
 }
 
+// Multi-Select Filter Component matching the image design
+interface MultiSelectFilterProps {
+  id: string;
+  label: string;
+  value: string[];
+  options: string[];
+  onChange: (value: string[]) => void;
+  placeholder?: string;
+  icon?: React.ReactNode;
+}
+
+const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
+  id,
+  label,
+  value,
+  options,
+  onChange,
+  placeholder = "Select options",
+  icon
+}) => {
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [searchText, setSearchText] = useState('');
+  const open = Boolean(anchorEl);
+
+  const filteredOptions = options.filter(option =>
+    option.toLowerCase().includes(searchText.toLowerCase())
+  );
+
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+    setSearchText('');
+  };
+
+  const handleToggle = (option: string) => {
+    const newValue = value.includes(option)
+      ? value.filter(item => item !== option)
+      : [...value, option];
+    onChange(newValue);
+  };
+
+  const handleSelectAll = () => {
+    if (value.length === options.length) {
+      onChange([]);
+    } else {
+      onChange([...options]);
+    }
+  };
+
+  const handleClear = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    onChange([]);
+  };
+
+  const displayText = value.length === 0 
+    ? placeholder 
+    : value.length === 1 
+      ? value[0]
+      : `Multiple Loc... (${value.length})`;
+
+  return (
+    <Box sx={{ position: 'relative', width: '100%' }}>
+      <Typography 
+        variant="body2" 
+        sx={{ 
+          mb: 1, 
+          color: '#666',
+          fontSize: '0.875rem',
+          fontWeight: 500
+        }}
+      >
+        {label}
+      </Typography>
+      
+      <Box
+        onClick={handleClick}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          border: '2px solid #e0e0e0',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          cursor: 'pointer',
+          backgroundColor: '#fff',
+          minHeight: '48px',
+          position: 'relative',
+          '&:hover': {
+            borderColor: '#1976d2',
+          }
+        }}
+      >
+        {icon && (
+          <Box sx={{ color: '#1976d2', mr: 1.5, display: 'flex', alignItems: 'center' }}>
+            {icon}
+          </Box>
+        )}
+        
+        <Typography 
+          variant="body1" 
+          sx={{ 
+            flexGrow: 1,
+            color: value.length > 0 ? '#333' : '#999',
+            fontSize: '0.95rem'
+          }}
+        >
+          {displayText}
+        </Typography>
+        
+        {value.length > 0 && (
+          <IconButton
+            size="small"
+            onClick={handleClear}
+            sx={{
+              width: 20,
+              height: 20,
+              backgroundColor: '#666',
+              color: 'white',
+              fontSize: '12px',
+              mr: 1,
+              '&:hover': {
+                backgroundColor: '#333',
+              }
+            }}
+          >
+            <CloseIcon sx={{ fontSize: '12px' }} />
+          </IconButton>
+        )}
+        
+        <SearchIcon sx={{ color: '#666', fontSize: '1.2rem' }} />
+      </Box>
+
+      <Popover
+        open={open}
+        anchorEl={anchorEl}
+        onClose={handleClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: {
+            width: anchorEl?.offsetWidth || 'auto',
+            maxHeight: 400,
+            mt: 1,
+            borderRadius: 2,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+          }
+        }}
+      >
+        {/* Search Box */}
+        <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0' }}>
+          <TextField
+            fullWidth
+            placeholder="Search..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            size="small"
+            InputProps={{
+              startAdornment: <SearchIcon sx={{ mr: 1, color: '#666' }} />,
+              sx: {
+                borderRadius: 2,
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#1976d2',
+                  borderWidth: '2px'
+                }
+              }
+            }}
+          />
+        </Box>
+
+        {/* Select All */}
+        <Box sx={{ p: 1 }}>
+          <Box
+            onClick={handleSelectAll}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              p: 1,
+              cursor: 'pointer',
+              borderRadius: 1,
+              '&:hover': {
+                backgroundColor: '#f5f5f5',
+              }
+            }}
+          >
+            <Checkbox
+              checked={value.length === options.length}
+              indeterminate={value.length > 0 && value.length < options.length}
+              size="small"
+              sx={{ p: 0, mr: 2 }}
+            />
+            <ListItemText primary="Select All" />
+          </Box>
+        </Box>
+
+        <Divider />
+
+        {/* Options List */}
+        <MenuList sx={{ py: 0, maxHeight: 250, overflow: 'auto' }}>
+          {filteredOptions.length === 0 ? (
+            <MenuItem disabled>
+              <ListItemText primary="No options found" />
+            </MenuItem>
+          ) : (
+            filteredOptions.map((option) => (
+              <MenuItem 
+                key={option} 
+                onClick={() => handleToggle(option)}
+                dense
+                sx={{ py: 1 }}
+              >
+                <Checkbox 
+                  checked={value.includes(option)} 
+                  size="small" 
+                  sx={{ p: 0, mr: 2 }}
+                />
+                <ListItemText primary={option} />
+              </MenuItem>
+            ))
+          )}
+        </MenuList>
+      </Popover>
+    </Box>
+  );
+};
+
+// Date Range Selector Component
+interface DateRangeSelectorComponentProps {
+  label: string;
+  onDateRangeSelect: (dateRange: any) => void;
+}
+
+const DateRangeSelectorComponent: React.FC<DateRangeSelectorComponentProps> = ({
+  label,
+  onDateRangeSelect
+}) => {
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedRange, setSelectedRange] = useState<string>('Select date range');
+  const open = Boolean(anchorEl);
+
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleDateRangeSelect = (range: any) => {
+    // Format the display text
+    const startDate = range.startDate.toLocaleDateString();
+    const endDate = range.endDate.toLocaleDateString();
+    setSelectedRange(`${startDate} - ${endDate}`);
+    
+    // Pass the range to parent
+    onDateRangeSelect(range);
+    
+    // Close the popover
+    handleClose();
+  };
+
+  const handleClear = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setSelectedRange('Select date range');
+    onDateRangeSelect(null);
+  };
+
+  return (
+    <Box sx={{ position: 'relative', width: '100%' }}>
+      <Typography 
+        variant="body2" 
+        sx={{ 
+          mb: 1, 
+          color: '#666',
+          fontSize: '0.875rem',
+          fontWeight: 500
+        }}
+      >
+        {label}
+      </Typography>
+      
+      <Box
+        onClick={handleClick}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          border: '2px solid #e0e0e0',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          cursor: 'pointer',
+          backgroundColor: '#fff',
+          minHeight: '48px',
+          position: 'relative',
+          '&:hover': {
+            borderColor: '#1976d2',
+          }
+        }}
+      >
+        <Box sx={{ color: '#1976d2', mr: 1.5, display: 'flex', alignItems: 'center' }}>
+          <CalendarTodayIcon />
+        </Box>
+        
+        <Typography 
+          variant="body1" 
+          sx={{ 
+            flexGrow: 1,
+            color: selectedRange === 'Select date range' ? '#999' : '#333',
+            fontSize: '0.95rem'
+          }}
+        >
+          {selectedRange}
+        </Typography>
+        
+        {selectedRange !== 'Select date range' && (
+          <IconButton
+            size="small"
+            onClick={handleClear}
+            sx={{
+              width: 20,
+              height: 20,
+              backgroundColor: '#666',
+              color: 'white',
+              fontSize: '12px',
+              mr: 1,
+              '&:hover': {
+                backgroundColor: '#333',
+              }
+            }}
+          >
+            <CloseIcon sx={{ fontSize: '12px' }} />
+          </IconButton>
+        )}
+        
+        <SearchIcon sx={{ color: '#666', fontSize: '1.2rem' }} />
+      </Box>
+
+      <Popover
+        open={open}
+        anchorEl={anchorEl}
+        onClose={handleClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: {
+            mt: 1,
+            borderRadius: 2,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+          }
+        }}
+      >
+        <DateRangeSelector onSelect={handleDateRangeSelect} />
+      </Popover>
+    </Box>
+  );
+};
+
+// Helper functions remain the same
+const extractFinancialMetrics = (table5Data: any[]) => {
+  if (!table5Data || table5Data.length === 0) return [];
+
+  const metricsMap = new Map();
+  
+  table5Data.forEach(row => {
+    const metric = row.Metric || row.metric;
+    if (metric) {
+      metricsMap.set(metric, {
+        thisWeek: row['This Week'] || row.thisWeek || '0',
+        lastWeek: row['Last Week'] || row.lastWeek || '0',
+        twLwChange: row['Tw/Lw (+/-)'] || row.twLwChange || '0',
+        budget: row.Budget || row.budget || '0',
+        twBdgChange: row['Tw/Bdg (+/-)'] || row.twBdgChange || '0'
+      });
+    }
+  });
+
+  return metricsMap;
+};
+
+const formatPercentageChange = (value: string | number): { value: string, isPositive: boolean } => {
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  const isPositive = numValue >= 0;
+  const formattedValue = isPositive ? `+${Math.abs(numValue).toFixed(2)}%` : `${numValue.toFixed(2)}%`;
+  
+  return { value: formattedValue, isPositive };
+};
+
+const formatCurrency = (value: string | number): string => {
+  const numValue = typeof value === 'string' ? parseFloat(value.replace(/[^0-9.-]/g, '')) : value;
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(numValue);
+};
+
 // Main component
 export function Financials() {
   const theme = useTheme();
   const dispatch = useAppDispatch();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
 
   // Get financial-specific data from Redux
   const { 
     financialFiles, 
     currentFinancialLocation, 
     financialFilters,
-    financialLocations 
+    financialLocations,
+    fileContent,
+    loading,
+    error
   } = useAppSelector((state) => state.excel);
   
   // Find current financial data for selected location
@@ -72,177 +524,235 @@ export function Financials() {
   // State variables
   const [tabValue, setTabValue] = useState(0);
   const [statsData, setStatsData] = useState([]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([currentFinancialLocation || '']);
+  const [selectedDateRange, setSelectedDateRange] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [filterError, setFilterError] = useState<string>('');
   
-  // Get years and date ranges from data or use defaults
-  const availableYears = currentFinancialData?.data?.table1?.[0]?.financials_years || ['2025', '2024'];
-  const availableDateRanges = currentFinancialData?.data?.dateRanges || [
-    '1 | 12/30/2024 - 01/05/2025',
-    '2 | 01/06/2025 - 01/12/2025'
-  ];
+  // Current table data from Redux or from current financial data
+  const [currentTableData, setCurrentTableData] = useState<any>({
+    table5: [],
+    table2: [],
+    table3: [],
+    table4: []
+  });
+  
+  // Extract data arrays from current financial data
+  const locations = currentFinancialData?.data?.locations || financialLocations || ['Midtown East', 'Downtown West', 'Uptown North'];
+  
+  // Table data - use local state that gets updated from API calls
+  const table5Data = currentTableData.table5 || currentFinancialData?.data?.table5 || [];
+  const table2Data = currentTableData.table2 || currentFinancialData?.data?.table2 || [];
+  const table3Data = currentTableData.table3 || currentFinancialData?.data?.table3 || [];
+  const table4Data = currentTableData.table4 || currentFinancialData?.data?.table4 || [];
 
-  // Handle store/location change
-  const handleStoreChange = (event: SelectChangeEvent) => {
-    const newStore = event.target.value;
-    dispatch(selectFinancialLocation(newStore));
-    dispatch(updateFinancialFilters({ store: newStore }));
+  // Initialize selected locations and table data
+  useEffect(() => {
+    if (locations.length > 0 && selectedLocations.length === 0) {
+      setSelectedLocations([locations[0]]);
+    }
+    
+    // Initialize table data from current financial data
+    if (currentFinancialData?.data) {
+      setCurrentTableData({
+        table5: currentFinancialData.data.table5 || [],
+        table2: currentFinancialData.data.table2 || [],
+        table3: currentFinancialData.data.table3 || [],
+        table4: currentFinancialData.data.table4 || []
+      });
+    }
+  }, [locations, currentFinancialData]);
+
+  // Handle filter changes
+  const handleLocationChange = (newLocations: string[]) => {
+    setSelectedLocations(newLocations);
   };
 
-  // Handle year change
-  const handleYearChange = (event: SelectChangeEvent) => {
-    const newYear = event.target.value;
-    dispatch(updateFinancialFilters({ year: newYear }));
+  const handleDateRangeSelect = (dateRange: any) => {
+    setSelectedDateRange(dateRange);
   };
 
-  // Handle date range change
-  const handleDateRangeChange = (event: SelectChangeEvent) => {
-    const newDateRange = event.target.value;
-    dispatch(updateFinancialFilters({ dateRange: newDateRange }));
+  // Apply filters with backend API call
+  const handleApplyFilters = async () => {
+    setIsLoading(true);
+    setFilterError('');
+    
+    try {
+      // Find the current financial file data
+      const currentFile = financialFiles.find(f => f.location === selectedLocations[0]);
+      
+      if (!currentFile) {
+        throw new Error('No financial data found for selected location');
+      }
+
+      // Prepare the request payload
+      const payload = {
+        fileName: currentFile.fileName,
+        fileContent: currentFile.fileContent,
+        location: selectedLocations[0] || '',
+        startDate: selectedDateRange?.startDateStr || null,
+        endDate: selectedDateRange?.endDateStr || null,
+        dashboard: 'Financials'
+      };
+
+      console.log('🚀 Sending financial filter request:', payload);
+
+      // Make API call to financial filter endpoint
+      const response = await axios.post(FINANCIAL_FILTER_API_URL, payload);
+
+      console.log('📥 Received financial filter response:', response.data);
+
+      if (response.data) {
+        // Update local table data state
+        setCurrentTableData({
+          table5: response.data.table5 || [],
+          table2: response.data.table2 || [],
+          table3: response.data.table3 || [],
+          table4: response.data.table4 || []
+        });
+
+        // Also update Redux state if needed
+        dispatch(setTableData(response.data));
+
+        // Update Redux filters
+        dispatch(updateFinancialFilters({ 
+          store: selectedLocations[0],
+          dateRange: selectedDateRange ? `${selectedDateRange.startDateStr} - ${selectedDateRange.endDateStr}` : ''
+        }));
+
+        // Update current location if changed
+        if (selectedLocations[0] !== currentFinancialLocation) {
+          dispatch(selectFinancialLocation(selectedLocations[0]));
+        }
+      }
+
+    } catch (err: any) {
+      console.error('❌ Financial filter error:', err);
+      
+      let errorMessage = 'Error applying filters';
+      
+      if (axios.isAxiosError(err)) {
+        if (err.response) {
+          const detail = err.response.data?.detail;
+          errorMessage = detail || `Server error: ${err.response.status}`;
+        } else if (err.request) {
+          errorMessage = 'No response from server. Please check if the backend is running.';
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setFilterError(errorMessage);
+      dispatch(setError(errorMessage));
+      
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Update stats when data changes
   useEffect(() => {
-    if (currentFinancialData?.data?.table5?.length > 0) {
-      const weekStats = currentFinancialData.data.table5[0];
+    if (table5Data.length > 0) {
+      const metricsMap = extractFinancialMetrics(table5Data);
       
-      const newStatsData = [
-        { 
-          label: 'Net Sales', 
-          value: weekStats.netSales || '$0.00', 
-          bottomChange: weekStats.netSalesChange || '+0%',
-          bottomLabel: '% Change',
-          changeColor: parseFloat(weekStats.netSalesChange) >= 0 ? '#2e7d32' : '#d32f2f',
-          changeDirection: parseFloat(weekStats.netSalesChange) >= 0 ? 'up' : 'down'
-        },
-        { 
-          label: 'Orders', 
-          value: weekStats.orders || '0', 
-          bottomChange: weekStats.ordersChange || '+0%',
-          bottomLabel: '% Change',
-          changeColor: parseFloat(weekStats.ordersChange) >= 0 ? '#2e7d32' : '#d32f2f',
-          changeDirection: parseFloat(weekStats.ordersChange) >= 0 ? 'up' : 'down'
-        },
-        { 
-          label: 'Avg Ticket', 
-          value: weekStats.avgTicket || '$0.00', 
-          bottomChange: weekStats.avgTicketChange || '0.00$',
-          changeDirection: parseFloat(weekStats.avgTicketChange) >= 0 ? 'up' : 'down',
-          changeColor: parseFloat(weekStats.avgTicketChange) >= 0 ? '#2e7d32' : '#d32f2f',
-          bottomLabel: '$ Change'
-        },
-        { 
-          label: 'Food Cost', 
-          value: weekStats.foodCostPercent || '0.00%', 
-          bottomChange: weekStats.foodCostChange || '0.00%',
-          changeDirection: parseFloat(weekStats.foodCostChange) >= 0 ? 'up' : 'down',
-          changeColor: parseFloat(weekStats.foodCostChange) >= 0 ? '#d32f2f' : '#2e7d32',
-          bottomLabel: '% Change'
-        },
-        { 
-          label: 'Labor Cost', 
-          value: weekStats.laborCostPercent || '0.00%', 
-          bottomChange: weekStats.laborCostChange || '0.00%',
-          changeDirection: parseFloat(weekStats.laborCostChange) >= 0 ? 'up' : 'down',
-          changeColor: parseFloat(weekStats.laborCostChange) >= 0 ? '#d32f2f' : '#2e7d32',
-          bottomLabel: '% Change'
-        },
-        { 
-          label: 'SPMH', 
-          value: weekStats.spmh || '$0.00', 
-          bottomChange: weekStats.spmhChange || '0.00$',
-          changeDirection: parseFloat(weekStats.spmhChange) >= 0 ? 'up' : 'down',
-          changeColor: parseFloat(weekStats.spmhChange) >= 0 ? '#2e7d32' : '#d32f2f',
-          bottomLabel: '% Change'
-        },
-        { 
-          label: 'LPMH', 
-          value: weekStats.lpmh || '$0.00', 
-          bottomChange: weekStats.lpmhChange || '0.00%',
-          changeDirection: parseFloat(weekStats.lpmhChange) >= 0 ? 'up' : 'down',
-          changeColor: parseFloat(weekStats.lpmhChange) >= 0 ? '#d32f2f' : '#2e7d32',
-          bottomLabel: '% Change'
-        },
+      const keyMetrics = [
+        'Net Sales',
+        'Orders', 
+        'Avg Ticket',
+        'Food Cost %',
+        'Lbr %',
+        'SPMH',
+        'LPMH'
       ];
+
+      const newStatsData = keyMetrics.map(metricName => {
+        const metricData = metricsMap.get(metricName);
+        
+        if (!metricData) {
+          return {
+            label: metricName,
+            value: '$0.00',
+            bottomChange: '+0%',
+            bottomLabel: '% Change',
+            changeColor: '#1976d2',
+            changeDirection: 'up'
+          };
+        }
+
+        const twLwChange = formatPercentageChange(metricData.twLwChange);
+        
+        let formattedValue = metricData.thisWeek;
+        let bottomLabel = '% Change';
+        
+        if (metricName === 'Net Sales') {
+          formattedValue = formatCurrency(metricData.thisWeek);
+        } else if (metricName === 'Avg Ticket' || metricName === 'SPMH' || metricName === 'LPMH') {
+          formattedValue = formatCurrency(metricData.thisWeek);
+        } else if (metricName.includes('%')) {
+          formattedValue = `${parseFloat(metricData.thisWeek).toFixed(2)}%`;
+        } else {
+          formattedValue = parseInt(metricData.thisWeek).toLocaleString();
+        }
+
+        return {
+          label: metricName,
+          value: formattedValue,
+          bottomChange: twLwChange.value,
+          bottomLabel: bottomLabel,
+          changeColor: twLwChange.isPositive ? '#2e7d32' : '#d32f2f',
+          changeDirection: twLwChange.isPositive ? 'up' : 'down'
+        };
+      });
       
       setStatsData(newStatsData);
     } else {
-      // Use default data if no stats available
       setStatsData([
-        { 
-          label: 'Net Sales', 
-          value: '$0.00', 
-          bottomChange: '+0%',
-          bottomLabel: '% Change',
-          changeColor: '#1976d2'
-        },
-        { 
-          label: 'Orders', 
-          value: '0', 
-          bottomChange: '+0%',
-          bottomLabel: '% Change',
-          changeColor: '#1976d2'
-        },
-        { 
-          label: 'Avg Ticket', 
-          value: '$0.00', 
-          bottomChange: '0.00$',
-          changeDirection: 'up',
-          changeColor: '#2e7d32',
-          bottomLabel: '$ Change'
-        },
-        { 
-          label: 'Food Cost', 
-          value: '0.00%', 
-          bottomChange: '0.00%',
-          changeDirection: 'up',
-          changeColor: '#d32f2f',
-          bottomLabel: '% Change'
-        },
-        { 
-          label: 'Labor Cost', 
-          value: '0.00%', 
-          bottomChange: '0.00%',
-          changeDirection: 'up',
-          changeColor: '#d32f2f',
-          bottomLabel: '% Change'
-        },
-        { 
-          label: 'SPMH', 
-          value: '$0.00', 
-          bottomChange: '0.00$',
-          changeDirection: 'up',
-          changeColor: '#2e7d32',
-          bottomLabel: '% Change'
-        },
-        { 
-          label: 'LPMH', 
-          value: '$0.00', 
-          bottomChange: '0.00%',
-          changeDirection: 'up',
-          changeColor: '#d32f2f',
-          bottomLabel: '% Change'
-        },
+        { label: 'Net Sales', value: '$0.00', bottomChange: '+0%', bottomLabel: '% Change', changeColor: '#1976d2' },
+        { label: 'Orders', value: '0', bottomChange: '+0%', bottomLabel: '% Change', changeColor: '#1976d2' },
+        { label: 'Avg Ticket', value: '$0.00', bottomChange: '0.00$', changeDirection: 'up', changeColor: '#2e7d32', bottomLabel: '$ Change' },
+        { label: 'Food Cost %', value: '0.00%', bottomChange: '0.00%', changeDirection: 'up', changeColor: '#d32f2f', bottomLabel: '% Change' },
+        { label: 'Labor Cost %', value: '0.00%', bottomChange: '0.00%', changeDirection: 'up', changeColor: '#d32f2f', bottomLabel: '% Change' },
+        { label: 'SPMH', value: '$0.00', bottomChange: '0.00$', changeDirection: 'up', changeColor: '#2e7d32', bottomLabel: '% Change' },
+        { label: 'LPMH', value: '$0.00', bottomChange: '0.00%', changeDirection: 'up', changeColor: '#d32f2f', bottomLabel: '% Change' },
       ]);
     }
-  }, [currentFinancialData]);
+  }, [table5Data]);
 
   // Tab change handler
-  const handleTabChange = (event, newValue) => {
-    setTabValue(newValue);
-  };
+  const handleTabChange = (event: any, newValue: number) => setTabValue(newValue);
+
+  // Inject rotating animation for loading state
+  React.useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+      @keyframes rotating {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .rotating {
+        animation: rotating 2s linear infinite;
+      }
+    `;
+    document.head.appendChild(styleElement);
+    
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
 
   return (
     <Box sx={{ p: 2, backgroundColor: '#ffffff', minHeight: '100vh' }}>
       {/* Dashboard Title */}
-       <Typography 
-          variant="h4" 
-          component="h1" 
-          sx={{ 
-            fontWeight: 600,
-            color: '#1a237e',
-            fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }
-          }}
-        >
-
+      <Typography 
+        variant="h4" 
+        component="h1" 
+        sx={{ 
+          fontWeight: 600,
+          color: '#1a237e',
+          fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
+          mb: 3
+        }}
+      >
         Financial Dashboard
       </Typography>
 
@@ -253,298 +763,369 @@ export function Financials() {
         </Alert>
       )}
 
-      {/* Alert for implementation status */}
-      {currentFinancialData?.data?.data === "Financial Dashboard is not yet implemented." && (
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          Financial Dashboard is not yet fully implemented. Displaying available data.
+      {/* Error Alert */}
+      {(filterError || error) && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => {
+          setFilterError('');
+          dispatch(setError(null));
+        }}>
+          {filterError || error}
         </Alert>
       )}
 
-      <Grid container spacing={3}>
-        {/* Left Side Filters */}
-        <Grid item xs={12} md={4} lg={3}>
-          <Card elevation={3} sx={{ borderRadius: 2 }}>
-            <CardContent>
-              <Typography variant="h6" sx={{ mb: 3, fontWeight: 500, color: '#424242' }}>
-                Filters
-              </Typography>
-              
-              {/* Current file info */}
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Current file: {currentFinancialData?.fileName || 'No file selected'}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" display="block">
-                  {financialFiles.length} financial file(s) available
-                </Typography>
-              </Box>
-              
-              {/* Store selector */}
-              <Box sx={{ mb: 3 }}>
-                <Typography sx={{ mb: 1, fontSize: '0.875rem', color: '#616161' }}>
-                  Store
-                </Typography>
-                <FormControl fullWidth size="small">
-                  <Select
-                    value={financialFilters.store || currentFinancialLocation || ''}
-                    onChange={handleStoreChange}
-                    displayEmpty
-                    sx={{ 
-                      backgroundColor: 'white',
-                      borderRadius: 1,
-                    }}
-                    disabled={financialLocations.length === 0}
-                  >
-                    {financialLocations.length > 0 ? (
-                      financialLocations.map(loc => (
-                        <MenuItem key={loc} value={loc}>{loc}</MenuItem>
-                      ))
-                    ) : (
-                      [
-                        <MenuItem key="default1" value="0001: Midtown East">0001: Midtown East</MenuItem>,
-                        <MenuItem key="default2" value="0002: Downtown West">0002: Downtown West</MenuItem>
-                      ]
-                    )}
-                  </Select>
-                </FormControl>
-              </Box>
-
-              {/* Year selector */}
-              <Box sx={{ mb: 3 }}>
-                <Typography sx={{ mb: 1, fontSize: '0.875rem', color: '#616161' }}>
-                  Year
-                </Typography>
-                <FormControl fullWidth size="small">
-                  <Select
-                    value={financialFilters.year}
-                    onChange={handleYearChange}
-                    displayEmpty
-                    sx={{ 
-                      backgroundColor: 'white',
-                      borderRadius: 1,
-                    }}
-                  >
-                    {availableYears.map(year => (
-                      <MenuItem key={year} value={year}>{year}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-
-              {/* Date range selector */}
-              <Box>
-                <Typography sx={{ mb: 1, fontSize: '0.875rem', color: '#616161' }}>
-                  Week / Date Range
-                </Typography>
-                <FormControl fullWidth size="small">
-                  <Select
-                    value={financialFilters.dateRange}
-                    onChange={handleDateRangeChange}
-                    displayEmpty
-                    sx={{ 
-                      backgroundColor: 'white',
-                      borderRadius: 1,
-                    }}
-                  >
-                    {availableDateRanges.map(range => (
-                      <MenuItem key={range} value={range}>{range}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Right Side - Week-Over-Week Analysis */}
-        <Grid item xs={12} md={8} lg={9}>
-          <Card 
-            elevation={3} 
-            sx={{ 
-              borderRadius: 2,
-              height: '100%'
-            }}
-          >
-            <CardContent sx={{ py: 2, px: 3 }}>
+      {/* Filter Card - Updated with DateRangeSelector */}
+      <Card 
+        elevation={2} 
+        sx={{ 
+          mb: 3, 
+          borderRadius: 2,
+          border: '1px solid #e0e0e0',
+          overflow: 'visible'
+        }}
+      >
+        <CardContent sx={{ p: 3 }}>
+          {/* Filter Header */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            mb: 3
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <FilterListIcon color="primary" />
               <Typography 
-                variant="h5" 
-                align="center" 
+                variant="h6" 
                 sx={{ 
                   fontWeight: 500,
-                  mb: 2,
-                  color: '#1565c0'
+                  color: '#333',
+                  fontSize: '1.1rem'
                 }}
               >
-                Week-Over-Week Analysis
+                Filters
               </Typography>
-              
-              {/* Stats Grid - Two Rows */}
-              <Grid container spacing={1.5}>
-                {/* First Row - 4 items */}
-                {statsData.slice(0, 4).map((stat, index) => (
-                  <Grid item xs={6} sm={3} key={index}>
-                    <Card 
-                      elevation={1} 
+            </Box>
+            
+            {/* Apply Filters Button */}
+            <Button
+              variant="outlined"
+              onClick={handleApplyFilters}
+              disabled={isLoading || loading}
+              startIcon={
+                (isLoading || loading) ? (
+                  <CircularProgress size={16} />
+                ) : (
+                  <RefreshIcon />
+                )
+              }
+              sx={{
+                borderColor: '#1976d2',
+                color: '#1976d2',
+                fontWeight: 500,
+                height: '30px',
+                py: 1,
+                px: 1,
+                borderRadius: '4px',
+                textTransform: 'uppercase',
+                fontSize: '0.875rem',
+                '&:hover': {
+                  borderColor: '#1565c0',
+                  backgroundColor: '#f3f7ff',
+                }
+              }}
+            >
+              {(isLoading || loading) ? 'Loading...' : 'APPLY FILTERS'}
+            </Button>
+          </Box>
+
+          {/* Filter Inputs Row - Updated with DateRangeSelector */}
+          <Grid container spacing={3} sx={{ mb: 2 }}>
+            {/* Location Filter */}
+            <Grid item xs={12} md={6}>
+              <MultiSelectFilter
+                id="location-filter"
+                label="Location"
+                value={selectedLocations}
+                options={locations}
+                onChange={handleLocationChange}
+                placeholder="Multiple Loc..."
+                icon={<PlaceIcon />}
+              />
+            </Grid>
+
+            {/* Date Range Filter - Updated to use DateRangeSelector */}
+            <Grid item xs={12} md={6}>
+              <DateRangeSelectorComponent
+                label="Date Range"
+                onDateRangeSelect={handleDateRangeSelect}
+              />
+            </Grid>
+          </Grid>
+
+          {/* Active Filters Pills */}
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {selectedLocations.length > 0 && (
+              <Chip
+                icon={<PlaceIcon sx={{ fontSize: '1rem' }} />}
+                label={selectedLocations.length === 1 
+                  ? `Location: ${selectedLocations[0]}` 
+                  : `Location: Multiple Locations`
+                }
+                onDelete={() => setSelectedLocations([])}
+                color="primary"
+                variant="outlined"
+                deleteIcon={<CloseIcon sx={{ fontSize: '1rem' }} />}
+                sx={{
+                  borderRadius: '20px',
+                  height: '21px',
+                  fontSize: '0.875rem',
+                  '& .MuiChip-icon': {
+                    fontSize: '1rem'
+                  }
+                }}
+              />
+            )}
+            
+            {selectedDateRange && (
+              <Chip
+                icon={<CalendarTodayIcon sx={{ fontSize: '1rem' }} />}
+                label={`Date Range: ${selectedDateRange.startDate.toLocaleDateString()} - ${selectedDateRange.endDate.toLocaleDateString()}`}
+                onDelete={() => setSelectedDateRange(null)}
+                sx={{
+                  borderRadius: '20px',
+                  height: '32px',
+                  fontSize: '0.875rem',
+                  backgroundColor: '#e8d5f2',
+                  color: '#7b1fa2',
+                  border: '1px solid #ce93d8',
+                  '& .MuiChip-icon': {
+                    color: '#7b1fa2',
+                    fontSize: '1rem'
+                  },
+                  '& .MuiChip-deleteIcon': {
+                    color: '#7b1fa2',
+                    fontSize: '1rem'
+                  }
+                }}
+                deleteIcon={<CloseIcon sx={{ fontSize: '1rem' }} />}
+              />
+            )}
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Show current data info */}
+      {currentFinancialData && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          <Typography variant="body2">
+            <strong>Data loaded:</strong> {currentFinancialData.fileName} | 
+            <strong> Location:</strong> {currentFinancialLocation} | 
+            <strong> Metrics:</strong> {table5Data.length} available
+            {selectedDateRange && (
+              <>
+                {' | '}
+                <strong> Date Range:</strong> {selectedDateRange.startDate.toLocaleDateString()} - {selectedDateRange.endDate.toLocaleDateString()}
+              </>
+            )}
+          </Typography>
+        </Alert>
+      )}
+
+      {/* Week-Over-Week Analysis Card - REDUCED HEIGHT */}
+      <Card 
+        elevation={3} 
+        sx={{ 
+          borderRadius: 2,
+          mb: 3
+        }}
+      >
+        <CardContent sx={{ py: 1.5, px: 3 }}> {/* Reduced padding from py: 2 to py: 1.5 */}
+          <Typography 
+            variant="h5" 
+            align="center" 
+            sx={{ 
+              fontWeight: 500,
+              mb: 1.5, // Reduced margin from mb: 2 to mb: 1.5
+              color: '#1565c0'
+            }}
+          >
+            Week-Over-Week Analysis
+          </Typography>
+          
+          {/* Loading State */}
+          {(isLoading || loading) && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+              <CircularProgress size={40} />
+              <Typography sx={{ ml: 2 }}>Loading financial data...</Typography>
+            </Box>
+          )}
+          
+          {/* Stats Grid - Two Rows - REDUCED SPACING */}
+          {!isLoading && !loading && (
+            <Grid container spacing={1}> {/* Reduced spacing from 1.5 to 1 */}
+              {/* First Row - 4 items */}
+              {statsData.slice(0, 4).map((stat, index) => (
+                <Grid item xs={6} sm={3} key={index}>
+                  <Card 
+                    elevation={1} 
+                    sx={{ 
+                      p: 1, // Reduced padding from p: 1.5 to p: 1
+                      textAlign: 'center',
+                      height: '100%',
+                      backgroundColor: '#ffffff',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'translateY(-2px)',
+                        boxShadow: 3,
+                      }
+                    }}
+                  >
+                    <Typography 
                       sx={{ 
-                        p: 1.5,
-                        textAlign: 'center',
-                        height: '100%',
-                        backgroundColor: '#ffffff',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          transform: 'translateY(-2px)',
-                          boxShadow: 3,
-                        }
+                        color: '#1976d2', 
+                        fontWeight: 500,
+                        fontSize: '0.75rem', // Reduced font size
+                        mb: 0.25 // Reduced margin
                       }}
                     >
+                      {stat.label}
+                    </Typography>
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        fontWeight: 600,
+                        color: '#263238',
+                        mb: 0.25, // Reduced margin
+                        fontSize: '1.1rem' // Reduced font size
+                      }}
+                    >
+                      {stat.value}
+                    </Typography>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      mb: 0.25,
+                      gap: 0.5
+                    }}>
+                      {stat.changeDirection && (
+                        <span style={{ 
+                          color: stat.changeColor, 
+                          fontSize: '10px', // Reduced font size
+                          fontWeight: 'bold'
+                        }}>
+                          {stat.changeDirection === 'up' ? '▲' : '▼'}
+                        </span>
+                      )}
                       <Typography 
                         sx={{ 
-                          color: '#1976d2', 
-                          fontWeight: 500,
-                          fontSize: '0.8rem',
-                          mb: 0.5
+                          color: stat.changeColor || '#1976d2',
+                          fontSize: '0.75rem', // Reduced font size
+                          fontWeight: 500
                         }}
                       >
-                        {stat.label}
+                        {stat.bottomChange}
                       </Typography>
-                      <Typography 
-                        variant="h6" 
+                    </Box>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: '#757575',
+                        fontSize: '0.65rem' // Reduced font size
+                      }}
+                    >
+                      {stat.bottomLabel}
+                    </Typography>
+                  </Card>
+                </Grid>
+              ))}
+              
+              {/* Second Row - 3 items centered */}
+              <Grid item xs={12}>
+                <Grid container spacing={1} justifyContent="center"> {/* Reduced spacing */}
+                  {statsData.slice(4, 7).map((stat, index) => (
+                    <Grid item xs={6} sm={4} key={index + 4}>
+                      <Card 
+                        elevation={1} 
                         sx={{ 
-                          fontWeight: 600,
-                          color: '#263238',
-                          mb: 0.5,
-                          fontSize: '1.2rem'
+                          p: 1, // Reduced padding
+                          textAlign: 'center',
+                          height: '100%',
+                          backgroundColor: '#ffffff',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            transform: 'translateY(-2px)',
+                            boxShadow: 3,
+                          }
                         }}
                       >
-                        {stat.value}
-                      </Typography>
-                      <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        mb: 0.25,
-                        gap: 0.5
-                      }}>
-                        {stat.changeDirection && (
-                          <span style={{ 
-                            color: stat.changeColor, 
-                            fontSize: '12px',
-                            fontWeight: 'bold'
-                          }}>
-                            {stat.changeDirection === 'up' ? '▲' : '▼'}
-                          </span>
-                        )}
                         <Typography 
                           sx={{ 
-                            color: stat.changeColor || '#1976d2',
-                            fontSize: '0.8rem',
-                            fontWeight: 500
+                            color: '#1976d2', 
+                            fontWeight: 500,
+                            fontSize: '0.75rem', // Reduced font size
+                            mb: 0.25
                           }}
                         >
-                          {stat.bottomChange}
+                          {stat.label}
                         </Typography>
-                      </Box>
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: '#757575',
-                          fontSize: '0.7rem'
-                        }}
-                      >
-                        {stat.bottomLabel}
-                      </Typography>
-                    </Card>
-                  </Grid>
-                ))}
-                
-                {/* Second Row - 3 items centered */}
-                <Grid item xs={12}>
-                  <Grid container spacing={1.5} justifyContent="center">
-                    {statsData.slice(4, 7).map((stat, index) => (
-                      <Grid item xs={6} sm={4} key={index + 4}>
-                        <Card 
-                          elevation={1} 
+                        <Typography 
+                          variant="h6" 
                           sx={{ 
-                            p: 1.5,
-                            textAlign: 'center',
-                            height: '100%',
-                            backgroundColor: '#ffffff',
-                            transition: 'all 0.3s ease',
-                            '&:hover': {
-                              transform: 'translateY(-2px)',
-                              boxShadow: 3,
-                            }
+                            fontWeight: 600,
+                            color: '#263238',
+                            mb: 0.25,
+                            fontSize: '1.1rem' // Reduced font size
                           }}
                         >
+                          {stat.value}
+                        </Typography>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          mb: 0.25,
+                          gap: 0.5
+                        }}>
+                          {stat.changeDirection && (
+                            <span style={{ 
+                              color: stat.changeColor, 
+                              fontSize: '10px', // Reduced font size
+                              fontWeight: 'bold'
+                            }}>
+                              {stat.changeDirection === 'up' ? '▲' : '▼'}
+                            </span>
+                          )}
                           <Typography 
                             sx={{ 
-                              color: '#1976d2', 
-                              fontWeight: 500,
-                              fontSize: '0.8rem',
-                              mb: 0.5
+                              color: stat.changeColor || '#1976d2',
+                              fontSize: '0.75rem', // Reduced font size
+                              fontWeight: 500
                             }}
                           >
-                            {stat.label}
+                            {stat.bottomChange}
                           </Typography>
-                          <Typography 
-                            variant="h6" 
-                            sx={{ 
-                              fontWeight: 600,
-                              color: '#263238',
-                              mb: 0.5,
-                              fontSize: '1.2rem'
-                            }}
-                          >
-                            {stat.value}
-                          </Typography>
-                          <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            mb: 0.25,
-                            gap: 0.5
-                          }}>
-                            {stat.changeDirection && (
-                              <span style={{ 
-                                color: stat.changeColor, 
-                                fontSize: '12px',
-                                fontWeight: 'bold'
-                              }}>
-                                {stat.changeDirection === 'up' ? '▲' : '▼'}
-                              </span>
-                            )}
-                            <Typography 
-                              sx={{ 
-                                color: stat.changeColor || '#1976d2',
-                                fontSize: '0.8rem',
-                                fontWeight: 500
-                              }}
-                            >
-                              {stat.bottomChange}
-                            </Typography>
-                          </Box>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              color: '#757575',
-                              fontSize: '0.7rem'
-                            }}
-                          >
-                            {stat.bottomLabel}
-                          </Typography>
-                        </Card>
-                      </Grid>
-                    ))}
-                  </Grid>
+                        </Box>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: '#757575',
+                            fontSize: '0.65rem' // Reduced font size
+                          }}
+                        >
+                          {stat.bottomLabel}
+                        </Typography>
+                      </Card>
+                    </Grid>
+                  ))}
                 </Grid>
               </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+            </Grid>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Tabs */}
-      <Card sx={{ mt: 3, borderRadius: 2 }} elevation={3}>
+      <Card sx={{ borderRadius: 2 }} elevation={3}>
         <Tabs 
           value={tabValue} 
           onChange={handleTabChange} 
@@ -566,45 +1147,19 @@ export function Financials() {
 
         <TabPanel value={tabValue} index={0}>
           <Box sx={{ p: 3 }}>
-            {/* Financial Table */}
-            <FinancialTable data={currentFinancialData?.data} />
-            
-            {/* Only show charts if we have data */}
-            {currentFinancialData && (
-              <Box sx={{ mt: 4 }}>
-                <Typography 
-                  variant="h5" 
-                  sx={{ 
-                    mb: 3,
-                    textAlign: 'center',
-                    fontWeight: 600,
-                    color: '#424242'
-                  }}
-                >
-                  Comparison Charts
-                </Typography>
-                
-                {/* First Chart - Full width row */}
-                <Box sx={{ mb: 4 }}>
-                  <WeekOverWeekChart data={currentFinancialData?.data} />
-                </Box>
-                
-                {/* Second Chart - Full width row */}
-                <Box>
-                  <BudgetChart data={currentFinancialData?.data} />
-                </Box>
-              </Box>
-            )}
+            <FinancialTable data={table5Data} />
           </Box>
         </TabPanel>
         
         <TabPanel value={tabValue} index={1}>
           <Box sx={{ p: 3 }}>
-            {/* Day of Week Analysis Tables */}
-            <DayOfWeekAnalysis data={currentFinancialData?.data} />
+            <DayOfWeekAnalysis 
+              salesData={table2Data}
+              ordersData={table3Data} 
+              avgTicketData={table4Data}
+            />
             
-            {/* Only show charts if we have data */}
-            {currentFinancialData && (
+            {currentFinancialData && (table2Data.length > 0 || table3Data.length > 0 || table4Data.length > 0) && (
               <Box sx={{ mt: 4 }}>
                 <Typography 
                   variant="h5" 
@@ -618,20 +1173,23 @@ export function Financials() {
                   Day of Week Trends
                 </Typography>
                 
-                {/* Sales Chart - Full width row */}
-                <Box sx={{ mb: 4 }}>
-                  <SalesChart data={currentFinancialData?.data} />
-                </Box>
+                {table2Data.length > 0 && (
+                  <Box sx={{ mb: 4 }}>
+                    <SalesChart data={table2Data} />
+                  </Box>
+                )}
                 
-                {/* Orders Chart - Full width row */}
-                <Box sx={{ mb: 4 }}>
-                  <OrdersChart data={currentFinancialData?.data} />
-                </Box>
+                {table3Data.length > 0 && (
+                  <Box sx={{ mb: 4 }}>
+                    <OrdersChart data={table3Data} />
+                  </Box>
+                )}
                 
-                {/* Average Ticket Chart - Full width row */}
-                <Box>
-                  <AvgTicketChart data={currentFinancialData?.data} />
-                </Box>
+                {table4Data.length > 0 && (
+                  <Box>
+                    <AvgTicketChart data={table4Data} />
+                  </Box>
+                )}
               </Box>
             )}
           </Box>

@@ -143,18 +143,18 @@ interface FileInfo {
 
 // Helper function to extract categories from response data
 const extractCategoriesFromData = (data: any): string[] => {
-  console.log("🔍 Extracting categories from data:", data);
+  // console.log("🔍 Extracting categories from data:", data);
 
   let categories: string[] = [];
 
   try {
     // Check if data is an array (multiple dashboards)
     if (Array.isArray(data)) {
-      console.log("📊 Processing array of dashboards");
+      // console.log("📊 Processing array of dashboards");
 
       // Process each dashboard in the array
       data.forEach((dashboardData, index) => {
-        console.log(`Processing dashboard ${index + 1}:`, dashboardData);
+        // console.log(`Processing dashboard ${index + 1}:`, dashboardData);
 
         // Extract categories from single dashboard
         const dashboardCategories =
@@ -170,11 +170,11 @@ const extractCategoriesFromData = (data: any): string[] => {
       });
     } else {
       // Single dashboard
-      console.log("📊 Processing single dashboard");
+      // console.log("📊 Processing single dashboard");
       categories = extractCategoriesFromSingleDashboard(data);
     }
 
-    console.log("✅ Final extracted categories:", categories);
+    // console.log("✅ Final extracted categories:", categories);
     return categories;
   } catch (error) {
     console.error("❌ Error extracting categories:", error);
@@ -187,23 +187,23 @@ const extractCategoriesFromSingleDashboard = (dashboardData: any): string[] => {
   let categories: string[] = [];
 
   try {
-    console.log("🔍 Processing single dashboard data:", dashboardData);
+    // console.log("🔍 Processing single dashboard data:", dashboardData);
 
     // METHOD 1: Check for direct "Categories" field (uppercase C)
     if (dashboardData.Categories && Array.isArray(dashboardData.Categories)) {
-      console.log(
-        "✅ Found direct Categories array (uppercase):",
-        dashboardData.Categories
-      );
+      // console.log(
+      //   "✅ Found direct Categories array (uppercase):",
+      //   dashboardData.Categories
+      // );
       categories = [...categories, ...dashboardData.Categories];
     }
 
     // METHOD 2: Check for direct "categories" field (lowercase c)
     if (dashboardData.categories && Array.isArray(dashboardData.categories)) {
-      console.log(
-        "✅ Found direct categories array (lowercase):",
-        dashboardData.categories
-      );
+      // console.log(
+      //   "✅ Found direct categories array (lowercase):",
+      //   dashboardData.categories
+      // );
       categories = [...categories, ...dashboardData.categories];
     }
 
@@ -214,14 +214,14 @@ const extractCategoriesFromSingleDashboard = (dashboardData: any): string[] => {
       Array.isArray(dashboardData.table1) &&
       dashboardData.table1.length > 0
     ) {
-      console.log(
-        "⚠️ No direct categories found, extracting from table1:",
-        dashboardData.table1[0]
-      );
+      // console.log(
+      //   "⚠️ No direct categories found, extracting from table1:",
+      //   dashboardData.table1[0]
+      // );
       const firstRow = dashboardData.table1[0];
       if (typeof firstRow === "object" && firstRow !== null) {
         const tableKeys = Object.keys(firstRow);
-        console.log("Table1 keys:", tableKeys);
+        // console.log("Table1 keys:", tableKeys);
 
         // Filter out non-category keys - IMPROVED FILTERING
         const filteredTableKeys = tableKeys.filter((key) => {
@@ -252,7 +252,7 @@ const extractCategoriesFromSingleDashboard = (dashboardData: any): string[] => {
           return !excludePatterns.some((pattern) => keyLower.includes(pattern));
         });
 
-        console.log("Filtered table categories:", filteredTableKeys);
+        // console.log("Filtered table categories:", filteredTableKeys);
         categories = [...categories, ...filteredTableKeys];
       }
     }
@@ -262,10 +262,10 @@ const extractCategoriesFromSingleDashboard = (dashboardData: any): string[] => {
       (cat) => cat && typeof cat === "string" && cat.trim() !== ""
     );
 
-    console.log("Final categories for single dashboard:", finalCategories);
+    // console.log("Final categories for single dashboard:", finalCategories);
     return finalCategories;
   } catch (error) {
-    console.error("Error extracting categories from single dashboard:", error);
+    // console.error("Error extracting categories from single dashboard:", error);
     return [];
   }
 };
@@ -482,13 +482,13 @@ const ExcelUploadPage: React.FC = () => {
 
         // Check if response.data is an array (multiple dashboards)
         if (Array.isArray(response.data)) {
-          console.log("Multiple dashboards detected in response array");
+          // console.log("Multiple dashboards detected in response array");
 
           // Handle multiple dashboards (Sales Split + Product Mix, etc.)
           response.data.forEach((dashboardData) => {
             const dashboardName = dashboardData.dashboardName?.trim(); // Trim whitespace
-            console.log(`Processing dashboard: "${dashboardName}" from array`);
-            console.log("Dashboard data:", dashboardData);
+            // console.log(`Processing dashboard: "${dashboardName}" from array`);
+            // console.log("Dashboard data:", dashboardData);
 
             // Add categories to dashboard data
             const enhancedDashboardData = {
@@ -545,7 +545,7 @@ const ExcelUploadPage: React.FC = () => {
               // Add to financial data in Redux
               dispatch(
                 addFinancialData({
-                  fileName: fileInfo.file.name,
+                  fileName: response.data[0].fileName,
                   fileContent: base64Content,
                   location: fileInfo.location,
                   data: enhancedDashboardData,
@@ -559,7 +559,7 @@ const ExcelUploadPage: React.FC = () => {
               // Add to sales wide data in Redux
               dispatch(
                 addSalesWideData({
-                  fileName: fileInfo.file.name,
+                  fileName: response.data[0].fileName,
                   fileContent: base64Content,
                   location: fileInfo.location,
                   data: enhancedDashboardData,

@@ -635,17 +635,17 @@ export const excelSlice = createSlice({
         categories?: string[];
       }>
     ) => {
-      console.log('🎯 addProductMixData action received:', action.payload);
+      // console.log('🎯 addProductMixData action received:', action.payload);
       
       // Check if product mix file already exists for this location
       const existingIndex = state.productMixFiles.findIndex(
         (f) => f.location === action.payload.location
       );
 
-      console.log('Existing Product Mix file index:', existingIndex);
+      // console.log('Existing Product Mix file index:', existingIndex);
 
       const categories = action.payload.categories || action.payload.data.categories || [];
-      console.log('Categories for Product Mix:', categories);
+      // console.log('Categories for Product Mix:', categories);
 
       // Create product mix data with upload timestamp, file content, and categories
       const productMixData: ProductMixData = {
@@ -657,16 +657,16 @@ export const excelSlice = createSlice({
         categories: categories, // Store categories
       };
 
-      console.log('Creating Product Mix data object:', productMixData);
+      // console.log('Creating Product Mix data object:', productMixData);
 
       if (existingIndex >= 0) {
         // Update existing file
         state.productMixFiles[existingIndex] = productMixData;
-        console.log('Updated existing Product Mix file at index:', existingIndex);
+        // console.log('Updated existing Product Mix file at index:', existingIndex);
       } else {
         // Add new file
         state.productMixFiles.push(productMixData);
-        console.log('Added new Product Mix file. Total Product Mix files:', state.productMixFiles.length);
+        // console.log('Added new Product Mix file. Total Product Mix files:', state.productMixFiles.length);
       }
 
       // Add location to product mix locations only
@@ -676,7 +676,7 @@ export const excelSlice = createSlice({
 
       if (!state.productMixLocations.includes(action.payload.location)) {
         state.productMixLocations.push(action.payload.location);
-        console.log('Added location to Product Mix locations:', action.payload.location);
+        // console.log('Added location to Product Mix locations:', action.payload.location);
       }
 
       // Add categories to state

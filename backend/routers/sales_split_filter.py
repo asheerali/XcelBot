@@ -18,7 +18,7 @@ from financials_dashboard.financials_processor import process_financials_file
 from sales_split_dashboard.sales_split_prcoessor import process_sales_split_file
 
 # Directory to save uploaded files
-UPLOAD_DIR = "../uploads"
+UPLOAD_DIR = "./uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 router = APIRouter(
@@ -32,8 +32,9 @@ async def filter_excel_data(request: SalesSplitPmixUploadRequest = Body(...)):
     """
     Endpoint to filter previously processed Excel data by date range and location.
     """
+    print(f"Received file upload/////// 1234556 : {request}")
     try:
-        # print(f"Received file upload: {request.fileName}")
+        print(f"Received file upload 1234556 : {request}")
         
         fileName = request.fileName
         print(f"Processing file: {request}")

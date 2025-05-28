@@ -1,3 +1,5 @@
+// src/components/FinancialTable.tsx - Updated with real data integration
+
 import React from 'react';
 import Box from '@mui/material/Box';
 import Table from '@mui/material/Table';
@@ -9,342 +11,277 @@ import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
 
-const FinancialTable = () => {
-  // Table data structure matching the exact layout from the image
-  const tableData = [
-    // SALES category (rows 1-4)
-    {
-      category: "Tw Net Sales",
-      section: "SALES",
-      thisWeekLabel: "Tw Net Sales",
-      thisWeekValue: "$7,174.76",
-      lastWeekLabel: "Lw Net Sales",
-      lastWeekValue: "$0.00",
-      twLw: "",
-      budgetLabel: "Bdgt Net Sales",
-      budgetValue: "$0.00",
-      twBdg: "-57.99%",
-      twBdgColor: "#d32f2f",
-      twBdgArrow: "down"
-    },
-    {
-      category: "Orders",
-      section: "SALES",
-      thisWeekLabel: "Orders",
-      thisWeekValue: "242",
-      lastWeekLabel: "Orders",
-      lastWeekValue: "0",
-      twLw: "",
-      budgetLabel: "Orders",
-      budgetValue: "0",
-      twBdg: "-52.75%",
-      twBdgColor: "#d32f2f",
-      twBdgArrow: "down"
-    },
-    {
-      category: "Avg Ticket",
-      section: "SALES",
-      thisWeekLabel: "Avg Ticket",
-      thisWeekValue: "$29.65",
-      lastWeekLabel: "Avg Ticket",
-      lastWeekValue: "",
-      twLw: "",
-      budgetLabel: "Avg Ticket",
-      budgetValue: "",
-      twBdg: "-11.09%",
-      twBdgColor: "#d32f2f",
-      twBdgArrow: "down"
-    },
-  
-    
-    // LABOR COST category (rows 5-9)
-    {
-      category: "Lbr hrs",
-      section: "LABOR COST",
-      thisWeekLabel: "Lbr hrs",
-      thisWeekValue: "120.00",
-      lastWeekLabel: "Lbr hrs",
-      lastWeekValue: "0.00",
-      twLw: "",
-      budgetLabel: "Lbr hrs",
-      budgetValue: "0.00",
-      twBdg: "-48.18%",
-      twBdgColor: "#2e7d32",
-      twBdgArrow: "down"
-    },
-    {
-      category: "Lbr Pay",
-      section: "LABOR COST",
-      thisWeekLabel: "Lbr Pay",
-      thisWeekValue: "$2,510.40",
-      lastWeekLabel: "Lbr Pay",
-      lastWeekValue: "$0.00",
-      twLw: "",
-      budgetLabel: "Lbr Pay",
-      budgetValue: "$0.00",
-      twBdg: "-55.71%",
-      twBdgColor: "#2e7d32",
-      twBdgArrow: "down"
-    },
-    {
-      category: "Lbr %",
-      section: "LABOR COST",
-      thisWeekLabel: "Lbr %",
-      thisWeekValue: "34.99%",
-      lastWeekLabel: "Lbr %",
-      lastWeekValue: "",
-      twLw: "34.99%",
-      twLwColor: "#d32f2f",
-      twLwArrow: "up",
-      budgetLabel: "Lbr %",
-      budgetValue: "",
-      twBdg: "1.56%",
-      twBdgColor: "#d32f2f",
-      twBdgArrow: "up"
-    },
-    {
-      category: "SPMH",
-      section: "LABOR COST",
-      thisWeekLabel: "SPMH",
-      thisWeekValue: "thr",
-      lastWeekLabel: "SPMH",
-      lastWeekValue: "$0.00",
-      twLw: "$0.00",
-      budgetLabel: "SPMH",
-      budgetValue: "",
-      twBdg: "-18.93%",
-      twBdgColor: "#d32f2f",
-      twBdgArrow: "down"
-    },
-    {
-      category: "LPMH",
-      section: "LABOR COST",
-      thisWeekLabel: "LPMH",
-      thisWeekValue: "$20.92",
-      lastWeekLabel: "a",
-      lastWeekValue: "",
-      twLw: "20.92%",
-      twLwColor: "#d32f2f",
-      twLwArrow: "up",
-      budgetLabel: "LPMH",
-      budgetValue: "",
-      twBdg: "-14.53%",
-      twBdgColor: "#2e7d32",
-      twBdgArrow: "down"
-    },
-    
-    // FOOD COST category (rows 10-23)
-    {
-      category: "Tw Johns",
-      section: "FOOD COST",
-      thisWeekLabel: "Tw Johns",
-      thisWeekValue: "$0.00",
-      lastWeekLabel: "Tw Johns",
-      lastWeekValue: "$0.00",
-      twLw: "",
-      budgetLabel: "Tw Johns",
-      budgetValue: "$0.00",
-      twBdg: "-100.00%",
-      twBdgColor: "#2e7d32",
-      twBdgArrow: "down"
-    },
-    {
-      category: "Terra",
-      section: "FOOD COST",
-      thisWeekLabel: "Terra",
-      thisWeekValue: "$167.80",
-      lastWeekLabel: "Terra",
-      lastWeekValue: "$0.00",
-      twLw: "",
-      budgetLabel: "Terra",
-      budgetValue: "$0.00",
-      twBdg: "-100.00%",
-      twBdgColor: "#2e7d32",
-      twBdgArrow: "down"
-    },
-    {
-      category: "Metro",
-      section: "FOOD COST",
-      thisWeekLabel: "Metro",
-      thisWeekValue: "$653.04",
-      lastWeekLabel: "Metro",
-      lastWeekValue: "$0.00",
-      twLw: "",
-      budgetLabel: "Metro",
-      budgetValue: "$0.00",
-      twBdg: "-100.00%",
-      twBdgColor: "#2e7d32",
-      twBdgArrow: "down"
-    },
-    {
-      category: "Victory",
-      section: "FOOD COST",
-      thisWeekLabel: "Victory",
-      thisWeekValue: "$0.00",
-      lastWeekLabel: "Victory",
-      lastWeekValue: "$0.00",
-      twLw: "",
-      budgetLabel: "Victory",
-      budgetValue: "$0.00",
-      twBdg: "-100.00%",
-      twBdgColor: "#2e7d32",
-      twBdgArrow: "down"
-    },
-    {
-      category: "Central Kitchen",
-      section: "FOOD COST",
-      thisWeekLabel: "Central Kitchen",
-      thisWeekValue: "$3,640.89",
-      lastWeekLabel: "Central Kitchen",
-      lastWeekValue: "$0.00",
-      twLw: "",
-      budgetLabel: "Central Kitchen",
-      budgetValue: "$0.00",
-      twBdg: "-100.00%",
-      twBdgColor: "#2e7d32",
-      twBdgArrow: "down"
-    },
-    {
-      category: "Other",
-      section: "FOOD COST",
-      thisWeekLabel: "Other",
-      thisWeekValue: "$59.00",
-      lastWeekLabel: "Other",
-      lastWeekValue: "$0.00",
-      twLw: "",
-      budgetLabel: "Other",
-      budgetValue: "$0.00",
-      twBdg: "",
-      twBdgColor: "",
-      twBdgArrow: ""
-    },
-    {
-      category: "",
-      section: "FOOD COST",
-      thisWeekLabel: "",
-      thisWeekValue: "$0.00",
-      lastWeekLabel: "",
-      lastWeekValue: "$0.00",
-      twLw: "",
-      budgetLabel: "",
-      budgetValue: "$0.00",
-      twBdg: "",
-      twBdgColor: "",
-      twBdgArrow: ""
-    },
-    {
-      category: "",
-      section: "FOOD COST",
-      thisWeekLabel: "",
-      thisWeekValue: "$0.00",
-      lastWeekLabel: "",
-      lastWeekValue: "$0.00",
-      twLw: "",
-      budgetLabel: "",
-      budgetValue: "$0.00",
-      twBdg: "",
-      twBdgColor: "",
-      twBdgArrow: ""
-    },
-    {
-      category: "",
-      section: "FOOD COST",
-      thisWeekLabel: "",
-      thisWeekValue: "$0.00",
-      lastWeekLabel: "",
-      lastWeekValue: "$0.00",
-      twLw: "",
-      budgetLabel: "",
-      budgetValue: "$0.00",
-      twBdg: "",
-      twBdgColor: "",
-      twBdgArrow: ""
-    },
-    {
-      category: "",
-      section: "FOOD COST",
-      thisWeekLabel: "",
-      thisWeekValue: "$0.00",
-      lastWeekLabel: "",
-      lastWeekValue: "$0.00",
-      twLw: "",
-      budgetLabel: "",
-      budgetValue: "$0.00",
-      twBdg: "",
-      twBdgColor: "",
-      twBdgArrow: ""
-    },
-    {
-      category: "TTL",
-      section: "FOOD COST",
-      thisWeekLabel: "TTL",
-      thisWeekValue: "$4,520.73",
-      lastWeekLabel: "TTL",
-      lastWeekValue: "$0.00",
-      twLw: "",
-      budgetLabel: "TTL",
-      budgetValue: "$0.00",
-      twBdg: "-100.00%",
-      twBdgColor: "#2e7d32",
-      twBdgArrow: "down"
-    },
-    {
-      category: "Food Cost%",
-      section: "FOOD COST",
-      thisWeekLabel: "Food Cost %",
-      thisWeekValue: "63.01%",
-      lastWeekLabel: "Food Cost %",
-      lastWeekValue: "",
-      twLw: "0.00%",
-      twLwColor: "#d32f2f",
-      twLwArrow: "up",
-      budgetLabel: "Food Cost %",
-      budgetValue: "",
-      twBdg: "-30.00%",
-      twBdgColor: "#2e7d32",
-      twBdgArrow: "down"
-    },
-    {
-      category: "Prime Cost $",
-      section: "FOOD COST",
-      thisWeekLabel: "Prime Cost $",
-      thisWeekValue: "$7,031.13",
-      lastWeekLabel: "Prime Cost $",
-      lastWeekValue: "$0.00",
-      twLw: "",
-      budgetLabel: "Prime Cost $",
-      budgetValue: "$0.00",
-      twBdg: "-78.36%",
-      twBdgColor: "#2e7d32",
-      twBdgArrow: "down"
-    },
-    {
-      category: "Prime Cost %",
-      section: "FOOD COST",
-      thisWeekLabel: "Prime Cost %",
-      thisWeekValue: "98.00%",
-      lastWeekLabel: "Prime Cost %",
-      lastWeekValue: "",
-      twLw: "30.23%",
-      twLwColor: "#d32f2f",
-      twLwArrow: "up",
-      budgetLabel: "Prime Cost %",
-      budgetValue: "",
-      twBdg: "-28.44%",
-      twBdgColor: "#2e7d32",
-      twBdgArrow: "down"
-    }
-  ];
+interface FinancialTableProps {
+  data?: any[]; // table5 data from backend
+}
 
-  // Calculate dynamic heights based on number of rows in each section
-  const salesRows = 5;
-  const laborRows = 5;
-  const foodRows = 14;
-  const rowHeight = 45; // Reduced from 52px
+const FinancialTable: React.FC<FinancialTableProps> = ({ data = [] }) => {
+  // Helper function to categorize metrics
+  const categorizeMetrics = (metrics: any[]) => {
+    const categories = {
+      sales: [],
+      labor: [],
+      foodCost: []
+    };
+
+    metrics.forEach(row => {
+      const metric = row.Metric || row.metric || '';
+      const metricLower = metric.toLowerCase();
+      
+      if (['net sales', 'orders', 'avg ticket'].some(term => metricLower.includes(term))) {
+        categories.sales.push(row);
+      } else if (['lbr', 'labor', 'spmh', 'lpmh'].some(term => metricLower.includes(term))) {
+        categories.labor.push(row);
+      } else if (['johns', 'terra', 'metro', 'victory', 'central kitchen', 'other', 'ttl', 'food cost', 'prime cost'].some(term => metricLower.includes(term))) {
+        categories.foodCost.push(row);
+      }
+    });
+
+    return categories;
+  };
+
+  // Helper function to format percentage with color
+  const formatPercentageWithColor = (value: string | number) => {
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    const isPositive = numValue >= 0;
+    const color = isPositive ? '#2e7d32' : '#d32f2f'; // Green for positive, red for negative
+    const arrow = isPositive ? '▲' : '▼';
+    
+    return {
+      color,
+      arrow,
+      value: `${isPositive ? '+' : ''}${numValue.toFixed(2)}%`,
+      isPositive
+    };
+  };
+
+  // Helper function to format currency
+  const formatCurrency = (value: string | number) => {
+    const numValue = typeof value === 'string' ? parseFloat(value.replace(/[^0-9.-]/g, '')) : value;
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(numValue);
+  };
+
+  // Helper function to format values based on metric type
+  const formatValue = (value: string | number, metricName: string) => {
+    if (!value && value !== 0) return '$0.00';
+    
+    const metricLower = metricName.toLowerCase();
+    
+    if (metricLower.includes('%') || metricLower === 'lbr %' || metricLower === 'food cost %' || metricLower === 'prime cost %') {
+      return `${parseFloat(value.toString()).toFixed(2)}%`;
+    } else if (metricLower.includes('sales') || metricLower.includes('pay') || metricLower.includes('spmh') || metricLower.includes('lpmh') || metricLower.includes('avg ticket') || metricLower.includes('cost') || metricLower.includes('johns') || metricLower.includes('terra') || metricLower.includes('metro') || metricLower.includes('victory') || metricLower.includes('central') || metricLower.includes('other') || metricLower.includes('ttl') || metricLower.includes('prime')) {
+      return formatCurrency(value);
+    } else if (metricLower.includes('orders') || metricLower.includes('hrs')) {
+      return parseInt(value.toString()).toLocaleString();
+    } else {
+      return value.toString();
+    }
+  };
+
+  // If no data provided, show placeholder
+  if (!data || data.length === 0) {
+    return (
+      <Paper elevation={3} sx={{ borderRadius: 2, overflow: 'hidden', width: '100%', p: 4 }}>
+        <Typography variant="h6" sx={{ textAlign: 'center', color: 'text.secondary' }}>
+          No financial data available
+        </Typography>
+        <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary', mt: 1 }}>
+          Upload financial files to see detailed metrics
+        </Typography>
+      </Paper>
+    );
+  }
+
+  // Categorize the metrics
+  const categorizedMetrics = categorizeMetrics(data);
+  
+  // Calculate row heights dynamically
+  const salesRows = Math.max(categorizedMetrics.sales.length, 5);
+  const laborRows = Math.max(categorizedMetrics.labor.length, 5);
+  const foodRows = Math.max(categorizedMetrics.foodCost.length, 10);
+  const rowHeight = 45;
   
   const salesHeight = salesRows * rowHeight;
   const laborHeight = laborRows * rowHeight;
   const foodHeight = foodRows * rowHeight;
+
+  // Render a table row for a metric
+  const renderMetricRow = (metric: any, index: number) => {
+    const metricName = metric.Metric || metric.metric || 'Unknown';
+    const thisWeek = metric['This Week'] || metric.thisWeek || '0';
+    const lastWeek = metric['Last Week'] || metric.lastWeek || '0';
+    const twLwChange = formatPercentageWithColor(metric['Tw/Lw (+/-)'] || metric.twLwChange || '0');
+    const budget = metric.Budget || metric.budget || '0';
+    const twBdgChange = formatPercentageWithColor(metric['Tw/Bdg (+/-)'] || metric.twBdgChange || '0');
+
+    return (
+      <TableRow 
+        key={index}
+        sx={{ 
+          height: `${rowHeight}px`,
+          borderBottom: '1px solid #e0e0e0',
+          backgroundColor: index % 2 === 0 ? '#fafafa' : '#ffffff',
+          '&:hover': {
+            backgroundColor: '#f5f5f5'
+          }
+        }}
+      >
+        {/* This Week Label */}
+        <TableCell 
+          align="center"
+          sx={{ 
+            borderRight: '1px solid #e0e0e0',
+            padding: '4px 8px',
+            width: '15%',
+            fontSize: '14px',
+            fontWeight: 400
+          }}
+        >
+          {metricName}
+        </TableCell>
+
+        {/* This Week Value */}
+        <TableCell 
+          align="center"
+          sx={{ 
+            borderRight: '1px solid #e0e0e0',
+            padding: '4px 8px',
+            width: '15%',
+            fontSize: '14px',
+            fontWeight: 400
+          }}
+        >
+          {formatValue(thisWeek, metricName)}
+        </TableCell>
+        
+        {/* Last Week Label */}
+        <TableCell 
+          align="center"
+          sx={{ 
+            borderRight: '1px solid #e0e0e0',
+            padding: '4px 8px',
+            width: '15%',
+            fontSize: '14px',
+            fontWeight: 400
+          }}
+        >
+          {metricName}
+        </TableCell>
+
+        {/* Last Week Value */}
+        <TableCell 
+          align="center"
+          sx={{ 
+            borderRight: '1px solid #e0e0e0',
+            padding: '4px 8px',
+            width: '15%',
+            fontSize: '14px',
+            fontWeight: 400
+          }}
+        >
+          {formatValue(lastWeek, metricName)}
+        </TableCell>
+        
+        {/* TW/LW Change */}
+        <TableCell 
+          align="center"
+          sx={{ 
+            borderRight: '1px solid #e0e0e0',
+            padding: '4px 8px',
+            fontSize: '14px',
+            fontWeight: 400
+          }}
+        >
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            gap: 0.5
+          }}>
+            <span style={{ 
+              color: twLwChange.color, 
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }}>
+              {twLwChange.arrow}
+            </span>
+            <Typography sx={{ 
+              color: twLwChange.color,
+              fontSize: '14px',
+              fontWeight: 400
+            }}>
+              {twLwChange.value}
+            </Typography>
+          </Box>
+        </TableCell>
+        
+        {/* Budget Label */}
+        <TableCell 
+          align="center"
+          sx={{ 
+            borderRight: '1px solid #e0e0e0',
+            padding: '4px 8px',
+            width: '10%',
+            fontSize: '13px',
+            fontWeight: 400
+          }}
+        >
+          {metricName}
+        </TableCell>
+
+        {/* Budget Value */}
+        <TableCell 
+          align="center"
+          sx={{ 
+            borderRight: '1px solid #e0e0e0',
+            padding: '4px 8px',
+            width: '10%',
+            fontSize: '14px',
+            fontWeight: 400
+          }}
+        >
+          {formatValue(budget, metricName)}
+        </TableCell>
+        
+        {/* TW/Budget Change */}
+        <TableCell 
+          align="center"
+          sx={{ 
+            padding: '4px 8px',
+            fontSize: '14px',
+            fontWeight: 400
+          }}
+        >
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            gap: 0.5
+          }}>
+            <Typography sx={{ 
+              color: twBdgChange.color,
+              fontSize: '14px',
+              fontWeight: 400
+            }}>
+              {twBdgChange.value}
+            </Typography>
+            <span style={{ 
+              color: twBdgChange.color, 
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }}>
+              {twBdgChange.arrow}
+            </span>
+          </Box>
+        </TableCell>
+      </TableRow>
+    );
+  };
 
   return (
     <Paper elevation={3} sx={{ borderRadius: 2, overflow: 'hidden', width: '100%' }}>
@@ -360,8 +297,8 @@ const FinancialTable = () => {
           {/* SALES label */}
           <Box sx={{ 
             height: `${salesHeight}px`,
-            backgroundColor: '#f5f5f5', // Light gray background
-            color: 'black', // Black font
+            backgroundColor: '#f5f5f5',
+            color: 'black',
             writingMode: 'vertical-rl',
             transform: 'rotate(180deg)',
             display: 'flex',
@@ -378,8 +315,8 @@ const FinancialTable = () => {
           {/* LABOR COST label */}
           <Box sx={{ 
             height: `${laborHeight}px`,
-            backgroundColor: '#f5f5f5', // Light gray background
-            color: 'black', // Black font
+            backgroundColor: '#f5f5f5',
+            color: 'black',
             writingMode: 'vertical-rl',
             transform: 'rotate(180deg)',
             display: 'flex',
@@ -396,8 +333,8 @@ const FinancialTable = () => {
           {/* FOOD COST label */}
           <Box sx={{ 
             height: `${foodHeight}px`,
-            backgroundColor: '#f5f5f5', // Light gray background
-            color: 'black', // Black font
+            backgroundColor: '#f5f5f5',
+            color: 'black',
             writingMode: 'vertical-rl',
             transform: 'rotate(180deg)',
             display: 'flex',
@@ -426,7 +363,7 @@ const FinancialTable = () => {
                     fontSize: '16px',
                     width: '30%',
                     border: '1px solid #e0e0e0',
-                    padding: '10px 8px' // Reduced from 14px
+                    padding: '10px 8px'
                   }}
                 >
                   This Weeks Trend
@@ -440,7 +377,7 @@ const FinancialTable = () => {
                     fontSize: '16px',
                     width: '30%',
                     border: '1px solid #e0e0e0',
-                    padding: '10px 8px' // Reduced from 14px
+                    padding: '10px 8px'
                   }}
                 >
                   Last Weeks Trend
@@ -454,7 +391,7 @@ const FinancialTable = () => {
                     fontSize: '16px',
                     width: '10%',
                     border: '1px solid #e0e0e0',
-                    padding: '10px 8px' // Reduced from 14px
+                    padding: '10px 8px'
                   }}
                 >
                   TW/LW (+/-)
@@ -469,7 +406,7 @@ const FinancialTable = () => {
                     fontSize: '16px',
                     width: '20%',
                     border: '1px solid #e0e0e0',
-                    padding: '10px 8px' // Reduced from 14px
+                    padding: '10px 8px'
                   }}
                 >
                   This Weeks Budget
@@ -483,7 +420,7 @@ const FinancialTable = () => {
                     fontSize: '16px',
                     width: '10%',
                     border: '1px solid #e0e0e0',
-                    padding: '10px 8px' // Reduced from 14px
+                    padding: '10px 8px'
                   }}
                 >
                   TW/Bdg (+/-)
@@ -491,175 +428,14 @@ const FinancialTable = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {tableData.map((row, index) => (
-                <TableRow 
-                  key={index}
-                  sx={{ 
-                    height: `${rowHeight}px`, // Reduced from 52px
-                    borderBottom: '1px solid #e0e0e0',
-                    backgroundColor: index % 2 === 0 ? '#fafafa' : '#ffffff',
-                    '&:hover': {
-                      backgroundColor: '#f5f5f5'
-                    }
-                  }}
-                >
-                  {/* This Weeks Trend - Label */}
-                  <TableCell 
-                    align="center"
-                    sx={{ 
-                      borderRight: '1px solid #e0e0e0',
-                      padding: '4px 8px', // Reduced padding
-                      width: '15%',
-                      fontSize: '14px', // Slightly smaller font
-                      fontWeight: 400
-                    }}
-                  >
-                    {row.thisWeekLabel}
-                  </TableCell>
-                  {/* This Weeks Trend - Value */}
-                  <TableCell 
-                    align="center"
-                    sx={{ 
-                      borderRight: '1px solid #e0e0e0',
-                      padding: '4px 8px', // Reduced padding
-                      width: '15%',
-                      fontSize: '14px', // Slightly smaller font
-                      fontWeight: 400
-                    }}
-                  >
-                    {row.thisWeekValue}
-                  </TableCell>
-                  
-                  {/* Last Weeks Trend - Label */}
-                  <TableCell 
-                    align="center"
-                    sx={{ 
-                      borderRight: '1px solid #e0e0e0',
-                      padding: '4px 8px', // Reduced padding
-                      width: '15%',
-                      fontSize: '14px', // Slightly smaller font
-                      fontWeight: 400
-                    }}
-                  >
-                    {row.lastWeekLabel}
-                  </TableCell>
-                  {/* Last Weeks Trend - Value */}
-                  <TableCell 
-                    align="center"
-                    sx={{ 
-                      borderRight: '1px solid #e0e0e0',
-                      padding: '4px 8px', // Reduced padding
-                      width: '15%',
-                      fontSize: '14px', // Slightly smaller font
-                      fontWeight: 400
-                    }}
-                  >
-                    {row.lastWeekValue}
-                  </TableCell>
-                  
-                  {/* TW/LW (+/-) */}
-                  <TableCell 
-                    align="center"
-                    sx={{ 
-                      borderRight: '1px solid #e0e0e0',
-                      padding: '4px 8px', // Reduced padding
-                      fontSize: '14px', // Slightly smaller font
-                      fontWeight: 400
-                    }}
-                  >
-                    {row.twLw && (
-                      <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        gap: 0.5
-                      }}>
-                        {row.twLwArrow === 'up' && (
-                          <span style={{ 
-                            color: row.twLwColor, 
-                            fontSize: '12px',
-                            fontWeight: 'bold'
-                          }}>▲</span>
-                        )}
-                        <Typography sx={{ 
-                          color: row.twLwColor || 'inherit',
-                          fontSize: '14px',
-                          fontWeight: 400
-                        }}>
-                          {row.twLw}
-                        </Typography>
-                      </Box>
-                    )}
-                  </TableCell>
-                  
-                  {/* This Weeks Budget - Label */}
-                  <TableCell 
-                    align="center"
-                    sx={{ 
-                      borderRight: '1px solid #e0e0e0',
-                      padding: '4px 8px', // Reduced padding
-                      width: '10%',
-                      fontSize: '13px', // Slightly smaller font
-                      fontWeight: 400
-                    }}
-                  >
-                    {row.budgetLabel}
-                  </TableCell>
-                  {/* This Weeks Budget - Value */}
-                  <TableCell 
-                    align="center"
-                    sx={{ 
-                      borderRight: '1px solid #e0e0e0',
-                      padding: '4px 8px', // Reduced padding
-                      width: '10%',
-                      fontSize: '14px', // Slightly smaller font
-                      fontWeight: 400
-                    }}
-                  >
-                    {row.budgetValue}
-                  </TableCell>
-                  
-                  {/* TW/Bdg (+/-) */}
-                  <TableCell 
-                    align="center"
-                    sx={{ 
-                      padding: '4px 8px', // Reduced padding
-                      fontSize: '14px', // Slightly smaller font
-                      fontWeight: 400
-                    }}
-                  >
-                    {row.twBdg && (
-                      <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        gap: 0.5
-                      }}>
-                        <Typography sx={{ 
-                          color: row.twBdgColor || 'inherit',
-                          fontSize: '14px',
-                          fontWeight: 400
-                        }}>
-                          {row.twBdg}
-                        </Typography>
-                        {row.twBdgArrow === 'up' ? (
-                          <span style={{ 
-                            color: row.twBdgColor, 
-                            fontSize: '12px',
-                            fontWeight: 'bold'
-                          }}>▲</span>
-                        ) : row.twBdgArrow === 'down' && (
-                          <span style={{ 
-                            color: row.twBdgColor, 
-                            fontSize: '12px',
-                            fontWeight: 'bold'
-                          }}>▼</span>
-                        )}
-                      </Box>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {/* Render Sales metrics */}
+              {categorizedMetrics.sales.map((metric, index) => renderMetricRow(metric, index))}
+              
+              {/* Render Labor metrics */}
+              {categorizedMetrics.labor.map((metric, index) => renderMetricRow(metric, index + 100))}
+              
+              {/* Render Food Cost metrics */}
+              {categorizedMetrics.foodCost.map((metric, index) => renderMetricRow(metric, index + 200))}
             </TableBody>
           </Table>
         </TableContainer>

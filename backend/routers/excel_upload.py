@@ -26,7 +26,7 @@ router = APIRouter(
     tags=["excel_upload"],
 )
 
-UPLOAD_DIR = "../uploads"
+UPLOAD_DIR = "./uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 

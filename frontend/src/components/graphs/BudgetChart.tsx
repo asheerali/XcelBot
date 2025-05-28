@@ -1,121 +1,215 @@
+// src/components/graphs/BudgetChart.tsx - Updated to use real financial data
+
 import React from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList
+  ComposedChart,
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend
 } from 'recharts';
-import Box from '@mui/material/Box';
-import Paper from '@mui/material/Paper';
-import Typography from '@mui/material/Typography';
+import { Box, Typography, Paper } from '@mui/material';
 
-const BudgetChart = () => {
-  const data = [
-    { name: 'Tw Net Sales', value: -57.99, showLabel: true },
-    { name: 'Orders', value: -52.75, showLabel: false },
-    { name: 'Avg Ticket', value: -11.09, showLabel: true },
-    { name: 'Lbr hrs', value: -48.18, showLabel: true },
-    { name: 'Lbr Pay', value: -55.71, showLabel: true },
-    { name: 'Lbr %', value: 1.56, showLabel: true },
-    { name: 'SPMH', value: -18.93, showLabel: true },
-    { name: 'LPMH', value: -14.53, showLabel: true },
-    { name: 'Tw Johns', value: -100, showLabel: false },
-    { name: 'Terra', value: -100, showLabel: false },
-    { name: 'Metro', value: -100, showLabel: false },
-    { name: 'Victory', value: -100, showLabel: false },
-    { name: 'Central Kitchen', value: -100, showLabel: true },
-    { name: 'Other', value: 0, showLabel: false },
-    { name: 'TTL', value: -100, showLabel: false },
-    { name: 'Food Cost %', value: -30, showLabel: true },
-    { name: 'Prime Cost $', value: -78.36, showLabel: true },
-    { name: 'Prime Cost %', value: -28.44, showLabel: true }
-  ];
+interface BudgetChartProps {
+  data: any[]; // table5 data from financial backend
+}
 
-  // Custom label renderer
-  const renderCustomLabel = (props) => {
-    const { x, y, width, height, value, index } = props;
-    const labelY = value >= 0 ? y - 5 : y + height + 15;
-    
-    // Access the data item directly using the index
-    const dataItem = data[index];
-    if (!dataItem || !dataItem.showLabel || value === 0) return null;
-    
-    return (
-      <text 
-        x={x + width / 2} 
-        y={labelY} 
-        fill="#0000FF"
-        textAnchor="middle" 
-        fontWeight="bold"
-        fontSize="14"
-      >
-        {value > 0 ? '▲' : '▼'} {Math.abs(value).toFixed(2)}%
-      </text>
-    );
+const BudgetChart: React.FC<BudgetChartProps> = ({ data }) => {
+  // Transform table5 data for budget comparison chart
+  const transformDataForChart = () => {
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    // Key metrics for budget comparison
+    const keyMetrics = [
+      'Net Sales',
+      'Orders', 
+      'Avg Ticket',
+      'Lbr Pay', // Labor Pay
+      'Food Cost %',
+      'Lbr %' // Labor %
+    ];
+
+    return data
+      .filter(row => keyMetrics.includes(row.Metric) && row.Budget)
+      .map(row => {
+        const thisWeek = parseFloat(row['This Week']) || 0;
+        const budget = parseFloat(row['Budget']) || 0;
+        const twBdgChange = parseFloat(row['Tw/Bdg (+/-)']) || 0;
+        
+        // Calculate percentage of budget achieved
+        const budgetAchievement = budget > 0 ? (thisWeek / budget) * 100 : 0;
+        
+        return {
+          metric: row.Metric,
+          actual: thisWeek,
+          budget: budget,
+          achievement: budgetAchievement,
+          variance: twBdgChange,
+          // Format display values
+          displayActual: formatMetricValue(row.Metric, thisWeek),
+          displayBudget: formatMetricValue(row.Metric, budget),
+          displayVariance: `${twBdgChange >= 0 ? '+' : ''}${twBdgChange.toFixed(2)}%`
+        };
+      });
   };
 
-  // All bars are blue in the budget chart
-  const getBarColor = () => '#0000FF';
+  // Helper function to format values based on metric type
+  const formatMetricValue = (metric: string, value: number) => {
+    if (metric === 'Net Sales' || metric === 'Lbr Pay' || metric === 'Avg Ticket') {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(value);
+    } else if (metric.includes('%')) {
+      return `${value.toFixed(2)}%`;
+    } else {
+      return value.toLocaleString();
+    }
+  };
+
+  // Custom tooltip
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <Paper sx={{ p: 2, boxShadow: 3 }}>
+          <Typography variant="subtitle2" fontWeight="bold">
+            {label}
+          </Typography>
+          <Typography variant="body2" color="primary">
+            Actual: {data.displayActual}
+          </Typography>
+          <Typography variant="body2" color="secondary">
+            Budget: {data.displayBudget}
+          </Typography>
+          <Typography variant="body2">
+            Achievement: {data.achievement.toFixed(1)}%
+          </Typography>
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              color: data.variance >= 0 ? '#2e7d32' : '#d32f2f',
+              fontWeight: 'bold'
+            }}
+          >
+            Variance: {data.displayVariance}
+          </Typography>
+        </Paper>
+      );
+    }
+    return null;
+  };
+
+  const chartData = transformDataForChart();
+
+  if (chartData.length === 0) {
+    return (
+      <Paper sx={{ p: 3, textAlign: 'center' }}>
+        <Typography variant="h6" color="text.secondary">
+          Budget vs Actual Comparison
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          No budget data available
+        </Typography>
+      </Paper>
+    );
+  }
 
   return (
-    <Paper sx={{ p: 2, height: '100%' }}>
-      <Box sx={{ 
-        height: '500px',
-        display: 'flex',
-        flexDirection: 'column',
-      }}>
-        <Typography 
-          variant="h5" 
-          sx={{ 
-            mb: 2, 
-            textAlign: 'center',
-            fontWeight: 'bold' 
-          }}
-        >
-          TW vs. Budget
+    <Paper sx={{ p: 3, boxShadow: 2, borderRadius: 2 }}>
+      <Typography 
+        variant="h6" 
+        sx={{ mb: 2, textAlign: 'center', fontWeight: 600 }}
+      >
+        Budget vs Actual Performance
+      </Typography>
+      
+      <Box sx={{ width: '100%', height: 400 }}>
+        <ResponsiveContainer>
+          <ComposedChart
+            data={chartData}
+            margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis 
+              dataKey="metric" 
+              angle={-45}
+              textAnchor="end"
+              height={80}
+              fontSize={12}
+            />
+            <YAxis yAxisId="left" fontSize={12} />
+            <YAxis yAxisId="right" orientation="right" fontSize={12} />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend />
+            <Bar 
+              yAxisId="left"
+              dataKey="actual" 
+              name="Actual"
+              fill="#1976d2" 
+              radius={[4, 4, 0, 0]}
+              maxBarSize={40}
+            />
+            <Bar 
+              yAxisId="left"
+              dataKey="budget" 
+              name="Budget"
+              fill="#ff9800" 
+              radius={[4, 4, 0, 0]}
+              maxBarSize={40}
+            />
+            <Line 
+              yAxisId="right"
+              type="monotone" 
+              dataKey="achievement" 
+              name="Achievement %"
+              stroke="#4caf50" 
+              strokeWidth={3}
+              dot={{ fill: '#4caf50', strokeWidth: 2, r: 6 }}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </Box>
+      
+      {/* Budget achievement summary */}
+      <Box sx={{ mt: 2 }}>
+        <Typography variant="subtitle2" sx={{ mb: 1, textAlign: 'center' }}>
+          Budget Achievement Summary
         </Typography>
-        
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'flex-end',
-          mb: 1,
-          pr: 2
-        }}>
-          <Typography variant="body2" sx={{ color: '#0000FF', fontWeight: 'bold' }}>
-            ▲ 1.56%
-          </Typography>
-        </Box>
-        
-        <Box sx={{ flex: 1 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={data}
-              margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'center' }}>
+          {chartData.map((item, index) => (
+            <Box 
+              key={index} 
+              sx={{ 
+                textAlign: 'center', 
+                minWidth: 100,
+                p: 1,
+                borderRadius: 1,
+                backgroundColor: item.achievement >= 100 ? '#e8f5e8' : item.achievement >= 80 ? '#fff3e0' : '#ffeaea'
+              }}
             >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="name" 
-                angle={-45}
-                textAnchor="end"
-                height={100}
-                interval={0}
-                style={{ fontSize: '13px', fontWeight: 'bold' }}
-              />
-              <YAxis 
-                domain={[-100, 25]}
-                ticks={[-100, -75, -50, -25, 0, 25]}
-                tickFormatter={(value) => value.toFixed(0)}
-                style={{ fontSize: '13px', fontWeight: '600' }}
-              />
-              <Tooltip 
-                formatter={(value) => `${value.toFixed(2)}%`}
-                labelStyle={{ color: '#000' }}
-              />
-              <Bar dataKey="value">
-                <LabelList content={renderCustomLabel} />
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={getBarColor()} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+              <Typography variant="caption" display="block">
+                {item.metric}
+              </Typography>
+              <Typography 
+                variant="body2" 
+                fontWeight="bold"
+                sx={{ 
+                  color: item.achievement >= 100 ? '#2e7d32' : item.achievement >= 80 ? '#f57c00' : '#d32f2f'
+                }}
+              >
+                {item.achievement.toFixed(1)}%
+              </Typography>
+            </Box>
+          ))}
         </Box>
       </Box>
     </Paper>

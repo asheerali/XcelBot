@@ -1,3 +1,5 @@
+// src/components/DayOfWeekAnalysis.tsx - Updated with real financial data integration
+
 import React from "react";
 import Box from "@mui/material/Box";
 import Table from "@mui/material/Table";
@@ -8,310 +10,97 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import Paper from "@mui/material/Paper";
+import Alert from "@mui/material/Alert";
 
-const DayOfWeekAnalysis = () => {
-  // Data structure based on your Excel spreadsheet
-  const dayOfWeekSalesData = [
-    {
-      day: "1 - Monday",
-      twSales: "$78,342.48",
-      lwSales: "$73,538.43",
-      lySales: "$204,935.43",
-      tytreand: "0.00%",
-      lytrends: "-61.77%",
-      twLwChange: "+6.53%",
-      twLyChange: "-61.77%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-    },
-    {
-      day: "2 - Tuesday",
-      twSales: "$136,646.72",
-      lwSales: "$139,080.06",
-      lySales: "$383,819.96",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "-1.75%",
-      twLyChange: "-64.40%",
-      isPositiveTwLw: false,
-      isPositiveTwLy: false,
-    },
-    {
-      day: "3 - Wednesday",
-      twSales: "$154,380.90",
-      lwSales: "$154,380.90",
-      lySales: "$419,204.38",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "-63.17%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-    },
-    {
-      day: "4 - Thursday",
-      twSales: "$142,480.95",
-      lwSales: "$142,480.95",
-      lySales: "$395,944.62",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "-64.01%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-    },
-    {
-      day: "5 - Friday",
-      twSales: "$80,651.51",
-      lwSales: "$80,651.51",
-      lySales: "$223,736.74",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "-63.95%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-    },
-    {
-      day: "6 - Saturday",
-      twSales: "$834.99",
-      lwSales: "$834.99",
-      lySales: "$60,192.66",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "-98.61%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-    },
-    {
-      day: "7 - Sunday",
-      twSales: "$1,208.99",
-      lwSales: "$1,208.99",
-      lySales: "$45,003.32",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "-97.31%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-    },
-    {
-      day: "Grand Total",
-      twSales: "$594,546.54",
-      lwSales: "$592,175.83",
-      lySales: "$1,732,837.11",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "+0.40%",
-      twLyChange: "-65.69%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-      isTotal: true,
-    },
-  ];
+// Interface for the component props
+interface DayOfWeekAnalysisProps {
+  salesData?: any[];     // table2 data - Day of week SALES
+  ordersData?: any[];    // table3 data - Day of week ORDERS  
+  avgTicketData?: any[]; // table4 data - Day of week AVERAGE TICKET
+}
 
-  const dayOfWeekOrdersData = [
-    {
-      day: "1 - Monday",
-      twOrders: "3,328",
-      lwOrders: "3,328",
-      lyOrders: "10,238",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "-67.49%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-    },
-    {
-      day: "2 - Tuesday",
-      twOrders: "5,020",
-      lwOrders: "5,020",
-      lyOrders: "15,017",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "-66.57%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-    },
-    {
-      day: "3 - Wednesday",
-      twOrders: "5,025",
-      lwOrders: "5,025",
-      lyOrders: "15,688",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "-67.97%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-    },
-    {
-      day: "4 - Thursday",
-      twOrders: "5,362",
-      lwOrders: "5,362",
-      lyOrders: "15,246",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "-64.83%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-    },
-    {
-      day: "5 - Friday",
-      twOrders: "3,427",
-      lwOrders: "3,427",
-      lyOrders: "9,603",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "-64.31%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-    },
-    {
-      day: "6 - Saturday",
-      twOrders: "2",
-      lwOrders: "2",
-      lyOrders: "3,060",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "-99.93%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-    },
-    {
-      day: "7 - Sunday",
-      twOrders: "1",
-      lwOrders: "1",
-      lyOrders: "2,349",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "-99.96%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-    },
-    {
-      day: "Grand Total",
-      twOrders: "22,165",
-      lwOrders: "22,165",
-      lyOrders: "71,201",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "-68.87%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-      isTotal: true,
-    },
-  ];
+// Helper function to format percentage changes with color
+const formatPercentageChange = (value: string | number): { value: string, isPositive: boolean } => {
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  const isPositive = numValue >= 0;
+  const formattedValue = isPositive ? `+${Math.abs(numValue).toFixed(2)}%` : `${numValue.toFixed(2)}%`;
+  
+  return { value: formattedValue, isPositive };
+};
 
-  const dayOfWeekAvgTicketData = [
-    {
-      day: "1 - Monday",
-      twAvgTicket: "$400.75",
-      lwAvgTicket: "$400.75",
-      lyAvgTicket: "$981.27",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "-59.16%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-    },
-    {
-      day: "2 - Tuesday",
-      twAvgTicket: "$464.78",
-      lwAvgTicket: "$464.78",
-      lyAvgTicket: "$1,336.11",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "-65.21%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-    },
-    {
-      day: "3 - Wednesday",
-      twAvgTicket: "$488.08",
-      lwAvgTicket: "$488.08",
-      lyAvgTicket: "$1,356.76",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "-64.03%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-    },
-    {
-      day: "4 - Thursday",
-      twAvgTicket: "$449.57",
-      lwAvgTicket: "$449.57",
-      lyAvgTicket: "$2,383.05",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "-81.13%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-    },
-    {
-      day: "5 - Friday",
-      twAvgTicket: "$401.79",
-      lwAvgTicket: "$401.79",
-      lyAvgTicket: "$1,233.34",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "-67.42%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: false,
-    },
-    {
-      day: "6 - Saturday",
-      twAvgTicket: "$834.99",
-      lwAvgTicket: "$834.99",
-      lyAvgTicket: "$237.09",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "+252.19%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: true,
-    },
-    {
-      day: "7 - Sunday",
-      twAvgTicket: "$1,208.99",
-      lwAvgTicket: "$1,208.99",
-      lyAvgTicket: "$893.36",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "0.00%",
-      twLyChange: "+35.33%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: true,
-    },
-    {
-      day: "Grand Total",
-      twAvgTicket: "$26.82",
-      lwAvgTicket: "$26.72",
-      lyAvgTicket: "$24.34",
-      tytreand: "0.00%",
-      lytrends: "0.00%",
-      twLwChange: "+0.40%",
-      twLyChange: "+10.22%",
-      isPositiveTwLw: true,
-      isPositiveTwLy: true,
-      isTotal: true,
-    },
-  ];
+// Helper function to format currency values
+const formatCurrency = (value: string | number): string => {
+  const numValue = typeof value === 'string' ? parseFloat(value.replace(/[^0-9.-]/g, '')) : value;
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(numValue);
+};
 
-  const renderTable = (title, data, metrics) => (
+// Helper function to format numbers with commas
+const formatNumber = (value: string | number): string => {
+  const numValue = typeof value === 'string' ? parseFloat(value.replace(/[^0-9.-]/g, '')) : value;
+  return new Intl.NumberFormat('en-US').format(numValue);
+};
+
+const DayOfWeekAnalysis: React.FC<DayOfWeekAnalysisProps> = ({ 
+  salesData = [], 
+  ordersData = [], 
+  avgTicketData = [] 
+}) => {
+
+  // Transform backend data to match component format
+  const transformSalesData = () => {
+    if (!salesData || salesData.length === 0) return [];
+    
+    return salesData.map((row, index) => ({
+      day: row["Day of the Week"] || row["Day of The Week"] || `${index + 1} - Day`,
+      twSales: formatCurrency(row["Tw Sales"] || 0),
+      lwSales: formatCurrency(row["Lw Sales"] || 0),
+      lySales: formatCurrency(row["Ly Sales"] || 0),
+      twLwChange: formatPercentageChange(row["Tw/Lw (+/-)"] || 0),
+      twLyChange: formatPercentageChange(row["Tw/Ly (+/-)"] || 0),
+      isTotal: row["Day of the Week"]?.includes("Grand Total") || row["Day of The Week"]?.includes("Grand Total")
+    }));
+  };
+
+  const transformOrdersData = () => {
+    if (!ordersData || ordersData.length === 0) return [];
+    
+    return ordersData.map((row, index) => ({
+      day: row["Day of The Week"] || row["Day of the Week"] || `${index + 1} - Day`,
+      twOrders: formatNumber(row["Tw Orders"] || 0),
+      lwOrders: formatNumber(row["Lw Orders"] || 0),
+      lyOrders: formatNumber(row["Ly Orders"] || 0),
+      twLwChange: formatPercentageChange(row["Tw/Lw (+/-)"] || 0),
+      twLyChange: formatPercentageChange(row["Tw/Ly (+/-)"] || 0),
+      isTotal: row["Day of The Week"]?.includes("Grand Total") || row["Day of the Week"]?.includes("Grand Total")
+    }));
+  };
+
+  const transformAvgTicketData = () => {
+    if (!avgTicketData || avgTicketData.length === 0) return [];
+    
+    return avgTicketData.map((row, index) => ({
+      day: row["Day of The Week"] || row["Day of the Week"] || `${index + 1} - Day`,
+      twAvgTicket: formatCurrency(row["Tw Avg Tckt"] || 0),
+      lwAvgTicket: formatCurrency(row["Lw Avg Tckt"] || 0),
+      lyAvgTicket: formatCurrency(row["Ly Avg Tckt"] || 0),
+      twLwChange: formatPercentageChange(row["Tw/Lw (+/-)"] || 0),
+      twLyChange: formatPercentageChange(row["Tw/Ly (+/-)"] || 0),
+      isTotal: row["Day of The Week"]?.includes("Grand Total") || row["Day of the Week"]?.includes("Grand Total")
+    }));
+  };
+
+  // Get transformed data
+  const dayOfWeekSalesData = transformSalesData();
+  const dayOfWeekOrdersData = transformOrdersData();
+  const dayOfWeekAvgTicketData = transformAvgTicketData();
+
+  // Render table function
+  const renderTable = (title: string, data: any[], metrics: any) => (
     <Paper sx={{ mb: 4, overflow: "hidden" }}>
       <Typography
         variant="h5"
@@ -369,33 +158,6 @@ const DayOfWeekAnalysis = () => {
               >
                 {metrics.lyLabel}
               </TableCell>
-{/* 
- <TableCell
-                align="center"
-                sx={{
-                  fontWeight: "bold",
-                  border: "1px solid #ddd",
-                  backgroundColor: "#ffeb3b",
-                  color: "#000",
-                  fontSize: "1rem",
-                }}
-              >
-                Ty Trends 
-              </TableCell>
-
-              <TableCell
-                align="center"
-                sx={{
-                  fontWeight: "bold",
-                  border: "1px solid #ddd",
-                  backgroundColor: "#ffeb3b",
-                  color: "#000",
-                  fontSize: "1rem",
-                }}
-              >
-                Ly Trends
-              </TableCell> */}
-
               <TableCell
                 align="center"
                 sx={{
@@ -482,24 +244,24 @@ const DayOfWeekAnalysis = () => {
                   sx={{
                     fontWeight: row.isTotal ? "bold" : "normal",
                     border: "1px solid #ddd",
-                    color: row.isPositiveTwLw ? "green" : "red",
+                    color: row.twLwChange?.isPositive ? "green" : "red",
                     backgroundColor: row.isTotal ? "#fff3c4" : "transparent",
                     fontSize: row.isTotal ? "0.95rem" : "0.9rem",
                   }}
                 >
-                  {row.twLwChange}
+                  {row.twLwChange?.value || "0.00%"}
                 </TableCell>
                 <TableCell
                   align="center"
                   sx={{
                     fontWeight: row.isTotal ? "bold" : "normal",
                     border: "1px solid #ddd",
-                    color: row.isPositiveTwLy ? "green" : "red",
+                    color: row.twLyChange?.isPositive ? "green" : "red",
                     backgroundColor: row.isTotal ? "#fff3c4" : "transparent",
                     fontSize: row.isTotal ? "0.95rem" : "0.9rem",
                   }}
                 >
-                  {row.twLyChange}
+                  {row.twLyChange?.value || "0.00%"}
                 </TableCell>
               </TableRow>
             ))}
@@ -511,27 +273,45 @@ const DayOfWeekAnalysis = () => {
 
   return (
     <Box sx={{ p: 2 }}>
-      {renderTable("Day of Week - Sales Analysis", dayOfWeekSalesData, {
-        twLabel: "Tw Sales",
-        lwLabel: "Lw Sales",
-        lyLabel: "Ly Sales",
-        twField: "twSales",
-        tytrends: "tytrends",
-        lytrends: "lytrends",
-        lwField: "lwSales",
-        lyField: "lySales",
-      })}
+      {/* Show alert if no data available */}
+      {(!salesData || salesData.length === 0) && 
+       (!ordersData || ordersData.length === 0) && 
+       (!avgTicketData || avgTicketData.length === 0) && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          No day-of-week analysis data available. Please ensure financial data is loaded.
+        </Alert>
+      )}
 
-      {renderTable("Day of Week - Orders Analysis", dayOfWeekOrdersData, {
-        twLabel: "Tw Orders",
-        lwLabel: "Lw Orders",
-        lyLabel: "Ly Orders",
-        twField: "twOrders",
-        lwField: "lwOrders",
-        lyField: "lyOrders",
-      })}
+      {/* Sales Analysis Table */}
+      {dayOfWeekSalesData.length > 0 && renderTable(
+        "Day of Week - Sales Analysis", 
+        dayOfWeekSalesData, 
+        {
+          twLabel: "Tw Sales",
+          lwLabel: "Lw Sales",
+          lyLabel: "Ly Sales",
+          twField: "twSales",
+          lwField: "lwSales",
+          lyField: "lySales",
+        }
+      )}
 
-      {renderTable(
+      {/* Orders Analysis Table */}
+      {dayOfWeekOrdersData.length > 0 && renderTable(
+        "Day of Week - Orders Analysis", 
+        dayOfWeekOrdersData, 
+        {
+          twLabel: "Tw Orders",
+          lwLabel: "Lw Orders",
+          lyLabel: "Ly Orders",
+          twField: "twOrders",
+          lwField: "lwOrders",
+          lyField: "lyOrders",
+        }
+      )}
+
+      {/* Average Ticket Analysis Table */}
+      {dayOfWeekAvgTicketData.length > 0 && renderTable(
         "Day of Week - Average Ticket Analysis",
         dayOfWeekAvgTicketData,
         {

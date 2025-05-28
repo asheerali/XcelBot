@@ -664,9 +664,7 @@ export default function ProductMixDashboard() {
             selectedMenuItems.length > 0 ||
             selectedCategories.length > 0) && (
             <Box sx={{ mt: 2 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                Active Filters:
-              </Typography>
+          
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                 {selectedLocations.length > 0 && (
                   <Chip
