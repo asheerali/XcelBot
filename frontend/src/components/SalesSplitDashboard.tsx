@@ -868,7 +868,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
               color: "#333",
             }}
           >
-            Week-over-Week Trends
+            Weekly Sales
             {/* ({chartData.availableColumns.table2.length > 0 ? 'Table2' : 'Table4'}) */}
           </div>
           <div style={{ height: "300px", overflow: "auto" }}>
