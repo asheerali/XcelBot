@@ -56,6 +56,14 @@ class DashboardResponse(BaseModel):
     table7: Optional[List[Dict[str, Any]]] = None
     table8: Optional[List[Dict[str, Any]]] = None
     table9: Optional[List[Dict[str, Any]]] = None
+    table10: Optional[List[Dict[str, Any]]] = None
+    table11: Optional[List[Dict[str, Any]]] = None
+    table12: Optional[List[Dict[str, Any]]] = None
+    table13: Optional[List[Dict[str, Any]]] = None
+    table14: Optional[List[Dict[str, Any]]] = None
+    table15: Optional[List[Dict[str, Any]]] = None
+    table16: Optional[List[Dict[str, Any]]] = None
+    table17: Optional[List[Dict[str, Any]]] = None
     locations: Optional[List[Any]] = None
     servers: Optional[List[Any]] = None
     categories: Optional[List[Any]] = None

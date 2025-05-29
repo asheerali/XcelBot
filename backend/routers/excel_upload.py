@@ -19,6 +19,7 @@ from financials_dashboard.financials_processor import process_financials_file
 from companywide_dashboard.companywide_processor import process_companywide_file
 from pmix_dashboard.pmix_processor import process_pmix_file
 from sales_split_dashboard.sales_split_prcoessor import process_sales_split_file
+from constants import *
 
 
 router = APIRouter(
@@ -84,6 +85,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         #     return ExcelUploadResponse(success=True, message="File processed successfully", data=result)
 
         # if request.dashboard in ["Financials", "Companywide", "Sales Wide"]:
+
         if request.dashboard == "Financials and Sales Wide":
 
             print("Dashboard type: ", request.dashboard)
@@ -97,12 +99,44 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 location="All" 
                 )
             
+            # financials_result = {
+            # "table1": [{"financials_weeks": [], "financials_years": [], "financials_stores": []}],
+            # "table2": financials_sales_table.to_dict(orient='records'),
+            # "table3": financials_orders_table.to_dict(orient='records'),
+            # "table4": financials_avg_ticket_table.to_dict(orient='records'),
+            # "table5": financials_tw_lw_bdg_table.to_dict(orient='records'),
+            # "fileName": file_name, #the full names of the file saved in the uploads folder
+            # "locations": stores,
+            # "years": years,
+            # "dates": dates,
+            # "dashboardName": "Financials",
+            # "data": "Financial Dashboard is not yet implemented."
+            # }
+            
             financials_result = {
-            "table1": [{"financials_weeks": [], "financials_years": [], "financials_stores": []}],
+            "table1": [{"financials_sales": 45000, 
+                        "financials_labor_cost": 33 , 
+                        "financials_avg_ticket": 13.4,
+                        "financials_prime_cost": 12.4,
+                        "financials_food_cost": 11.4,
+                        "financials_spmh": 10.4,
+                        "financials_lmph": 9.4,
+                        }],
             "table2": financials_sales_table.to_dict(orient='records'),
             "table3": financials_orders_table.to_dict(orient='records'),
             "table4": financials_avg_ticket_table.to_dict(orient='records'),
             "table5": financials_tw_lw_bdg_table.to_dict(orient='records'),
+            "table6": financials_sales_df.to_dict(orient='records'),  
+            "table7": financials_labor_df.to_dict(orient='records'),
+            "table8": financials_avg_ticker_df.to_dict(orient='records'),
+            "table9": financials_prime_cost_df.to_dict(orient='records'),
+            "table10": financials_food_cost_df.to_dict(orient='records'),
+            "table11": financials_spmh_df.to_dict(orient='records'),
+            "table12": financials_lpmh_df.to_dict(orient='records'),
+            "table13": financials_weekly_sales_df.to_dict(orient='records'),
+            "table14": financials_orders_by_day_df.to_dict(orient='records'),
+            "table15": financials_average_ticket_df.to_dict(orient='records'),
+            "table16": financials_kpi_vs_budget_df.to_dict(orient='records'),
             "fileName": file_name, #the full names of the file saved in the uploads folder
             "locations": stores,
             "years": years,
@@ -110,6 +144,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             "dashboardName": "Financials",
             "data":  "Financial Dashboard is not yet implemented."
             }
+        
             # ,
             # {
             #     "table1":sales_df.to_dict(orient='records'),
@@ -175,6 +210,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             #     "data":  f"{request.dashboard} Dashboard is not yet implemented."
             # }
         
+
         if request.dashboard == "Financials":
             print("i am here in financials only dashboard")
             print("Dashboard type: ", request.dashboard)
@@ -189,11 +225,29 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 )
             
             financials_result = {
-            "table1": [{"financials_weeks": [], "financials_years": [], "financials_stores": []}],
+            "table1": [{"financials_sales": 45000, 
+                        "financials_labor_cost": 33 , 
+                        "financials_avg_ticket": 13.4,
+                        "financials_prime_cost": 12.4,
+                        "financials_food_cost": 11.4,
+                        "financials_spmh": 10.4,
+                        "financials_lmph": 9.4,
+                        }],
             "table2": financials_sales_table.to_dict(orient='records'),
             "table3": financials_orders_table.to_dict(orient='records'),
             "table4": financials_avg_ticket_table.to_dict(orient='records'),
             "table5": financials_tw_lw_bdg_table.to_dict(orient='records'),
+            "table6": financials_sales_df.to_dict(orient='records'),  
+            "table7": financials_labor_df.to_dict(orient='records'),
+            "table8": financials_avg_ticker_df.to_dict(orient='records'),
+            "table9": financials_prime_cost_df.to_dict(orient='records'),
+            "table10": financials_food_cost_df.to_dict(orient='records'),
+            "table11": financials_spmh_df.to_dict(orient='records'),
+            "table12": financials_lpmh_df.to_dict(orient='records'),
+            "table13": financials_weekly_sales_df.to_dict(orient='records'),
+            "table14": financials_orders_by_day_df.to_dict(orient='records'),
+            "table15": financials_average_ticket_df.to_dict(orient='records'),
+            "table16": financials_kpi_vs_budget_df.to_dict(orient='records'),
             "fileName": file_name, #the full names of the file saved in the uploads folder
             "locations": stores,
             "years": years,
@@ -201,8 +255,9 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             "dashboardName": "Financials",
             "data":  "Financial Dashboard is not yet implemented."
             }
-            # ,
-            # {
+        
+       
+          # {
             #     "table1":sales_df.to_dict(orient='records'),
             #     "table2":order_df.to_dict(orient='records'),
             #     "table3":avg_ticket_df.to_dict(orient='records'),
@@ -245,7 +300,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             # }
             
             # print("result for the sales wide", financials_result) 
-            
+            print("i am here in financials result", financials_result)
             return [financials_result]
             # return {"message": "Financial Dashboard is not yet implemented."}
                 # return {
@@ -266,6 +321,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             #     "data":  f"{request.dashboard} Dashboard is not yet implemented."
             # }
         
+
         if request.dashboard == "Sales Wide" or request.dashboard == "Companywide":
 
             print("Dashboard type: ", request.dashboard)
@@ -356,8 +412,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             #     "fileName": request.fileName,
             #     "data":  f"{request.dashboard} Dashboard is not yet implemented."
             # }
-        
-        
+              
         
         if request.dashboard == "Sales Split and Product Mix":
             print("Dashboard type: Sales Split / Product Mix Dashboard")
