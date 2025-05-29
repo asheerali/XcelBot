@@ -28,6 +28,7 @@ import SalesDashboard from "./pages/SalesDashboard";
 import ProductMixDashboard from "./pages/ProductMixDashboard";
 import DateRangeSelector from "./components/DateRangeSelector";
 import SalesSplitDashboard from "./components/SalesSplitDashboard";
+import ComprehensiveFinancialDashboard from "./components/ComprehensiveFinancialDashboard";
 const router = createBrowserRouter([
   {
     Component: App,
@@ -64,8 +65,11 @@ const router = createBrowserRouter([
            {
             path: "daterange",
             Component: DateRangeSelector,
+          },{
+            path: "ComprehensiveFinancialDashboard",
+            Component: ComprehensiveFinancialDashboard,
           },
-          
+        
           {
             path: "upload-excel", // New route for the excel upload page
             Component: ExcelUploadPage,
