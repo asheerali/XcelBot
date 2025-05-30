@@ -521,8 +521,21 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
 
             # # print("i am here in excel upload printing start_date", start_date)
 
+           
             # Process Excel file with optional filters
-            pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay, categories, locations = process_sales_split_file(
+            (sales_by_day_table, 
+             sales_by_category_table, 
+             category_comparison_table, 
+             thirteen_week_category_table, 
+             pivot_table, 
+             in_house_table,
+             week_over_week_table, 
+             category_summary_table, 
+             salesByWeek, 
+             salesByDayOfWeek, 
+             salesByTimeOfDay, 
+             categories, 
+             locations) = process_sales_split_file(
                 excel_data, 
                 start_date=start_date,
                 end_date=end_date,
@@ -621,7 +634,19 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             # # print("i am here in excel upload printing start_date", start_date)
 
             # Process Excel file with optional filters
-            sales_by_day_table, sales_by_category_table, category_comparison_table, thirteen_week_category_table, pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay, categories, locations = process_sales_split_file(
+            (sales_by_day_table, 
+             sales_by_category_table, 
+             category_comparison_table, 
+             thirteen_week_category_table, 
+             pivot_table, 
+             in_house_table,
+             week_over_week_table, 
+             category_summary_table, 
+             salesByWeek, 
+             salesByDayOfWeek, 
+             salesByTimeOfDay, 
+             categories, 
+             locations) = process_sales_split_file(
                 excel_data, 
                 start_date=start_date,
                 end_date=end_date,

@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 def overview_tables(df, location_filter='All', order_date_filter=None, server_filter='All', dining_option_filter='All', category_filter='All', start_date=None, end_date=None  ):
@@ -486,7 +486,8 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
         else:
             filtered_df = filtered_df[filtered_df['Menu Item'] == menu_item_filter]
     
-        change_filtered_df = df.copy()
+    
+    change_filtered_df = df.copy()
     
     
         
