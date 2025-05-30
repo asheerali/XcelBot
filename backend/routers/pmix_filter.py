@@ -46,21 +46,63 @@ async def upload_excel(request: SalesSplitPmixUploadRequest = Body(...)):
         category_filter = request.category if request.category else 'All'
       
 
+                
+        (net_sales, 
+        orders, 
+        qty_sold, 
+        sales_by_category_df, 
+        sales_by_menu_group_df, 
+        sales_by_server_df, 
+        top_selling_items_df, 
+        sales_by_location_df, 
+        average_price_by_item_df, 
+        average_order_value, 
+        average_items_per_order, 
+        price_changes_df, 
+        top_items_df, 
+        unique_orders, 
+        total_quantity, 
+        locations, 
+        server, 
+        category, 
+        net_sales_change, 
+        orders_change, 
+        qty_sold_change, 
+        average_order_value_change,
+        average_items_per_order_change,
+        unique_orders_change,
+        total_quantity_change
+        ) = process_pmix_file(file_location, 
+        location_filter=location_filter,
+        start_date=start_date, 
+        end_date=end_date,
+        server_filter=server_filter,
+        category_filter=category_filter
+        )
         
-        net_sales, orders, qty_sold, sales_by_category_df, sales_by_menu_group_df, sales_by_server_df, top_selling_items_df, sales_by_location_df, average_price_by_item_df, average_order_value, average_items_per_order, price_changes_df, top_items_df, unique_orders, total_quantity, locations, server, category = process_pmix_file(file_location, 
-                                                                                                                                                                                                                                                                                                                location_filter=location_filter,
-                                                                                                                                                                                                                                                                                                                start_date=start_date, 
-                                                                                                                                                                                                                                                                                                                end_date=end_date,
-                                                                                                                                                                                                                                                                                                                server_filter=server_filter,
-                                                                                                                                                                                                                                                                                                                category_filter=category_filter
-                                                                                                                                                                                                                                                                                                                )
-
             
-        # result ={
-        #     "table1": [{"net_sales": [net_sales], "orders": [orders], 
-        #                 "qty_sold": [qty_sold],"average_order_value": [average_order_value], 
-        #                 "average_items_per_order": [average_items_per_order], "unique_orders": [unique_orders], 
-        #                 "total_quantity": [total_quantity]}],
+        # pmix_dashboard = {
+        #     # "table1": [{"net_sales": [net_sales], "orders": [orders], 
+        #     #             "qty_sold": [qty_sold],"average_order_value": [average_order_value], 
+        #     #             "average_items_per_order": [average_items_per_order], "unique_orders": [unique_orders], 
+        #     #             "total_quantity": [total_quantity]}],
+        #        "table1": [{
+        #                     "net_sales": [float(net_sales)],
+        #                     "orders": [int(orders)],
+        #                     "qty_sold": [int(qty_sold)],
+        #                     "average_order_value": [float(average_order_value)],
+        #                     "average_items_per_order": [float(average_items_per_order)],
+        #                     "unique_orders": [int(unique_orders)],
+        #                     "total_quantity": [int(total_quantity)],
+                            
+        #                     "net_sales_change": [float(net_sales_change)],
+        #                     "orders_change": [int(orders_change)],
+        #                     "qty_sold_change": [int(qty_sold_change)],
+        #                     "average_order_value_change": [float(average_order_value_change)],
+        #                     "average_items_per_order_change": [float(average_items_per_order_change)],
+        #                     "unique_orders_change": [int(unique_orders_change)],
+        #                     "total_quantity_change": [int(total_quantity_change)]
+        #                 }],
         #     "table2": sales_by_category_df.to_dict(orient='records'),
         #     "table3": sales_by_menu_group_df.to_dict(orient='records'),
         #     "table4": sales_by_server_df.to_dict(orient='records'),
@@ -69,14 +111,17 @@ async def upload_excel(request: SalesSplitPmixUploadRequest = Body(...)):
         #     "table7": average_price_by_item_df.to_dict(orient='records'),
         #     "table8": price_changes_df.to_dict(orient='records'),
         #     "table9": top_items_df.to_dict(orient='records'),
-        #     "locations": result['locations'],
-        #     "dateRanges": result['dateRanges'],
-        #     "fileLocation": result['fileLocation'],
+        #     # "locations": locations,
+        #     # "servers": server,
+        #     # "categories": category,
+        #     "dateRanges": [],
+        #     "fileLocation": ['fileLocation', 'fileLocationa'],
         #     "fileName": request.fileName,
         #     "dashboardName": "Product Mix ",
         #     "data":  "Dashboard is not yet implemented."
         #     }
-            
+            # print("i am here in excel upload printing  the result", result)
+                # print("i am here in excel upload printing before the result" )
         pmix_dashboard = {
             # "table1": [{"net_sales": [net_sales], "orders": [orders], 
             #             "qty_sold": [qty_sold],"average_order_value": [average_order_value], 
@@ -89,7 +134,15 @@ async def upload_excel(request: SalesSplitPmixUploadRequest = Body(...)):
                             "average_order_value": [float(average_order_value)],
                             "average_items_per_order": [float(average_items_per_order)],
                             "unique_orders": [int(unique_orders)],
-                            "total_quantity": [int(total_quantity)]
+                            "total_quantity": [int(total_quantity)],
+                            
+                            "net_sales_change": [float(net_sales_change)],
+                            "orders_change": [int(orders_change)],
+                            "qty_sold_change": [int(qty_sold_change)],
+                            "average_order_value_change": [float(average_order_value_change)],
+                            "average_items_per_order_change": [float(average_items_per_order_change)],
+                            "unique_orders_change": [int(unique_orders_change)],
+                            "total_quantity_change": [int(total_quantity_change)]
                         }],
             "table2": sales_by_category_df.to_dict(orient='records'),
             "table3": sales_by_menu_group_df.to_dict(orient='records'),
@@ -99,17 +152,18 @@ async def upload_excel(request: SalesSplitPmixUploadRequest = Body(...)):
             "table7": average_price_by_item_df.to_dict(orient='records'),
             "table8": price_changes_df.to_dict(orient='records'),
             "table9": top_items_df.to_dict(orient='records'),
-            # "locations": locations,
-            # "servers": server,
-            # "categories": category,
+            "locations": locations,
+            "servers": server,
+            "categories": category,
             "dateRanges": [],
             "fileLocation": ['fileLocation', 'fileLocationa'],
             "fileName": request.fileName,
             "dashboardName": "Product Mix ",
             "data":  "Dashboard is not yet implemented."
             }
-            # print("i am here in excel upload printing  the result", result)
+ 
             
+        
           
         return pmix_dashboard
             # return {"message": "Financial Dashboard is not yet implemented."}

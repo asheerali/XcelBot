@@ -129,6 +129,9 @@ def process_pmix_file(file_data: Union[io.BytesIO, str],start_date=None, end_dat
     sales_by_menu_group_df = p1['sales_by_menu_group']
     sales_by_server_df = p1['sales_by_server']
     top_selling_items_df = p1['top_selling_items']
+    net_sales_change = p1['net_sales_change'] #value
+    orders_change = p1['orders_change'] #value
+    qty_sold_change = p1['qty_sold_change'] #value
     
     # p2 = detailed_analysis_tables(df, location_filter=location_filter, menu_item_filter=menu_item_filter)
     p2 = detailed_analysis_tables(df, location_filter=location_filter ,category_filter=category_filter, start_date=start_date, end_date=end_date)
@@ -154,7 +157,11 @@ def process_pmix_file(file_data: Union[io.BytesIO, str],start_date=None, end_dat
     top_items_df = p2['top_items']
     unique_orders = p2['unique_orders'] #value
     total_quantity = p2['total_quantity'] #value
+    average_order_value_change = p2['average_order_value_change'] #value
+    average_items_per_order_change = p2['average_items_per_order_change'] #value
+    unique_orders_change = p2['unique_orders_change'] #value
+    total_quantity_change = p2['total_quantity_change'] #value
      
     
  
-    return net_sales, orders, qty_sold, sales_by_category_df, sales_by_menu_group_df, sales_by_server_df, top_selling_items_df, sales_by_location_df, average_price_by_item_df, average_order_value, average_items_per_order, price_changes_df, top_items_df, unique_orders, total_quantity, locations, server, category
+    return net_sales, orders, qty_sold, sales_by_category_df, sales_by_menu_group_df, sales_by_server_df, top_selling_items_df, sales_by_location_df, average_price_by_item_df, average_order_value, average_items_per_order, price_changes_df, top_items_df, unique_orders, total_quantity, locations, server, category, net_sales_change, orders_change, qty_sold_change, average_order_value_change, average_items_per_order_change, unique_orders_change, total_quantity_change

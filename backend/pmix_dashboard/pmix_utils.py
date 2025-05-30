@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 
-def overview_tables(df, location_filter='All', start_date=None, end_date=None  ,order_date_filter=None, server_filter='All', dining_option_filter='All', category_filter='All'):
+
+def overview_tables(df, location_filter='All', order_date_filter=None, server_filter='All', dining_option_filter='All', category_filter='All', start_date=None, end_date=None  ):
     """
     Create dashboard tables for restaurant visualization with optional filters.
     
@@ -72,25 +73,64 @@ def overview_tables(df, location_filter='All', start_date=None, end_date=None  ,
             end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
         filtered_df = filtered_df[filtered_df['Date'] <= end_date]
         
+    # Create a change dataframe for comparison (e.g., previous day or week)
     
     # If the dataframe is empty after filtering, return empty tables
     if filtered_df.empty:
         return {
-            'net_sales': pd.DataFrame({'Value': [0.00], 'Label': ['Net Sales']}),
-            'orders': pd.DataFrame({'Value': [0], 'Label': ['Orders']}),
-            'qty_sold': pd.DataFrame({'Value': [0], 'Label': ['Qty Sold']}),
+            'net_sales': 0,
+            'orders': 0,
+            'qty_sold':0,
             'sales_by_category': pd.DataFrame(columns=['Category', 'Percentage', 'Sales']),
             'sales_by_menu_group': pd.DataFrame(columns=['Menu Group', 'Sales']),
             'sales_by_server': pd.DataFrame(columns=['Server', 'Sales']),
-            'top_selling_items': pd.DataFrame(columns=['Item', 'Server', 'Quantity', 'Sales'])
+            'top_selling_items': pd.DataFrame(columns=['Item', 'Server', 'Quantity', 'Sales']),
+            "net_sales_change":0 ,
+            "orders_change": 0,
+            "qty_sold_change": 0
+            
         }
+    
+    change_filtered_df = df.copy()
+    
+    
+        
+    # Calculate the number of days in the original range
+    days_diff = (end_date - start_date).days
+
+    # Set change period dates
+    change_end_date = start_date  # Change end date becomes the original start date
+    change_start_date = start_date - timedelta(days=days_diff + 1)  # Go back by the range duration
+
+    # Apply date range filter for change period
+    if change_start_date is not None:
+        change_filtered_df = change_filtered_df[change_filtered_df['Date'] >= change_start_date]
+
+    if change_end_date is not None:
+        change_filtered_df = change_filtered_df[change_filtered_df['Date'] <= change_end_date]
+
+    
+        # Apply date range filter - convert string dates to datetime.date objects
+    if change_start_date is not None:
+        if isinstance(change_start_date, str):
+            change_start_date = datetime.strptime(change_start_date, '%Y-%m-%d').date()
+        filtered_df = filtered_df[filtered_df['Date'] >= change_start_date]
+    
+    if change_end_date is not None:
+        if isinstance(change_end_date, str):
+            change_end_date = datetime.strptime(change_end_date, '%Y-%m-%d').date()
+        filtered_df = filtered_df[filtered_df['Date'] <= change_end_date]
+    
     
     # -------------------------------------------------------
     # 1. Overview Metrics Tables
     # -------------------------------------------------------
     net_sales = round(filtered_df['Net Price'].sum(), 2)
+    net_sales_change =  (round(change_filtered_df['Net Price'].sum(), 2) - net_sales)/  net_sales  if net_sales != 0 else 0
     unique_orders = filtered_df['Order #'].nunique()
-    qty_sold = filtered_df['Qty'].sum()
+    orders_change = round(change_filtered_df['Order #'].nunique(), 2) - unique_orders / unique_orders  if unique_orders != 0 else 0
+    qty_sold = filtered_df['Qty'].sum() 
+    qty_sold_change = round(change_filtered_df['Qty'].sum(), 2) - qty_sold / qty_sold  if qty_sold != 0 else 0
     
     # net_sales_table = pd.DataFrame({'Value': [net_sales], 'Label': ['Net Sales']})
     # orders_table = pd.DataFrame({'Value': [unique_orders], 'Label': ['Orders']})
@@ -137,10 +177,10 @@ def overview_tables(df, location_filter='All', start_date=None, end_date=None  ,
     
     # Round sales values to 2 decimal places
     sales_by_server['Sales'] = sales_by_server['Sales'].round(2)
-        
+    
     # Get top 5 servers by sales
     sales_by_server = sales_by_server.sort_values(by='Sales', ascending=False).head(5)
-    # If there are less than 5 servers, fill the rest with empty rows    
+    
     # -------------------------------------------------------
     # 5. Top Selling Items
     # -------------------------------------------------------
@@ -194,8 +234,12 @@ def overview_tables(df, location_filter='All', start_date=None, end_date=None  ,
         'sales_by_category': sales_by_category,
         'sales_by_menu_group': sales_by_menu_group,
         'sales_by_server': sales_by_server,
-        'top_selling_items': top_selling_items
+        'top_selling_items': top_selling_items,
+        "net_sales_change": net_sales_change,
+        "orders_change": orders_change,
+        "qty_sold_change": qty_sold_change
     }
+
 
 
 # def detailed_analysis_tables(df, location_filter='All', order_date_filter=None, dining_option_filter='All', menu_item_filter='All'):
@@ -442,6 +486,36 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
         else:
             filtered_df = filtered_df[filtered_df['Menu Item'] == menu_item_filter]
     
+        change_filtered_df = df.copy()
+    
+    
+        
+    # Calculate the number of days in the original range
+    days_diff = (end_date - start_date).days
+
+    # Set change period dates
+    change_end_date = start_date  # Change end date becomes the original start date
+    change_start_date = start_date - timedelta(days=days_diff + 1)  # Go back by the range duration
+
+    # Apply date range filter for change period
+    if change_start_date is not None:
+        change_filtered_df = change_filtered_df[change_filtered_df['Date'] >= change_start_date]
+
+    if change_end_date is not None:
+        change_filtered_df = change_filtered_df[change_filtered_df['Date'] <= change_end_date]
+
+    
+        # Apply date range filter - convert string dates to datetime.date objects
+    if change_start_date is not None:
+        if isinstance(change_start_date, str):
+            change_start_date = datetime.strptime(change_start_date, '%Y-%m-%d').date()
+        filtered_df = filtered_df[filtered_df['Date'] >= change_start_date]
+    
+    if change_end_date is not None:
+        if isinstance(change_end_date, str):
+            change_end_date = datetime.strptime(change_end_date, '%Y-%m-%d').date()
+        filtered_df = filtered_df[filtered_df['Date'] <= change_end_date]
+    
     # If the dataframe is empty after filtering, return empty tables
     if filtered_df.empty:
         return {
@@ -449,8 +523,15 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
             'average_price_by_item': pd.DataFrame(columns=['Menu Item', 'Price']),
             'average_order_value': 0,
             'average_items_per_order': 0,
+            "unique_orders": 0,
+            'total_quantity': 0,
             'price_changes': pd.DataFrame(columns=['Item', 'Change', 'Direction', 'Category']),
-            'top_items': pd.DataFrame(columns=['Item', 'Price'])
+            'top_items': pd.DataFrame(columns=['Item', 'Price']),
+            "average_order_value_change": 0,
+            "average_items_per_order_change": 0,
+            "unique_orders_change": 0,
+            "total_quantity_change": 0,
+            
         }
     
     # -------------------------------------------------------
@@ -475,10 +556,13 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
     # Calculate total sales per order
     order_totals = filtered_df.groupby('Order #')['Net Price'].sum()
     average_order_value = round(order_totals.mean(), 2)
+    average_order_value_change = round(change_filtered_df.groupby('Order #')['Net Price'].sum().mean(), 2) - average_order_value / average_order_value if average_order_value != 0 else 0
     
     # Calculate items per order
     items_per_order = filtered_df.groupby('Order #')['Qty'].sum()
     average_items_per_order = round(items_per_order.mean(), 1)
+    average_items_per_order_change = round(change_filtered_df.groupby('Order #')['Qty'].sum().mean(), 1) - average_items_per_order / average_items_per_order if average_items_per_order != 0 else 0
+    
     
     # -------------------------------------------------------
     # 4. Price Changes (for the arrows in the dashboard)
@@ -554,6 +638,8 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
     # Calculate the key metrics shown in the dashboard
     unique_orders = filtered_df['Order #'].nunique()
     total_quantity = filtered_df['Qty'].sum()
+    unique_orders_change = round(change_filtered_df['Order #'].nunique(), 2) - unique_orders / unique_orders if unique_orders != 0 else 0
+    total_quantity_change = round(change_filtered_df['Qty'].sum(), 2) - total_quantity / total_quantity if total_quantity != 0 else 0
     
     # Return all tables and metrics in a dictionary
     return {
@@ -564,7 +650,11 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
         'price_changes': price_changes,
         'top_items': top_items,
         'unique_orders': unique_orders,
-        'total_quantity': total_quantity
+        'total_quantity': total_quantity,
+        "average_order_value_change": average_order_value_change,
+        "average_items_per_order_change": average_items_per_order_change,
+        "unique_orders_change": unique_orders_change,
+        "total_quantity_change": total_quantity_change
     }
 
 

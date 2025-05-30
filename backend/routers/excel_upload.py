@@ -434,17 +434,45 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             default_end_date = "2025-05-31" #2025-05-17
 
             start_date = request.startDate
+            end_date = request.endDate
             
             end_date = request.endDate
             start_date = start_date if start_date else default_start_date
             end_date = end_date if end_date else default_end_date
             
-            net_sales, orders, qty_sold, sales_by_category_df, sales_by_menu_group_df, sales_by_server_df, top_selling_items_df, sales_by_location_df, average_price_by_item_df, average_order_value, average_items_per_order, price_changes_df, top_items_df, unique_orders, total_quantity, locations, server, category = process_pmix_file(excel_data_copy, 
-                                                                                                                                                                                                                                                                                                                start_date=None, 
-                                                                                                                                                                                                                                                                                                                end_date=None,
-                                                                                                                                                                                                                                                                                                                category_filter='All',
-                                                                                                                                                                                                                                                                                                                location_filter=location_filter, 
-                                                                                                                                                                                                                                                                                                                server_filter=server_filter)
+            category_filter = request.category if request.category else 'All'
+            
+            (net_sales, 
+             orders, 
+             qty_sold, 
+             sales_by_category_df, 
+             sales_by_menu_group_df, 
+             sales_by_server_df, 
+             top_selling_items_df, 
+             sales_by_location_df, 
+             average_price_by_item_df, 
+             average_order_value, 
+             average_items_per_order, 
+             price_changes_df, 
+             top_items_df, 
+             unique_orders, 
+             total_quantity, 
+             locations, 
+             server, 
+             category, 
+             net_sales_change, 
+             orders_change, 
+             qty_sold_change, 
+             average_order_value_change,
+             average_items_per_order_change,
+             unique_orders_change,
+             total_quantity_change
+             ) = process_pmix_file(excel_data_copy, 
+            start_date=start_date, 
+            end_date=end_date,
+            category_filter=category_filter,
+            location_filter=location_filter, 
+            server_filter=server_filter)
 
             # print("i am here in excel upload printing before the result" )
             pmix_dashboard = {
@@ -459,7 +487,15 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                             "average_order_value": [float(average_order_value)],
                             "average_items_per_order": [float(average_items_per_order)],
                             "unique_orders": [int(unique_orders)],
-                            "total_quantity": [int(total_quantity)]
+                            "total_quantity": [int(total_quantity)],
+                            
+                            "net_sales_change": [float(net_sales_change)],
+                            "orders_change": [int(orders_change)],
+                            "qty_sold_change": [int(qty_sold_change)],
+                            "average_order_value_change": [float(average_order_value_change)],
+                            "average_items_per_order_change": [float(average_items_per_order_change)],
+                            "unique_orders_change": [int(unique_orders_change)],
+                            "total_quantity_change": [int(total_quantity_change)]
                         }],
             "table2": sales_by_category_df.to_dict(orient='records'),
             "table3": sales_by_menu_group_df.to_dict(orient='records'),
@@ -478,8 +514,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             "dashboardName": "Product Mix ",
             "data":  "Dashboard is not yet implemented."
             }
-            # print("i am here in excel upload printing  the result", result)
-            
+ 
             
             # return result
         
@@ -655,20 +690,48 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             default_start_date = (default_end_date1 - relativedelta(months=2)).strftime('%Y-%m-%d')                                                                                                                                                                                                                                                                                                            
 
             default_start_date = "2025-01-01"
-            default_end_date = "2025-05-31" #2025-05-17
+            default_end_date = "2025-05-31" 
 
             start_date = request.startDate
+            end_date = request.endDate
             
             end_date = request.endDate
             start_date = start_date if start_date else default_start_date
             end_date = end_date if end_date else default_end_date
             
-            net_sales, orders, qty_sold, sales_by_category_df, sales_by_menu_group_df, sales_by_server_df, top_selling_items_df, sales_by_location_df, average_price_by_item_df, average_order_value, average_items_per_order, price_changes_df, top_items_df, unique_orders, total_quantity, locations, server, category = process_pmix_file(excel_data_copy, 
-                                                                                                                                                                                                                                                                                                                start_date=None, 
-                                                                                                                                                                                                                                                                                                                end_date=None,
-                                                                                                                                                                                                                                                                                                                category_filter='All',
-                                                                                                                                                                                                                                                                                                                location_filter=location_filter, 
-                                                                                                                                                                                                                                                                                                                server_filter=server_filter)
+            category_filter = request.category if request.category else 'All'
+            
+            (net_sales, 
+             orders, 
+             qty_sold, 
+             sales_by_category_df, 
+             sales_by_menu_group_df, 
+             sales_by_server_df, 
+             top_selling_items_df, 
+             sales_by_location_df, 
+             average_price_by_item_df, 
+             average_order_value, 
+             average_items_per_order, 
+             price_changes_df, 
+             top_items_df, 
+             unique_orders, 
+             total_quantity, 
+             locations, 
+             server, 
+             category, 
+             net_sales_change, 
+             orders_change, 
+             qty_sold_change, 
+             average_order_value_change,
+             average_items_per_order_change,
+             unique_orders_change,
+             total_quantity_change
+             ) = process_pmix_file(excel_data_copy, 
+            start_date=start_date, 
+            end_date=end_date,
+            category_filter=category_filter,
+            location_filter=location_filter, 
+            server_filter=server_filter)
 
             # print("i am here in excel upload printing before the result" )
             pmix_dashboard = {
@@ -683,7 +746,15 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                             "average_order_value": [float(average_order_value)],
                             "average_items_per_order": [float(average_items_per_order)],
                             "unique_orders": [int(unique_orders)],
-                            "total_quantity": [int(total_quantity)]
+                            "total_quantity": [int(total_quantity)],
+                            
+                            "net_sales_change": [float(net_sales_change)],
+                            "orders_change": [int(orders_change)],
+                            "qty_sold_change": [int(qty_sold_change)],
+                            "average_order_value_change": [float(average_order_value_change)],
+                            "average_items_per_order_change": [float(average_items_per_order_change)],
+                            "unique_orders_change": [int(unique_orders_change)],
+                            "total_quantity_change": [int(total_quantity_change)]
                         }],
             "table2": sales_by_category_df.to_dict(orient='records'),
             "table3": sales_by_menu_group_df.to_dict(orient='records'),

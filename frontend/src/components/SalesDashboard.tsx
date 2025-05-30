@@ -442,7 +442,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
           </div>
 
           {/* Menu Group Chart */}
-          <div
+          {/* <div
             style={{
               padding: "16px",
               borderRadius: "8px",
@@ -490,7 +490,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* Category Pie Charts on right */}
@@ -553,7 +553,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
       {/* Second row - Sales by Server and Top Selling Items */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
         {/* Sales by Server */}
-        <div style={{ width: "calc(50% - 12px)", minWidth: "300px" }}>
+        {/* <div style={{ width: "calc(50% - 12px)", minWidth: "300px" }}>
           <div
             style={{
               padding: "16px",
@@ -635,7 +635,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
               ))}
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Top Selling Items */}
         <div
