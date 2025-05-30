@@ -118,6 +118,7 @@ def process_pmix_file(file_data: Union[io.BytesIO, str],start_date=None, end_dat
     server = df["Server"].unique().tolist()
     category = df["Category"].unique().tolist()
 
+    print("i am here in pmix_processor.py printing request", df.head(), location_filter, server_filter, category_filter, start_date, end_date)   
     # sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df = companywide_tables(df, store_filter=store_filter, year_filter=year_filter, quarter_filter=quarter_filter, helper4_filter=helper4_filter)
  
     p1 = overview_tables(df, location_filter=location_filter, server_filter=server_filter, category_filter=category_filter,  start_date=start_date, end_date=end_date)

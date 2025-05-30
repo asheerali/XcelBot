@@ -675,8 +675,8 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 "data": f"{request.dashboard} Dashboard is not yet implemented."
             }
                        
-            print (sales_split_dashboard, pmix_dashboard)
-            return [sales_split_dashboard, pmix_dashboard]
+            print (sales_split_dashboard)
+            return [sales_split_dashboard]
             # return {
             #     "table1": [],
             #     "table2": [],
@@ -702,12 +702,12 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             print("Dashboard type: Sales Split / Product Mix Dashboard")
             
             excel_data_copy = io.BytesIO(file_content)
-            if request.location == "Multiple Locations":
-                location_filter = "All"
-            else:
-                location_filter = request.location if request.location else 'All'
+            # if request.location == "Multiple Locations":
+            #     location_filter = "All"
+            # else:
+            #     location_filter = request.location if request.location else 'All'
                 
-            print("i am here in excel upload printing the location filter", location_filter)
+            # print("i am here in excel upload printing the location filter", location_filter)
             server_filter = request.server if request.server else 'All'
             # Set dynamic dates
             default_end_date1 = date.today()
@@ -724,7 +724,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             start_date = start_date if start_date else default_start_date
             end_date = end_date if end_date else default_end_date
             
-            category_filter = request.category if request.category else 'All'
+            category_filter = 'All'
             
             (net_sales, 
              orders, 
@@ -752,10 +752,10 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
              unique_orders_change,
              total_quantity_change
              ) = process_pmix_file(excel_data_copy, 
-            start_date=start_date, 
-            end_date=end_date,
+            start_date=None, 
+            end_date=None,
             category_filter=category_filter,
-            location_filter=location_filter, 
+            location_filter="All", 
             server_filter=server_filter)
 
             # print("i am here in excel upload printing before the result" )
@@ -764,23 +764,23 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             #             "qty_sold": [qty_sold],"average_order_value": [average_order_value], 
             #             "average_items_per_order": [average_items_per_order], "unique_orders": [unique_orders], 
             #             "total_quantity": [total_quantity]}],
-                "table1": [{
-                            "net_sales": [float(net_sales)],
-                            "orders": [int(orders)],
-                            "qty_sold": [int(qty_sold)],
-                            "average_order_value": [float(average_order_value)],
-                            "average_items_per_order": [float(average_items_per_order)],
-                            "unique_orders": [int(unique_orders)],
-                            "total_quantity": [int(total_quantity)],
-                            
-                            "net_sales_change": [float(net_sales_change)],
-                            "orders_change": [int(orders_change)],
-                            "qty_sold_change": [int(qty_sold_change)],
-                            "average_order_value_change": [float(average_order_value_change)],
-                            "average_items_per_order_change": [float(average_items_per_order_change)],
-                            "unique_orders_change": [int(unique_orders_change)],
-                            "total_quantity_change": [int(total_quantity_change)]
-                        }],
+            "table1": [{
+                        "net_sales": [float(net_sales)],
+                        "orders": [int(orders)],
+                        "qty_sold": [int(qty_sold)],
+                        "average_order_value": [float(average_order_value)],
+                        "average_items_per_order": [float(average_items_per_order)],
+                        "unique_orders": [int(unique_orders)],
+                        "total_quantity": [int(total_quantity)],
+                        
+                        # "net_sales_change": [float(net_sales_change)],
+                        # "orders_change": [int(orders_change)],
+                        # "qty_sold_change": [int(qty_sold_change)],
+                        # "average_order_value_change": [float(average_order_value_change)],
+                        # "average_items_per_order_change": [float(average_items_per_order_change)],
+                        # "unique_orders_change": [int(unique_orders_change)],
+                        # "total_quantity_change": [int(total_quantity_change)]
+                    }],
             "table2": sales_by_category_df.to_dict(orient='records'),
             "table3": sales_by_menu_group_df.to_dict(orient='records'),
             "table4": sales_by_server_df.to_dict(orient='records'),
@@ -798,7 +798,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             "dashboardName": "Product Mix ",
             "data":  "Dashboard is not yet implemented."
             }
-            # print("i am here in excel upload printing  the result", result)
+            print("i am here in excel upload printing  the result", pmix_dashboard)
             
             
             # return result
@@ -806,34 +806,34 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
 
             # # print("i am here in excel upload printing start_date", start_date)
 
-            # Process Excel file with optional filters
-            pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay, categories, locations = process_sales_split_file(
-                excel_data, 
-                start_date=start_date,
-                end_date=end_date,
-                location=location_filter
-            )
+            # # Process Excel file with optional filters
+            # pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay, categories, locations = process_sales_split_file(
+            #     excel_data, 
+            #     start_date=start_date,
+            #     end_date=end_date,
+            #     location=location_filter
+            # )
             
             
-            # response accepted from the FE
-               # For now, return empty data for unsupported dashboards
-            sales_split_dashboard = {
-                "table1": pivot_table.to_dict(orient='records'),
-                "table2": in_house_table.to_dict(orient='records'),
-                "table3": week_over_week_table.to_dict(orient='records'),
-                "table4": category_summary_table.to_dict(orient='records'),
-                "table5": salesByWeek.to_dict(orient='records'),
-                "table6": salesByDayOfWeek.to_dict(orient='records'),
-                "table7": salesByTimeOfDay.to_dict(orient='records'),
-                "locations": locations,
-                "categories": categories,
-                "dashboardName": "Sales Split",
-                "fileName": file_name,
-                "data": f"{request.dashboard} Dashboard is not yet implemented."
-            }
+            # # response accepted from the FE
+            #    # For now, return empty data for unsupported dashboards
+            # sales_split_dashboard = {
+            #     "table1": pivot_table.to_dict(orient='records'),
+            #     "table2": in_house_table.to_dict(orient='records'),
+            #     "table3": week_over_week_table.to_dict(orient='records'),
+            #     "table4": category_summary_table.to_dict(orient='records'),
+            #     "table5": salesByWeek.to_dict(orient='records'),
+            #     "table6": salesByDayOfWeek.to_dict(orient='records'),
+            #     "table7": salesByTimeOfDay.to_dict(orient='records'),
+            #     "locations": locations,
+            #     "categories": categories,
+            #     "dashboardName": "Sales Split",
+            #     "fileName": file_name,
+            #     "data": f"{request.dashboard} Dashboard is not yet implemented."
+            # }
                        
-            print (sales_split_dashboard, pmix_dashboard)
-            return [sales_split_dashboard, pmix_dashboard]
+            # print (sales_split_dashboard, pmix_dashboard)
+            return [pmix_dashboard]
             # return {
             #     "table1": [],
             #     "table2": [],

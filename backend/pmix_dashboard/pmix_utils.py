@@ -92,35 +92,26 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
         }
     
     change_filtered_df = df.copy()
-    
-    
         
-    # Calculate the number of days in the original range
-    days_diff = (end_date - start_date).days
+    # Create comparison period only if both start_date and end_date are provided
+    if start_date is not None and end_date is not None:
+        # Calculate the number of days in the original range
+        days_diff = (end_date - start_date).days
 
-    # Set change period dates
-    change_end_date = start_date  # Change end date becomes the original start date
-    change_start_date = start_date - timedelta(days=days_diff + 1)  # Go back by the range duration
+        # Set change period dates
+        change_end_date = start_date  # Change end date becomes the original start date
+        change_start_date = start_date - timedelta(days=days_diff + 1)  # Go back by the range duration
 
-    # Apply date range filter for change period
-    if change_start_date is not None:
-        change_filtered_df = change_filtered_df[change_filtered_df['Date'] >= change_start_date]
+        # Apply date range filter for change period
+        if change_start_date is not None:
+            change_filtered_df = change_filtered_df[change_filtered_df['Date'] >= change_start_date]
 
-    if change_end_date is not None:
-        change_filtered_df = change_filtered_df[change_filtered_df['Date'] <= change_end_date]
-
-    
-        # Apply date range filter - convert string dates to datetime.date objects
-    if change_start_date is not None:
-        if isinstance(change_start_date, str):
-            change_start_date = datetime.strptime(change_start_date, '%Y-%m-%d').date()
-        filtered_df = filtered_df[filtered_df['Date'] >= change_start_date]
-    
-    if change_end_date is not None:
-        if isinstance(change_end_date, str):
-            change_end_date = datetime.strptime(change_end_date, '%Y-%m-%d').date()
-        filtered_df = filtered_df[filtered_df['Date'] <= change_end_date]
-    
+        if change_end_date is not None:
+            change_filtered_df = change_filtered_df[change_filtered_df['Date'] <= change_end_date]
+    else:
+        # If no date range is specified, use the entire dataset for comparison
+        change_start_date = None
+        change_end_date = None
     
     # -------------------------------------------------------
     # 1. Overview Metrics Tables
@@ -490,33 +481,27 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
     change_filtered_df = df.copy()
     
     
+        # Create comparison period only if both start_date and end_date are provided
+    if start_date is not None and end_date is not None:
+        # Calculate the number of days in the original range
+        days_diff = (end_date - start_date).days
+
+        # Set change period dates
+        change_end_date = start_date  # Change end date becomes the original start date
+        change_start_date = start_date - timedelta(days=days_diff + 1)  # Go back by the range duration
+
+        # Apply date range filter for change period
+        if change_start_date is not None:
+            change_filtered_df = change_filtered_df[change_filtered_df['Date'] >= change_start_date]
+
+        if change_end_date is not None:
+            change_filtered_df = change_filtered_df[change_filtered_df['Date'] <= change_end_date]
+    else:
+        # If no date range is specified, use the entire dataset for comparison
+        change_start_date = None
+        change_end_date = None
         
-    # Calculate the number of days in the original range
-    days_diff = (end_date - start_date).days
-
-    # Set change period dates
-    change_end_date = start_date  # Change end date becomes the original start date
-    change_start_date = start_date - timedelta(days=days_diff + 1)  # Go back by the range duration
-
-    # Apply date range filter for change period
-    if change_start_date is not None:
-        change_filtered_df = change_filtered_df[change_filtered_df['Date'] >= change_start_date]
-
-    if change_end_date is not None:
-        change_filtered_df = change_filtered_df[change_filtered_df['Date'] <= change_end_date]
-
-    
-        # Apply date range filter - convert string dates to datetime.date objects
-    if change_start_date is not None:
-        if isinstance(change_start_date, str):
-            change_start_date = datetime.strptime(change_start_date, '%Y-%m-%d').date()
-        filtered_df = filtered_df[filtered_df['Date'] >= change_start_date]
-    
-    if change_end_date is not None:
-        if isinstance(change_end_date, str):
-            change_end_date = datetime.strptime(change_end_date, '%Y-%m-%d').date()
-        filtered_df = filtered_df[filtered_df['Date'] <= change_end_date]
-    
+        
     # If the dataframe is empty after filtering, return empty tables
     if filtered_df.empty:
         return {
