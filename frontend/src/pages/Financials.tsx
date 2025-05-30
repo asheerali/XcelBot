@@ -1,4 +1,4 @@
-// src/pages/Financials.tsx - Updated with DateRangeSelector matching FilterSection pattern
+// src/pages/Financials.tsx - Updated with ComprehensiveFinancialDashboard integration
 
 import React, { useState, useEffect } from 'react';
 import Box from '@mui/material/Box';
@@ -29,7 +29,6 @@ import Divider from '@mui/material/Divider';
 import Popover from '@mui/material/Popover';
 import MenuList from '@mui/material/MenuList';
 import CircularProgress from '@mui/material/CircularProgress';
-import { format } from 'date-fns';
 
 // Import axios for API calls
 import axios from 'axios';
@@ -326,6 +325,745 @@ const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
   );
 };
 
+// Date Range Selector Component
+interface DateRangeSelectorComponentProps {
+  label: string;
+  onDateRangeSelect: (dateRange: any) => void;
+}
+
+const DateRangeSelectorComponent: React.FC<DateRangeSelectorComponentProps> = ({
+  label,
+  onDateRangeSelect
+}) => {
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedRange, setSelectedRange] = useState<string>('Select date range');
+  const open = Boolean(anchorEl);
+
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleDateRangeSelect = (range: any) => {
+    // Format the display text
+    const startDate = range.startDate.toLocaleDateString();
+    const endDate = range.endDate.toLocaleDateString();
+    setSelectedRange(`${startDate} - ${endDate}`);
+    
+    // Pass the range to parent
+    onDateRangeSelect(range);
+    
+    // Close the popover
+    handleClose();
+  };
+
+  const handleClear = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setSelectedRange('Select date range');
+    onDateRangeSelect(null);
+  };
+
+  return (
+    <Box sx={{ position: 'relative', width: '100%' }}>
+      <Typography 
+        variant="body2" 
+        sx={{ 
+          mb: 1, 
+          color: '#666',
+          fontSize: '0.875rem',
+          fontWeight: 500
+        }}
+      >
+        {label}
+      </Typography>
+      
+      <Box
+        onClick={handleClick}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          border: '2px solid #e0e0e0',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          cursor: 'pointer',
+          backgroundColor: '#fff',
+          minHeight: '48px',
+          position: 'relative',
+          '&:hover': {
+            borderColor: '#1976d2',
+          }
+        }}
+      >
+        <Box sx={{ color: '#1976d2', mr: 1.5, display: 'flex', alignItems: 'center' }}>
+          <CalendarTodayIcon />
+        </Box>
+        
+        <Typography 
+          variant="body1" 
+          sx={{ 
+            flexGrow: 1,
+            color: selectedRange === 'Select date range' ? '#999' : '#333',
+            fontSize: '0.95rem'
+          }}
+        >
+          {selectedRange}
+        </Typography>
+        
+        {selectedRange !== 'Select date range' && (
+          <IconButton
+            size="small"
+            onClick={handleClear}
+            sx={{
+              width: 20,
+              height: 20,
+              backgroundColor: '#666',
+              color: 'white',
+              fontSize: '12px',
+              mr: 1,
+              '&:hover': {
+                backgroundColor: '#333',
+              }
+            }}
+          >
+            <CloseIcon sx={{ fontSize: '12px' }} />
+          </IconButton>
+        )}
+        
+        <SearchIcon sx={{ color: '#666', fontSize: '1.2rem' }} />
+      </Box>
+
+      <Popover
+        open={open}
+        anchorEl={anchorEl}
+        onClose={handleClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: {
+            mt: 1,
+            borderRadius: 2,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+          }
+        }}
+      >
+        <DateRangeSelector onSelect={handleDateRangeSelect} />
+      </Popover>
+    </Box>
+  );
+};
+
+// Comprehensive Financial Dashboard Component (Updated to use backend data)
+const ComprehensiveFinancialDashboard = ({ financialData }: { financialData: any }) => {
+  // Extract data from backend tables
+  const salesData = financialData?.table6 || [];
+  const laborData = financialData?.table7 || [];
+  const avgTicketData = financialData?.table8 || [];
+  const primeCostData = financialData?.table9 || [];
+  const foodCostData = financialData?.table10 || [];
+  const spmhData = financialData?.table11 || [];
+  const lpmhData = financialData?.table12 || [];
+  const weeklySalesData = financialData?.table13 || [];
+  const ordersByDayData = financialData?.table14 || [];
+  const avgTicketChartData = financialData?.table15 || [];
+  const kpiData = financialData?.table16 || [];
+
+  // Helper function to format change values
+  const formatChange = (value: string) => {
+    if (!value) return { value: '0%', color: '#666', arrow: '' };
+    
+    const numValue = parseFloat(value.replace('%', ''));
+    const isPositive = numValue >= 0;
+    return {
+      value: value,
+      color: isPositive ? '#2e7d32' : '#d32f2f',
+      arrow: isPositive ? '▲' : '▼'
+    };
+  };
+
+  // Simple Line Chart Component
+  const SimpleLineChart = ({ data, title, height = 250, dataKeys = ['This Week', 'Last Week', 'Last Year'] }) => {
+    if (!data || data.length === 0) {
+      return (
+        <div style={{ 
+          padding: '20px', 
+          background: '#fff', 
+          borderRadius: '8px', 
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          width: '100%',
+          boxSizing: 'border-box',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: height
+        }}>
+          <Typography>No data available</Typography>
+        </div>
+      );
+    }
+
+    const maxValue = Math.max(...data.map(d => Math.max(...dataKeys.map(key => d[key] || 0))));
+    const minValue = Math.min(...data.map(d => Math.min(...dataKeys.map(key => d[key] || 0))));
+    const range = maxValue - minValue || 1;
+    
+    const getY = (value: number) => {
+      return height - 40 - ((value - minValue) / range) * (height - 80);
+    };
+    
+    const getX = (index: number) => {
+      return 60 + (index * (320 / (data.length - 1)));
+    };
+
+    return (
+      <div style={{ 
+        padding: '20px', 
+        background: '#fff', 
+        borderRadius: '8px', 
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        width: '100%',
+        boxSizing: 'border-box'
+      }}>
+        <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: '600' }}>{title}</h3>
+        <div style={{ overflow: 'auto' }}>
+          <svg width="400" height={height} style={{ overflow: 'visible', minWidth: '350px' }}>
+            {/* Grid lines */}
+            {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
+              <line
+                key={i}
+                x1="60"
+                y1={40 + ratio * (height - 80)}
+                x2="380"
+                y2={40 + ratio * (height - 80)}
+                stroke="#e0e0e0"
+                strokeWidth="1"
+              />
+            ))}
+            
+            {/* Lines for each data key */}
+            {dataKeys.map((key, keyIndex) => {
+              const colors = ['#1976d2', '#90caf9', '#424242', '#ff6b35', '#4caf50'];
+              const strokeWidths = [3, 2, 2, 2, 2];
+              
+              return (
+                <polyline
+                  key={key}
+                  fill="none"
+                  stroke={colors[keyIndex] || '#666'}
+                  strokeWidth={strokeWidths[keyIndex] || 2}
+                  points={data.map((d, i) => `${getX(i)},${getY(d[key] || 0)}`).join(' ')}
+                />
+              );
+            })}
+            
+            {/* Data points */}
+            {data.map((d, i) => (
+              <g key={i}>
+                {dataKeys.map((key, keyIndex) => {
+                  const colors = ['#1976d2', '#90caf9', '#424242', '#ff6b35', '#4caf50'];
+                  const radii = [4, 3, 3, 3, 3];
+                  
+                  return (
+                    <circle 
+                      key={key}
+                      cx={getX(i)} 
+                      cy={getY(d[key] || 0)} 
+                      r={radii[keyIndex] || 3} 
+                      fill={colors[keyIndex] || '#666'} 
+                    />
+                  );
+                })}
+              </g>
+            ))}
+            
+            {/* X-axis labels */}
+            {data.map((d, i) => (
+              <text
+                key={i}
+                x={getX(i)}
+                y={height - 10}
+                textAnchor="middle"
+                fontSize="12"
+                fill="#666"
+              >
+                {d.Day || d.day || d.label || i + 1}
+              </text>
+            ))}
+            
+            {/* Y-axis labels */}
+            {[minValue, (minValue + maxValue) / 2, maxValue].map((value, i) => (
+              <text
+                key={i}
+                x="50"
+                y={getY(value) + 4}
+                textAnchor="end"
+                fontSize="12"
+                fill="#666"
+              >
+                {value.toFixed(1)}
+              </text>
+            ))}
+          </svg>
+        </div>
+        
+        {/* Legend */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '10px', flexWrap: 'wrap' }}>
+          {dataKeys.map((key, index) => {
+            const colors = ['#1976d2', '#90caf9', '#424242', '#ff6b35', '#4caf50'];
+            
+            return (
+              <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <div style={{ width: '12px', height: '3px', background: colors[index] || '#666' }}></div>
+                <span style={{ fontSize: '12px', color: '#666' }}>{key}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  // Financial Data Table Component
+  const FinancialDataTable = ({ title, mainValue, data, columns }: any) => {
+    if (!data || data.length === 0) {
+      return (
+        <div style={{ 
+          background: '#fff', 
+          borderRadius: '12px', 
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          border: '1px solid #e0e0e0',
+          height: '300px',
+          width: '100%',
+          boxSizing: 'border-box',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <Typography>No data available for {title}</Typography>
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ 
+        background: '#fff', 
+        borderRadius: '12px', 
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        border: '1px solid #e0e0e0',
+        transition: 'all 0.3s ease',
+        height: '100%',
+        width: '100%',
+        boxSizing: 'border-box'
+      }}>
+        <div style={{ padding: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#333' }}>{title}</h3>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: '#1976d2' }}>{mainValue}</div>
+          </div>
+          
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '300px' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f5f5f5' }}>
+                  <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px', borderBottom: '1px solid #ddd' }}>Time Period</th>
+                  <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px', borderBottom: '1px solid #ddd' }}>% Change</th>
+                  {columns.map((col: any, index: number) => (
+                    <th key={index} style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px', borderBottom: '1px solid #ddd' }}>
+                      {col.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((row: any, index: number) => (
+                  <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#fff' : '#f9f9f9' }}>
+                    <td style={{ padding: '6px 4px', fontWeight: '600', borderBottom: '1px solid #eee' }}>
+                      {row['Time Period'] || row.period}
+                    </td>
+                    <td style={{ padding: '6px 4px', borderBottom: '1px solid #eee' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        <span style={{ color: formatChange(row['% Change'] || row.change).color, fontSize: '10px' }}>
+                          {formatChange(row['% Change'] || row.change).arrow}
+                        </span>
+                        <span style={{ color: formatChange(row['% Change'] || row.change).color, fontWeight: '600' }}>
+                          {row['% Change'] || row.change}
+                        </span>
+                      </div>
+                    </td>
+                    {columns.map((col: any, colIndex: number) => (
+                      <td key={colIndex} style={{ padding: '6px 4px', borderBottom: '1px solid #eee' }}>
+                        {row[col.key] || '-'}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Get main value for each section (first row's total or average)
+  const getSalesMainValue = () => {
+    if (salesData.length === 0) return '$0.00';
+    const firstRow = salesData[0];
+    return firstRow['TTL'] || firstRow.total || '$0.00';
+  };
+
+  const getLaborMainValue = () => {
+    if (laborData.length === 0) return '0%';
+    // Calculate total labor percentage
+    const firstRow = laborData[0];
+    return firstRow['Total'] || '35.25%';
+  };
+
+  return (
+    <div style={{ 
+      padding: '24px',
+      backgroundColor: '#f8f9fa',
+      minHeight: '100vh',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      maxWidth: '100vw',
+      overflow: 'hidden'
+    }}>
+      {/* Header */}
+      <div style={{ marginBottom: '32px', textAlign: 'center' }}>
+        <h1 style={{ 
+          fontSize: 'clamp(24px, 5vw, 36px)',
+          fontWeight: '700',
+          color: '#1976d2',
+          margin: '0 0 8px 0'
+        }}>
+          Comprehensive Financial Dashboard
+        </h1>
+        <p style={{ 
+          fontSize: 'clamp(14px, 3vw, 18px)',
+          color: '#666',
+          margin: 0
+        }}>
+          Complete Financial Analytics & Performance Metrics
+        </p>
+      </div>
+
+      {/* Top Row - Sales and Labor Cost */}
+      <div style={{ 
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(400px, 100%), 1fr))',
+        gap: '24px',
+        marginBottom: '32px'
+      }}>
+        <FinancialDataTable
+          title="Sales"
+          mainValue={getSalesMainValue()}
+          data={salesData}
+          columns={[
+            { label: 'In-House', key: 'In-House' },
+            { label: '% (+/-)', key: '% (+/-)_In-House' },
+            { label: '1p', key: '1p' },
+            { label: '% (+/-)', key: '% (+/-)_1p' },
+            { label: '3p', key: '3p' },
+            { label: '% (+/-)', key: '% (+/-)_3p' },
+            { label: 'Catering', key: 'Catering' },
+            { label: '% (+/-)', key: '% (+/-)_Catering' },
+            { label: 'TTL', key: 'TTL' }
+          ]}
+        />
+        <FinancialDataTable
+          title="Labor Cost"
+          mainValue={getLaborMainValue()}
+          data={laborData}
+          columns={[
+            { label: 'Manager', key: 'Manager' },
+            { label: '% (+/-)', key: '% (+/-)_Manager' },
+            { label: 'FOH', key: 'FOH' },
+            { label: '% (+/-)', key: '% (+/-)_FOH' },
+            { label: 'BOH', key: 'BOH' },
+            { label: '% (+/-)', key: '% (+/-)_BOH' },
+            { label: 'Training', key: 'Training' },
+            { label: '% (+/-)', key: '% (+/-)_Training' },
+            { label: 'Other', key: 'Other' }
+          ]}
+        />
+      </div>
+
+      {/* Second Row - Average Ticket & Prime Cost */}
+      <div style={{ 
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(400px, 100%), 1fr))',
+        gap: '24px',
+        marginBottom: '32px'
+      }}>
+        <FinancialDataTable
+          title="Avg Ticket"
+          mainValue={avgTicketData[0]?.['Avg'] || '$0.00'}
+          data={avgTicketData}
+          columns={[
+            { label: 'In-House', key: 'In-House' },
+            { label: '% (+/-)', key: '% (+/-)_In-House' },
+            { label: '1p', key: '1p' },
+            { label: '% (+/-)', key: '% (+/-)_1p' },
+            { label: '3p', key: '3p' },
+            { label: '% (+/-)', key: '% (+/-)_3p' },
+            { label: 'Catering', key: 'Catering' },
+            { label: '% (+/-)', key: '% (+/-)_Catering' },
+            { label: 'Avg', key: 'Avg' }
+          ]}
+        />
+        <FinancialDataTable
+          title="Prime Cost"
+          mainValue={primeCostData[0]?.['Total'] || '0%'}
+          data={primeCostData}
+          columns={[
+            { label: 'Labor', key: 'Labor' },
+            { label: '% (+/-)', key: '% (+/-)_Labor' },
+            { label: 'Food', key: 'Food' },
+            { label: '% (+/-)', key: '% (+/-)_Food' },
+            { label: 'Paper', key: 'Paper' },
+            { label: '% (+/-)', key: '% (+/-)_Paper' },
+            { label: 'OK', key: 'OK' },
+            { label: '% (+/-)', key: '% (+/-)_OK' },
+            { label: 'Total', key: 'Total' }
+          ]}
+        />
+      </div>
+
+      {/* Third Row - Food Cost, SPMH, LPMH */}
+      <div style={{ 
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gap: '24px',
+        marginBottom: '32px'
+      }}>
+        <FinancialDataTable
+          title="Food Cost"
+          mainValue={foodCostData[0]?.['Total'] || '0%'}
+          data={foodCostData}
+          columns={[
+            { label: 'Johns', key: 'Johns' },
+            { label: '% (+/-)', key: '% (+/-)_Johns' },
+            { label: 'Terra', key: 'Terra' },
+            { label: '% (+/-)', key: '% (+/-)_Terra' },
+            { label: 'Metro', key: 'Metro' },
+            { label: '% (+/-)', key: '% (+/-)_Metro' },
+            { label: 'Victory', key: 'Victory' },
+            { label: '% (+/-)', key: '% (+/-)_Victory' },
+            { label: 'CK', key: 'CK' }
+          ]}
+        />
+        
+        {/* SPMH Card */}
+        <div style={{ 
+          background: '#fff', 
+          borderRadius: '12px', 
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          border: '1px solid #e0e0e0',
+          height: 'fit-content',
+          width: '100%',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{ padding: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>SPMH</h3>
+              <div style={{ fontSize: '24px', fontWeight: '700', color: '#1976d2' }}>
+                {spmhData[0]?.['$ Change'] || '$0.00'}
+              </div>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '200px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f5f5f5' }}>
+                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>Time Period</th>
+                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>$ Change</th>
+                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>% Change</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {spmhData.map((row: any, index: number) => (
+                    <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#fff' : '#f9f9f9' }}>
+                      <td style={{ padding: '6px 4px', fontWeight: '600' }}>
+                        {row['Time Period'] || row.period}
+                      </td>
+                      <td style={{ padding: '6px 4px' }}>
+                        {row['$ Change'] || row.dollarChange}
+                      </td>
+                      <td style={{ padding: '6px 4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          <span style={{ color: formatChange(row['% Change'] || row.percentChange).color, fontSize: '10px' }}>
+                            {formatChange(row['% Change'] || row.percentChange).arrow}
+                          </span>
+                          <span style={{ color: formatChange(row['% Change'] || row.percentChange).color, fontWeight: '600' }}>
+                            {row['% Change'] || row.percentChange}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        
+        {/* LPMH Card */}
+        <div style={{ 
+          background: '#fff', 
+          borderRadius: '12px', 
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          border: '1px solid #e0e0e0',
+          height: 'fit-content',
+          width: '100%',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{ padding: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>LPMH</h3>
+              <div style={{ fontSize: '24px', fontWeight: '700', color: '#1976d2' }}>
+                {lpmhData[0]?.['$ Change'] || '$0.00'}
+              </div>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '200px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f5f5f5' }}>
+                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>Time Period</th>
+                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>$ Change</th>
+                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>% Change</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lpmhData.map((row: any, index: number) => (
+                    <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#fff' : '#f9f9f9' }}>
+                      <td style={{ padding: '6px 4px', fontWeight: '600' }}>
+                        {row['Time Period'] || row.period}
+                      </td>
+                      <td style={{ padding: '6px 4px' }}>
+                        {row['$ Change'] || row.dollarChange}
+                      </td>
+                      <td style={{ padding: '6px 4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          <span style={{ color: formatChange(row['% Change'] || row.percentChange).color, fontSize: '10px' }}>
+                            {formatChange(row['% Change'] || row.percentChange).arrow}
+                          </span>
+                          <span style={{ color: formatChange(row['% Change'] || row.percentChange).color, fontWeight: '600' }}>
+                            {row['% Change'] || row.percentChange}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Charts Section */}
+      <div style={{ 
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(350px, 100%), 1fr))',
+        gap: '24px',
+        marginBottom: '32px'
+      }}>
+        <SimpleLineChart 
+          data={weeklySalesData} 
+          title="Weekly Sales" 
+          dataKeys={['This Week', 'Last Week', 'Last Year', 'L4wt', 'Bdg']}
+        />
+        <SimpleLineChart 
+          data={ordersByDayData} 
+          title="Orders by Day of Week" 
+          dataKeys={['This Week', 'Last Week', 'Last Year', 'L4wt', 'Bdg']}
+        />
+      </div>
+
+      {/* Bottom Row - Average Ticket Chart and KPI vs Budget */}
+      <div style={{ 
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))',
+        gap: '24px'
+      }}>
+        <SimpleLineChart 
+          data={avgTicketChartData} 
+          title="Average Ticket Trends" 
+          height={200}
+          dataKeys={['This Week', 'Last Week', 'Last Year', 'L4wt', 'Bdg']}
+        />
+        
+        {/* KPI vs Budget Table */}
+        <div style={{ 
+          background: '#fff', 
+          borderRadius: '12px', 
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          border: '1px solid #e0e0e0',
+          height: 'fit-content',
+          width: '100%',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{ padding: '16px' }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '600' }}>KPI vs Budget</h3>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '300px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f5f5f5' }}>
+                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>Metric</th>
+                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>This Week</th>
+                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>Budget</th>
+                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>Tw/Bdg (+/-)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {kpiData.map((row: any, index: number) => (
+                    <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#fff' : '#f9f9f9' }}>
+                      <td style={{ padding: '6px 4px', fontWeight: '600' }}>
+                        {row.Metric || row.metric}
+                      </td>
+                      <td style={{ padding: '6px 4px' }}>
+                        {row['This Week'] || row.thisWeek}
+                      </td>
+                      <td style={{ padding: '6px 4px' }}>
+                        {row.Budget || row.budget}
+                      </td>
+                      <td style={{ padding: '6px 4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                          <span style={{ 
+                            color: (row['Tw/Bdg (+/-)'] || row.twBdg || '').startsWith('+') ? '#2e7d32' : '#d32f2f',
+                            fontWeight: '600' 
+                          }}>
+                            {row['Tw/Bdg (+/-)'] || row.twBdg}
+                          </span>
+                          <span style={{ 
+                            background: '#e3f2fd',
+                            color: '#1976d2',
+                            padding: '2px 6px',
+                            borderRadius: '12px',
+                            fontSize: '10px'
+                          }}>
+                            {row.percent || row['%'] || '0%'}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Helper functions remain the same
 const extractFinancialMetrics = (table5Data: any[]) => {
   if (!table5Data || table5Data.length === 0) return [];
@@ -390,31 +1128,27 @@ export function Financials() {
   const [tabValue, setTabValue] = useState(0);
   const [statsData, setStatsData] = useState([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([currentFinancialLocation || '']);
+  const [selectedDateRange, setSelectedDateRange] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [filterError, setFilterError] = useState<string>('');
-  
-  // Date range state - matching FilterSection pattern
-  const DEFAULT_START_DATE = new Date(2010, 0, 1); // January 1, 2010
-  const DEFAULT_END_DATE = new Date(2025, 0, 1);   // January 1, 2025
-  
-  const [localStartDate, setLocalStartDate] = useState<string>(
-    format(DEFAULT_START_DATE, 'MM/dd/yyyy')
-  );
-  const [localEndDate, setLocalEndDate] = useState<string>(
-    format(DEFAULT_END_DATE, 'MM/dd/yyyy')
-  );
-  const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
-  const [selectedRange, setSelectedRange] = useState({
-    startDate: DEFAULT_START_DATE,
-    endDate: DEFAULT_END_DATE,
-  });
   
   // Current table data from Redux or from current financial data
   const [currentTableData, setCurrentTableData] = useState<any>({
     table5: [],
     table2: [],
     table3: [],
-    table4: []
+    table4: [],
+    table6: [],
+    table7: [],
+    table8: [],
+    table9: [],
+    table10: [],
+    table11: [],
+    table12: [],
+    table13: [],
+    table14: [],
+    table15: [],
+    table16: []
   });
   
   // Extract data arrays from current financial data
@@ -438,7 +1172,18 @@ export function Financials() {
         table5: currentFinancialData.data.table5 || [],
         table2: currentFinancialData.data.table2 || [],
         table3: currentFinancialData.data.table3 || [],
-        table4: currentFinancialData.data.table4 || []
+        table4: currentFinancialData.data.table4 || [],
+        table6: currentFinancialData.data.table6 || [],
+        table7: currentFinancialData.data.table7 || [],
+        table8: currentFinancialData.data.table8 || [],
+        table9: currentFinancialData.data.table9 || [],
+        table10: currentFinancialData.data.table10 || [],
+        table11: currentFinancialData.data.table11 || [],
+        table12: currentFinancialData.data.table12 || [],
+        table13: currentFinancialData.data.table13 || [],
+        table14: currentFinancialData.data.table14 || [],
+        table15: currentFinancialData.data.table15 || [],
+        table16: currentFinancialData.data.table16 || []
       });
     }
   }, [locations, currentFinancialData]);
@@ -448,47 +1193,8 @@ export function Financials() {
     setSelectedLocations(newLocations);
   };
 
-  // Date range handling - matching FilterSection pattern
-  const openDateRangePicker = () => {
-    setIsDateRangeOpen(true);
-  };
-
-  const handleDateRangeSelect = (range: any) => {
-    setSelectedRange(range);
-  };
-
-  const applyDateRange = () => {
-    const formattedStartDate = format(selectedRange.startDate, 'MM/dd/yyyy');
-    const formattedEndDate = format(selectedRange.endDate, 'MM/dd/yyyy');
-    
-    console.log('📅 Financials: Setting date range locally:', {
-      startDate: formattedStartDate,
-      endDate: formattedEndDate
-    });
-    
-    // Update local state only
-    setLocalStartDate(formattedStartDate);
-    setLocalEndDate(formattedEndDate);
-    
-    // Update Redux state for persistence
-    dispatch(updateFinancialFilters({ 
-      dateRange: `${formattedStartDate} - ${formattedEndDate}`
-    }));
-    
-    setIsDateRangeOpen(false);
-    
-    console.log('📅 Date range set. User must click "Apply Filters" to send to backend.');
-  };
-
-  // Format display date
-  const formatDisplayDate = (dateStr: string) => {
-    if (!dateStr) return '';
-    try {
-      const date = new Date(dateStr);
-      return format(date, 'MMM dd, yyyy');
-    } catch (e) {
-      return dateStr;
-    }
+  const handleDateRangeSelect = (dateRange: any) => {
+    setSelectedDateRange(dateRange);
   };
 
   // Apply filters with backend API call
@@ -509,8 +1215,8 @@ export function Financials() {
         fileName: currentFile.fileName,
         fileContent: currentFile.fileContent,
         location: selectedLocations[0] || '',
-        startDate: localStartDate,
-        endDate: localEndDate,
+        startDate: selectedDateRange?.startDateStr || null,
+        endDate: selectedDateRange?.endDateStr || null,
         dashboard: 'Financials'
       };
 
@@ -522,12 +1228,23 @@ export function Financials() {
       console.log('📥 Received financial filter response:', response.data);
 
       if (response.data) {
-        // Update local table data state
+        // Update local table data state with all tables
         setCurrentTableData({
           table5: response.data.table5 || [],
           table2: response.data.table2 || [],
           table3: response.data.table3 || [],
-          table4: response.data.table4 || []
+          table4: response.data.table4 || [],
+          table6: response.data.table6 || [],
+          table7: response.data.table7 || [],
+          table8: response.data.table8 || [],
+          table9: response.data.table9 || [],
+          table10: response.data.table10 || [],
+          table11: response.data.table11 || [],
+          table12: response.data.table12 || [],
+          table13: response.data.table13 || [],
+          table14: response.data.table14 || [],
+          table15: response.data.table15 || [],
+          table16: response.data.table16 || []
         });
 
         // Also update Redux state if needed
@@ -536,7 +1253,7 @@ export function Financials() {
         // Update Redux filters
         dispatch(updateFinancialFilters({ 
           store: selectedLocations[0],
-          dateRange: `${localStartDate} - ${localEndDate}`
+          dateRange: selectedDateRange ? `${selectedDateRange.startDateStr} - ${selectedDateRange.endDateStr}` : ''
         }));
 
         // Update current location if changed
@@ -590,10 +1307,10 @@ export function Financials() {
         if (!metricData) {
           return {
             label: metricName,
-            value: '$0.00',
-            bottomChange: '+0%',
+            value: '0',
+            bottomChange: '0%',
             bottomLabel: '% Change',
-            changeColor: '#1976d2',
+            changeColor: '#666',
             changeDirection: 'up'
           };
         }
@@ -625,15 +1342,8 @@ export function Financials() {
       
       setStatsData(newStatsData);
     } else {
-      setStatsData([
-        { label: 'Net Sales', value: '$0.00', bottomChange: '+0%', bottomLabel: '% Change', changeColor: '#1976d2' },
-        { label: 'Orders', value: '0', bottomChange: '+0%', bottomLabel: '% Change', changeColor: '#1976d2' },
-        { label: 'Avg Ticket', value: '$0.00', bottomChange: '0.00$', changeDirection: 'up', changeColor: '#2e7d32', bottomLabel: '$ Change' },
-        { label: 'Food Cost %', value: '0.00%', bottomChange: '0.00%', changeDirection: 'up', changeColor: '#d32f2f', bottomLabel: '% Change' },
-        { label: 'Labor Cost %', value: '0.00%', bottomChange: '0.00%', changeDirection: 'up', changeColor: '#d32f2f', bottomLabel: '% Change' },
-        { label: 'SPMH', value: '$0.00', bottomChange: '0.00$', changeDirection: 'up', changeColor: '#2e7d32', bottomLabel: '% Change' },
-        { label: 'LPMH', value: '$0.00', bottomChange: '0.00%', changeDirection: 'up', changeColor: '#d32f2f', bottomLabel: '% Change' },
-      ]);
+      // Only show empty state when no data is available - no static fallback data
+      setStatsData([]);
     }
   }, [table5Data]);
 
@@ -692,7 +1402,7 @@ export function Financials() {
         </Alert>
       )}
 
-      {/* Filter Card - Updated with DateRangeSelector matching FilterSection */}
+      {/* Filter Card - Updated with DateRangeSelector */}
       <Card 
         elevation={2} 
         sx={{ 
@@ -756,7 +1466,7 @@ export function Financials() {
             </Button>
           </Box>
 
-          {/* Filter Inputs Row - Updated with DateRangeSelector matching FilterSection */}
+          {/* Filter Inputs Row - Updated with DateRangeSelector */}
           <Grid container spacing={3} sx={{ mb: 2 }}>
             {/* Location Filter */}
             <Grid item xs={12} md={6}>
@@ -771,44 +1481,12 @@ export function Financials() {
               />
             </Grid>
 
-            {/* Date Range Button - Updated to match FilterSection pattern */}
+            {/* Date Range Filter - Updated to use DateRangeSelector */}
             <Grid item xs={12} md={6}>
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  mb: 1, 
-                  color: '#666',
-                  fontSize: '0.875rem',
-                  fontWeight: 500
-                }}
-              >
-                Date Range
-              </Typography>
-              <Button
-                variant="outlined"
-                onClick={openDateRangePicker}
-                startIcon={<CalendarTodayIcon />}
-                fullWidth
-                sx={{ 
-                  height: 48, 
-                  justifyContent: 'flex-start',
-                  textTransform: 'none',
-                  borderColor: '#e0e0e0',
-                  borderWidth: '2px',
-                  color: 'text.primary',
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  '&:hover': {
-                    borderColor: '#1976d2',
-                  }
-                }}
-              >
-                <Box sx={{ textAlign: 'left', flexGrow: 1 }}>
-                  <Typography variant="body1" component="div" sx={{ fontSize: '0.95rem' }}>
-                    {formatDisplayDate(localStartDate)} - {formatDisplayDate(localEndDate)}
-                  </Typography>
-                </Box>
-              </Button>
+              <DateRangeSelectorComponent
+                label="Date Range"
+                onDateRangeSelect={handleDateRangeSelect}
+              />
             </Grid>
           </Grid>
 
@@ -836,25 +1514,30 @@ export function Financials() {
               />
             )}
             
-            <Chip
-              icon={<CalendarTodayIcon sx={{ fontSize: '1rem' }} />}
-              label={`Date Range: ${formatDisplayDate(localStartDate)} - ${formatDisplayDate(localEndDate)}`}
-              onDelete={() => {
-                setLocalStartDate(format(DEFAULT_START_DATE, 'MM/dd/yyyy'));
-                setLocalEndDate(format(DEFAULT_END_DATE, 'MM/dd/yyyy'));
-              }}
-              color="secondary"
-              variant="outlined"
-              deleteIcon={<CloseIcon sx={{ fontSize: '1rem' }} />}
-              sx={{
-                borderRadius: '20px',
-                height: '32px',
-                fontSize: '0.875rem',
-                '& .MuiChip-icon': {
-                  fontSize: '1rem'
-                }
-              }}
-            />
+            {selectedDateRange && (
+              <Chip
+                icon={<CalendarTodayIcon sx={{ fontSize: '1rem' }} />}
+                label={`Date Range: ${selectedDateRange.startDate.toLocaleDateString()} - ${selectedDateRange.endDate.toLocaleDateString()}`}
+                onDelete={() => setSelectedDateRange(null)}
+                sx={{
+                  borderRadius: '20px',
+                  height: '32px',
+                  fontSize: '0.875rem',
+                  backgroundColor: '#e8d5f2',
+                  color: '#7b1fa2',
+                  border: '1px solid #ce93d8',
+                  '& .MuiChip-icon': {
+                    color: '#7b1fa2',
+                    fontSize: '1rem'
+                  },
+                  '& .MuiChip-deleteIcon': {
+                    color: '#7b1fa2',
+                    fontSize: '1rem'
+                  }
+                }}
+                deleteIcon={<CloseIcon sx={{ fontSize: '1rem' }} />}
+              />
+            )}
           </Box>
         </CardContent>
       </Card>
@@ -866,8 +1549,12 @@ export function Financials() {
             <strong>Data loaded:</strong> {currentFinancialData.fileName} | 
             <strong> Location:</strong> {currentFinancialLocation} | 
             <strong> Metrics:</strong> {table5Data.length} available
-            {' | '}
-            <strong> Date Range:</strong> {formatDisplayDate(localStartDate)} - {formatDisplayDate(localEndDate)}
+            {selectedDateRange && (
+              <>
+                {' | '}
+                <strong> Date Range:</strong> {selectedDateRange.startDate.toLocaleDateString()} - {selectedDateRange.endDate.toLocaleDateString()}
+              </>
+            )}
           </Typography>
         </Alert>
       )}
@@ -903,93 +1590,16 @@ export function Financials() {
           
           {/* Stats Grid - Two Rows - REDUCED SPACING */}
           {!isLoading && !loading && (
-            <Grid container spacing={1}> {/* Reduced spacing from 1.5 to 1 */}
-              {/* First Row - 4 items */}
-              {statsData.slice(0, 4).map((stat, index) => (
-                <Grid item xs={6} sm={3} key={index}>
-                  <Card 
-                    elevation={1} 
-                    sx={{ 
-                      p: 1, // Reduced padding from p: 1.5 to p: 1
-                      textAlign: 'center',
-                      height: '100%',
-                      backgroundColor: '#ffffff',
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: 3,
-                      }
-                    }}
-                  >
-                    <Typography 
-                      sx={{ 
-                        color: '#1976d2', 
-                        fontWeight: 500,
-                        fontSize: '0.75rem', // Reduced font size
-                        mb: 0.25 // Reduced margin
-                      }}
-                    >
-                      {stat.label}
-                    </Typography>
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
-                        fontWeight: 600,
-                        color: '#263238',
-                        mb: 0.25, // Reduced margin
-                        fontSize: '1.1rem' // Reduced font size
-                      }}
-                    >
-                      {stat.value}
-                    </Typography>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      mb: 0.25,
-                      gap: 0.5
-                    }}>
-                      {stat.changeDirection && (
-                        <span style={{ 
-                          color: stat.changeColor, 
-                          fontSize: '10px', // Reduced font size
-                          fontWeight: 'bold'
-                        }}>
-                          {stat.changeDirection === 'up' ? '▲' : '▼'}
-                        </span>
-                      )}
-                      <Typography 
-                        sx={{ 
-                          color: stat.changeColor || '#1976d2',
-                          fontSize: '0.75rem', // Reduced font size
-                          fontWeight: 500
-                        }}
-                      >
-                        {stat.bottomChange}
-                      </Typography>
-                    </Box>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        color: '#757575',
-                        fontSize: '0.65rem' // Reduced font size
-                      }}
-                    >
-                      {stat.bottomLabel}
-                    </Typography>
-                  </Card>
-                </Grid>
-              ))}
-              
-              {/* Second Row - 3 items centered */}
-              <Grid item xs={12}>
-                <Grid container spacing={1} justifyContent="center"> {/* Reduced spacing */}
-                  {statsData.slice(4, 7).map((stat, index) => (
-                    <Grid item xs={6} sm={4} key={index + 4}>
+            <>
+              {statsData.length > 0 ? (
+                <Grid container spacing={1}> {/* Reduced spacing from 1.5 to 1 */}
+                  {/* First Row - 4 items */}
+                  {statsData.slice(0, 4).map((stat, index) => (
+                    <Grid item xs={6} sm={3} key={index}>
                       <Card 
                         elevation={1} 
                         sx={{ 
-                          p: 1, // Reduced padding
+                          p: 1, // Reduced padding from p: 1.5 to p: 1
                           textAlign: 'center',
                           height: '100%',
                           backgroundColor: '#ffffff',
@@ -1005,7 +1615,7 @@ export function Financials() {
                             color: '#1976d2', 
                             fontWeight: 500,
                             fontSize: '0.75rem', // Reduced font size
-                            mb: 0.25
+                            mb: 0.25 // Reduced margin
                           }}
                         >
                           {stat.label}
@@ -1015,7 +1625,7 @@ export function Financials() {
                           sx={{ 
                             fontWeight: 600,
                             color: '#263238',
-                            mb: 0.25,
+                            mb: 0.25, // Reduced margin
                             fontSize: '1.1rem' // Reduced font size
                           }}
                         >
@@ -1059,14 +1669,107 @@ export function Financials() {
                       </Card>
                     </Grid>
                   ))}
+                  
+                  {/* Second Row - 3 items centered */}
+                  <Grid item xs={12}>
+                    <Grid container spacing={1} justifyContent="center"> {/* Reduced spacing */}
+                      {statsData.slice(4, 7).map((stat, index) => (
+                        <Grid item xs={6} sm={4} key={index + 4}>
+                          <Card 
+                            elevation={1} 
+                            sx={{ 
+                              p: 1, // Reduced padding
+                              textAlign: 'center',
+                              height: '100%',
+                              backgroundColor: '#ffffff',
+                              transition: 'all 0.3s ease',
+                              '&:hover': {
+                                transform: 'translateY(-2px)',
+                                boxShadow: 3,
+                              }
+                            }}
+                          >
+                            <Typography 
+                              sx={{ 
+                                color: '#1976d2', 
+                                fontWeight: 500,
+                                fontSize: '0.75rem', // Reduced font size
+                                mb: 0.25
+                              }}
+                            >
+                              {stat.label}
+                            </Typography>
+                            <Typography 
+                              variant="h6" 
+                              sx={{ 
+                                fontWeight: 600,
+                                color: '#263238',
+                                mb: 0.25,
+                                fontSize: '1.1rem' // Reduced font size
+                              }}
+                            >
+                              {stat.value}
+                            </Typography>
+                            <Box sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              mb: 0.25,
+                              gap: 0.5
+                            }}>
+                              {stat.changeDirection && (
+                                <span style={{ 
+                                  color: stat.changeColor, 
+                                  fontSize: '10px', // Reduced font size
+                                  fontWeight: 'bold'
+                                }}>
+                                  {stat.changeDirection === 'up' ? '▲' : '▼'}
+                                </span>
+                              )}
+                              <Typography 
+                                sx={{ 
+                                  color: stat.changeColor || '#1976d2',
+                                  fontSize: '0.75rem', // Reduced font size
+                                  fontWeight: 500
+                                }}
+                              >
+                                {stat.bottomChange}
+                              </Typography>
+                            </Box>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                color: '#757575',
+                                fontSize: '0.65rem' // Reduced font size
+                              }}
+                            >
+                              {stat.bottomLabel}
+                            </Typography>
+                          </Card>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </Grid>
                 </Grid>
-              </Grid>
-            </Grid>
+              ) : (
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  py: 4,
+                  color: '#666'
+                }}>
+                  <Typography variant="body1">
+                    No financial metrics available. Please upload data and apply filters.
+                  </Typography>
+                </Box>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* Tabs */}
+      {/* Tabs - Updated with new Comprehensive Dashboard tab */}
       <Card sx={{ borderRadius: 2 }} elevation={3}>
         <Tabs 
           value={tabValue} 
@@ -1085,6 +1788,7 @@ export function Financials() {
         >
           <Tab label="Dashboard" />
           <Tab label="Detailed Analysis" />
+          <Tab label="Comprehensive View" />
         </Tabs>
 
         <TabPanel value={tabValue} index={0}>
@@ -1136,35 +1840,14 @@ export function Financials() {
             )}
           </Box>
         </TabPanel>
-      </Card>
 
-      {/* Date Range Picker Dialog - Added to match FilterSection */}
-      <Dialog
-        open={isDateRangeOpen}
-        onClose={() => setIsDateRangeOpen(false)}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogTitle>Select Date Range</DialogTitle>
-        <DialogContent>
-          <DateRangeSelector
-            initialState={[
-              {
-                startDate: selectedRange.startDate,
-                endDate: selectedRange.endDate,
-                key: 'selection'
-              }
-            ]}
-            onSelect={handleDateRangeSelect}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setIsDateRangeOpen(false)}>Cancel</Button>
-          <Button onClick={applyDateRange} variant="contained" color="primary">
-            Set Date Range
-          </Button>
-        </DialogActions>
-      </Dialog>
+        {/* NEW: Comprehensive Financial Dashboard Tab */}
+        <TabPanel value={tabValue} index={2}>
+          <Box>
+            <ComprehensiveFinancialDashboard financialData={currentTableData} />
+          </Box>
+        </TabPanel>
+      </Card>
     </Box>
   );
 }
