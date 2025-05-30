@@ -3,7 +3,7 @@ import io
 from typing import Union
 import pandas as pd
 # from pmix_dashboard.pmix_utils import overview_tables, detailed_analysis_tables
-from sales_split_dashboard.sales_split_utils import create_sales_pivot_tables, sales_analysis_tables
+from sales_split_dashboard.sales_split_utils import create_sales_pivot_tables, sales_analysis_tables, create_sales_overview_tables
 import numpy as np
 
 def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', start_date=None, end_date=None):
@@ -139,6 +139,7 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
     print("pivot_table i am here in sales split processor", "\n", pivot_table.head())
     # p2 = detailed_analysis_tables(df, location_filter=location_filter, order_date_filter=order_date_filter, dining_option_filter=dining_option_filter, menu_item_filter=menu_item_filter)
     
+    sales_overview_analysis = create_sales_overview_tables(df, location_filter='All', start_date=None, end_date=None)
 
     analysis = sales_analysis_tables(df, location_filter=location, start_date=start_date, end_date=end_date)
     
@@ -158,6 +159,10 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
     salesByDayOfWeek = analysis['sales_by_day']
     salesByTimeOfDay = analysis['sales_by_time'] #value
      
+    sales_by_day_table = sales_overview_analysis['sales_by_day_table']
+    sales_by_category_table = sales_overview_analysis['sales_by_category_table']
+    category_comparison_table = sales_overview_analysis['category_comparison_table']
+    thirteen_week_category_table = sales_overview_analysis['thirteen_week_category_table']
     
  
-    return pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay, categories, locations
+    return sales_by_day_table, sales_by_category_table, category_comparison_table, thirteen_week_category_table, pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay, categories, locations

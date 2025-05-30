@@ -664,7 +664,6 @@ export default function ProductMixDashboard() {
             selectedMenuItems.length > 0 ||
             selectedCategories.length > 0) && (
             <Box sx={{ mt: 2 }}>
-          
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                 {selectedLocations.length > 0 && (
                   <Chip
@@ -775,8 +774,8 @@ export default function ProductMixDashboard() {
                 },
               }}
             >
-              <Tab label="Server Performance" />
-              <Tab label="Menu Analysis" />
+              <Tab label="Performance" />
+              {/* <Tab label="Menu Analysis" /> */}
             </Tabs>
 
             {/* Server Performance Tab */}

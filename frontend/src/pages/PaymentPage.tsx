@@ -760,7 +760,7 @@ export default function PaymentPage() {
         Choose your preferred payment method
       </Typography>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={4}>
         <Grid item xs={12} md={4}>
           <PaymentMethodCard
             selected={paymentMethod === "creditCard"}
@@ -850,7 +850,7 @@ export default function PaymentPage() {
           </PaymentMethodCard>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        {/* <Grid item xs={12} md={4}>
           <PaymentMethodCard
             selected={paymentMethod === "invoice"}
             onClick={() => setPaymentMethod("invoice")}
@@ -906,9 +906,9 @@ export default function PaymentPage() {
               </Box>
             )}
           </PaymentMethodCard>
-        </Grid>
+        </Grid> */}
 
-        <Grid item xs={12} md={4}>
+        {/* <Grid item xs={12} md={4}>
           <PaymentMethodCard
             selected={paymentMethod === "paypal"}
             onClick={() => setPaymentMethod("paypal")}
@@ -956,7 +956,7 @@ export default function PaymentPage() {
               </Box>
             )}
           </PaymentMethodCard>
-        </Grid>
+        </Grid> */}
       </Grid>
     </Box>
   );
