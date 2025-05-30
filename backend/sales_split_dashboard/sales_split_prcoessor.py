@@ -139,7 +139,23 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
     print("pivot_table i am here in sales split processor", "\n", pivot_table.head())
     # p2 = detailed_analysis_tables(df, location_filter=location_filter, order_date_filter=order_date_filter, dining_option_filter=dining_option_filter, menu_item_filter=menu_item_filter)
     
-    sales_overview_analysis = create_sales_overview_tables(df, location_filter='All', start_date=None, end_date=None)
+        
+    # Get the latest date from your dataframe
+    current_date = df['Date'].max()
+
+    # Calculate start date as 28 days before the end date
+    start_date_sample = current_date - pd.Timedelta(days=28)
+
+    # Adjust start_date to the previous Monday (weekday 0 = Monday)
+    days_since_monday = start_date_sample.weekday()  # 0=Monday, 1=Tuesday, ..., 6=Sunday
+    start_date_sample = start_date_sample - pd.Timedelta(days=days_since_monday)
+
+    end_date_sample =  start_date_sample + pd.Timedelta(days=27)
+    # Convert to string format
+    end_date_str = end_date_sample.strftime('%Y-%m-%d')
+    start_date_str = start_date_sample.strftime('%Y-%m-%d')
+    
+    sales_overview_analysis = create_sales_overview_tables(df, location_filter='All', start_date=start_date_str, end_date=end_date_str)
 
     analysis = sales_analysis_tables(df, location_filter=location, start_date=start_date, end_date=end_date)
     
