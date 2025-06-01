@@ -34,7 +34,39 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
   // Use provided initialState or default
   const [state, setState] = useState(initialState || defaultState);
 
-  // Define static ranges - UPDATED with new week options
+  // Helper function to get the most recent Monday (or today if today is Monday)
+  const getMostRecentMonday = (date: Date): Date => {
+    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    const daysFromLastMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday becomes 6, others are days since Monday
+    return addDays(date, -daysFromLastMonday);
+  };
+
+  // Helper function to create week-based ranges that end on Monday
+  const createWeekBasedRange = (totalDays: number) => {
+    return () => {
+      const today = new Date();
+      
+      // Calculate the original date range
+      const originalStartDate = addDays(today, -(totalDays - 1)); // -1 because we include today
+      
+      // Find the most recent Monday
+      const lastMonday = getMostRecentMonday(today);
+      
+      // Calculate how many days we're losing by ending on Monday instead of today
+      const dayOfWeek = today.getDay();
+      const daysLost = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Days from Monday to today
+      
+      // Extend the start date by the number of days lost
+      const adjustedStartDate = addDays(originalStartDate, -daysLost);
+      
+      return {
+        startDate: adjustedStartDate,
+        endDate: lastMonday
+      };
+    };
+  };
+
+  // Define static ranges - UPDATED with week-end adjustment
   const staticRanges = createStaticRanges([
     {
       label: 'Today',
@@ -52,10 +84,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
     },
     {
       label: 'Last 7 Days',
-      range: () => ({
-        startDate: addDays(new Date(), -6),
-        endDate: new Date()
-      })
+      range: createWeekBasedRange(7)
     },
     {
       label: 'Last 30 Days',
@@ -64,29 +93,20 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
         endDate: new Date()
       })
     },
-    // NEW: Last 4 weeks (28 days)
+    // UPDATED: Last 4 weeks with Monday adjustment
     {
       label: 'Last 4 Weeks',
-      range: () => ({
-        startDate: addDays(new Date(), -27), // 28 days including today
-        endDate: new Date()
-      })
+      range: createWeekBasedRange(28) // 4 weeks * 7 days
     },
-    // NEW: Last 8 weeks (56 days)
+    // UPDATED: Last 8 weeks with Monday adjustment
     {
       label: 'Last 8 Weeks',
-      range: () => ({
-        startDate: addDays(new Date(), -55), // 56 days including today
-        endDate: new Date()
-      })
+      range: createWeekBasedRange(56) // 8 weeks * 7 days
     },
-    // NEW: Last 13 weeks (91 days)
+    // UPDATED: Last 13 weeks with Monday adjustment
     {
       label: 'Last 13 Weeks',
-      range: () => ({
-        startDate: addDays(new Date(), -90), // 91 days including today
-        endDate: new Date()
-      })
+      range: createWeekBasedRange(91) // 13 weeks * 7 days
     },
     {
       label: 'This Month',
@@ -124,7 +144,8 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
           endDate: lastWeekEnd
         };
       }
-    }
+    },
+  
   ]);
 
   // Handle date range selection
@@ -160,6 +181,9 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
       '& .rdrStaticRangeSelected': {
         backgroundColor: '#1976d2',
         color: 'white'
+      },
+      '& .rdrStaticRangeLabel': {
+        fontSize: '14px'
       }
     }}>
       <DateRangePicker

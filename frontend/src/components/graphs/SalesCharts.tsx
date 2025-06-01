@@ -33,9 +33,12 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
   dateRangeType, 
   height = 250 
 }) => {
-  // Custom tooltip formatter
+  // UPDATED: Custom tooltip that shows both sales and orders on hover
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      // Get the original data point to access orders information
+      const dataPoint = payload[0]?.payload;
+      
       return (
         <div style={{
           backgroundColor: '#fff',
@@ -45,17 +48,19 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
           boxShadow: '0 2px 5px rgba(0,0,0,0.15)'
         }}>
           <p style={{ margin: 0, fontWeight: 'bold' }}>{`${label}`}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} style={{ margin: 0, color: entry.color }}>
-              {entry.name === 'Orders' 
-                ? `${entry.name}: ${entry.value}` 
-                : `${entry.name}: $${parseFloat(entry.value).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  })}`
-              }
+          {/* Always show sales */}
+          <p style={{ margin: 0, color: '#4B79FF' }}>
+            {`Sales: $${parseFloat(dataPoint?.Sales || payload[0]?.value || 0).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2
+            })}`}
+          </p>
+          {/* Show orders if available in data */}
+          {dataPoint?.Orders !== undefined && (
+            <p style={{ margin: 0, color: '#FF6B6B' }}>
+              {`Orders: ${dataPoint.Orders}`}
             </p>
-          ))}
+          )}
         </div>
       );
     }
@@ -119,7 +124,7 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
     );
   };
 
-  // Render dual-axis chart for sales and orders
+  // UPDATED: Modified dual-axis chart to only show sales bars but keep orders data for tooltip
   const renderDualAxisChart = (data: any[], dataKey: string, chartHeight = 250) => {
     const safeData = Array.isArray(data) ? data : [];
     
@@ -142,38 +147,29 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
             tick={{ fontSize: 12 }}
           />
           <YAxis
-            yAxisId="sales"
             tickCount={5}
             tick={{ fontSize: 12 }}
             tickFormatter={formatCurrency}
             domain={[0, 'auto']}
             axisLine={{ stroke: '#E0E0E0' }}
           />
-          <YAxis
-            yAxisId="orders"
-            orientation="right"
-            tickCount={5}
-            tick={{ fontSize: 12 }}
-            tickFormatter={formatOrders}
-            domain={[0, 'auto']}
-            axisLine={{ stroke: '#E0E0E0' }}
-          />
           <Tooltip content={<CustomTooltip />} />
-          <Legend />
+          {/* UPDATED: Removed Legend since we're only showing sales bars */}
+          {/* Only show blue sales bars - orders data still available in tooltip */}
           <Bar 
             dataKey="Sales" 
-            yAxisId="sales"
             fill="#4B79FF" 
             name="Sales"
             radius={[4, 4, 0, 0]}
           />
-          <Bar 
+          {/* REMOVED: Red orders bar */}
+          {/* <Bar 
             dataKey="Orders" 
             yAxisId="orders"
             fill="#FF6B6B" 
             name="Orders"
             radius={[4, 4, 0, 0]}
-          />
+          /> */}
         </BarChart>
       </ResponsiveContainer>
     );
@@ -271,7 +267,7 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
   // Render the charts with data
   return (
     <Box sx={chartContainerStyle} className="sales-charts-root">
-      {/* Sales by Week Chart */}
+      {/* Sales by Week Chart - UPDATED: Only shows blue bars */}
       {hasWeeklyData && (
         <Card sx={chartCardStyle}>
           <Box sx={chartHeaderStyle}>
@@ -287,7 +283,7 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
       
       {/* Two-column layout for day of week and time of day */}
       <Box sx={chartRowStyle}>
-        {/* Day of Week Chart */}
+        {/* Day of Week Chart - UPDATED: Only shows blue bars */}
         {hasDayOfWeekData && (
           <Box sx={{...chartColumnStyle, flex: '1 1 50%'}}>
             <Card sx={chartCardStyle}>
@@ -303,7 +299,7 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
           </Box>
         )}
         
-        {/* Time of Day Chart */}
+        {/* Time of Day Chart - UPDATED: Only shows blue bars */}
         {hasTimeRangeData && timeRangeData.length > 0 && (
           <Box sx={{...chartColumnStyle, flex: '1 1 50%'}}>
             <Card sx={chartCardStyle}>

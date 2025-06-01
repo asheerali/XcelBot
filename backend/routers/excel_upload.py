@@ -605,6 +605,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         if request.dashboard == "Sales Split":
             print("Dashboard type: Sales Split / Product Mix Dashboard")
             
+            print("i am here in excel upload printing the request of sales split", request)
             excel_data_copy = io.BytesIO(file_content)
             if request.location == "Multiple Locations":
                 location_filter = "All"

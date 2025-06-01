@@ -1129,6 +1129,7 @@ export function ExcelImport() {
                 {fileProcessed && files.length > 0 ? (
                   <Fade in timeout={600}>
                     <Box>
+                      
                       <SalesSplitDashboard
                         tableData={reduxTableData}
                         selectedLocation={selectedLocation}
@@ -1179,7 +1180,7 @@ export function ExcelImport() {
                             sx={{ mr: 2, color: "primary.main", fontSize: 28 }}
                           />
                           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                            Sales Analytics
+                            Sales Analytics ss
                             {/* {selectedLocation ? `for ${selectedLocation}` : ''} */}
                           </Typography>
                         </Box>

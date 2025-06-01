@@ -1,4 +1,3 @@
-// src/pages/ExcelUploadPage.tsx - Updated with multiple location selection and reduced drag/drop height
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
@@ -37,6 +36,8 @@ import {
   Grow,
   useTheme,
   alpha,
+  Menu,
+  ListItemButton,
 } from "@mui/material";
 import { styled, keyframes } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
@@ -66,6 +67,13 @@ import BusinessIcon from "@mui/icons-material/Business";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
+import StarIcon from "@mui/icons-material/Star";
+import AutoGraphIcon from "@mui/icons-material/AutoGraph";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import PieChartIcon from "@mui/icons-material/PieChart";
+import ShowChartIcon from "@mui/icons-material/ShowChart";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import LaunchIcon from "@mui/icons-material/Launch";
 
 // Import Redux hooks
 import { useAppDispatch } from "../typedHooks";
@@ -111,6 +119,15 @@ const pulse = keyframes`
   }
 `;
 
+const shimmer = keyframes`
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+`;
+
 // Styled components
 const PageContainer = styled(Container)(({ theme }) => ({
   minHeight: "100vh",
@@ -146,33 +163,48 @@ const HeaderCard = styled(Card)(({ theme }) => ({
   },
 }));
 
-const DashboardCard = styled(Card, {
+// Modern Dashboard Card with sleek design similar to the image
+const ModernDashboardCard = styled(Card, {
   shouldForwardProp: (prop) => prop !== "selected",
 })<{ selected?: boolean }>(({ theme, selected }) => ({
-  height: "80%",
+  height: "160px",
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
+  justifyContent: "center",
   textAlign: "center",
-  padding: theme.spacing(2),
-  borderRadius: theme.spacing(2),
+  padding: theme.spacing(2.5),
+  borderRadius: theme.spacing(2.5),
   cursor: "pointer",
   transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
   position: "relative",
   overflow: "hidden",
   border: selected
-    ? `3px solid ${theme.palette.primary.main}`
-    : `1px solid ${theme.palette.divider}`,
+    ? `2px solid ${theme.palette.primary.main}`
+    : `1px solid ${alpha(theme.palette.divider, 0.08)}`,
   background: selected
-    ? `linear-gradient(135deg, ${alpha(
-        theme.palette.primary.main,
-        0.1
-      )} 0%, ${alpha(theme.palette.primary.light, 0.05)} 100%)`
+    ? `linear-gradient(135deg, 
+        ${alpha(theme.palette.primary.main, 0.08)} 0%, 
+        ${alpha(theme.palette.background.paper, 0.95)} 100%)`
     : theme.palette.background.paper,
+  boxShadow: selected
+    ? `0 8px 32px ${alpha(theme.palette.primary.main, 0.15)}, 
+       0 0 0 1px ${alpha(theme.palette.primary.main, 0.1)}`
+    : "0 2px 12px rgba(0, 0, 0, 0.04)",
   "&:hover": {
     transform: "translateY(-4px)",
-    boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.15)}`,
+    boxShadow: `0 12px 40px ${alpha(theme.palette.primary.main, 0.15)}, 
+                0 0 0 1px ${alpha(theme.palette.primary.main, 0.1)}`,
+    border: `2px solid ${theme.palette.primary.main}`,
+    background: `linear-gradient(135deg, 
+      ${alpha(theme.palette.primary.main, 0.06)} 0%, 
+      ${alpha(theme.palette.background.paper, 0.98)} 100%)`,
+    "& .dashboard-icon": {
+      transform: "scale(1.1)",
+      color: theme.palette.primary.main,
+    },
   },
+  // Clean top accent for selected state
   "&::before": selected
     ? {
         content: '""',
@@ -180,28 +212,48 @@ const DashboardCard = styled(Card, {
         top: 0,
         left: 0,
         right: 0,
-        height: "4px",
-        background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+        height: "3px",
+        background: `linear-gradient(90deg, 
+          ${theme.palette.primary.main}, 
+          ${theme.palette.primary.light})`,
       }
     : {},
 }));
 
-const DashboardIconAvatar = styled(Avatar)(({ theme }) => ({
+const ModernIconAvatar = styled(Avatar)(({ theme }) => ({
   width: 60,
   height: 60,
   marginBottom: theme.spacing(1.5),
-  background: `linear-gradient(135deg, ${alpha(
-    theme.palette.primary.main,
-    0.1
-  )} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
-  border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+  position: "relative",
+  zIndex: 2,
+  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
+  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  "&::before": {
+    content: '""',
+    position: "absolute",
+    top: "-1px",
+    left: "-1px",
+    right: "-1px",
+    bottom: "-1px",
+    background: "linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent)",
+    borderRadius: "50%",
+    zIndex: -1,
+    opacity: 0,
+    transition: "opacity 0.3s ease",
+  },
+  ".dashboard-card:hover &": {
+    boxShadow: "0 6px 24px rgba(0, 0, 0, 0.1)",
+  },
+  ".dashboard-card:hover &::before": {
+    opacity: 1,
+  },
 }));
 
-// UPDATED: Reduced height of the drag and drop area
 const ModernDropZone = styled(Paper)(({ theme }) => ({
   border: `2px dashed ${theme.palette.primary.main}`,
   borderRadius: theme.spacing(2),
-  padding: theme.spacing(4), // REDUCED from theme.spacing(8) to theme.spacing(4)
+  padding: theme.spacing(4),
   textAlign: "center",
   cursor: "pointer",
   transition: "all 0.3s ease",
@@ -257,97 +309,85 @@ const SelectedBadge = styled(Chip)(({ theme }) => ({
   position: "absolute",
   top: theme.spacing(1),
   right: theme.spacing(1),
-  background: theme.palette.primary.main,
+  background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
   color: "white",
   fontWeight: 600,
   fontSize: "0.75rem",
+  zIndex: 3,
+  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
 }));
 
-// Dashboard options with modern icons and colors - UPDATED with combination cards
+// Clean Dashboard options with simpler design
 const DASHBOARD_OPTIONS = [
   {
     value: "Sales Split and Product Mix",
     label: "Sales Split & Product Mix",
-    icon: <AnalyticsIcon />,
-    description: " ",
+    icon: <AnalyticsIcon className="dashboard-icon" />,
+    description: "Sales analysis & menu insights",
     color: "#e91e63",
-    height: "150px",
+    gradient: "linear-gradient(135deg, #e91e63 0%, #f06292 100%)",
+    height: "160px",
   },
   {
     value: "Financials and Sales Wide",
     label: "Financials & Sales Wide",
-    icon: <AssessmentIcon />,
-    description: " ",
+    icon: <AssessmentIcon className="dashboard-icon" />,
+    description: "Financial & company metrics",
     color: "#00bcd4",
-    height: "150px",
+    gradient: "linear-gradient(135deg, #00bcd4 0%, #4dd0e1 100%)",
+    height: "160px",
   },
   {
     value: "Sales Split",
     label: "Sales Split",
-    icon: <GridViewIcon />,
-    description: "",
+    icon: <PieChartIcon className="dashboard-icon" />,
+    description: "Sales category breakdown",
     color: "#4285f4",
-    height: "150px",
+    gradient: "linear-gradient(135deg, #4285f4 0%, #64b5f6 100%)",
+    height: "160px",
   },
   {
     value: "Product Mix",
     label: "Product Mix",
-    icon: <RestaurantIcon />,
-    description: "",
+    icon: <RestaurantIcon className="dashboard-icon" />,
+    description: "Menu performance analysis",
     color: "#689f38",
-    height: "150px",
+    gradient: "linear-gradient(135deg, #689f38 0%, #8bc34a 100%)",
+    height: "160px",
   },
   {
     value: "Financials",
     label: "Financials",
-    icon: <AttachMoneyIcon />,
-    description: "",
+    icon: <AttachMoneyIcon className="dashboard-icon" />,
+    description: "Financial performance",
     color: "#9c27b0",
-    height: "150px",
+    gradient: "linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%)",
+    height: "160px",
   },
   {
     value: "Sales Wide",
     label: "Companywide Sales",
-    icon: <TrendingUpIcon />,
-    description: "",
+    icon: <ShowChartIcon className="dashboard-icon" />,
+    description: "Enterprise-wide insights",
     color: "#f57c00",
-    height: "150px",
+    gradient: "linear-gradient(135deg, #f57c00 0%, #ffb74d 100%)",
+    height: "160px",
   },
-];
-
-// List of popular US cities
-const US_CITIES = [
-  "Multiple Locations",
-  "Midtown East",
-  "Lenox Hill",
-  "Hell's Kitchen",
-  "Union Square",
-  "Flatiron",
-  "Williamsburg",
-  "New York",
-  "Los Angeles",
-  "Chicago",
-  "Houston",
-  "Phoenix",
-  "Philadelphia",
-  "San Antonio",
-  "San Diego",
-  "Dallas",
 ];
 
 // File status type
 type FileStatus = "pending" | "uploading" | "success" | "error";
 
-// File info type with location and dashboard
+// File info type - UPDATED: Removed locations, added extracted fileName
 interface FileInfo {
   file: File;
   status: FileStatus;
   error?: string;
   progress: number;
-  locations: string[]; // UPDATED: Changed from single location to multiple locations
   dashboard: string;
   data?: any;
   categories?: string[];
+  extractedFileName?: string; // NEW: Store the filename from backend response
 }
 
 // Helper function to extract categories from response data
@@ -437,25 +477,13 @@ const ExcelUploadPage: React.FC = () => {
   const [files, setFiles] = useState<FileInfo[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
-  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
-  const [currentEditingIndex, setCurrentEditingIndex] = useState<number | null>(
-    null
-  );
-  const [locationInput, setLocationInput] = useState<string[]>([]); // UPDATED: Changed to array
-  const [locationError, setLocationError] = useState("");
   const [selectedDashboard, setSelectedDashboard] = useState("Financials");
-
-  // UPDATED: Changed to multiple locations
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([
-    "Midtown East",
-  ]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  // UPDATED: Handle multiple location changes
   const handleDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
@@ -476,23 +504,14 @@ const ExcelUploadPage: React.FC = () => {
           file,
           status: "pending" as FileStatus,
           progress: 0,
-          locations: selectedLocations.length > 0 ? [...selectedLocations] : [], // UPDATED: Use selected locations
           dashboard: selectedDashboard,
         }));
 
         setFiles((prevFiles) => [...prevFiles, ...newFiles]);
         setGeneralError(null);
-
-        // Show location dialog if no locations selected
-        if (selectedLocations.length === 0 && newFiles.length > 0) {
-          setCurrentEditingIndex(files.length);
-          setLocationInput([]);
-          setLocationError("");
-          setIsLocationDialogOpen(true);
-        }
       }
     },
-    [files.length, selectedLocations, selectedDashboard] // UPDATED: Use selectedLocations
+    [selectedDashboard]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -505,7 +524,6 @@ const ExcelUploadPage: React.FC = () => {
     setIsDragging(false);
   }, []);
 
-  // UPDATED: Handle file change with multiple locations
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files.length > 0) {
@@ -523,27 +541,18 @@ const ExcelUploadPage: React.FC = () => {
           file,
           status: "pending" as FileStatus,
           progress: 0,
-          locations: selectedLocations.length > 0 ? [...selectedLocations] : [], // UPDATED: Use selected locations
           dashboard: selectedDashboard,
         }));
 
         setFiles((prevFiles) => [...prevFiles, ...newFiles]);
         setGeneralError(null);
 
-        // Show location dialog if no locations selected
-        if (selectedLocations.length === 0 && newFiles.length > 0) {
-          setCurrentEditingIndex(files.length);
-          setLocationInput([]);
-          setLocationError("");
-          setIsLocationDialogOpen(true);
-        }
-
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }
       }
     },
-    [files.length, selectedLocations, selectedDashboard] // UPDATED: Use selectedLocations
+    [selectedDashboard]
   );
 
   const handleDashboardChange = (dashboardType: string) => {
@@ -559,22 +568,8 @@ const ExcelUploadPage: React.FC = () => {
     });
   };
 
-  // UPDATED: Upload file for each location
+  // UPDATED: Upload file with filename extraction
   const uploadFile = async (fileInfo: FileInfo, index: number) => {
-    if (!fileInfo.locations || fileInfo.locations.length === 0) {
-      setFiles((prevFiles) => {
-        const updatedFiles = [...prevFiles];
-        updatedFiles[index] = {
-          ...updatedFiles[index],
-          status: "error",
-          error: "At least one location is required",
-          progress: 0,
-        };
-        return updatedFiles;
-      });
-      return false;
-    }
-
     try {
       setFiles((prevFiles) => {
         const updatedFiles = [...prevFiles];
@@ -589,23 +584,12 @@ const ExcelUploadPage: React.FC = () => {
       const base64File = await toBase64(fileInfo.file);
       const base64Content = base64File.split(",")[1];
 
-      // Upload file for each selected location
-      const uploadPromises = fileInfo.locations.map(async (location) => {
-        dispatch(
-          setExcelFile({
-            fileName: fileInfo.file.name,
-            fileContent: base64Content,
-            location: location,
-          })
-        );
-
-        return axios.post(API_URL, {
+      dispatch(
+        setExcelFile({
           fileName: fileInfo.file.name,
           fileContent: base64Content,
-          location: location,
-          dashboard: fileInfo.dashboard,
-        });
-      });
+        })
+      );
 
       let progress = 0;
       const progressInterval = setInterval(() => {
@@ -624,156 +608,177 @@ const ExcelUploadPage: React.FC = () => {
         }
       }, 300);
 
-      // Wait for all uploads to complete
-      const responses = await Promise.all(uploadPromises);
+      const response = await axios.post(API_URL, {
+        fileName: fileInfo.file.name,
+        fileContent: base64Content,
+        dashboard: fileInfo.dashboard,
+      });
+
+      console.log("📤 sending response:", fileInfo);
+
       clearInterval(progressInterval);
 
-      // Process responses for each location
-      responses.forEach((response, locationIndex) => {
-        const location = fileInfo.locations[locationIndex];
+      if (response.data) {
+        console.log("📨 Received response data:", response.data);
 
-        if (response.data) {
-          console.log(
-            `📨 Received response data for ${location}:`,
-            response.data
-          );
+        // UPDATED: Extract filename from backend response
+        let extractedFileName = fileInfo.file.name; // Default fallback
+        
+        if (Array.isArray(response.data) && response.data.length > 0) {
+          // For array responses, get fileName from first dashboard
+          extractedFileName = response.data[0]?.fileName || fileInfo.file.name;
+          console.log("🏷️ Extracted fileName from array response:", extractedFileName);
+        } else if (response.data.fileName) {
+          // For single object responses
+          extractedFileName = response.data.fileName;
+          console.log("🏷️ Extracted fileName from object response:", extractedFileName);
+        }
 
-          const extractedCategories = extractCategoriesFromData(response.data);
-          console.log("🏷️ Extracted categories:", extractedCategories);
+        const extractedCategories = extractCategoriesFromData(response.data);
+        console.log("🏷️ Extracted categories:", extractedCategories);
 
-          if (Array.isArray(response.data)) {
-            response.data.forEach((dashboardData) => {
-              const dashboardName = dashboardData.dashboardName?.trim();
-              const enhancedDashboardData = {
-                ...dashboardData,
-                categories: extractedCategories,
-              };
-
-              // Dispatch to appropriate store based on dashboard type
-              if (dashboardName === "Sales Split") {
-                dispatch(
-                  addSalesData({
-                    fileName: fileInfo.file.name,
-                    fileContent: base64Content,
-                    location: location,
-                    data: enhancedDashboardData,
-                  })
-                );
-
-                dispatch(
-                  addFileData({
-                    fileName: fileInfo.file.name,
-                    fileContent: base64Content,
-                    location: location,
-                    data: enhancedDashboardData,
-                  })
-                );
-              } else if (dashboardName === "Product Mix") {
-                dispatch(
-                  addProductMixData({
-                    fileName: fileInfo.file.name,
-                    fileContent: base64Content,
-                    location: location,
-                    data: enhancedDashboardData,
-                  })
-                );
-              } else if (dashboardName === "Financials") {
-                dispatch(
-                  addFinancialData({
-                    fileName: fileInfo.file.name,
-                    fileContent: base64Content,
-                    location: location,
-                    data: enhancedDashboardData,
-                  })
-                );
-              } else if (dashboardName === "Sales Wide") {
-                dispatch(
-                  addSalesWideData({
-                    fileName: fileInfo.file.name,
-                    fileContent: base64Content,
-                    location: location,
-                    data: enhancedDashboardData,
-                  })
-                );
-              }
-            });
-          } else {
-            const dashboardName =
-              response.data.dashboardName?.trim() || fileInfo.dashboard;
+        if (Array.isArray(response.data)) {
+          response.data.forEach((dashboardData) => {
+            const dashboardName = dashboardData.dashboardName?.trim();
             const enhancedDashboardData = {
-              ...response.data,
+              ...dashboardData,
               categories: extractedCategories,
             };
 
+            // UPDATED: Use extractedFileName from response instead of location
+            const locationFromFileName = extractedFileName.replace(/\.(xlsx|xls)$/i, '');
+
             // Dispatch to appropriate store based on dashboard type
-            if (dashboardName === "Financials") {
-              dispatch(
-                addFinancialData({
-                  fileName: fileInfo.file.name,
-                  fileContent: base64Content,
-                  location: location,
-                  data: enhancedDashboardData,
-                })
-              );
-            } else if (dashboardName === "Sales Split") {
+            if (dashboardName === "Sales Split") {
               dispatch(
                 addSalesData({
-                  fileName: fileInfo.file.name,
+                  fileName: extractedFileName,
                   fileContent: base64Content,
-                  location: location,
+                  location: locationFromFileName,
                   data: enhancedDashboardData,
                 })
               );
 
               dispatch(
                 addFileData({
-                  fileName: fileInfo.file.name,
+                  fileName: extractedFileName,
                   fileContent: base64Content,
-                  location: location,
-                  data: enhancedDashboardData,
-                })
-              );
-            } else if (dashboardName === "Sales Wide") {
-              dispatch(
-                addSalesWideData({
-                  fileName: fileInfo.file.name,
-                  fileContent: base64Content,
-                  location: location,
+                  location: locationFromFileName,
                   data: enhancedDashboardData,
                 })
               );
             } else if (dashboardName === "Product Mix") {
               dispatch(
                 addProductMixData({
-                  fileName: fileInfo.file.name,
+                  fileName: extractedFileName,
                   fileContent: base64Content,
-                  location: location,
+                  location: locationFromFileName,
+                  data: enhancedDashboardData,
+                })
+              );
+            } else if (dashboardName === "Financials") {
+              dispatch(
+                addFinancialData({
+                  fileName: extractedFileName,
+                  fileContent: base64Content,
+                  location: locationFromFileName,
+                  data: enhancedDashboardData,
+                })
+              );
+            } else if (dashboardName === "Sales Wide") {
+              dispatch(
+                addSalesWideData({
+                  fileName: extractedFileName,
+                  fileContent: base64Content,
+                  location: locationFromFileName,
                   data: enhancedDashboardData,
                 })
               );
             }
+          });
+        } else {
+          const dashboardName =
+            response.data.dashboardName?.trim() || fileInfo.dashboard;
+          const enhancedDashboardData = {
+            ...response.data,
+            categories: extractedCategories,
+          };
+
+          // UPDATED: Use extractedFileName from response instead of location
+          const locationFromFileName = extractedFileName.replace(/\.(xlsx|xls)$/i, '');
+
+          // Dispatch to appropriate store based on dashboard type
+          if (dashboardName === "Financials") {
+            dispatch(
+              addFinancialData({
+                fileName: extractedFileName,
+                fileContent: base64Content,
+                location: locationFromFileName,
+                data: enhancedDashboardData,
+              })
+            );
+          } else if (dashboardName === "Sales Split") {
+            dispatch(
+              addSalesData({
+                fileName: extractedFileName,
+                fileContent: base64Content,
+                location: locationFromFileName,
+                data: enhancedDashboardData,
+              })
+            );
+
+            dispatch(
+              addFileData({
+                fileName: extractedFileName,
+                fileContent: base64Content,
+                location: locationFromFileName,
+                data: enhancedDashboardData,
+              })
+            );
+          } else if (dashboardName === "Sales Wide") {
+            dispatch(
+              addSalesWideData({
+                fileName: extractedFileName,
+                fileContent: base64Content,
+                location: locationFromFileName,
+                data: enhancedDashboardData,
+              })
+            );
+          } else if (dashboardName === "Product Mix") {
+            dispatch(
+              addProductMixData({
+                fileName: extractedFileName,
+                fileContent: base64Content,
+                location: locationFromFileName,
+                data: enhancedDashboardData,
+              })
+            );
           }
-
-          // Update locations in Redux
-          dispatch(setLocations([location]));
-          dispatch(selectLocation(location));
         }
-      });
 
-      setFiles((prevFiles) => {
-        const updatedFiles = [...prevFiles];
-        updatedFiles[index] = {
-          ...updatedFiles[index],
-          status: "success",
-          progress: 100,
-          data: responses[0].data, // Use first response for display
-          categories: extractCategoriesFromData(responses[0].data),
-        };
-        return updatedFiles;
-      });
+        // Update locations in Redux
+        const locationFromFileName = extractedFileName.replace(/\.(xlsx|xls)$/i, '');
+        dispatch(setLocations([locationFromFileName]));
+        dispatch(selectLocation(locationFromFileName));
 
-      console.log("✅ File upload completed successfully for all locations");
-      return true;
+        setFiles((prevFiles) => {
+          const updatedFiles = [...prevFiles];
+          updatedFiles[index] = {
+            ...updatedFiles[index],
+            status: "success",
+            progress: 100,
+            data: response.data,
+            categories: extractedCategories,
+            extractedFileName: extractedFileName, // Store the extracted filename
+          };
+          return updatedFiles;
+        });
+
+        console.log("✅ File upload completed successfully");
+        return true;
+      } else {
+        throw new Error("Invalid response data");
+      }
     } catch (err) {
       console.error("Upload error:", err);
 
@@ -807,19 +812,15 @@ const ExcelUploadPage: React.FC = () => {
   };
 
   const uploadAllFiles = async () => {
-    const pendingFiles = files.filter(
-      (file) => file.status === "pending" && file.locations.length > 0
-    );
+    const pendingFiles = files.filter((file) => file.status === "pending");
 
     if (pendingFiles.length === 0) {
-      setGeneralError(
-        "No files ready for upload. Please add locations to files."
-      );
+      setGeneralError("No files ready for upload.");
       return;
     }
 
     for (let i = 0; i < files.length; i++) {
-      if (files[i].status === "pending" && files[i].locations.length > 0) {
+      if (files[i].status === "pending") {
         await uploadFile(files[i], i);
       }
     }
@@ -827,81 +828,6 @@ const ExcelUploadPage: React.FC = () => {
 
   const removeFile = (index: number) => {
     setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
-  };
-
-  const editFileLocation = (index: number) => {
-    setCurrentEditingIndex(index);
-    setLocationInput([...files[index].locations]); // UPDATED: Set array of locations
-    setLocationError("");
-    setIsLocationDialogOpen(true);
-  };
-
-  // UPDATED: Handle multiple location save with exclusion logic
-  const handleLocationSave = () => {
-    if (!locationInput || locationInput.length === 0) {
-      setLocationError("At least one location is required");
-      return;
-    }
-
-    let finalLocations = [...locationInput];
-
-    // Apply the same exclusion logic
-    if (locationInput.includes("Multiple Locations")) {
-      finalLocations = ["Multiple Locations"];
-    } else {
-      finalLocations = locationInput.filter(
-        (location) => location !== "Multiple Locations"
-      );
-    }
-
-    if (currentEditingIndex !== null) {
-      setFiles((prevFiles) => {
-        const updatedFiles = [...prevFiles];
-        updatedFiles[currentEditingIndex] = {
-          ...updatedFiles[currentEditingIndex],
-          locations: finalLocations,
-        };
-        return updatedFiles;
-      });
-    }
-
-    setIsLocationDialogOpen(false);
-    setCurrentEditingIndex(null);
-    setLocationInput([]);
-    setLocationError("");
-  };
-
-  const handleLocationCancel = () => {
-    setIsLocationDialogOpen(false);
-    setCurrentEditingIndex(null);
-    setLocationInput([]);
-    setLocationError("");
-  };
-
-  // UPDATED: Handle multiple location changes with exclusion logic
-  const handleLocationsChange = (event: any, newValue: string[]) => {
-    let filteredValue = [...newValue];
-
-    // If "Multiple Locations" is selected, remove all other locations
-    if (newValue.includes("Multiple Locations")) {
-      filteredValue = ["Multiple Locations"];
-    } else {
-      // If any other location is selected, remove "Multiple Locations"
-      filteredValue = newValue.filter(
-        (location) => location !== "Multiple Locations"
-      );
-    }
-
-    setSelectedLocations(filteredValue);
-
-    // Update all pending files with new locations
-    setFiles((prevFiles) =>
-      prevFiles.map((file) =>
-        file.status === "pending"
-          ? { ...file, locations: [...filteredValue] }
-          : file
-      )
-    );
   };
 
   const getStatusIcon = (status: FileStatus) => {
@@ -930,10 +856,33 @@ const ExcelUploadPage: React.FC = () => {
     }
   };
 
-  const viewDashboard = (fileInfo: FileInfo) => {
+  // Updated view dashboard function for two separate buttons
+  const viewDashboard = (fileInfo: FileInfo, specificDashboard?: string) => {
     if (fileInfo.data && fileInfo.status === "success") {
       const dashboardName = fileInfo.data.dashboardName || fileInfo.dashboard;
 
+      // Handle specific dashboard navigation for combination dashboards
+      if (specificDashboard) {
+        switch (specificDashboard) {
+          case "Sales Split":
+            navigate("/manage-reports");
+            break;
+          case "Product Mix":
+            navigate("/Productmix");
+            break;
+          case "Financials":
+            navigate("/Financials");
+            break;
+          case "Sales Wide":
+            navigate("/Saleswide");
+            break;
+          default:
+            navigate("/dashboard");
+        }
+        return;
+      }
+
+      // Handle single dashboards (original logic)
       switch (dashboardName) {
         case "Financials":
           navigate("/Financials");
@@ -986,41 +935,51 @@ const ExcelUploadPage: React.FC = () => {
         </HeaderCard>
       </Fade>
 
-      {/* Dashboard Type Selection & Location Settings - Combined */}
+      {/* Dashboard Type Selection - UPDATED: Removed Location Section */}
       <Grow in timeout={1000}>
         <DashboardSelectionCard sx={{ mb: 4 }}>
           <CardContent sx={{ p: 4 }}>
-            {/* Dashboard Selection */}
             <Typography
               variant="h5"
               sx={{ mb: 3, fontWeight: 600, color: "text.primary" }}
             >
-              Dashboard & Location Settings
+              Dashboard Selection
             </Typography>
 
+            {/* Modern Dashboard Cards Grid */}
             <Grid container spacing={3}>
               {DASHBOARD_OPTIONS.map((option, index) => (
-                <Grid item xs={12} sm={2} md={2} key={option.value}>
+                <Grid item xs={12} sm={6} md={4} lg={2} key={option.value}>
                   <Fade in timeout={1200 + index * 200}>
-                    <DashboardCard
+                    <ModernDashboardCard
+                      className="dashboard-card"
                       selected={selectedDashboard === option.value}
                       onClick={() => handleDashboardChange(option.value)}
-                      sx={{ height: option.height || "100%" }} // Apply height here
+                      sx={{ height: option.height || "100%" }}
                     >
                       {selectedDashboard === option.value && (
-                        <SelectedBadge label="Selected" />
+                        <SelectedBadge 
+                          label="Selected" 
+                          icon={<StarIcon sx={{ fontSize: "12px" }} />}
+                        />
                       )}
 
-                      <DashboardIconAvatar
-                        sx={{ bgcolor: alpha(option.color, 0.1) }}
+                      <ModernIconAvatar
+                        sx={{
+                          background: option.gradient,
+                          border: `3px solid ${alpha(option.color, 0.2)}`,
+                          "& .dashboard-icon": {
+                            color: "white",
+                            fontSize: 32,
+                            transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+                          }
+                        }}
                       >
-                        <Box sx={{ color: option.color, fontSize: 24 }}>
-                          {option.icon}
-                        </Box>
-                      </DashboardIconAvatar>
+                        {option.icon}
+                      </ModernIconAvatar>
 
                       <Typography
-                        variant="subtitle1"
+                        variant="h6"
                         sx={{
                           fontWeight: 600,
                           mb: 0.5,
@@ -1028,123 +987,39 @@ const ExcelUploadPage: React.FC = () => {
                             selectedDashboard === option.value
                               ? "primary.main"
                               : "text.primary",
+                          fontSize: "1rem",
+                          lineHeight: 1.2,
+                          zIndex: 2,
+                          position: "relative",
                         }}
                       >
                         {option.label}
                       </Typography>
 
                       <Typography
-                        variant="caption"
+                        variant="body2"
                         color="text.secondary"
-                        sx={{ lineHeight: 1.3 }}
+                        sx={{ 
+                          lineHeight: 1.3,
+                          fontSize: "0.875rem",
+                          zIndex: 2,
+                          position: "relative",
+                        }}
                       >
                         {option.description}
                       </Typography>
-                    </DashboardCard>
+
+                      {/* Remove shimmer effect */}
+                    </ModernDashboardCard>
                   </Fade>
                 </Grid>
               ))}
             </Grid>
-
-            {/* UPDATED: Multiple Location Settings */}
-            <Box
-              sx={{
-                mt: 4,
-                pt: 3,
-                borderTop: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
-              }}
-            >
-              <Grid container spacing={3} alignItems="center">
-                <Grid item xs={12} md={8}>
-                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                    <LocationOnIcon sx={{ mr: 1, color: "text.secondary" }} />
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ fontWeight: 500 }}
-                    >
-                      Default Locations (Multiple Selection - "Multiple
-                      Locations" excludes others)
-                    </Typography>
-                  </Box>
-
-                  {/* UPDATED: Multiple location selection with exclusion logic */}
-                  <Autocomplete
-                    multiple
-                    value={selectedLocations}
-                    onChange={handleLocationsChange}
-                    options={US_CITIES}
-                    freeSolo
-                    renderTags={(value, getTagProps) =>
-                      value.map((option, index) => (
-                        <Chip
-                          variant="outlined"
-                          label={option}
-                          {...getTagProps({ index })}
-                          sx={{ margin: "2px" }}
-                        />
-                      ))
-                    }
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        placeholder="Select or type locations"
-                        variant="outlined"
-                        sx={{
-                          "& .MuiOutlinedInput-root": {
-                            borderRadius: 2,
-                            backgroundColor: "background.paper",
-                          },
-                        }}
-                        InputProps={{
-                          ...params.InputProps,
-                          startAdornment: (
-                            <>
-                              <LocationCityIcon
-                                sx={{ mr: 1, color: "primary.main" }}
-                              />
-                              {params.InputProps.startAdornment}
-                            </>
-                          ),
-                        }}
-                      />
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12} md={4}>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{
-                      fontStyle: "italic",
-                      p: 2,
-                      backgroundColor: alpha(theme.palette.info.main, 0.05),
-                      borderRadius: 2,
-                      border: `1px solid ${alpha(
-                        theme.palette.info.main,
-                        0.1
-                      )}`,
-                    }}
-                  >
-                    {selectedLocations.length === 0
-                      ? "Select locations to apply to all new files automatically."
-                      : selectedLocations.includes("Multiple Locations")
-                      ? "Files will be processed for multiple locations. 'Multiple Locations' excludes other specific location selections."
-                      : `New files will be processed for ${
-                          selectedLocations.length
-                        } location${
-                          selectedLocations.length > 1 ? "s" : ""
-                        }. You can modify individual files after upload.`}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Box>
           </CardContent>
         </DashboardSelectionCard>
       </Grow>
 
-      {/* UPDATED: File Upload Area with reduced height */}
+      {/* File Upload Area */}
       <Grow in timeout={1600}>
         <Card sx={{ mb: 4, borderRadius: 3, overflow: "hidden" }}>
           <CardContent sx={{ p: 0 }}>
@@ -1161,9 +1036,9 @@ const ExcelUploadPage: React.FC = () => {
             >
               <CloudUploadIcon
                 sx={{
-                  fontSize: 48, // REDUCED from 64 to 48
+                  fontSize: 48,
                   color: "primary.main",
-                  mb: 1.5, // REDUCED from mb: 2 to mb: 1.5
+                  mb: 1.5,
                   animation: isDragging ? `${pulse} 0.5s infinite` : "none",
                 }}
               />
@@ -1173,8 +1048,6 @@ const ExcelUploadPage: React.FC = () => {
               </Typography>
 
               <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                {" "}
-                {/* REDUCED from mb: 3 to mb: 2 */}
                 or click to browse files
               </Typography>
 
@@ -1182,7 +1055,7 @@ const ExcelUploadPage: React.FC = () => {
                 variant="contained"
                 startIcon={<UploadFileIcon />}
                 endIcon={<ArrowForwardIcon />}
-                sx={{ mb: 1 }} // REDUCED from mb: 2 to mb: 1
+                sx={{ mb: 1 }}
               >
                 Browse Files
               </ProcessButton>
@@ -1237,9 +1110,7 @@ const ExcelUploadPage: React.FC = () => {
                 <ProcessButton
                   variant="contained"
                   onClick={uploadAllFiles}
-                  disabled={files.every(
-                    (f) => f.status !== "pending" || f.locations.length === 0
-                  )}
+                  disabled={files.every((f) => f.status !== "pending")}
                   startIcon={<CloudUploadIcon />}
                   endIcon={<ArrowForwardIcon />}
                 >
@@ -1272,6 +1143,25 @@ const ExcelUploadPage: React.FC = () => {
                                   {fileInfo.file.name}
                                 </Typography>
 
+                                {/* UPDATED: Show extracted filename from backend */}
+                                {fileInfo.extractedFileName && 
+                                 fileInfo.extractedFileName !== fileInfo.file.name && (
+                                  <Typography
+                                    variant="body2"
+                                    sx={{ 
+                                      color: "primary.main", 
+                                      fontStyle: "italic",
+                                      mb: 1,
+                                      background: alpha(theme.palette.primary.main, 0.1),
+                                      padding: "4px 8px",
+                                      borderRadius: 1,
+                                      display: "inline-block"
+                                    }}
+                                  >
+                                    Backend filename: {fileInfo.extractedFileName}
+                                  </Typography>
+                                )}
+
                                 <Stack
                                   direction="row"
                                   spacing={1}
@@ -1303,7 +1193,7 @@ const ExcelUploadPage: React.FC = () => {
                                     )}
                                 </Stack>
 
-                                {/* UPDATED: Display multiple locations */}
+                                {/* UPDATED: Show location derived from filename */}
                                 <Box
                                   sx={{
                                     display: "flex",
@@ -1313,65 +1203,15 @@ const ExcelUploadPage: React.FC = () => {
                                   }}
                                 >
                                   <PlaceIcon fontSize="small" color="action" />
-                                  {fileInfo.locations.length === 0 ? (
-                                    <Typography
-                                      variant="body2"
-                                      color="text.secondary"
-                                    >
-                                      No locations set
-                                    </Typography>
-                                  ) : fileInfo.locations.length === 1 ? (
-                                    <Typography
-                                      variant="body2"
-                                      color="text.secondary"
-                                    >
-                                      {fileInfo.locations[0]}
-                                    </Typography>
-                                  ) : (
-                                    <>
-                                      <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                      >
-                                        {fileInfo.locations.length} locations:
-                                      </Typography>
-                                      <Box
-                                        sx={{
-                                          display: "flex",
-                                          gap: 0.5,
-                                          flexWrap: "wrap",
-                                        }}
-                                      >
-                                        {fileInfo.locations
-                                          .slice(0, 3)
-                                          .map((location, locIndex) => (
-                                            <Chip
-                                              key={locIndex}
-                                              label={location}
-                                              size="small"
-                                              variant="outlined"
-                                              sx={{
-                                                fontSize: "0.75rem",
-                                                height: "20px",
-                                              }}
-                                            />
-                                          ))}
-                                        {fileInfo.locations.length > 3 && (
-                                          <Chip
-                                            label={`+${
-                                              fileInfo.locations.length - 3
-                                            } more`}
-                                            size="small"
-                                            variant="outlined"
-                                            sx={{
-                                              fontSize: "0.75rem",
-                                              height: "20px",
-                                            }}
-                                          />
-                                        )}
-                                      </Box>
-                                    </>
-                                  )}
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                  >
+                                    Location: {fileInfo.extractedFileName 
+                                      ? fileInfo.extractedFileName.replace(/\.(xlsx|xls)$/i, '')
+                                      : fileInfo.file.name.replace(/\.(xlsx|xls)$/i, '')
+                                    }
+                                  </Typography>
                                 </Box>
                               </Box>
                             </Box>
@@ -1428,27 +1268,67 @@ const ExcelUploadPage: React.FC = () => {
                               justifyContent="flex-end"
                             >
                               {fileInfo.status === "success" && (
-                                <Button
-                                  variant="contained"
-                                  color="primary"
-                                  onClick={() => viewDashboard(fileInfo)}
-                                  startIcon={<FileOpenIcon />}
-                                  sx={{ borderRadius: 2 }}
-                                >
-                                  View Dashboard
-                                </Button>
-                              )}
+                                <>
+                                  {/* Single dashboard button for individual dashboards */}
+                                  {!fileInfo.dashboard.includes(" and ") && (
+                                    <Button
+                                      variant="contained"
+                                      color="primary"
+                                      onClick={() => viewDashboard(fileInfo)}
+                                      startIcon={<FileOpenIcon />}
+                                      sx={{ borderRadius: 2 }}
+                                    >
+                                      View Dashboard
+                                    </Button>
+                                  )}
+                                  
+                                  {/* Two separate buttons for combination dashboards */}
+                                  {fileInfo.dashboard === "Sales Split and Product Mix" && (
+                                    <>
+                                      <Button
+                                        variant="contained"
+                                        color="primary"
+                                        onClick={() => viewDashboard(fileInfo, "Sales Split")}
+                                        startIcon={<FileOpenIcon />}
+                                        sx={{ borderRadius: 2 }}
+                                      >
+                                        Sales Split
+                                      </Button>
+                                      <Button
+                                        variant="outlined"
+                                        color="primary"
+                                        onClick={() => viewDashboard(fileInfo, "Product Mix")}
+                                        startIcon={<RestaurantIcon />}
+                                        sx={{ borderRadius: 2 }}
+                                      >
+                                        Product Mix
+                                      </Button>
+                                    </>
+                                  )}
 
-                              {fileInfo.status === "pending" && (
-                                <Button
-                                  variant="outlined"
-                                  color="primary"
-                                  onClick={() => editFileLocation(index)}
-                                  startIcon={<EditIcon />}
-                                  sx={{ borderRadius: 2 }}
-                                >
-                                  Edit Locations
-                                </Button>
+                                  {fileInfo.dashboard === "Financials and Sales Wide" && (
+                                    <>
+                                      <Button
+                                        variant="contained"
+                                        color="primary"
+                                        onClick={() => viewDashboard(fileInfo, "Financials")}
+                                        startIcon={<AttachMoneyIcon />}
+                                        sx={{ borderRadius: 2 }}
+                                      >
+                                        Financials
+                                      </Button>
+                                      <Button
+                                        variant="outlined"
+                                        color="primary"
+                                        onClick={() => viewDashboard(fileInfo, "Sales Wide")}
+                                        startIcon={<TrendingUpIcon />}
+                                        sx={{ borderRadius: 2 }}
+                                      >
+                                        Sales Wide
+                                      </Button>
+                                    </>
+                                  )}
+                                </>
                               )}
 
                               <IconButton
@@ -1478,125 +1358,8 @@ const ExcelUploadPage: React.FC = () => {
           </Card>
         </Grow>
       )}
-
-      {/* UPDATED: Location Dialog for multiple locations */}
-      <Dialog
-        open={isLocationDialogOpen}
-        onClose={handleLocationCancel}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            background: "linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)",
-          },
-        }}
-      >
-        <DialogTitle sx={{ pb: 1 }}>
-          <Typography
-            variant="h5"
-            sx={{
-              fontWeight: 600,
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-            }}
-          >
-            <LocationOnIcon color="primary" />
-            Set File Locations
-          </Typography>
-        </DialogTitle>
-
-        <DialogContent sx={{ pt: 2 }}>
-          <Typography
-            variant="body1"
-            sx={{ mb: 3, color: "text.secondary", lineHeight: 1.6 }}
-          >
-            Please specify one or more locations for this file. Note: Selecting
-            "Multiple Locations" will exclude other specific location choices.
-          </Typography>
-
-          {/* UPDATED: Multiple location selection in dialog with exclusion logic */}
-          <Autocomplete
-            multiple
-            value={locationInput}
-            onChange={(event, newValue) => {
-              let filteredValue = [...newValue];
-
-              // Apply exclusion logic: "Multiple Locations" excludes all others
-              if (newValue.includes("Multiple Locations")) {
-                filteredValue = ["Multiple Locations"];
-              } else {
-                filteredValue = newValue.filter(
-                  (location) => location !== "Multiple Locations"
-                );
-              }
-
-              setLocationInput(filteredValue);
-              setLocationError("");
-            }}
-            options={US_CITIES}
-            freeSolo
-            renderTags={(value, getTagProps) =>
-              value.map((option, index) => (
-                <Chip
-                  variant="outlined"
-                  label={option}
-                  {...getTagProps({ index })}
-                  sx={{ margin: "2px" }}
-                />
-              ))
-            }
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Locations"
-                placeholder="Select or type multiple locations"
-                fullWidth
-                margin="normal"
-                error={!!locationError}
-                helperText={
-                  locationError ||
-                  "Choose locations to help organize your data. 'Multiple Locations' excludes other selections."
-                }
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
-                  },
-                }}
-                InputProps={{
-                  ...params.InputProps,
-                  startAdornment: (
-                    <>
-                      <LocationOnIcon sx={{ mr: 1, color: "primary.main" }} />
-                      {params.InputProps.startAdornment}
-                    </>
-                  ),
-                }}
-              />
-            )}
-          />
-        </DialogContent>
-
-        <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button
-            onClick={handleLocationCancel}
-            sx={{ borderRadius: 2, px: 3 }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleLocationSave}
-            variant="contained"
-            sx={{ borderRadius: 2, px: 3 }}
-            startIcon={<CheckCircleIcon />}
-          >
-            Save Locations
-          </Button>
-        </DialogActions>
-      </Dialog>
     </PageContainer>
   );
 };
 
-export default ExcelUploadPage;
+export default ExcelUploadPage; 
