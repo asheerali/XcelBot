@@ -426,6 +426,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
           </div>
 
           {/* Large centered total value below the chart */}
+           <ResponsiveContainer>
           <div
             style={{
               fontSize: "36px", // Slightly reduced to fit better
@@ -436,9 +437,10 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
               width: "100%",
             }}
           >
-            <span style={{ color: "black" }}>Total: </span> $
+            <span style={{ color: "black" }}>Total Week Sale: </span> $
             {totalSalesValue.toFixed(1)}k
           </div>
+           </ResponsiveContainer>
         </div>
 
         {/* Sales Category Line Chart from Table9 with Categories List from Table10 */}

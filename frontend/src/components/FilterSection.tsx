@@ -1,4 +1,4 @@
-// FilterSection.tsx - Fixed alignment and removed card wrapper
+// FilterSection.tsx - Updated with no default value but initially all selected
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -20,7 +20,10 @@ import {
   SelectChangeEvent,
   TextField,
   Popover,
-  IconButton
+  IconButton,
+  MenuList,
+  Divider,
+  OutlinedInput
 } from '@mui/material';
 import { format } from 'date-fns';
 
@@ -32,6 +35,8 @@ import CategoryIcon from '@mui/icons-material/Category';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
 
 // Import DateRangeSelector component
 import DateRangeSelector from './DateRangeSelector';
@@ -47,6 +52,279 @@ import {
   updateSalesFilters
 } from '../store/excelSlice';
 
+// Custom MultiSelect component with search functionality (exact copy from ProductMixDashboard)
+interface MultiSelectProps {
+  id: string;
+  label: string;
+  options: string[];
+  value: string[];
+  onChange: (value: string[]) => void;
+  icon?: React.ReactNode;
+  placeholder?: string;
+  initiallySelectAll?: boolean;
+}
+
+const MultiSelect: React.FC<MultiSelectProps> = ({
+  id,
+  label,
+  options,
+  value,
+  onChange,
+  icon,
+  placeholder,
+  initiallySelectAll = false,
+}) => {
+  const [searchText, setSearchText] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  // FIXED: Initialize with all options selected if initiallySelectAll is true
+  useEffect(() => {
+    if (initiallySelectAll && options.length > 0 && !hasInitialized && value.length === 0) {
+      console.log(`🎯 FilterSection: Initializing ${label} with all options selected:`, options);
+      onChange([...options]);
+      setHasInitialized(true);
+    }
+  }, [initiallySelectAll, options, hasInitialized, value.length, onChange, label]);
+
+  const filteredOptions = options.filter((option) =>
+    option.toLowerCase().includes(searchText.toLowerCase())
+  );
+
+  const handleToggle = (event: React.MouseEvent<HTMLDivElement>) => {
+    setAnchorEl(event.currentTarget);
+    setIsOpen(!isOpen);
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    setAnchorEl(null);
+    setSearchText("");
+  };
+
+  const handleSelect = (option: string) => {
+    const newValue = value.includes(option)
+      ? value.filter((item) => item !== option)
+      : [...value, option];
+    onChange(newValue);
+  };
+
+  const handleSelectAll = () => {
+    if (value.length === options.length) {
+      onChange([]);
+    } else {
+      onChange([...options]);
+    }
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === "Escape") {
+      handleClose();
+    }
+  };
+
+  return (
+    <Box sx={{ position: "relative", width: "100%" }}>
+      <Box
+        onClick={handleToggle}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          border: "1px solid rgba(0, 0, 0, 0.23)",
+          borderRadius: 1,
+          p: 1,
+          cursor: "pointer",
+          minHeight: "40px",
+          position: "relative",
+          height: "40px",
+          overflow: "hidden",
+        }}
+      >
+        {icon && (
+          <Box
+            sx={{
+              color: "primary.light",
+              mr: 1,
+              ml: -0.5,
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            {icon}
+          </Box>
+        )}
+
+        <Box
+          sx={{
+            flexGrow: 1,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {value.length === 0 && (
+            <Typography color="text.secondary" variant="body2" noWrap>
+              {placeholder || "Select options"}
+            </Typography>
+          )}
+
+          {value.length > 0 && (
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "nowrap",
+                gap: 0.5,
+                overflow: "hidden",
+              }}
+            >
+              {value.length <= 2 ? (
+                value.map((item) => (
+                  <Chip
+                    key={item}
+                    label={item}
+                    size="small"
+                    onDelete={(e) => {
+                      e.stopPropagation();
+                      onChange(value.filter((val) => val !== item));
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    sx={{ maxWidth: "120px" }}
+                  />
+                ))
+              ) : (
+                <>
+                  <Chip
+                    label={value[0]}
+                    size="small"
+                    onDelete={(e) => {
+                      e.stopPropagation();
+                      onChange(value.filter((val) => val !== value[0]));
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    sx={{ maxWidth: "120px" }}
+                  />
+                  <Chip
+                    label={`+${value.length - 1} more`}
+                    size="small"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </>
+              )}
+            </Box>
+          )}
+        </Box>
+
+        <Box
+          sx={{
+            position: "absolute",
+            right: 8,
+            top: "50%",
+            transform: "translateY(-50%)",
+          }}
+        >
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsOpen(!isOpen);
+            }}
+          >
+            {isOpen ? (
+              <CloseIcon fontSize="small" />
+            ) : (
+              <SearchIcon fontSize="small" />
+            )}
+          </IconButton>
+        </Box>
+      </Box>
+
+      <InputLabel
+        htmlFor={id}
+        sx={{
+          position: "absolute",
+          top: -6,
+          left: 8,
+          backgroundColor: "white",
+          px: 0.5,
+          fontSize: "0.75rem",
+          pointerEvents: "none",
+        }}
+      >
+        {label}
+      </InputLabel>
+
+      <Popover
+        id={`${id}-popover`}
+        open={isOpen}
+        anchorEl={anchorEl}
+        onClose={handleClose}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "left",
+        }}
+        transformOrigin={{
+          vertical: "top",
+          horizontal: "left",
+        }}
+        PaperProps={{
+          style: {
+            width: anchorEl ? anchorEl.clientWidth : undefined,
+            maxHeight: 300,
+            overflow: "auto",
+          },
+        }}
+      >
+        <Box sx={{ p: 1 }}>
+          <TextField
+            autoFocus
+            fullWidth
+            placeholder="Search..."
+            size="small"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            InputProps={{
+              startAdornment: (
+                <SearchIcon
+                  fontSize="small"
+                  sx={{ mr: 1, color: "action.active" }}
+                />
+              ),
+            }}
+          />
+        </Box>
+        <Divider />
+        <Box sx={{ p: 1 }}>
+          <MenuItem dense onClick={handleSelectAll}>
+            <Checkbox
+              checked={value.length === options.length}
+              indeterminate={value.length > 0 && value.length < options.length}
+              size="small"
+            />
+            <ListItemText primary="Select All" />
+          </MenuItem>
+        </Box>
+        <Divider />
+        <MenuList>
+          {filteredOptions.length === 0 ? (
+            <MenuItem disabled>
+              <ListItemText primary="No options found" />
+            </MenuItem>
+          ) : (
+            filteredOptions.map((option) => (
+              <MenuItem key={option} dense onClick={() => handleSelect(option)}>
+                <Checkbox checked={value.includes(option)} size="small" />
+                <ListItemText primary={option} />
+              </MenuItem>
+            ))
+          )}
+        </MenuList>
+      </Popover>
+    </Box>
+  );
+};
+
 interface FilterSectionProps {
   dateRangeType: string;
   availableDateRanges: string[];
@@ -60,10 +338,11 @@ interface FilterSectionProps {
   selectedLocation: string;
   onLocationChange: (event: SelectChangeEvent) => void;
   onApplyFilters: () => void;
-  // NEW: Add a callback that accepts explicit date values
-  onApplyFiltersWithDates?: (startDate: string, endDate: string, categories: string[]) => void;
+  // NEW: Add a callback that accepts explicit values including selected locations
+  onApplyFiltersWithDates?: (startDate: string, endDate: string, categories: string[], selectedLocations: string[]) => void;
   categoriesOverride?: string[];
   dashboardType?: 'Sales Split' | 'Financials' | 'Sales Wide' | 'Product Mix';
+  initiallySelectAll?: boolean;
 }
 
 const FilterSection: React.FC<FilterSectionProps> = ({
@@ -81,7 +360,8 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   onApplyFilters,
   onApplyFiltersWithDates, // NEW prop
   categoriesOverride,
-  dashboardType = 'Sales Split'
+  dashboardType = 'Sales Split',
+  initiallySelectAll = false,
 }) => {
   const dispatch = useAppDispatch();
   
@@ -139,21 +419,9 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     [availableCategories, filterCategories]
   );
   
-  // State for category selection
+  // FIXED: State for multi-select arrays - NO DEFAULT VALUES, but will be populated by initiallySelectAll
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  
-  // State for category dropdown
-  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
-  const [categoryAnchorEl, setCategoryAnchorEl] = useState<null | HTMLElement>(null);
-  const [categorySearchText, setCategorySearchText] = useState('');
-  
-  // Filtered categories based on search
-  const filteredCategoriesForSearch = React.useMemo(() => {
-    if (!categorySearchText) return filteredCategories;
-    return filteredCategories.filter(category =>
-      category.toLowerCase().includes(categorySearchText.toLowerCase())
-    );
-  }, [filteredCategories, categorySearchText]);
   
   // State for date range - LOCAL state that we manage directly
   const [localStartDate, setLocalStartDate] = useState<string>(startDate || '');
@@ -172,50 +440,27 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     setLocalEndDate(endDate || '');
   }, [startDate, endDate]);
 
-  // Update local state when Redux filters change - no auto-selection
+  // REMOVED: Auto-selection based on selectedLocation prop
+  // No default values, but initiallySelectAll will handle the initial population
+
+  // Update local state when Redux filters change
   useEffect(() => {
     if (salesFilters.selectedCategories && salesFilters.selectedCategories.length > 0) {
       setSelectedCategories(salesFilters.selectedCategories);
     }
-    // Removed auto-selection of all categories when they become available
   }, [salesFilters.selectedCategories]);
 
-  // Handler for "All" option in dining categories
-  const handleSelectAllCategories = () => {
-    const isAllSelected = selectedCategories.length === filteredCategoriesForSearch.length && filteredCategoriesForSearch.length > 0;
-    const newSelection = isAllSelected ? [] : filteredCategoriesForSearch;
-    
-    setSelectedCategories(newSelection);
-    dispatch(updateSalesFilters({ selectedCategories: newSelection }));
+  // Handle location change (multi-select) - UPDATED to not trigger parent onChange immediately
+  const handleLocationChange = (newValue: string[]) => {
+    console.log('📍 FilterSection: Location selection changed to:', newValue);
+    setSelectedLocations(newValue);
+    // Don't trigger parent onChange - wait for Apply Filters
   };
 
-  // Handler for individual category selection
-  const handleCategoryToggle = (category: string) => {
-    const newSelection = selectedCategories.includes(category)
-      ? selectedCategories.filter(item => item !== category)
-      : [...selectedCategories, category];
-    
-    setSelectedCategories(newSelection);
-    dispatch(updateSalesFilters({ selectedCategories: newSelection }));
-  };
-
-  // Category dropdown handlers
-  const handleCategoryDropdownOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setCategoryAnchorEl(event.currentTarget);
-    setCategoryDropdownOpen(true);
-    setCategorySearchText('');
-  };
-
-  const handleCategoryDropdownClose = () => {
-    setCategoryDropdownOpen(false);
-    setCategoryAnchorEl(null);
-    setCategorySearchText('');
-  };
-
-  // Clear handlers
-  const handleClearCategories = () => {
-    setSelectedCategories([]);
-    dispatch(updateSalesFilters({ selectedCategories: [] }));
+  // Handle category change (multi-select)
+  const handleCategoryChange = (newValue: string[]) => {
+    setSelectedCategories(newValue);
+    dispatch(updateSalesFilters({ selectedCategories: newValue }));
   };
 
   // Open date range dialog
@@ -263,33 +508,43 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     }
   };
 
-  // FIXED: Enhanced apply filters - use callback with explicit values to avoid state sync issues
+  // Enhanced apply filters - use callback with explicit values including selected locations
   const handleApplyFilters = () => {
     console.log('🎯 FilterSection: Applying filters with explicit values:', {
       startDate: localStartDate,
       endDate: localEndDate,
       selectedCategories,
-      selectedLocation,
+      selectedLocations,
       useNewCallback: !!onApplyFiltersWithDates
     });
+
+    // Check if at least one location is selected
+    if (selectedLocations.length === 0) {
+      console.warn('⚠️ No locations selected');
+      return;
+    }
 
     // Update Redux state
     dispatch(updateSalesFilters({ 
       selectedCategories: selectedCategories,
-      location: selectedLocation,
+      location: selectedLocations[0] || '', // Use first selected location for backward compatibility
       dateRangeType: 'Custom Date Range',
       startDate: localStartDate,
       endDate: localEndDate
     }));
     
-    // FIXED: Use the new callback if available to pass explicit values
+    // Use the new callback if available to pass explicit values including locations
     if (onApplyFiltersWithDates) {
-      console.log('🚀 Using new callback with explicit values');
-      onApplyFiltersWithDates(localStartDate, localEndDate, selectedCategories);
+      console.log('🚀 Using new callback with explicit values including selected locations');
+      onApplyFiltersWithDates(localStartDate, localEndDate, selectedCategories, selectedLocations);
     } else {
       console.log('⚠️ Using legacy callback - may have timing issues');
       
       // Legacy approach - update parent state first, then call API
+      const locationEvent = {
+        target: { value: selectedLocations[0] || '' }
+      } as SelectChangeEvent;
+      
       const startEvent = {
         target: { value: localStartDate }
       } as React.ChangeEvent<HTMLInputElement>;
@@ -303,6 +558,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       } as SelectChangeEvent;
       
       // Update parent component state
+      onLocationChange(locationEvent);
       onStartDateChange(startEvent);
       onEndDateChange(endEvent);
       onDateRangeChange(dateRangeEvent);
@@ -313,9 +569,6 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       }, 100);
     }
   };
-
-  // Check if all categories are selected
-  const isAllCategoriesSelected = selectedCategories.length === filteredCategories.length && filteredCategories.length > 0;
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
@@ -328,24 +581,18 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       </Box>
 
       <Grid container spacing={2}>
-        {/* Location filter */}
+        {/* Location filter - Using MultiSelect with NO default but initially all selected */}
         <Grid item xs={12} sm={6} md={4}>
-          <FormControl fullWidth size="small">
-            <InputLabel id="location-select-label">Location</InputLabel>
-            <Select
-              labelId="location-select-label"
-              id="location-select"
-              value={selectedLocation || ''}
-              label="Location"
-              onChange={onLocationChange}
-              startAdornment={<PlaceIcon sx={{ mr: 1, ml: -0.5, color: 'primary.light' }} />}
-              disabled={locations.length === 0}
-            >
-              {locations.map((location) => (
-                <MenuItem key={location} value={location}>{location}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <MultiSelect
+            id="location-select"
+            label="Location"
+            options={locations}
+            value={selectedLocations}
+            onChange={handleLocationChange}
+            icon={<PlaceIcon />}
+            placeholder="Select locations"
+            initiallySelectAll={initiallySelectAll}
+          />
         </Grid>
 
         {/* Date Range Button */}
@@ -377,228 +624,40 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           </Button>
         </Grid>
 
-        {/* Dining Options Filter - FIXED alignment */}
+        {/* Dining Options Filter - Using MultiSelect with initially all selected */}
         <Grid item xs={12} sm={6} md={4}>
-          <FormControl fullWidth size="small">
-            <InputLabel id="dining-options-label">Dining Options</InputLabel>
-            <Select
-              labelId="dining-options-label"
-              value=""
-              label="Dining Options"
-              onClick={handleCategoryDropdownOpen}
-              displayEmpty
-              renderValue={() => {
-                if (selectedCategories.length === 0) {
-                  return <Typography color="text.secondary">Select dining options</Typography>;
-                }
-                if (selectedCategories.length === filteredCategories.length && filteredCategories.length > 0) {
-                  return 'All selected';
-                }
-                if (selectedCategories.length === 1) {
-                  return selectedCategories[0];
-                }
-                return `${selectedCategories.length} selected`;
-              }}
-              startAdornment={<CategoryIcon sx={{ mr: 1, ml: -0.5, color: 'primary.light' }} />}
-              endAdornment={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  {selectedCategories.length > 0 && (
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleClearCategories();
-                      }}
-                      sx={{
-                        width: 20,
-                        height: 20,
-                        backgroundColor: '#666',
-                        color: 'white',
-                        fontSize: '12px',
-                        '&:hover': {
-                          backgroundColor: '#333',
-                        }
-                      }}
-                    >
-                      <CloseIcon sx={{ fontSize: '12px' }} />
-                    </IconButton>
-                  )}
-                  <ExpandMoreIcon />
-                </Box>
-              }
-            />
-          </FormControl>
-
-          <Popover
-            open={categoryDropdownOpen}
-            anchorEl={categoryAnchorEl}
-            onClose={handleCategoryDropdownClose}
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'left',
-            }}
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'left',
-            }}
-            PaperProps={{
-              sx: {
-                width: categoryAnchorEl?.offsetWidth || 300,
-                maxHeight: 400,
-                mt: 1,
-                borderRadius: 2,
-                boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                border: '1px solid #e0e0e0'
-              }
-            }}
-          >
-            {/* Search Box */}
-            <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0' }}>
-              <TextField
-                fullWidth
-                placeholder="Search..."
-                value={categorySearchText}
-                onChange={(e) => setCategorySearchText(e.target.value)}
-                size="small"
-                InputProps={{
-                  startAdornment: <SearchIcon sx={{ mr: 1, color: '#666', fontSize: '20px' }} />,
-                  sx: {
-                    borderRadius: 2,
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#e0e0e0',
-                    },
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#1976d2',
-                    }
-                  }
-                }}
-                sx={{
-                  '& .MuiInputBase-input': {
-                    padding: '8px 12px'
-                  }
-                }}
-              />
-            </Box>
-
-            {/* Select All Option */}
-            {filteredCategoriesForSearch.length > 0 && (
-              <Box sx={{ borderBottom: '1px solid #e0e0e0' }}>
-                <Box
-                  onClick={handleSelectAllCategories}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    p: 2,
-                    cursor: 'pointer',
-                    '&:hover': {
-                      backgroundColor: '#f5f5f5',
-                    }
-                  }}
-                >
-                  <Checkbox
-                    checked={isAllCategoriesSelected && filteredCategoriesForSearch.length > 0}
-                    indeterminate={selectedCategories.length > 0 && selectedCategories.length < filteredCategoriesForSearch.length}
-                    size="small"
-                    sx={{ 
-                      p: 0, 
-                      mr: 2,
-                      '& .MuiSvgIcon-root': {
-                        fontSize: '20px'
-                      }
-                    }}
-                    onChange={handleSelectAllCategories}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <Typography 
-                    variant="body1" 
-                    sx={{ 
-                      fontWeight: 600,
-                      fontSize: '0.875rem',
-                      color: '#333'
-                    }}
-                  >
-                    Select All
-                  </Typography>
-                </Box>
-              </Box>
-            )}
-
-            {/* Category Options */}
-            <Box sx={{ maxHeight: 250, overflow: 'auto' }}>
-              {filteredCategoriesForSearch.length === 0 ? (
-                <Box sx={{ p: 3, textAlign: 'center' }}>
-                  <Typography variant="body2" color="text.secondary">
-                    {categorySearchText ? 'No options found' : 'No dining options available'}
-                  </Typography>
-                  {!categorySearchText && (
-                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                      Upload a file to see available options
-                    </Typography>
-                  )}
-                </Box>
-              ) : (
-                filteredCategoriesForSearch.map((category) => (
-                  <Box
-                    key={category}
-                    onClick={() => handleCategoryToggle(category)}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      p: 2,
-                      cursor: 'pointer',
-                      '&:hover': {
-                        backgroundColor: '#f5f5f5',
-                      }
-                    }}
-                  >
-                    <Checkbox
-                      checked={selectedCategories.includes(category)}
-                      size="small"
-                      sx={{ 
-                        p: 0, 
-                        mr: 2,
-                        '& .MuiSvgIcon-root': {
-                          fontSize: '20px'
-                        }
-                      }}
-                      onChange={() => handleCategoryToggle(category)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Typography 
-                      variant="body1"
-                      sx={{ 
-                        fontSize: '0.875rem',
-                        color: '#333'
-                      }}
-                    >
-                      {category}
-                    </Typography>
-                  </Box>
-                ))
-              )}
-            </Box>
-          </Popover>
+          <MultiSelect
+            id="dining-options-select"
+            label="Dining Options"
+            options={filteredCategories}
+            value={selectedCategories}
+            onChange={handleCategoryChange}
+            icon={<CategoryIcon />}
+            placeholder="Select dining options"
+            initiallySelectAll={initiallySelectAll}
+          />
         </Grid>
       </Grid>
 
       {/* Active filters display */}
-      {(selectedLocation || selectedCategories.length > 0 || (localStartDate && localEndDate)) && (
+      {(selectedLocations.length > 0 || selectedCategories.length > 0 || (localStartDate && localEndDate)) && (
         <Box sx={{ mt: 2 }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             Active Filters:
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {selectedLocation && (
+            {selectedLocations.length > 0 && (
               <Chip 
-                label={`Location: ${selectedLocation}`} 
+                label={
+                  selectedLocations.length === 1
+                    ? `Location: ${selectedLocations[0]}`
+                    : `Locations: ${selectedLocations.length} selected`
+                } 
                 color="primary" 
                 variant="outlined" 
                 size="small" 
                 icon={<PlaceIcon />} 
-                onDelete={() => {
-                  const event = { target: { value: '' } } as SelectChangeEvent;
-                  onLocationChange(event);
-                }}
+                onDelete={() => setSelectedLocations([])}
               />
             )}
             
@@ -619,17 +678,15 @@ const FilterSection: React.FC<FilterSectionProps> = ({
             {selectedCategories.length > 0 && (
               <Chip 
                 label={
-                  isAllCategoriesSelected 
-                    ? 'Dining: All' 
-                    : selectedCategories.length === 1 
-                      ? `Dining: ${selectedCategories[0]}` 
-                      : `Dining: ${selectedCategories.length} selected`
+                  selectedCategories.length === 1 
+                    ? `Dining: ${selectedCategories[0]}` 
+                    : `Dining: ${selectedCategories.length} selected`
                 } 
                 color="error" 
                 variant="outlined" 
                 size="small" 
                 icon={<CategoryIcon />} 
-                onDelete={handleClearCategories}
+                onDelete={() => setSelectedCategories([])}
               />
             )}
           </Box>
@@ -642,11 +699,16 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           variant="contained" 
           color="primary"
           onClick={handleApplyFilters}
-          disabled={locations.length === 0}
+          disabled={selectedLocations.length === 0}
           sx={{ px: 3 }}
         >
           Apply Filters 
         </Button>
+        {selectedLocations.length === 0 && locations.length > 0 && (
+          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+            Please select at least one location
+          </Typography>
+        )}
       </Box>
 
       {/* Date Range Picker Dialog */}

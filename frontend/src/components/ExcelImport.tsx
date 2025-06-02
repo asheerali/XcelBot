@@ -1,4 +1,4 @@
-// Fixed ExcelImport.tsx - Resolves timing issues with filter application
+// Fixed ExcelImport.tsx - Resolves location selection and data loading issues
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -333,7 +333,10 @@ export function ExcelImport() {
   const [tableTab, setTableTab] = useState<number>(0);
   const [viewMode, setViewMode] = useState<string>('tabs');
   const [showTutorial, setShowTutorial] = useState<boolean>(false);
-  const [selectedLocation, setSelectedLocation] = useState<string>(currentLocation || '');
+  
+  // FIXED: Initialize with empty string instead of current location
+  const [selectedLocation, setSelectedLocation] = useState<string>('');
+  
   const [isLocationDialogOpen, setIsLocationDialogOpen] = useState<boolean>(false);
   const [locationInput, setLocationInput] = useState<string>('');
   const [locationError, setLocationError] = useState<string>('');
@@ -347,25 +350,33 @@ export function ExcelImport() {
   const [availableDateRanges, setAvailableDateRanges] = useState<string[]>([]);
   const [customDateRange, setCustomDateRange] = useState<boolean>(false);
   
+  // NEW: State to track if we're waiting for backend response
+  const [isWaitingForBackendResponse, setIsWaitingForBackendResponse] = useState<boolean>(false);
+  const [hasValidData, setHasValidData] = useState<boolean>(false);
+  
   // Loading states
   const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
   const [loadingProgress, setLoadingProgress] = useState<number>(0);
   const [loadingMessage, setLoadingMessage] = useState<string>('');
 
-  // Update selected location whenever Redux location changes
+  // FIXED: Only update selected location when Redux location changes AND we have valid data
   useEffect(() => {
-    if (currentLocation && currentLocation !== selectedLocation) {
+    if (currentLocation && hasValidData && currentLocation !== selectedLocation) {
+      console.log('📍 Updating selected location from Redux:', currentLocation);
       setSelectedLocation(currentLocation);
     }
-  }, [currentLocation, selectedLocation]);
+  }, [currentLocation, hasValidData, selectedLocation]);
   
   // Set file processed notification when tableData changes
   useEffect(() => {
-    if (fileProcessed) {
+    if (fileProcessed && reduxTableData && Object.keys(reduxTableData).length > 0) {
+      console.log('✅ Data processed successfully, setting hasValidData to true');
+      setHasValidData(true);
+      setIsWaitingForBackendResponse(false);
       setShowSuccessNotification(true);
       setChartKey(prevKey => prevKey + 1);
     }
-  }, [fileProcessed]);
+  }, [fileProcessed, reduxTableData]);
   
   // Update available date ranges when data changes or location changes
   useEffect(() => {
@@ -377,12 +388,14 @@ export function ExcelImport() {
       }
     }
     
-    if (allLocations && allLocations.length > 0 && !selectedLocation) {
+    // FIXED: Only set default location when we have valid data and no location is selected
+    if (hasValidData && allLocations && allLocations.length > 0 && !selectedLocation) {
       const firstLocation = currentLocation || allLocations[0];
+      console.log('📍 Setting initial location:', firstLocation);
       setSelectedLocation(firstLocation);
       dispatch(selectLocation(firstLocation));
     }
-  }, [reduxTableData, dateRangeType, selectedLocation, allLocations, currentLocation, dispatch]);
+  }, [reduxTableData, dateRangeType, selectedLocation, allLocations, currentLocation, dispatch, hasValidData]);
 
   useEffect(() => {
     if (dateRangeType === 'Custom Date Range') {
@@ -416,12 +429,12 @@ export function ExcelImport() {
     setTableTab(newValue);
   };
 
-  // Handle location change
+  // FIXED: Handle location change without immediately loading data
   const handleLocationChange = (event: SelectChangeEvent) => {
     const newLocation = event.target.value;
+    console.log('📍 Location changed to:', newLocation, '(data will not load until Apply Filters is pressed)');
     setSelectedLocation(newLocation);
-    dispatch(selectLocation(newLocation));
-    setChartKey(prevKey => prevKey + 1);
+    // Don't update Redux state or load data until Apply Filters is pressed
   };
 
   // Handle date range type change
@@ -455,6 +468,10 @@ export function ExcelImport() {
     }
 
     try {
+      console.log('🔄 Starting backend request...');
+      setIsWaitingForBackendResponse(true);
+      setHasValidData(false); // Clear valid data flag until we get response
+      
       if (setLoading && typeof setLoading === 'function') {
         dispatch(setLoading(true));
       }
@@ -464,6 +481,9 @@ export function ExcelImport() {
       }
       
       setLocalError('');
+      
+      // Update Redux state with the new location
+      dispatch(selectLocation(selectedLocation));
       
       // FIXED: Use the explicit date values passed to this function
       let formattedStartDate: string | null = null;
@@ -509,7 +529,9 @@ export function ExcelImport() {
           console.log('📥 Received filter response:', response.data);
           
           if (response.data) {
+            // Update Redux state with new data
             dispatch(setTableData(response.data));
+            
             setLocalError('');
             setChartKey(prevKey => prevKey + 1);
             
@@ -518,6 +540,10 @@ export function ExcelImport() {
             setEndDate(explicitEndDate);
             setDateRangeType('Custom Date Range');
             
+            // Mark that we have valid data
+            setHasValidData(true);
+            setIsWaitingForBackendResponse(false);
+            
             console.log('✅ Filter applied successfully with explicit values');
           } else {
             throw new Error('Invalid response data');
@@ -525,6 +551,9 @@ export function ExcelImport() {
         })
         .catch(err => {
           console.error('❌ Filter error:', err);
+          
+          setIsWaitingForBackendResponse(false);
+          setHasValidData(false);
           
           let errorMessage = 'Error filtering data';
           if (axios.isAxiosError(err)) {
@@ -555,6 +584,9 @@ export function ExcelImport() {
       
     } catch (err: any) {
       console.error('Filter error:', err);
+      setIsWaitingForBackendResponse(false);
+      setHasValidData(false);
+      
       const errorMessage = 'Error applying filters: ' + (err.message || 'Unknown error');
       setLocalError(errorMessage);
       
@@ -587,6 +619,9 @@ export function ExcelImport() {
     }
 
     try {
+      setIsWaitingForBackendResponse(true);
+      setHasValidData(false);
+      
       if (setLoading && typeof setLoading === 'function') {
         dispatch(setLoading(true));
       }
@@ -596,6 +631,9 @@ export function ExcelImport() {
       }
       
       setLocalError('');
+      
+      // Update Redux state with the new location
+      dispatch(selectLocation(location));
       
       // Format dates correctly for API
       let formattedStartDate: string | null = null;
@@ -638,6 +676,8 @@ export function ExcelImport() {
             dispatch(setTableData(response.data));
             setLocalError('');
             setChartKey(prevKey => prevKey + 1);
+            setHasValidData(true);
+            setIsWaitingForBackendResponse(false);
             
             console.log('✅ Filter applied successfully (legacy)');
           } else {
@@ -646,6 +686,9 @@ export function ExcelImport() {
         })
         .catch(err => {
           console.error('❌ Filter error:', err);
+          
+          setIsWaitingForBackendResponse(false);
+          setHasValidData(false);
           
           let errorMessage = 'Error filtering data';
           if (axios.isAxiosError(err)) {
@@ -676,6 +719,9 @@ export function ExcelImport() {
       
     } catch (err: any) {
       console.error('Filter error:', err);
+      setIsWaitingForBackendResponse(false);
+      setHasValidData(false);
+      
       const errorMessage = 'Error applying filters: ' + (err.message || 'Unknown error');
       setLocalError(errorMessage);
       
@@ -783,6 +829,7 @@ export function ExcelImport() {
         
         dispatch(setTableData(response.data));
         setShowSuccessNotification(true);
+        setHasValidData(true); // Mark that we have valid data
         
         if (locationName) {
           setSelectedLocation(locationName);
@@ -816,6 +863,7 @@ export function ExcelImport() {
     } catch (err: any) {
       console.error('Upload error:', err);
       setIsLoadingData(false);
+      setHasValidData(false);
       
       let errorMessage = 'Error processing file';
       
@@ -976,6 +1024,11 @@ export function ExcelImport() {
     </Dialog>
   );
 
+  // FIXED: Helper function to determine if we should show data
+  const shouldShowData = () => {
+    return hasValidData && !isWaitingForBackendResponse && reduxTableData && Object.keys(reduxTableData).length > 0;
+  };
+
   return (
     <>
       {/* Clean white background */}
@@ -1043,10 +1096,7 @@ export function ExcelImport() {
                       <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
                         Data Sources Active
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        Current: {fileName || 'None selected'}
-                        {selectedLocation && ` • 📍 ${selectedLocation}`}
-                      </Typography>
+                   
                     </Box>
                   </Box>
                 </Grid>
@@ -1113,6 +1163,28 @@ export function ExcelImport() {
               </Alert>
             </Fade>
           )}
+
+          {/* FIXED: Show loading state when waiting for backend response */}
+          {isWaitingForBackendResponse && (
+            <Fade in>
+              <Alert 
+                severity="info" 
+                sx={{ 
+                  mt: 2,
+                  borderRadius: 2,
+                  '& .MuiAlert-icon': {
+                    fontSize: 24
+                  }
+                }}
+                icon={<CircularProgress size={20} />}
+              >
+                <Typography variant="subtitle2" fontWeight={600}>
+                  Loading Data...
+                </Typography>
+                Please wait while we fetch the latest data from the backend.
+              </Alert>
+            </Fade>
+          )}
         </CleanCard>
 
         {/* Main Dashboard - Product Mix Style */}
@@ -1140,7 +1212,8 @@ export function ExcelImport() {
             {/* Overview Tab */}
             <TabPanel value={salesSplitTab} index={0}>
               <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
-                {fileProcessed && files.length > 0 ? (
+                {/* FIXED: Only show data when we have valid data and not waiting for response */}
+                {shouldShowData() ? (
                   <Fade in timeout={600}>
                     <Box>
                       <SalesSplitDashboard 
@@ -1149,6 +1222,16 @@ export function ExcelImport() {
                       />
                     </Box>
                   </Fade>
+                ) : isWaitingForBackendResponse ? (
+                  <Box sx={{ textAlign: 'center', py: 6 }}>
+                    <CircularProgress size={40} sx={{ mb: 2 }} />
+                    <Typography variant="h6" color="text.secondary" gutterBottom>
+                      Loading data for {selectedLocation}...
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Please wait while we fetch the latest data
+                    </Typography>
+                  </Box>
                 ) : (
                   <Box sx={{ textAlign: 'center', py: 6 }}>
                     <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, mb: 2 }} />
@@ -1162,7 +1245,8 @@ export function ExcelImport() {
             {/* Detailed Analysis Tab */}
             <TabPanel value={salesSplitTab} index={1}>
               <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
-                {fileProcessed && reduxTableData.table1 && reduxTableData.table1.length > 0 ? (
+                {/* FIXED: Only show data when we have valid data and not waiting for response */}
+                {shouldShowData() && reduxTableData.table1 && reduxTableData.table1.length > 0 ? (
                   <Fade in timeout={600}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -1260,13 +1344,23 @@ export function ExcelImport() {
                       </Grid>
                     </Box>
                   </Fade>
+                ) : isWaitingForBackendResponse ? (
+                  <Box sx={{ textAlign: 'center', py: 6 }}>
+                    <CircularProgress size={40} sx={{ mb: 2 }} />
+                    <Typography variant="h6" color="text.secondary" gutterBottom>
+                      Loading detailed analysis...
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Please wait while we process your data
+                    </Typography>
+                  </Box>
                 ) : (
                   <Box sx={{ textAlign: 'center', py: 6 }}>
                     <Typography variant="h6" color="text.secondary" gutterBottom>
                       No detailed data available
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Upload files to see detailed analysis
+                      Upload files or apply filters to see detailed analysis
                     </Typography>
                   </Box>
                 )}
