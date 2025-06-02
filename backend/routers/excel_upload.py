@@ -475,7 +475,11 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
              average_order_value_change,
              average_items_per_order_change,
              unique_orders_change,
-             total_quantity_change
+             total_quantity_change,
+             sales_by_category_tables_df, 
+             category_comparison_table_df, 
+             top_vs_bottom_comparison_df
+   
              ) = process_pmix_file(excel_data_copy, 
             start_date=start_date, 
             end_date=end_date,
@@ -514,6 +518,9 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             "table7": average_price_by_item_df.to_dict(orient='records'),
             "table8": price_changes_df.to_dict(orient='records'),
             "table9": top_items_df.to_dict(orient='records'),
+            "table10": sales_by_category_tables_df.to_dict(orient='records'),
+            "table11": category_comparison_table_df.to_dict(orient='records'),
+            "table12": top_vs_bottom_comparison_df.to_dict(orient='records'),
             "locations": locations,
             "servers": server,
             "categories": category,
@@ -761,7 +768,10 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
              average_order_value_change,
              average_items_per_order_change,
              unique_orders_change,
-             total_quantity_change
+             total_quantity_change,
+             sales_by_category_tables_df, 
+             category_comparison_table_df, 
+             top_vs_bottom_comparison_df
              ) = process_pmix_file(excel_data_copy, 
             start_date=None, 
             end_date=None,
@@ -800,6 +810,9 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             "table7": average_price_by_item_df.to_dict(orient='records'),
             "table8": price_changes_df.to_dict(orient='records'),
             "table9": top_items_df.to_dict(orient='records'),
+            "table10": sales_by_category_tables_df.to_dict(orient='records'),
+            "table11": category_comparison_table_df.to_dict(orient='records'),
+            "table12": top_vs_bottom_comparison_df.to_dict(orient='records'),
             "locations": locations,
             "servers": server,
             "categories": category,
