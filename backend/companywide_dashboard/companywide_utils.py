@@ -1,10 +1,22 @@
 import pandas as pd
 import numpy as np
 import io
+from datetime import datetime
+
+def parse_date(date_str):
+    for fmt in ('%Y-%m-%d', '%m/%d/%Y'):
+        try:
+            return datetime.strptime(date_str, fmt).date()
+        except ValueError:
+            continue
+    raise ValueError("Date must be in one of the following formats: 'YYYY-MM-DD' or 'MM/DD/YYYY'")
 
 
-def companywide_tables(df, store_filter='All', year_filter=None, quarter_filter='All', helper4_filter='All'):
-    # Make a copy of the dataframe
+def companywide_tables(df, store_filter='All', year_filter=None, quarter_filter='All', helper4_filter='All', start_date=None, end_date=None):
+    
+    print("i am here printing the df attributes", "\n", store_filter, start_date, end_date, year_filter, quarter_filter, helper4_filter)
+    
+    #Make a copy of the dataframe
     filtered_df = df.copy()
     
     # Apply filters
@@ -32,6 +44,29 @@ def companywide_tables(df, store_filter='All', year_filter=None, quarter_filter=
         else:
             filtered_df = filtered_df[filtered_df['Helper 4'] == helper4_filter]
    
+    # if start_date is not None:
+    #     if isinstance(start_date, str):
+    #         start_date = parse_date(start_date)
+    #     filtered_df = filtered_df[filtered_df['Date'] >= start_date]
+    #     filtered_budget_df = filtered_budget_df[filtered_budget_df['Date'] >= start_date]
+
+    # if end_date is not None:
+    #     if isinstance(end_date, str):
+    #         end_date = parse_date(end_date)
+    #     filtered_df = filtered_df[filtered_df['Date'] <= end_date]
+    #     filtered_budget_df = filtered_budget_df[filtered_budget_df['Date'] <= end_date]
+
+    if start_date is not None:
+        if isinstance(start_date, str):
+            start_date = parse_date(start_date)
+        start_date = pd.to_datetime(start_date)
+        filtered_df = filtered_df[filtered_df['Date'] >= start_date]
+
+    if end_date is not None:
+        if isinstance(end_date, str):
+            end_date = parse_date(end_date)
+        end_date = pd.to_datetime(end_date)
+        filtered_df = filtered_df[filtered_df['Date'] <= end_date]
 
 # -------------------------------------------------------
 # sales table

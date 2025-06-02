@@ -6,6 +6,7 @@ import traceback
 # Import from local modules
 from models import FinancialCompanyWideUploadRequest, DashboardResponse
 from financials_dashboard.financials_processor import process_financials_file
+from constants import *
 
 router = APIRouter(
     prefix="/api",
@@ -44,7 +45,16 @@ async def upload_excel(request: FinancialCompanyWideUploadRequest = Body(...)):
         print("this is the year", year)
 
 
-        financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table, years, dates, stores  = process_financials_file(
+        (financials_weeks, 
+         financials_years, 
+         financials_stores, 
+         financials_sales_table, 
+         financials_orders_table, 
+         financials_avg_ticket_table, 
+         financials_tw_lw_bdg_table, 
+         years, 
+         dates, 
+         stores)  = process_financials_file(
                 file_location,  
                 year=year, 
                 week_range=week_range, 
@@ -54,13 +64,31 @@ async def upload_excel(request: FinancialCompanyWideUploadRequest = Body(...)):
                 )
             
         financials_result = {
-            "table1": [{"financials_weeks": [], "financials_years": [], "financials_stores": []}],
+            "table1": [{"financials_sales": 45000, 
+                        "financials_labor_cost": 33 , 
+                        "financials_avg_ticket": 13.4,
+                        "financials_prime_cost": 12.4,
+                        "financials_food_cost": 11.4,
+                        "financials_spmh": 10.4,
+                        "financials_lmph": 9.4,
+                        }],
             "table2": financials_sales_table.to_dict(orient='records'),
             "table3": financials_orders_table.to_dict(orient='records'),
             "table4": financials_avg_ticket_table.to_dict(orient='records'),
             "table5": financials_tw_lw_bdg_table.to_dict(orient='records'),
+            "table6": financials_sales_df1.to_dict(orient='records'),  
+            "table7": financials_labor_df.to_dict(orient='records'),
+            "table8": financials_avg_ticker_df.to_dict(orient='records'),
+            "table9": financials_prime_cost_df.to_dict(orient='records'),
+            "table10": financials_food_cost_df.to_dict(orient='records'),
+            "table11": financials_spmh_df.to_dict(orient='records'),
+            "table12": financials_lpmh_df.to_dict(orient='records'),
+            "table13": financials_weekly_sales_df.to_dict(orient='records'),
+            "table14": financials_orders_by_day_df.to_dict(orient='records'),
+            "table15": financials_average_ticket_df.to_dict(orient='records'),
+            "table16": financials_kpi_vs_budget_df.to_dict(orient='records'),
             "fileName": request.fileName, #the full names of the file saved in the uploads folder
-            # "locations": stores,
+            "locations": stores,
             # "years": years,
             # "dates": dates,
             "dashboardName": "Financials",

@@ -251,7 +251,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             "fileName": file_name, #the full names of the file saved in the uploads folder
             "locations": stores,
             "years": years,
-            "dates": dates,
+            # "dates": dates,
             "dashboardName": "Financials",
             "data":  "Financial Dashboard is not yet implemented."
             }
@@ -365,7 +365,16 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             #     "data":  "Companywide Dashboard is not yet implemented."
             # }
             
-            sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df, years, dates, stores = process_companywide_file(
+            (sales_df, 
+             order_df, 
+             avg_ticket_df, 
+             cogs_df, 
+             reg_pay_df, 
+             lb_hrs_df, 
+             spmh_df, 
+             years, 
+             dates, 
+             stores) = process_companywide_file(
                 excel_data_copy, 
                 store_filter='All', 
                 year_filter=None, 

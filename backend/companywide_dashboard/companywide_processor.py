@@ -9,7 +9,7 @@ from companywide_dashboard.companywide_utils import companywide_tables
 
 
 
-def process_companywide_file(file_data: Union[io.BytesIO, str], store_filter='All', year_filter=None, quarter_filter='All', helper4_filter='All'):
+def process_companywide_file(file_data: Union[io.BytesIO, str], store_filter='All', year_filter=None, quarter_filter='All', helper4_filter='All', start_date=None, end_date=None):
     """
     Process the uploaded Excel file and transform the data.
     Returns data tables for the frontend including the 1P column.
@@ -63,7 +63,19 @@ def process_companywide_file(file_data: Union[io.BytesIO, str], store_filter='Al
     stores = df["Store"].unique().tolist()  # Display unique values in the 'stores' column
 
  
-    sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df = companywide_tables(df, store_filter=store_filter, year_filter=year_filter, quarter_filter=quarter_filter, helper4_filter=helper4_filter)
+    (sales_df, 
+     order_df, 
+     avg_ticket_df, 
+     cogs_df, 
+     reg_pay_df, 
+     lb_hrs_df, 
+     spmh_df) = companywide_tables(df, 
+                                   store_filter=store_filter, 
+                                   year_filter=year_filter, 
+                                   quarter_filter=quarter_filter, 
+                                   helper4_filter=helper4_filter, 
+                                   start_date=start_date,
+                                   end_date=end_date)
  
 
     return sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df, years, dates, stores

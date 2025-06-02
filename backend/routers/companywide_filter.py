@@ -29,18 +29,30 @@ async def upload_excel(request: FinancialCompanyWideUploadRequest = Body(...)):
         fileName = request.fileName
         # fileName = "20250514_200147_midtown_east_dashboard2_template1.xlsx"
         file_location = os.path.join(UPLOAD_DIR, fileName)
-        
-        location = request.location if request.location else 'All'
+        if request.location == "Multiple Locations":
+            location_filter = "All"
+        else:
+            location_filter = request.location if request.location else 'All'
         year = request.year if request.year else "All"
         quarter_filter = request.quarter if request.quarter else 'All'
         week_range = request.weekRange if request.weekRange else 'All'
+        start_date = request.startDate if request.startDate else None
+        end_date = request.endDate if request.endDate else None
             
-        sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df, years, dates, stores = process_companywide_file(
+        (sales_df, 
+         order_df, 
+         avg_ticket_df, 
+         cogs_df, 
+         reg_pay_df, 
+         lb_hrs_df, 
+         spmh_df, 
+         years, 
+         dates, 
+         stores) = process_companywide_file(
                 file_location, 
-                store_filter=location, 
-                year_filter=year, 
-                quarter_filter=quarter_filter, 
-                helper4_filter=week_range
+                store_filter=location_filter, 
+                start_date=start_date,
+                end_date=end_date
             )
             
             

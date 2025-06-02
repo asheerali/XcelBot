@@ -159,3 +159,22 @@ kpi_vs_budget_data_ext = {
 # Creating extended DataFrames
 financials_average_ticket_df = pd.DataFrame(average_ticket_data_ext)
 financials_kpi_vs_budget_df = pd.DataFrame(kpi_vs_budget_data_ext)
+
+
+# Creating dummy data based on the table in the image
+sales_data1 = {
+    "Time Period": ["Tw", "Lw", "L4wt", "Ly", "Bdg"],
+    "% Change": ["1%", "1%", "1.00%", "1.00%", "-1.00%"],
+    "In-House": ["1.00%", "1.00%", "1.00%", "1.00%", "1.00%"],
+    "% (+/-)_In-House": ["1.00%", "1.00%", "-1.00%", "1.00%", "-1.00%"],
+    "1p": ["1.00%", "1.00%", "1.00%", "1.00%", "1.00%"],
+    "% (+/-)_1p": ["1.00%", "1.00%", "-1.00%", "1.00%", "-1.00%"],
+    "3p": ["1.00%", "1.00%", "1.00%", "1.00%", "1.00%"],
+    "% (+/-)_3p": ["1.00%", "1.00%", "-1.00%", "1.00%", "-1.00%"],
+    "Catering": ["1.00%", "1.00%", "1.00%", "1.00%", "1.00%"],
+    "% (+/-)_Catering": ["1.00%", "1.00%", "-1.00%", "1.00%", "-1.00%"],
+    "TTL": ["1.00%", "1.00%", "1.00%", "1.00%", "1.00%"]
+}
+
+# Creating DataFrame
+financials_sales_df1 = pd.DataFrame(sales_data1)
