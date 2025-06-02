@@ -393,20 +393,13 @@ export default function ProductMixDashboard() {
   const [filterError, setFilterError] = useState<string>("");
   const [dataUpdated, setDataUpdated] = useState<boolean>(false);
 
-  // Date range state - using DateRangeSelector pattern
-  const DEFAULT_START_DATE = new Date(2010, 0, 1); // January 1, 2010
-  const DEFAULT_END_DATE = new Date(2025, 0, 1);   // January 1, 2025
-  
-  const [localStartDate, setLocalStartDate] = useState<string>(
-    format(DEFAULT_START_DATE, 'MM/dd/yyyy')
-  );
-  const [localEndDate, setLocalEndDate] = useState<string>(
-    format(DEFAULT_END_DATE, 'MM/dd/yyyy')
-  );
+  // UPDATED: No default date range - empty state
+  const [localStartDate, setLocalStartDate] = useState<string>("");
+  const [localEndDate, setLocalEndDate] = useState<string>("");
   const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
   const [selectedRange, setSelectedRange] = useState({
-    startDate: DEFAULT_START_DATE,
-    endDate: DEFAULT_END_DATE,
+    startDate: new Date(),
+    endDate: new Date(),
   });
 
   // Extract filter options from actual data
@@ -430,23 +423,27 @@ export default function ProductMixDashboard() {
     ?.map((item) => item["Menu Item"])
     .filter(Boolean) || ["No menu items available"];
 
-  // Filter states using multiselect arrays - Initialize with actual data
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([
-    currentProductMixLocation || locations[0],
-  ]);
+  // UPDATED: Filter states using multiselect arrays - No defaults, but initially select all available locations
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedServers, setSelectedServers] = useState<string[]>([]);
   const [selectedMenuItems, setSelectedMenuItems] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [hasInitializedLocations, setHasInitializedLocations] = useState(false);
 
-  // Update selected locations when currentProductMixLocation changes
+  // Initially select all available locations (not a default, just initial state)
   useEffect(() => {
     if (
-      currentProductMixLocation &&
-      !selectedLocations.includes(currentProductMixLocation)
+      !hasInitializedLocations && 
+      productMixLocations.length > 0 && 
+      !productMixLocations.includes("No locations available") &&
+      selectedLocations.length === 0
     ) {
-      setSelectedLocations([currentProductMixLocation]);
+      // Initially select ALL available locations
+      setSelectedLocations([...productMixLocations]);
+      setHasInitializedLocations(true);
+      console.log('📍 Initially selecting all available locations:', productMixLocations);
     }
-  }, [currentProductMixLocation, selectedLocations]);
+  }, [productMixLocations, selectedLocations.length, hasInitializedLocations]);
 
   // Clear dataUpdated state when filters change
   useEffect(() => {
@@ -526,22 +523,23 @@ export default function ProductMixDashboard() {
     setTabValue(newValue);
   };
 
-  // NEW: Clear all filters and reset to original data
+  // UPDATED: Clear all filters - no default values, resets initialization
   const handleClearAllFilters = () => {
-    setSelectedLocations([currentProductMixLocation || locations[0]]);
-    setLocalStartDate(format(DEFAULT_START_DATE, 'MM/dd/yyyy'));
-    setLocalEndDate(format(DEFAULT_END_DATE, 'MM/dd/yyyy'));
+    setSelectedLocations([]);
+    setLocalStartDate("");
+    setLocalEndDate("");
     setSelectedServers([]);
     setSelectedCategories([]);
     setSelectedMenuItems([]);
     setDataUpdated(false);
     setFilterError("");
+    setHasInitializedLocations(false); // Reset initialization flag
     
     // Reset Redux filters
     dispatch(updateProductMixFilters({
-      location: currentProductMixLocation || locations[0],
-      startDate: format(DEFAULT_START_DATE, 'MM/dd/yyyy'),
-      endDate: format(DEFAULT_END_DATE, 'MM/dd/yyyy'),
+      location: "",
+      startDate: "",
+      endDate: "",
       server: "",
       category: "",
       selectedCategories: [],
@@ -549,8 +547,14 @@ export default function ProductMixDashboard() {
     }));
   };
 
-  // NEW: Handle Apply Filters with API call
+  // UPDATED: Handle Apply Filters with validation - only location validation needed
   const handleApplyFilters = async () => {
+    // Validate required filters (only locations are required)
+    if (selectedLocations.length === 0) {
+      setFilterError("Please select at least one location");
+      return;
+    }
+
     setIsLoading(true);
     setFilterError("");
     setDataUpdated(false);
@@ -803,36 +807,12 @@ export default function ProductMixDashboard() {
         </Alert>
       )}
 
-      {/* Show current data summary */}
-      {currentProductMixData && (
-        <Alert 
-          severity={currentProductMixData?.filterApplied ? "info" : "success"} 
-          sx={{ mb: 3 }}
-        >
+      {/* Info Alert for Initial State */}
+      {selectedLocations.length > 0 && !dataUpdated && !filterError && !error && (
+        <Alert severity="info" sx={{ mb: 3 }}>
           <Typography variant="body2">
-            <strong>Data Status:</strong> {currentProductMixData?.filterApplied ? "📊 Filtered Data" : "📋 Original Data"} |
-            <strong> Location:</strong> {currentProductMixLocation} |
-            <strong> Net Sales:</strong> $
-            {(
-              currentProductMixData.table1?.[0]?.net_sales?.[0] || 0
-            ).toLocaleString()}{" "}
-            |<strong> Orders:</strong>{" "}
-            {currentProductMixData.table1?.[0]?.orders?.[0] || 0} |
-            <strong> Items Sold:</strong>{" "}
-            {currentProductMixData.table1?.[0]?.qty_sold?.[0] || 0}
-            {currentProductMixData?.filterApplied && (
-              <>
-                <br />
-                <strong>Active Filters:</strong>{" "}
-                Date: {currentProductMixData.appliedFilters?.startDate} - {currentProductMixData.appliedFilters?.endDate}
-                {currentProductMixData.appliedFilters?.categories?.length > 0 && (
-                  <> | Categories: {currentProductMixData.appliedFilters.categories.join(", ")}</>
-                )}
-                {currentProductMixData.appliedFilters?.servers?.length > 0 && (
-                  <> | Servers: {currentProductMixData.appliedFilters.servers.join(", ")}</>
-                )}
-              </>
-            )}
+            <strong>Ready to Filter:</strong> All available locations ({selectedLocations.length}) are initially selected. 
+            Optionally modify any filters, then click "Apply Filters" to analyze your data.
           </Typography>
         </Alert>
       )}
@@ -840,12 +820,15 @@ export default function ProductMixDashboard() {
       {/* Filters Section */}
       <Card elevation={3} sx={{ mb: 3, borderRadius: 2, overflow: "hidden" }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-          {/* Filter Header - Removed the Apply Filters button from here */}
+          {/* Filter Header */}
           <Box sx={{ mb: 2 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <FilterListIcon color="primary" />
               <Typography variant="h6" sx={{ fontWeight: 500 }}>
                 Filters
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                (All locations initially selected)
               </Typography>
             </Box>
           </Box>
@@ -860,11 +843,11 @@ export default function ProductMixDashboard() {
                 value={selectedLocations}
                 onChange={handleLocationChange}
                 icon={<PlaceIcon />}
-                placeholder="Select locations"
+                placeholder="All locations initially selected"
               />
             </Grid>
 
-            {/* Date Range filter - Updated to use DateRangeSelector */}
+            {/* Date Range filter - Updated to be optional */}
             <Grid item {...gridSizes}>
               <Box sx={{ position: "relative", width: "100%" }}>
                 <InputLabel
@@ -890,7 +873,7 @@ export default function ProductMixDashboard() {
                     justifyContent: 'flex-start',
                     textTransform: 'none',
                     borderColor: 'rgba(0, 0, 0, 0.23)',
-                    color: 'text.primary',
+                    color: (!localStartDate || !localEndDate) ? 'text.secondary' : 'text.primary',
                     padding: '8px 14px',
                     '&:hover': {
                       borderColor: 'primary.main',
@@ -899,7 +882,10 @@ export default function ProductMixDashboard() {
                 >
                   <Box sx={{ textAlign: 'left', flexGrow: 1 }}>
                     <Typography variant="body2" component="div" sx={{ fontSize: '0.875rem' }}>
-                      {formatDisplayDate(localStartDate)} - {formatDisplayDate(localEndDate)}
+                      {(!localStartDate || !localEndDate) 
+                        ? "Select date range (optional)" 
+                        : `${formatDisplayDate(localStartDate)} - ${formatDisplayDate(localEndDate)}`
+                      }
                     </Typography>
                   </Box>
                 </Button>
@@ -915,10 +901,11 @@ export default function ProductMixDashboard() {
                 value={selectedCategories}
                 onChange={handleCategoryChange}
                 icon={<FastfoodIcon />}
-                placeholder="Select categories"
+                placeholder="Select categories (optional)"
               />
             </Grid>
-            {/* Server/Menu filter - conditional based on tab */}
+            
+            {/* Server filter - conditional based on tab */}
             <Grid item {...gridSizes}>
               {tabValue === 0 ? (
                 <MultiSelect
@@ -928,7 +915,7 @@ export default function ProductMixDashboard() {
                   value={selectedServers}
                   onChange={handleServerChange}
                   icon={<PersonIcon />}
-                  placeholder="Select servers"
+                  placeholder="Select servers (optional)"
                 />
               ) : (
                 <></>
@@ -974,8 +961,8 @@ export default function ProductMixDashboard() {
                     size="small"
                     icon={<CalendarTodayIcon />}
                     onDelete={() => {
-                      setLocalStartDate(format(DEFAULT_START_DATE, 'MM/dd/yyyy'));
-                      setLocalEndDate(format(DEFAULT_END_DATE, 'MM/dd/yyyy'));
+                      setLocalStartDate("");
+                      setLocalEndDate("");
                     }}
                   />
                 )}
@@ -1028,13 +1015,18 @@ export default function ProductMixDashboard() {
             </Box>
           )}
 
-          {/* MOVED: Apply Filters Button to bottom left */}
+          {/* UPDATED: Apply Filters Button with validation feedback */}
           <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-start", gap: 2 }}>
             <Button
               variant="contained"
               color="primary"
               onClick={handleApplyFilters}
-              disabled={isLoading || loading || !currentProductMixFile}
+              disabled={
+                isLoading || 
+                loading || 
+                !currentProductMixFile ||
+                selectedLocations.length === 0
+              }
               startIcon={
                 isLoading || loading ? (
                   <CircularProgress size={16} />
@@ -1053,25 +1045,50 @@ export default function ProductMixDashboard() {
               {isLoading || loading ? "Loading..." : "APPLY FILTERS"}
             </Button>
 
-            {/* Clear All Filters Button */}
-            {(selectedLocations.length > 1 || 
+            {/* Clear All Filters Button - Show if any filters are applied */}
+            {(selectedLocations.length > 0 || 
               selectedServers.length > 0 || 
               selectedCategories.length > 0 || 
               selectedMenuItems.length > 0 ||
-              localStartDate !== format(DEFAULT_START_DATE, 'MM/dd/yyyy') ||
-              localEndDate !== format(DEFAULT_END_DATE, 'MM/dd/yyyy')) && (
+              localStartDate ||
+              localEndDate) && (
               <Button
                 variant="outlined"
                 color="secondary"
                 onClick={handleClearAllFilters}
                 disabled={isLoading || loading}
                 startIcon={<CloseIcon />}
-            
+                sx={{ 
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                  }
+                }}
               >
                 CLEAR ALL FILTERS
               </Button>
             )}
           </Box>
+
+          {/* Helper text for Clear All behavior */}
+          {(selectedLocations.length > 0 || localStartDate || localEndDate) && (
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                💡 Tip: "Clear All Filters" will reset everything to empty. To re-select all locations, use the location filter's "Select All" option.
+                Date range is optional - filters will apply to all available data if no date range is selected.
+              </Typography>
+            </Box>
+          )}
+
+          {/* Validation message for required fields */}
+          {selectedLocations.length === 0 && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                <strong>Required:</strong> Please select at least one location to apply filters.
+              </Typography>
+            </Alert>
+          )}
+
+         
         </CardContent>
       </Card>
 
