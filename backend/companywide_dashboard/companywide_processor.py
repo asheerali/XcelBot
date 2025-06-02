@@ -8,7 +8,6 @@ import numpy as np
 from companywide_dashboard.companywide_utils import companywide_tables
 
 
-
 def process_companywide_file(file_data: Union[io.BytesIO, str], store_filter='All', year_filter=None, quarter_filter='All', helper4_filter='All', start_date=None, end_date=None):
     """
     Process the uploaded Excel file and transform the data.
