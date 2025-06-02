@@ -1,3 +1,4 @@
+// ExcelUploadPage.tsx - Updated with responsive location handling
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
@@ -43,7 +44,7 @@ import { styled, keyframes } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-// Icons
+// Icons (keeping existing imports)
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import FileUploadIcon from "@mui/icons-material/FileUpload";
 import DescriptionIcon from "@mui/icons-material/Description";
@@ -95,7 +96,7 @@ import { API_URL_Local } from "../constants";
 // API URL for Excel upload
 const API_URL = API_URL_Local + "/api/excel/upload";
 
-// Animation keyframes
+// Styled components (keeping existing ones)
 const fadeIn = keyframes`
   from {
     opacity: 0;
@@ -119,16 +120,6 @@ const pulse = keyframes`
   }
 `;
 
-const shimmer = keyframes`
-  0% {
-    background-position: -200px 0;
-  }
-  100% {
-    background-position: calc(200px + 100%) 0;
-  }
-`;
-
-// Styled components
 const PageContainer = styled(Container)(({ theme }) => ({
   minHeight: "100vh",
   background: `linear-gradient(135deg, 
@@ -150,20 +141,8 @@ const HeaderCard = styled(Card)(({ theme }) => ({
   position: "relative",
   border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
   boxShadow: "none",
-  "&::before": {
-    content: '""',
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'url("data:image/svg+xml,")',
-    backgroundSize: "100px 100px",
-    pointerEvents: "none",
-  },
 }));
 
-// Modern Dashboard Card with sleek design similar to the image
 const ModernDashboardCard = styled(Card, {
   shouldForwardProp: (prop) => prop !== "selected",
 })<{ selected?: boolean }>(({ theme, selected }) => ({
@@ -188,36 +167,13 @@ const ModernDashboardCard = styled(Card, {
         ${alpha(theme.palette.background.paper, 0.95)} 100%)`
     : theme.palette.background.paper,
   boxShadow: selected
-    ? `0 8px 32px ${alpha(theme.palette.primary.main, 0.15)}, 
-       0 0 0 1px ${alpha(theme.palette.primary.main, 0.1)}`
+    ? `0 8px 32px ${alpha(theme.palette.primary.main, 0.15)}`
     : "0 2px 12px rgba(0, 0, 0, 0.04)",
   "&:hover": {
     transform: "translateY(-4px)",
-    boxShadow: `0 12px 40px ${alpha(theme.palette.primary.main, 0.15)}, 
-                0 0 0 1px ${alpha(theme.palette.primary.main, 0.1)}`,
+    boxShadow: `0 12px 40px ${alpha(theme.palette.primary.main, 0.15)}`,
     border: `2px solid ${theme.palette.primary.main}`,
-    background: `linear-gradient(135deg, 
-      ${alpha(theme.palette.primary.main, 0.06)} 0%, 
-      ${alpha(theme.palette.background.paper, 0.98)} 100%)`,
-    "& .dashboard-icon": {
-      transform: "scale(1.1)",
-      color: theme.palette.primary.main,
-    },
   },
-  // Clean top accent for selected state
-  "&::before": selected
-    ? {
-        content: '""',
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        height: "3px",
-        background: `linear-gradient(90deg, 
-          ${theme.palette.primary.main}, 
-          ${theme.palette.primary.light})`,
-      }
-    : {},
 }));
 
 const ModernIconAvatar = styled(Avatar)(({ theme }) => ({
@@ -229,25 +185,6 @@ const ModernIconAvatar = styled(Avatar)(({ theme }) => ({
   transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
   boxShadow: "0 4px 16px rgba(0, 0, 0, 0.06)",
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  "&::before": {
-    content: '""',
-    position: "absolute",
-    top: "-1px",
-    left: "-1px",
-    right: "-1px",
-    bottom: "-1px",
-    background: "linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent)",
-    borderRadius: "50%",
-    zIndex: -1,
-    opacity: 0,
-    transition: "opacity 0.3s ease",
-  },
-  ".dashboard-card:hover &": {
-    boxShadow: "0 6px 24px rgba(0, 0, 0, 0.1)",
-  },
-  ".dashboard-card:hover &::before": {
-    opacity: 1,
-  },
 }));
 
 const ModernDropZone = styled(Paper)(({ theme }) => ({
@@ -269,15 +206,6 @@ const ModernDropZone = styled(Paper)(({ theme }) => ({
     )} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
     transform: "translateY(-2px)",
   },
-}));
-
-const DashboardSelectionCard = styled(Card)(({ theme }) => ({
-  borderRadius: theme.spacing(3),
-  background: `linear-gradient(145deg, 
-    ${theme.palette.background.paper} 0%, 
-    ${alpha(theme.palette.primary.main, 0.02)} 100%)`,
-  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-  backdropFilter: "blur(10px)",
 }));
 
 const FileCard = styled(Card)(({ theme }) => ({
@@ -317,7 +245,7 @@ const SelectedBadge = styled(Chip)(({ theme }) => ({
   boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
 }));
 
-// Clean Dashboard options with simpler design
+// Dashboard options (keeping existing)
 const DASHBOARD_OPTIONS = [
   {
     value: "Sales Split and Product Mix",
@@ -326,7 +254,6 @@ const DASHBOARD_OPTIONS = [
     description: "Sales analysis & menu insights",
     color: "#e91e63",
     gradient: "linear-gradient(135deg, #e91e63 0%, #f06292 100%)",
-    height: "160px",
   },
   {
     value: "Financials and Sales Wide",
@@ -335,7 +262,6 @@ const DASHBOARD_OPTIONS = [
     description: "Financial & company metrics",
     color: "#00bcd4",
     gradient: "linear-gradient(135deg, #00bcd4 0%, #4dd0e1 100%)",
-    height: "160px",
   },
   {
     value: "Sales Split",
@@ -344,7 +270,6 @@ const DASHBOARD_OPTIONS = [
     description: "Sales category breakdown",
     color: "#4285f4",
     gradient: "linear-gradient(135deg, #4285f4 0%, #64b5f6 100%)",
-    height: "160px",
   },
   {
     value: "Product Mix",
@@ -353,7 +278,6 @@ const DASHBOARD_OPTIONS = [
     description: "Menu performance analysis",
     color: "#689f38",
     gradient: "linear-gradient(135deg, #689f38 0%, #8bc34a 100%)",
-    height: "160px",
   },
   {
     value: "Financials",
@@ -362,7 +286,6 @@ const DASHBOARD_OPTIONS = [
     description: "Financial performance",
     color: "#9c27b0",
     gradient: "linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%)",
-    height: "160px",
   },
   {
     value: "Sales Wide",
@@ -371,14 +294,13 @@ const DASHBOARD_OPTIONS = [
     description: "Enterprise-wide insights",
     color: "#f57c00",
     gradient: "linear-gradient(135deg, #f57c00 0%, #ffb74d 100%)",
-    height: "160px",
   },
 ];
 
 // File status type
 type FileStatus = "pending" | "uploading" | "success" | "error";
 
-// File info type - UPDATED: Removed locations, added extracted fileName
+// UPDATED: Enhanced FileInfo interface with multiple locations support
 interface FileInfo {
   file: File;
   status: FileStatus;
@@ -387,24 +309,97 @@ interface FileInfo {
   dashboard: string;
   data?: any;
   categories?: string[];
-  extractedFileName?: string; // NEW: Store the filename from backend response
+  extractedFileName?: string;
+  // NEW: Support for multiple locations
+  locations?: string[];
+  primaryLocation?: string;
+  allLocationsData?: Array<{
+    location: string;
+    data: any;
+    categories?: string[];
+  }>;
 }
 
-// Helper function to extract categories from response data
-const extractCategoriesFromData = (data: any): string[] => {
+// UPDATED: Enhanced location extraction function
+const extractLocationsFromResponse = (response: any): string[] => {
+  console.log("🔍 Extracting locations from response:", response);
+  
+  let locations: string[] = [];
+  
+  try {
+    // Handle array responses (multiple dashboards)
+    if (Array.isArray(response)) {
+      response.forEach((dashboardData) => {
+        // Extract from fileLocation field
+        if (dashboardData.fileLocation) {
+          if (Array.isArray(dashboardData.fileLocation)) {
+            locations = [...locations, ...dashboardData.fileLocation];
+          } else {
+            locations.push(dashboardData.fileLocation);
+          }
+        }
+        
+        // Extract from locations field
+        if (dashboardData.locations && Array.isArray(dashboardData.locations)) {
+          locations = [...locations, ...dashboardData.locations];
+        }
+        
+        // Extract from fileName if no explicit location
+        if (dashboardData.fileName && locations.length === 0) {
+          const locationFromFileName = dashboardData.fileName.replace(/\.(xlsx|xls)$/i, '');
+          locations.push(locationFromFileName);
+        }
+      });
+    } else {
+      // Handle single object responses
+      if (response.fileLocation) {
+        if (Array.isArray(response.fileLocation)) {
+          locations = [...locations, ...response.fileLocation];
+        } else {
+          locations.push(response.fileLocation);
+        }
+      }
+      
+      if (response.locations && Array.isArray(response.locations)) {
+        locations = [...locations, ...response.locations];
+      }
+      
+      // Fallback to fileName
+      if (response.fileName && locations.length === 0) {
+        const locationFromFileName = response.fileName.replace(/\.(xlsx|xls)$/i, '');
+        locations.push(locationFromFileName);
+      }
+    }
+    
+    // Remove duplicates and filter out empty strings
+    const uniqueLocations = [...new Set(locations)].filter(loc => 
+      loc && typeof loc === 'string' && loc.trim() !== ''
+    );
+    
+    console.log("📍 Extracted unique locations:", uniqueLocations);
+    return uniqueLocations;
+    
+  } catch (error) {
+    console.error("❌ Error extracting locations:", error);
+    return [];
+  }
+};
+
+// UPDATED: Enhanced categories extraction with location awareness
+const extractCategoriesFromData = (data: any, location?: string): string[] => {
   let categories: string[] = [];
 
   try {
     if (Array.isArray(data)) {
-      data.forEach((dashboardData, index) => {
-        const dashboardCategories =
-          extractCategoriesFromSingleDashboard(dashboardData);
+      data.forEach((dashboardData) => {
+        const dashboardCategories = extractCategoriesFromSingleDashboard(dashboardData);
         categories = [...new Set([...categories, ...dashboardCategories])];
       });
     } else {
       categories = extractCategoriesFromSingleDashboard(data);
     }
 
+    console.log(`🏷️ Extracted categories for location ${location}:`, categories);
     return categories;
   } catch (error) {
     console.error("❌ Error extracting categories:", error);
@@ -416,6 +411,7 @@ const extractCategoriesFromSingleDashboard = (dashboardData: any): string[] => {
   let categories: string[] = [];
 
   try {
+    // Direct categories fields
     if (dashboardData.Categories && Array.isArray(dashboardData.Categories)) {
       categories = [...categories, ...dashboardData.Categories];
     }
@@ -424,37 +420,17 @@ const extractCategoriesFromSingleDashboard = (dashboardData: any): string[] => {
       categories = [...categories, ...dashboardData.categories];
     }
 
-    if (
-      categories.length === 0 &&
-      dashboardData.table1 &&
-      Array.isArray(dashboardData.table1) &&
-      dashboardData.table1.length > 0
-    ) {
+    // Extract from table data if no explicit categories
+    if (categories.length === 0 && dashboardData.table1 && Array.isArray(dashboardData.table1) && dashboardData.table1.length > 0) {
       const firstRow = dashboardData.table1[0];
       if (typeof firstRow === "object" && firstRow !== null) {
         const tableKeys = Object.keys(firstRow);
         const filteredTableKeys = tableKeys.filter((key) => {
           const keyLower = key.toLowerCase();
           const excludePatterns = [
-            "week",
-            "date",
-            "time",
-            "id",
-            "index",
-            "total",
-            "grand",
-            "sum",
-            "count",
-            "avg",
-            "average",
-            "min",
-            "max",
-            "store",
-            "location",
-            "file",
-            "upload",
-            "dashboard",
-            "data",
+            "week", "date", "time", "id", "index", "total", "grand", "sum", 
+            "count", "avg", "average", "min", "max", "store", "location", 
+            "file", "upload", "dashboard", "data",
           ];
           return !excludePatterns.some((pattern) => keyLower.includes(pattern));
         });
@@ -462,11 +438,9 @@ const extractCategoriesFromSingleDashboard = (dashboardData: any): string[] => {
       }
     }
 
-    const finalCategories = [...new Set(categories)].filter(
+    return [...new Set(categories)].filter(
       (cat) => cat && typeof cat === "string" && cat.trim() !== ""
     );
-
-    return finalCategories;
   } catch (error) {
     return [];
   }
@@ -480,10 +454,10 @@ const ExcelUploadPage: React.FC = () => {
   const [selectedDashboard, setSelectedDashboard] = useState("Financials");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
+  // Existing event handlers (keeping them the same)
   const handleDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
@@ -568,7 +542,7 @@ const ExcelUploadPage: React.FC = () => {
     });
   };
 
-  // UPDATED: Upload file with filename extraction
+  // UPDATED: Enhanced upload function with responsive location handling
   const uploadFile = async (fileInfo: FileInfo, index: number) => {
     try {
       setFiles((prevFiles) => {
@@ -614,48 +588,150 @@ const ExcelUploadPage: React.FC = () => {
         dashboard: fileInfo.dashboard,
       });
 
-      console.log("📤 sending response:", fileInfo);
-
       clearInterval(progressInterval);
 
       if (response.data) {
         console.log("📨 Received response data:", response.data);
 
-        // UPDATED: Extract filename from backend response
-        let extractedFileName = fileInfo.file.name; // Default fallback
-        
-        if (Array.isArray(response.data) && response.data.length > 0) {
-          // For array responses, get fileName from first dashboard
-          extractedFileName = response.data[0]?.fileName || fileInfo.file.name;
-          console.log("🏷️ Extracted fileName from array response:", extractedFileName);
-        } else if (response.data.fileName) {
-          // For single object responses
-          extractedFileName = response.data.fileName;
-          console.log("🏷️ Extracted fileName from object response:", extractedFileName);
+        // UPDATED: Extract all locations from response
+        const extractedLocations = extractLocationsFromResponse(response.data);
+        console.log("📍 All extracted locations:", extractedLocations);
+
+        // Get primary location (first one or from filename)
+        let primaryLocation = "";
+        if (extractedLocations.length > 0) {
+          primaryLocation = extractedLocations[0];
+        } else {
+          // Fallback to filename
+          primaryLocation = fileInfo.file.name.replace(/\.(xlsx|xls)$/i, '');
+          extractedLocations.push(primaryLocation);
         }
 
-        const extractedCategories = extractCategoriesFromData(response.data);
-        console.log("🏷️ Extracted categories:", extractedCategories);
+        // Extract filename from response
+        let extractedFileName = fileInfo.file.name;
+        if (Array.isArray(response.data) && response.data.length > 0) {
+          extractedFileName = response.data[0]?.fileName || fileInfo.file.name;
+        } else if (response.data.fileName) {
+          extractedFileName = response.data.fileName;
+        }
+
+        // UPDATED: Process data for all locations
+        const allLocationsData: Array<{
+          location: string;
+          data: any;
+          categories?: string[];
+        }> = [];
 
         if (Array.isArray(response.data)) {
+          // Handle multiple dashboard response
           response.data.forEach((dashboardData) => {
             const dashboardName = dashboardData.dashboardName?.trim();
+            const extractedCategories = extractCategoriesFromData(dashboardData, primaryLocation);
+            
             const enhancedDashboardData = {
               ...dashboardData,
               categories: extractedCategories,
             };
 
-            // UPDATED: Use extractedFileName from response instead of location
-            const locationFromFileName = extractedFileName.replace(/\.(xlsx|xls)$/i, '');
+            // Store data for all locations
+            extractedLocations.forEach(location => {
+              allLocationsData.push({
+                location,
+                data: enhancedDashboardData,
+                categories: extractedCategories,
+              });
 
-            // Dispatch to appropriate store based on dashboard type
-            if (dashboardName === "Sales Split") {
+              // Dispatch to appropriate store based on dashboard type
+              if (dashboardName === "Sales Split") {
+                dispatch(
+                  addSalesData({
+                    fileName: extractedFileName,
+                    fileContent: base64Content,
+                    location: location,
+                    data: enhancedDashboardData,
+                    categories: extractedCategories,
+                  })
+                );
+
+                dispatch(
+                  addFileData({
+                    fileName: extractedFileName,
+                    fileContent: base64Content,
+                    location: location,
+                    data: enhancedDashboardData,
+                    categories: extractedCategories,
+                  })
+                );
+              } else if (dashboardName === "Product Mix") {
+                dispatch(
+                  addProductMixData({
+                    fileName: extractedFileName,
+                    fileContent: base64Content,
+                    location: location,
+                    data: enhancedDashboardData,
+                    categories: extractedCategories,
+                  })
+                );
+              } else if (dashboardName === "Financials") {
+                dispatch(
+                  addFinancialData({
+                    fileName: extractedFileName,
+                    fileContent: base64Content,
+                    location: location,
+                    data: enhancedDashboardData,
+                    categories: extractedCategories,
+                  })
+                );
+              } else if (dashboardName === "Sales Wide") {
+                dispatch(
+                  addSalesWideData({
+                    fileName: extractedFileName,
+                    fileContent: base64Content,
+                    location: location,
+                    data: enhancedDashboardData,
+                    categories: extractedCategories,
+                  })
+                );
+              }
+            });
+          });
+        } else {
+          // Handle single dashboard response
+          const dashboardName = response.data.dashboardName?.trim() || fileInfo.dashboard;
+          const extractedCategories = extractCategoriesFromData(response.data, primaryLocation);
+          
+          const enhancedDashboardData = {
+            ...response.data,
+            categories: extractedCategories,
+          };
+
+          // Store data for all locations
+          extractedLocations.forEach(location => {
+            allLocationsData.push({
+              location,
+              data: enhancedDashboardData,
+              categories: extractedCategories,
+            });
+
+            // Dispatch to appropriate store
+            if (dashboardName === "Financials") {
+              dispatch(
+                addFinancialData({
+                  fileName: extractedFileName,
+                  fileContent: base64Content,
+                  location: location,
+                  data: enhancedDashboardData,
+                  categories: extractedCategories,
+                })
+              );
+            } else if (dashboardName === "Sales Split") {
               dispatch(
                 addSalesData({
                   fileName: extractedFileName,
                   fileContent: base64Content,
-                  location: locationFromFileName,
+                  location: location,
                   data: enhancedDashboardData,
+                  categories: extractedCategories,
                 })
               );
 
@@ -663,26 +739,9 @@ const ExcelUploadPage: React.FC = () => {
                 addFileData({
                   fileName: extractedFileName,
                   fileContent: base64Content,
-                  location: locationFromFileName,
+                  location: location,
                   data: enhancedDashboardData,
-                })
-              );
-            } else if (dashboardName === "Product Mix") {
-              dispatch(
-                addProductMixData({
-                  fileName: extractedFileName,
-                  fileContent: base64Content,
-                  location: locationFromFileName,
-                  data: enhancedDashboardData,
-                })
-              );
-            } else if (dashboardName === "Financials") {
-              dispatch(
-                addFinancialData({
-                  fileName: extractedFileName,
-                  fileContent: base64Content,
-                  location: locationFromFileName,
-                  data: enhancedDashboardData,
+                  categories: extractedCategories,
                 })
               );
             } else if (dashboardName === "Sales Wide") {
@@ -690,77 +749,34 @@ const ExcelUploadPage: React.FC = () => {
                 addSalesWideData({
                   fileName: extractedFileName,
                   fileContent: base64Content,
-                  location: locationFromFileName,
+                  location: location,
                   data: enhancedDashboardData,
+                  categories: extractedCategories,
+                })
+              );
+            } else if (dashboardName === "Product Mix") {
+              dispatch(
+                addProductMixData({
+                  fileName: extractedFileName,
+                  fileContent: base64Content,
+                  location: location,
+                  data: enhancedDashboardData,
+                  categories: extractedCategories,
                 })
               );
             }
           });
-        } else {
-          const dashboardName =
-            response.data.dashboardName?.trim() || fileInfo.dashboard;
-          const enhancedDashboardData = {
-            ...response.data,
-            categories: extractedCategories,
-          };
-
-          // UPDATED: Use extractedFileName from response instead of location
-          const locationFromFileName = extractedFileName.replace(/\.(xlsx|xls)$/i, '');
-
-          // Dispatch to appropriate store based on dashboard type
-          if (dashboardName === "Financials") {
-            dispatch(
-              addFinancialData({
-                fileName: extractedFileName,
-                fileContent: base64Content,
-                location: locationFromFileName,
-                data: enhancedDashboardData,
-              })
-            );
-          } else if (dashboardName === "Sales Split") {
-            dispatch(
-              addSalesData({
-                fileName: extractedFileName,
-                fileContent: base64Content,
-                location: locationFromFileName,
-                data: enhancedDashboardData,
-              })
-            );
-
-            dispatch(
-              addFileData({
-                fileName: extractedFileName,
-                fileContent: base64Content,
-                location: locationFromFileName,
-                data: enhancedDashboardData,
-              })
-            );
-          } else if (dashboardName === "Sales Wide") {
-            dispatch(
-              addSalesWideData({
-                fileName: extractedFileName,
-                fileContent: base64Content,
-                location: locationFromFileName,
-                data: enhancedDashboardData,
-              })
-            );
-          } else if (dashboardName === "Product Mix") {
-            dispatch(
-              addProductMixData({
-                fileName: extractedFileName,
-                fileContent: base64Content,
-                location: locationFromFileName,
-                data: enhancedDashboardData,
-              })
-            );
-          }
         }
 
-        // Update locations in Redux
-        const locationFromFileName = extractedFileName.replace(/\.(xlsx|xls)$/i, '');
-        dispatch(setLocations([locationFromFileName]));
-        dispatch(selectLocation(locationFromFileName));
+        // UPDATED: Update Redux with all locations
+        dispatch(setLocations(extractedLocations));
+        
+        // Set primary location as selected
+        if (primaryLocation) {
+          dispatch(selectLocation(primaryLocation));
+        }
 
+        // UPDATED: Update file state with all location data
         setFiles((prevFiles) => {
           const updatedFiles = [...prevFiles];
           updatedFiles[index] = {
@@ -768,13 +784,16 @@ const ExcelUploadPage: React.FC = () => {
             status: "success",
             progress: 100,
             data: response.data,
-            categories: extractedCategories,
-            extractedFileName: extractedFileName, // Store the extracted filename
+            categories: extractCategoriesFromData(response.data),
+            extractedFileName: extractedFileName,
+            locations: extractedLocations, // Store all locations
+            primaryLocation: primaryLocation, // Store primary location
+            allLocationsData: allLocationsData, // Store all location data
           };
           return updatedFiles;
         });
 
-        console.log("✅ File upload completed successfully");
+        console.log("✅ File upload completed successfully with locations:", extractedLocations);
         return true;
       } else {
         throw new Error("Invalid response data");
@@ -811,6 +830,7 @@ const ExcelUploadPage: React.FC = () => {
     }
   };
 
+  // Rest of the component logic remains the same...
   const uploadAllFiles = async () => {
     const pendingFiles = files.filter((file) => file.status === "pending");
 
@@ -856,7 +876,7 @@ const ExcelUploadPage: React.FC = () => {
     }
   };
 
-  // Updated view dashboard function for two separate buttons
+  // Updated view dashboard function for responsive location handling
   const viewDashboard = (fileInfo: FileInfo, specificDashboard?: string) => {
     if (fileInfo.data && fileInfo.status === "success") {
       const dashboardName = fileInfo.data.dashboardName || fileInfo.dashboard;
@@ -935,9 +955,9 @@ const ExcelUploadPage: React.FC = () => {
         </HeaderCard>
       </Fade>
 
-      {/* Dashboard Type Selection - UPDATED: Removed Location Section */}
+      {/* Dashboard Type Selection */}
       <Grow in timeout={1000}>
-        <DashboardSelectionCard sx={{ mb: 4 }}>
+        <Card sx={{ mb: 4, borderRadius: 3, overflow: "hidden" }}>
           <CardContent sx={{ p: 4 }}>
             <Typography
               variant="h5"
@@ -955,7 +975,6 @@ const ExcelUploadPage: React.FC = () => {
                       className="dashboard-card"
                       selected={selectedDashboard === option.value}
                       onClick={() => handleDashboardChange(option.value)}
-                      sx={{ height: option.height || "100%" }}
                     >
                       {selectedDashboard === option.value && (
                         <SelectedBadge 
@@ -1008,15 +1027,13 @@ const ExcelUploadPage: React.FC = () => {
                       >
                         {option.description}
                       </Typography>
-
-                      {/* Remove shimmer effect */}
                     </ModernDashboardCard>
                   </Fade>
                 </Grid>
               ))}
             </Grid>
           </CardContent>
-        </DashboardSelectionCard>
+        </Card>
       </Grow>
 
       {/* File Upload Area */}
@@ -1090,7 +1107,7 @@ const ExcelUploadPage: React.FC = () => {
         </Fade>
       )}
 
-      {/* Files List */}
+      {/* Files List with Enhanced Location Display */}
       {files.length > 0 && (
         <Grow in timeout={1800}>
           <Card sx={{ borderRadius: 3, overflow: "hidden" }}>
@@ -1143,7 +1160,7 @@ const ExcelUploadPage: React.FC = () => {
                                   {fileInfo.file.name}
                                 </Typography>
 
-                                {/* UPDATED: Show extracted filename from backend */}
+                                {/* Show extracted filename from backend */}
                                 {fileInfo.extractedFileName && 
                                  fileInfo.extractedFileName !== fileInfo.file.name && (
                                   <Typography
@@ -1193,25 +1210,91 @@ const ExcelUploadPage: React.FC = () => {
                                     )}
                                 </Stack>
 
-                                {/* UPDATED: Show location derived from filename */}
-                                <Box
-                                  sx={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 1,
-                                    flexWrap: "wrap",
-                                  }}
-                                >
-                                  <PlaceIcon fontSize="small" color="action" />
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                  >
-                                    Location: {fileInfo.extractedFileName 
-                                      ? fileInfo.extractedFileName.replace(/\.(xlsx|xls)$/i, '')
-                                      : fileInfo.file.name.replace(/\.(xlsx|xls)$/i, '')
-                                    }
-                                  </Typography>
+                                {/* UPDATED: Enhanced location display with multiple location support */}
+                                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                                  {/* Primary Location */}
+                                  {fileInfo.primaryLocation && (
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 1,
+                                      }}
+                                    >
+                                      <PlaceIcon fontSize="small" color="primary" />
+                                      <Typography
+                                        variant="body2"
+                                        sx={{ fontWeight: 600, color: "primary.main" }}
+                                      >
+                                        Primary Location: {fileInfo.primaryLocation}
+                                      </Typography>
+                                    </Box>
+                                  )}
+
+                                  {/* All Locations */}
+                                  {fileInfo.locations && fileInfo.locations.length > 0 && (
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 1,
+                                        flexWrap: "wrap",
+                                      }}
+                                    >
+                                      <LocationCityIcon fontSize="small" color="action" />
+                                      <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                        sx={{ mr: 1 }}
+                                      >
+                                        All Locations ({fileInfo.locations.length}):
+                                      </Typography>
+                                      {fileInfo.locations.map((location, locIndex) => (
+                                        <Chip
+                                          key={locIndex}
+                                          label={location}
+                                          size="small"
+                                          variant="outlined"
+                                          color={
+                                            location === fileInfo.primaryLocation 
+                                              ? "primary" 
+                                              : "default"
+                                          }
+                                          icon={location === fileInfo.primaryLocation ? <StarIcon /> : <LocationOnIcon />}
+                                        />
+                                      ))}
+                                    </Box>
+                                  )}
+
+                                  {/* Show location data summary if available */}
+                                  {fileInfo.allLocationsData && fileInfo.allLocationsData.length > 0 && (
+                                    <Box
+                                      sx={{
+                                        background: alpha(theme.palette.info.main, 0.1),
+                                        borderRadius: 1,
+                                        p: 1.5,
+                                        mt: 1,
+                                      }}
+                                    >
+                                      <Typography
+                                        variant="body2"
+                                        sx={{ fontWeight: 600, mb: 1, color: "info.main" }}
+                                      >
+                                        📊 Data Summary:
+                                      </Typography>
+                                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                                        {fileInfo.allLocationsData.map((locData, idx) => (
+                                          <Chip
+                                            key={idx}
+                                            label={`${locData.location}: ${locData.categories?.length || 0} categories`}
+                                            size="small"
+                                            color="info"
+                                            variant="outlined"
+                                          />
+                                        ))}
+                                      </Box>
+                                    </Box>
+                                  )}
                                 </Box>
                               </Box>
                             </Box>
@@ -1362,4 +1445,4 @@ const ExcelUploadPage: React.FC = () => {
   );
 };
 
-export default ExcelUploadPage; 
+export default ExcelUploadPage;
