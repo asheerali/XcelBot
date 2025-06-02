@@ -378,7 +378,7 @@ def sales_analysis_tables(df, location_filter='All', start_date=None, end_date=N
 
 
 def create_sales_overview_tables(df, location_filter='All', start_date=None, end_date=None):
-    
+    print("i am here in sales split utils printing for sales by categories dates", start_date, end_date)
     
     # Make a copy of the dataframe
     df_copy = df.copy()

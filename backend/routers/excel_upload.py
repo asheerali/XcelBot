@@ -51,7 +51,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         file_content = base64.b64decode(request.fileContent)
         print("Type of file_content:", type(file_content))
         
-        print("i am here printing the request in the excel upload", request)
+        # print("i am here printing the request in the excel upload", request)
         # print("response", request)
         
         # Create BytesIO object for pandas
@@ -605,7 +605,6 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         if request.dashboard == "Sales Split":
             print("Dashboard type: Sales Split / Product Mix Dashboard")
             
-            print("i am here in excel upload printing the request of sales split", request)
             excel_data_copy = io.BytesIO(file_content)
             if request.location == "Multiple Locations":
                 location_filter = "All"
@@ -620,7 +619,9 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             default_start_date = (default_end_date1 - relativedelta(months=2)).strftime('%Y-%m-%d')                                                                                                                                                                                                                                                                                                            
 
             default_start_date = "2025-01-01"
-            default_end_date = "2025-05-31" #2025-05-17
+            # default_end_date = "2025-05-31" #2025-05-17
+            default_end_date = date.today().isoformat()
+
 
             start_date = request.startDate
             
@@ -794,7 +795,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             "servers": server,
             "categories": category,
             "dateRanges": [],
-            "fileLocation": ['fileLocation', 'fileLocationa'],
+            # "fileLocation": ['fileLocation', 'fileLocationa'],
             "fileName": file_name,
             "dashboardName": "Product Mix ",
             "data":  "Dashboard is not yet implemented."
