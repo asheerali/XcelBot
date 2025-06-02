@@ -64,9 +64,21 @@ def day_of_the_week_tables(df, store='All', start_date=None, end_date=None):
     # Group by Helper 1
     grouped = df.groupby('Helper 1')[sales_cols].sum().reset_index()
 
-    # Calculate percentage differences and round to 2 decimal places
-    grouped['Tw/Lw (+/-)'] = (((grouped['Tw Sales'] - grouped['Lw Sales']) / grouped['Lw Sales'].replace(0, pd.NA)) * 100).round(2)
-    grouped['Tw/Ly (+/-)'] = (((grouped['Tw Sales'] - grouped['Ly Sales']) / grouped['Ly Sales'].replace(0, pd.NA)) * 100).round(2)
+    # # Calculate percentage differences and round to 2 decimal places
+    # grouped['Tw/Lw (+/-)'] = (((grouped['Tw Sales'] - grouped['Lw Sales']) / grouped['Lw Sales'].replace(0, pd.NA)) * 100).round(2)
+    # grouped['Tw/Ly (+/-)'] = (((grouped['Tw Sales'] - grouped['Ly Sales']) / grouped['Ly Sales'].replace(0, pd.NA)) * 100).round(2)
+
+    grouped['Tw/Lw (+/-)'] = np.where(
+        grouped['Lw Sales'] == 0,
+        0.0,
+        ((grouped['Tw Sales'] - grouped['Lw Sales']) / grouped['Lw Sales']) * 100
+    ).round(2)
+
+    grouped['Tw/Ly (+/-)'] = np.where(
+        grouped['Ly Sales'] == 0,
+        0.0,
+        ((grouped['Tw Sales'] - grouped['Ly Sales']) / grouped['Ly Sales']) * 100
+    ).round(2)
 
     # Grand total values
     total_tw = df['Tw Sales'].sum()
@@ -105,10 +117,9 @@ def day_of_the_week_tables(df, store='All', start_date=None, end_date=None):
 
     # Rename column
     sales_table = sales_table.rename(columns={'Helper 1': 'Day of the Week'})
-
+    print("sales_table", sales_table)
     cols_to_round = ['Tw Sales', 'Lw Sales', 'Ly Sales', 'Tw/Lw (+/-)', 'Tw/Ly (+/-)']
     sales_table[cols_to_round] = sales_table[cols_to_round].astype(float).round(2)
-
 
 
     # orders_table
@@ -124,9 +135,22 @@ def day_of_the_week_tables(df, store='All', start_date=None, end_date=None):
     # Group by 'Helper 1'
     grouped_orders = df.groupby('Helper 1')[order_cols].sum().reset_index()
 
-    # Calculate percentage differences
-    grouped_orders['Tw/Lw (+/-)'] = (((grouped_orders['Tw Orders'] - grouped_orders['Lw Orders']) / grouped_orders['Lw Orders'].replace(0, pd.NA)) * 100).round(2)
-    grouped_orders['Tw/Ly (+/-)'] = (((grouped_orders['Tw Orders'] - grouped_orders['Ly Orders']) / grouped_orders['Ly Orders'].replace(0, pd.NA)) * 100).round(2)
+    # # Calculate percentage differences
+    # grouped_orders['Tw/Lw (+/-)'] = (((grouped_orders['Tw Orders'] - grouped_orders['Lw Orders']) / grouped_orders['Lw Orders'].replace(0, pd.NA)) * 100).round(2)
+    # grouped_orders['Tw/Ly (+/-)'] = (((grouped_orders['Tw Orders'] - grouped_orders['Ly Orders']) / grouped_orders['Ly Orders'].replace(0, pd.NA)) * 100).round(2)
+
+
+    grouped_orders['Tw/Lw (+/-)'] = np.where(
+        grouped_orders['Lw Orders'] == 0,
+        0.0,
+        ((grouped_orders['Tw Orders'] - grouped_orders['Lw Orders']) / grouped_orders['Lw Orders']) * 100
+    ).round(2)
+
+    grouped_orders['Tw/Ly (+/-)'] = np.where(
+        grouped_orders['Ly Orders'] == 0,
+        0.0,
+        ((grouped_orders['Tw Orders'] - grouped_orders['Ly Orders']) / grouped_orders['Ly Orders']) * 100
+    ).round(2)
 
     # Grand total values
     total_tw_orders = df['Tw Orders'].sum()
@@ -184,9 +208,22 @@ def day_of_the_week_tables(df, store='All', start_date=None, end_date=None):
     # Group by 'Helper 1' and sum (not average)
     grouped_tckt = df.groupby('Helper 1')[ticket_cols].sum().reset_index()
 
-    # Calculate % differences
-    grouped_tckt['Tw/Lw (+/-)'] = (((grouped_tckt['Tw Avg Tckt'] - grouped_tckt['Lw Avg Tckt']) / grouped_tckt['Lw Avg Tckt'].replace(0, pd.NA)) * 100).round(2)
-    grouped_tckt['Tw/Ly (+/-)'] = (((grouped_tckt['Tw Avg Tckt'] - grouped_tckt['Ly Avg Tckt']) / grouped_tckt['Ly Avg Tckt'].replace(0, pd.NA)) * 100).round(2)
+    # # Calculate % differences
+    # grouped_tckt['Tw/Lw (+/-)'] = (((grouped_tckt['Tw Avg Tckt'] - grouped_tckt['Lw Avg Tckt']) / grouped_tckt['Lw Avg Tckt'].replace(0, pd.NA)) * 100).round(2)
+    # grouped_tckt['Tw/Ly (+/-)'] = (((grouped_tckt['Tw Avg Tckt'] - grouped_tckt['Ly Avg Tckt']) / grouped_tckt['Ly Avg Tckt'].replace(0, pd.NA)) * 100).round(2)
+
+
+    grouped_tckt['Tw/Lw (+/-)'] = np.where(
+        grouped_tckt['Lw Avg Tckt'] == 0,
+        0.0,
+        ((grouped_tckt['Tw Avg Tckt'] - grouped_tckt['Lw Avg Tckt']) / grouped_tckt['Lw Avg Tckt']) * 100
+    ).round(2)
+
+    grouped_tckt['Tw/Ly (+/-)'] = np.where(
+        grouped_tckt['Ly Avg Tckt'] == 0,
+        0.0,
+        ((grouped_tckt['Tw Avg Tckt'] - grouped_tckt['Ly Avg Tckt']) / grouped_tckt['Ly Avg Tckt']) * 100
+    ).round(2)
 
     # Grand total values (averaged)
     tw_avg = round(df['Tw Avg Tckt'].mean(), 2)

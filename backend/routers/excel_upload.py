@@ -51,7 +51,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         file_content = base64.b64decode(request.fileContent)
         print("Type of file_content:", type(file_content))
         
-        print("i am here printing the request in the excel upload", request)
+        # print("i am here printing the request in the excel upload", request)
         # print("response", request)
         
         # Create BytesIO object for pandas
@@ -251,7 +251,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             "fileName": file_name, #the full names of the file saved in the uploads folder
             "locations": stores,
             "years": years,
-            "dates": dates,
+            # "dates": dates,
             "dashboardName": "Financials",
             "data":  "Financial Dashboard is not yet implemented."
             }
@@ -365,7 +365,16 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             #     "data":  "Companywide Dashboard is not yet implemented."
             # }
             
-            sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df, years, dates, stores = process_companywide_file(
+            (sales_df, 
+             order_df, 
+             avg_ticket_df, 
+             cogs_df, 
+             reg_pay_df, 
+             lb_hrs_df, 
+             spmh_df, 
+             years, 
+             dates, 
+             stores) = process_companywide_file(
                 excel_data_copy, 
                 store_filter='All', 
                 year_filter=None, 
@@ -605,7 +614,6 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
         if request.dashboard == "Sales Split":
             print("Dashboard type: Sales Split / Product Mix Dashboard")
             
-            print("i am here in excel upload printing the request of sales split", request)
             excel_data_copy = io.BytesIO(file_content)
             if request.location == "Multiple Locations":
                 location_filter = "All"
@@ -620,7 +628,9 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             default_start_date = (default_end_date1 - relativedelta(months=2)).strftime('%Y-%m-%d')                                                                                                                                                                                                                                                                                                            
 
             default_start_date = "2025-01-01"
-            default_end_date = "2025-05-31" #2025-05-17
+            # default_end_date = "2025-05-31" #2025-05-17
+            default_end_date = date.today().isoformat()
+
 
             start_date = request.startDate
             
@@ -794,7 +804,7 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             "servers": server,
             "categories": category,
             "dateRanges": [],
-            "fileLocation": ['fileLocation', 'fileLocationa'],
+            # "fileLocation": ['fileLocation', 'fileLocationa'],
             "fileName": file_name,
             "dashboardName": "Product Mix ",
             "data":  "Dashboard is not yet implemented."

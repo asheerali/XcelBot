@@ -8,7 +8,6 @@ import numpy as np
 from financials_dashboard.financials_utils import financials_filters, day_of_the_week_tables, calculate_tw_lw_bdg_comparison
 
 
-
 def process_financials_file(file_data: Union[io.BytesIO, str], year="All", week_range="All", location="All", start_date=None, end_date=None):
     """
     Process the uploaded Excel file and transform the data.
