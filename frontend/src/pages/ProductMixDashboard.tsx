@@ -30,7 +30,14 @@ import {
   Popover,
   useMediaQuery,
   Alert,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
+import axios from "axios"; // Added axios import
+import { format } from 'date-fns';
 
 // Icons
 import FilterListIcon from "@mui/icons-material/FilterList";
@@ -49,13 +56,25 @@ import CheckBoxIcon from "@mui/icons-material/CheckBox";
 // Updated imports for the dashboard components
 import MenuAnalysisDashboard from "../components/SalesDashboard";
 import MenuAnalysisDashboardtwo from "../components/MenuAnalysisDashboardtwo";
+import DateRangeSelector from "../components/DateRangeSelector";
 
 // Import Redux hooks
 import { useAppDispatch, useAppSelector } from "../typedHooks";
 import {
   selectProductMixLocation,
   updateProductMixFilters,
+  setTableData,
+  addProductMixData,
+  excelSlice,
 } from "../store/excelSlice";
+
+// Extract actions from the slice
+const { setLoading, setError } = excelSlice.actions;
+
+import { API_URL_Local } from "../constants"; // Import API base URL
+
+// API URL for Product Mix filter
+const PRODUCT_MIX_FILTER_API_URL = API_URL_Local + "/api/pmix/filter";
 
 // TabPanel Component
 interface TabPanelProps {
@@ -354,6 +373,8 @@ export default function ProductMixDashboard() {
     productMixLocations,
     currentProductMixLocation,
     productMixFilters,
+    loading,
+    error,
   } = useAppSelector((state) => state.excel);
 
   // Find current data for the selected location
@@ -361,9 +382,32 @@ export default function ProductMixDashboard() {
     (f) => f.location === currentProductMixLocation
   )?.data;
 
+  // Find current file info
+  const currentProductMixFile = productMixFiles.find(
+    (f) => f.location === currentProductMixLocation
+  );
+
   // State variables
   const [tabValue, setTabValue] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [filterError, setFilterError] = useState<string>("");
+  const [dataUpdated, setDataUpdated] = useState<boolean>(false);
+
+  // Date range state - using DateRangeSelector pattern
+  const DEFAULT_START_DATE = new Date(2010, 0, 1); // January 1, 2010
+  const DEFAULT_END_DATE = new Date(2025, 0, 1);   // January 1, 2025
+  
+  const [localStartDate, setLocalStartDate] = useState<string>(
+    format(DEFAULT_START_DATE, 'MM/dd/yyyy')
+  );
+  const [localEndDate, setLocalEndDate] = useState<string>(
+    format(DEFAULT_END_DATE, 'MM/dd/yyyy')
+  );
+  const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
+  const [selectedRange, setSelectedRange] = useState({
+    startDate: DEFAULT_START_DATE,
+    endDate: DEFAULT_END_DATE,
+  });
 
   // Extract filter options from actual data
   const locations =
@@ -386,21 +430,10 @@ export default function ProductMixDashboard() {
     ?.map((item) => item["Menu Item"])
     .filter(Boolean) || ["No menu items available"];
 
-  // Date ranges - you can customize these based on your needs
-  const DATE_RANGES = [
-    "10 | 03/03/2025 - 03/09/2025",
-    "11 | 03/10/2025 - 03/16/2025",
-    "12 | 03/17/2025 - 03/23/2025",
-    "13 | 03/24/2025 - 03/30/2025",
-    "14 | 03/31/2025 - 04/06/2025",
-    "15 | 04/07/2025 - 04/13/2025",
-  ];
-
   // Filter states using multiselect arrays - Initialize with actual data
   const [selectedLocations, setSelectedLocations] = useState<string[]>([
     currentProductMixLocation || locations[0],
   ]);
-  const [dateRanges, setDateRanges] = useState<string[]>([DATE_RANGES[1]]);
   const [selectedServers, setSelectedServers] = useState<string[]>([]);
   const [selectedMenuItems, setSelectedMenuItems] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -415,6 +448,11 @@ export default function ProductMixDashboard() {
     }
   }, [currentProductMixLocation, selectedLocations]);
 
+  // Clear dataUpdated state when filters change
+  useEffect(() => {
+    setDataUpdated(false);
+  }, [selectedLocations, localStartDate, localEndDate, selectedServers, selectedCategories, selectedMenuItems]);
+
   // Handlers for filter changes
   const handleLocationChange = (newValue: string[]) => {
     setSelectedLocations(newValue);
@@ -425,9 +463,47 @@ export default function ProductMixDashboard() {
     }
   };
 
-  const handleDateRangeChange = (newValue: string[]) => {
-    setDateRanges(newValue);
-    dispatch(updateProductMixFilters({ dateRange: newValue[0] || "" }));
+  // Date range handling - following DateRangeSelector pattern
+  const openDateRangePicker = () => {
+    setIsDateRangeOpen(true);
+  };
+
+  const handleDateRangeSelect = (range: any) => {
+    setSelectedRange(range);
+  };
+
+  const applyDateRange = () => {
+    const formattedStartDate = format(selectedRange.startDate, 'MM/dd/yyyy');
+    const formattedEndDate = format(selectedRange.endDate, 'MM/dd/yyyy');
+    
+    console.log('📅 ProductMix: Setting date range locally:', {
+      startDate: formattedStartDate,
+      endDate: formattedEndDate
+    });
+    
+    // Update local state
+    setLocalStartDate(formattedStartDate);
+    setLocalEndDate(formattedEndDate);
+    
+    // Update Redux state for persistence
+    dispatch(updateProductMixFilters({ 
+      startDate: formattedStartDate,
+      endDate: formattedEndDate,
+      dateRangeType: 'Custom Date Range'
+    }));
+    
+    setIsDateRangeOpen(false);
+  };
+
+  // Format display date
+  const formatDisplayDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      return format(date, 'MMM dd, yyyy');
+    } catch (e) {
+      return dateStr;
+    }
   };
 
   const handleServerChange = (newValue: string[]) => {
@@ -450,13 +526,171 @@ export default function ProductMixDashboard() {
     setTabValue(newValue);
   };
 
-  // Handle refresh - simulate data loading
-  const handleRefresh = () => {
+  // NEW: Clear all filters and reset to original data
+  const handleClearAllFilters = () => {
+    setSelectedLocations([currentProductMixLocation || locations[0]]);
+    setLocalStartDate(format(DEFAULT_START_DATE, 'MM/dd/yyyy'));
+    setLocalEndDate(format(DEFAULT_END_DATE, 'MM/dd/yyyy'));
+    setSelectedServers([]);
+    setSelectedCategories([]);
+    setSelectedMenuItems([]);
+    setDataUpdated(false);
+    setFilterError("");
+    
+    // Reset Redux filters
+    dispatch(updateProductMixFilters({
+      location: currentProductMixLocation || locations[0],
+      startDate: format(DEFAULT_START_DATE, 'MM/dd/yyyy'),
+      endDate: format(DEFAULT_END_DATE, 'MM/dd/yyyy'),
+      server: "",
+      category: "",
+      selectedCategories: [],
+      dateRangeType: ""
+    }));
+  };
+
+  // NEW: Handle Apply Filters with API call
+  const handleApplyFilters = async () => {
     setIsLoading(true);
-    // Simulate data loading
-    setTimeout(() => {
+    setFilterError("");
+    setDataUpdated(false);
+
+    try {
+      // Check if we have any files loaded
+      if (!currentProductMixFile) {
+        throw new Error("No Product Mix data found for selected location");
+      }
+
+      console.log("🔄 Starting Product Mix filter process...");
+
+      // Format dates correctly for API (convert MM/dd/yyyy to yyyy-MM-dd)
+      let formattedStartDate: string | null = null;
+      let formattedEndDate: string | null = null;
+      
+      if (localStartDate) {
+        const dateParts = localStartDate.split('/');
+        if (dateParts.length === 3) {
+          formattedStartDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
+        }
+      }
+      
+      if (localEndDate) {
+        const dateParts = localEndDate.split('/');
+        if (dateParts.length === 3) {
+          formattedEndDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
+        }
+      }
+
+      // Prepare the request payload
+      const payload = {
+        fileName: currentProductMixFile.fileName,
+        fileContent: currentProductMixFile.fileContent,
+        location: selectedLocations[0] || currentProductMixLocation,
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+        servers: selectedServers,
+        categories: selectedCategories,
+        menuItems: selectedMenuItems,
+        dashboard: "Product Mix",
+      };
+
+      console.log("🚀 Sending Product Mix filter request:", payload);
+
+      // Make API call to Product Mix filter endpoint
+      const response = await axios.post(PRODUCT_MIX_FILTER_API_URL, payload);
+
+      console.log("📥 Received Product Mix filter response:", response.data);
+
+      if (response.data) {
+        // Extract categories from the filtered data
+        const extractedCategories = response.data.categories || selectedCategories;
+
+        // Create enhanced data with filter metadata
+        const enhancedData = {
+          ...response.data,
+          categories: extractedCategories,
+          filterApplied: true,
+          filterTimestamp: new Date().toISOString(),
+          appliedFilters: {
+            location: selectedLocations[0] || currentProductMixLocation,
+            startDate: localStartDate,
+            endDate: localEndDate,
+            servers: selectedServers,
+            categories: selectedCategories,
+            menuItems: selectedMenuItems,
+          }
+        };
+
+        console.log("📊 Enhanced data with filters:", enhancedData);
+
+        // Update general table data (for compatibility)
+        dispatch(setTableData(enhancedData));
+
+        // IMPORTANT: Update the specific Product Mix data in Redux store
+        dispatch(
+          addProductMixData({
+            fileName: currentProductMixFile.fileName,
+            fileContent: currentProductMixFile.fileContent,
+            location: selectedLocations[0] || currentProductMixLocation,
+            data: enhancedData,
+            categories: extractedCategories,
+          })
+        );
+
+        // Update Redux filters to reflect what was applied
+        dispatch(
+          updateProductMixFilters({
+            location: selectedLocations[0],
+            startDate: localStartDate,
+            endDate: localEndDate,
+            server: selectedServers.join(","),
+            category: selectedCategories.join(","),
+            selectedCategories: selectedCategories,
+            dateRangeType: 'Custom Date Range'
+          })
+        );
+
+        // Update current location if changed
+        if (selectedLocations[0] !== currentProductMixLocation) {
+          dispatch(selectProductMixLocation(selectedLocations[0]));
+        }
+
+        // Set success state
+        setDataUpdated(true);
+        
+        console.log("✅ Product Mix data updated successfully in Redux store");
+        console.log("🔍 Updated product mix data:", enhancedData);
+
+        // Auto-hide success message after 5 seconds
+        setTimeout(() => {
+          setDataUpdated(false);
+        }, 5000);
+
+      } else {
+        throw new Error("No data received from server");
+      }
+    } catch (err: any) {
+      console.error("❌ Product Mix filter error:", err);
+
+      let errorMessage = "Error applying filters";
+
+      if (axios.isAxiosError(err)) {
+        if (err.response) {
+          const detail = err.response.data?.detail;
+          errorMessage = detail || `Server error: ${err.response.status}`;
+        } else if (err.request) {
+          errorMessage =
+            "No response from server. Please check if the backend is running.";
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setFilterError(errorMessage);
+      dispatch(setError(errorMessage));
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   // Calculate grid sizing based on mobile/tablet status
@@ -536,11 +770,47 @@ export default function ProductMixDashboard() {
         </Alert>
       )}
 
+      {/* Error Alert */}
+      {(filterError || error) && (
+        <Alert
+          severity="error"
+          sx={{ mb: 3 }}
+          onClose={() => {
+            setFilterError("");
+            dispatch(setError(null));
+          }}
+        >
+          {filterError || error}
+        </Alert>
+      )}
+
+      {/* Success Alert for Data Update */}
+      {dataUpdated && (
+        <Alert 
+          severity="success" 
+          sx={{ mb: 3 }}
+          onClose={() => setDataUpdated(false)}
+        >
+          <Typography variant="body2">
+            <strong>Filters Applied Successfully!</strong> Product Mix data has been updated with your selected filters.
+            {currentProductMixData?.filterApplied && (
+              <>
+                <br />
+                <strong>Applied on:</strong> {new Date(currentProductMixData.filterTimestamp).toLocaleString()}
+              </>
+            )}
+          </Typography>
+        </Alert>
+      )}
+
       {/* Show current data summary */}
       {currentProductMixData && (
-        <Alert severity="success" sx={{ mb: 3 }}>
+        <Alert 
+          severity={currentProductMixData?.filterApplied ? "info" : "success"} 
+          sx={{ mb: 3 }}
+        >
           <Typography variant="body2">
-            <strong>Data loaded:</strong> {currentProductMixData.fileName} |
+            <strong>Data Status:</strong> {currentProductMixData?.filterApplied ? "📊 Filtered Data" : "📋 Original Data"} |
             <strong> Location:</strong> {currentProductMixLocation} |
             <strong> Net Sales:</strong> $
             {(
@@ -550,6 +820,19 @@ export default function ProductMixDashboard() {
             {currentProductMixData.table1?.[0]?.orders?.[0] || 0} |
             <strong> Items Sold:</strong>{" "}
             {currentProductMixData.table1?.[0]?.qty_sold?.[0] || 0}
+            {currentProductMixData?.filterApplied && (
+              <>
+                <br />
+                <strong>Active Filters:</strong>{" "}
+                Date: {currentProductMixData.appliedFilters?.startDate} - {currentProductMixData.appliedFilters?.endDate}
+                {currentProductMixData.appliedFilters?.categories?.length > 0 && (
+                  <> | Categories: {currentProductMixData.appliedFilters.categories.join(", ")}</>
+                )}
+                {currentProductMixData.appliedFilters?.servers?.length > 0 && (
+                  <> | Servers: {currentProductMixData.appliedFilters.servers.join(", ")}</>
+                )}
+              </>
+            )}
           </Typography>
         </Alert>
       )}
@@ -557,36 +840,14 @@ export default function ProductMixDashboard() {
       {/* Filters Section */}
       <Card elevation={3} sx={{ mb: 3, borderRadius: 2, overflow: "hidden" }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 2,
-            }}
-          >
+          {/* Filter Header - Removed the Apply Filters button from here */}
+          <Box sx={{ mb: 2 }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <FilterListIcon color="primary" />
               <Typography variant="h6" sx={{ fontWeight: 500 }}>
                 Filters
               </Typography>
             </Box>
-            <Button
-              variant="outlined"
-              size="small"
-              color="primary"
-              disabled={isLoading}
-              onClick={handleRefresh}
-              startIcon={
-                isLoading ? (
-                  <RefreshIcon className="rotating" />
-                ) : (
-                  <RefreshIcon />
-                )
-              }
-            >
-              {isLoading ? "Loading..." : "Apply Filters"}
-            </Button>
           </Box>
 
           <Grid container spacing={2}>
@@ -603,17 +864,46 @@ export default function ProductMixDashboard() {
               />
             </Grid>
 
-            {/* Date Range filter */}
+            {/* Date Range filter - Updated to use DateRangeSelector */}
             <Grid item {...gridSizes}>
-              <MultiSelect
-                id="date-range-select"
-                label="Date Range"
-                options={DATE_RANGES}
-                value={dateRanges}
-                onChange={handleDateRangeChange}
-                icon={<CalendarTodayIcon />}
-                placeholder="Select date ranges"
-              />
+              <Box sx={{ position: "relative", width: "100%" }}>
+                <InputLabel
+                  sx={{
+                    position: "absolute",
+                    top: -6,
+                    left: 8,
+                    backgroundColor: "white",
+                    px: 0.5,
+                    fontSize: "0.75rem",
+                    pointerEvents: "none",
+                  }}
+                >
+                  Date Range
+                </InputLabel>
+                <Button
+                  variant="outlined"
+                  onClick={openDateRangePicker}
+                  startIcon={<CalendarTodayIcon />}
+                  fullWidth
+                  sx={{ 
+                    height: 40, 
+                    justifyContent: 'flex-start',
+                    textTransform: 'none',
+                    borderColor: 'rgba(0, 0, 0, 0.23)',
+                    color: 'text.primary',
+                    padding: '8px 14px',
+                    '&:hover': {
+                      borderColor: 'primary.main',
+                    }
+                  }}
+                >
+                  <Box sx={{ textAlign: 'left', flexGrow: 1 }}>
+                    <Typography variant="body2" component="div" sx={{ fontSize: '0.875rem' }}>
+                      {formatDisplayDate(localStartDate)} - {formatDisplayDate(localEndDate)}
+                    </Typography>
+                  </Box>
+                </Button>
+              </Box>
             </Grid>
 
             {/* Category filter */}
@@ -641,17 +931,6 @@ export default function ProductMixDashboard() {
                   placeholder="Select servers"
                 />
               ) : (
-                // (
-                //   <MultiSelect
-                //     id="menu-item-select"
-                //     label="Menu Item"
-                //     options={menuItems}
-                //     value={selectedMenuItems}
-                //     onChange={handleMenuItemChange}
-                //     icon={<RestaurantMenuIcon />}
-                //     placeholder="Select menu items"
-                //   />
-                // )
                 <></>
               )}
             </Grid>
@@ -659,11 +938,18 @@ export default function ProductMixDashboard() {
 
           {/* Active filters display */}
           {(selectedLocations.length > 0 ||
-            dateRanges.length > 0 ||
+            (localStartDate && localEndDate) ||
             selectedServers.length > 0 ||
             selectedMenuItems.length > 0 ||
             selectedCategories.length > 0) && (
             <Box sx={{ mt: 2 }}>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 1 }}
+              >
+                Active Filters:
+              </Typography>
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                 {selectedLocations.length > 0 && (
                   <Chip
@@ -680,18 +966,17 @@ export default function ProductMixDashboard() {
                   />
                 )}
 
-                {dateRanges.length > 0 && (
+                {(localStartDate && localEndDate) && (
                   <Chip
-                    label={
-                      dateRanges.length === 1
-                        ? `Date Range: ${dateRanges[0].split("|")[0].trim()}`
-                        : `Date Ranges: ${dateRanges.length} selected`
-                    }
+                    label={`Date Range: ${formatDisplayDate(localStartDate)} - ${formatDisplayDate(localEndDate)}`}
                     color="secondary"
                     variant="outlined"
                     size="small"
                     icon={<CalendarTodayIcon />}
-                    onDelete={() => setDateRanges([])}
+                    onDelete={() => {
+                      setLocalStartDate(format(DEFAULT_START_DATE, 'MM/dd/yyyy'));
+                      setLocalEndDate(format(DEFAULT_END_DATE, 'MM/dd/yyyy'));
+                    }}
                   />
                 )}
 
@@ -742,6 +1027,51 @@ export default function ProductMixDashboard() {
               </Box>
             </Box>
           )}
+
+          {/* MOVED: Apply Filters Button to bottom left */}
+          <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-start", gap: 2 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleApplyFilters}
+              disabled={isLoading || loading || !currentProductMixFile}
+              startIcon={
+                isLoading || loading ? (
+                  <CircularProgress size={16} />
+                ) : (
+                  <RefreshIcon />
+                )
+              }
+              sx={{
+                borderRadius: 2,
+                px: 3,
+                py: 1,
+                textTransform: "uppercase",
+                fontWeight: 600,
+              }}
+            >
+              {isLoading || loading ? "Loading..." : "APPLY FILTERS"}
+            </Button>
+
+            {/* Clear All Filters Button */}
+            {(selectedLocations.length > 1 || 
+              selectedServers.length > 0 || 
+              selectedCategories.length > 0 || 
+              selectedMenuItems.length > 0 ||
+              localStartDate !== format(DEFAULT_START_DATE, 'MM/dd/yyyy') ||
+              localEndDate !== format(DEFAULT_END_DATE, 'MM/dd/yyyy')) && (
+              <Button
+                variant="outlined"
+                color="secondary"
+                onClick={handleClearAllFilters}
+                disabled={isLoading || loading}
+                startIcon={<CloseIcon />}
+            
+              >
+                CLEAR ALL FILTERS
+              </Button>
+            )}
+          </Box>
         </CardContent>
       </Card>
 
@@ -775,22 +1105,39 @@ export default function ProductMixDashboard() {
               }}
             >
               <Tab label="Performance" />
-              {/* <Tab label="Menu Analysis" /> */}
             </Tabs>
 
             {/* Server Performance Tab */}
             <TabPanel value={tabValue} index={0}>
               <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
-                <MenuAnalysisDashboard productMixData={currentProductMixData} />
+                {isLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
+                    <CircularProgress size={40} />
+                    <Typography sx={{ ml: 2 }}>Updating dashboard data...</Typography>
+                  </Box>
+                ) : (
+                  <MenuAnalysisDashboard 
+                    key={`performance-${currentProductMixLocation}-${currentProductMixData?.filterTimestamp || 'original'}`}
+                    productMixData={currentProductMixData} 
+                  />
+                )}
               </Box>
             </TabPanel>
 
             {/* Menu Analysis Tab */}
             <TabPanel value={tabValue} index={1}>
               <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
-                <MenuAnalysisDashboardtwo
-                  productMixData={currentProductMixData}
-                />
+                {isLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
+                    <CircularProgress size={40} />
+                    <Typography sx={{ ml: 2 }}>Updating dashboard data...</Typography>
+                  </Box>
+                ) : (
+                  <MenuAnalysisDashboardtwo
+                    key={`menu-analysis-${currentProductMixLocation}-${currentProductMixData?.filterTimestamp || 'original'}`}
+                    productMixData={currentProductMixData}
+                  />
+                )}
               </Box>
             </TabPanel>
           </Card>
@@ -810,6 +1157,34 @@ export default function ProductMixDashboard() {
           </Button>
         </Card>
       )}
+
+      {/* Date Range Picker Dialog */}
+      <Dialog
+        open={isDateRangeOpen}
+        onClose={() => setIsDateRangeOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>Select Date Range</DialogTitle>
+        <DialogContent>
+          <DateRangeSelector
+            initialState={[
+              {
+                startDate: selectedRange.startDate,
+                endDate: selectedRange.endDate,
+                key: 'selection'
+              }
+            ]}
+            onSelect={handleDateRangeSelect}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsDateRangeOpen(false)}>Cancel</Button>
+          <Button onClick={applyDateRange} variant="contained" color="primary">
+            Set Date Range
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

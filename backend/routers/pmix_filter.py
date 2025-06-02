@@ -21,7 +21,7 @@ router = APIRouter(
     tags=["pmix_filter"],
 )
 
-UPLOAD_DIR = "../uploads"
+UPLOAD_DIR = "./uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
@@ -32,13 +32,15 @@ async def upload_excel(request: SalesSplitPmixUploadRequest = Body(...)):
     Endpoint to upload and process an Excel file.
     Supports optional date range and location filtering.
     """
+    print("Received request for PMIX filter with data:", request)
     try:
         # print(f"Received file upload: {request.fileName}")
         
        
         # fileName = "20250514_200147_midtown_east_dashboard2_template1.xlsx"
-        file_location = os.path.join(UPLOAD_DIR, fileName)
         fileName = request.fileName
+        file_location = os.path.join(UPLOAD_DIR, fileName)
+
         location_filter = request.location if request.location else 'All'
         start_date = request.startDate if request.startDate else None
         end_date = request.endDate if request.endDate else None

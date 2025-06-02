@@ -259,7 +259,7 @@ const DASHBOARD_OPTIONS = [
     value: "Financials and Sales Wide",
     label: "Financials & Sales Wide",
     icon: <AssessmentIcon className="dashboard-icon" />,
-    description: "Financial & company metrics",
+    description: "In-depth insights ",
     color: "#00bcd4",
     gradient: "linear-gradient(135deg, #00bcd4 0%, #4dd0e1 100%)",
   },
@@ -1161,23 +1161,7 @@ const ExcelUploadPage: React.FC = () => {
                                 </Typography>
 
                                 {/* Show extracted filename from backend */}
-                                {fileInfo.extractedFileName && 
-                                 fileInfo.extractedFileName !== fileInfo.file.name && (
-                                  <Typography
-                                    variant="body2"
-                                    sx={{ 
-                                      color: "primary.main", 
-                                      fontStyle: "italic",
-                                      mb: 1,
-                                      background: alpha(theme.palette.primary.main, 0.1),
-                                      padding: "4px 8px",
-                                      borderRadius: 1,
-                                      display: "inline-block"
-                                    }}
-                                  >
-                                    Backend filename: {fileInfo.extractedFileName}
-                                  </Typography>
-                                )}
+                               
 
                                 <Stack
                                   direction="row"
@@ -1266,35 +1250,7 @@ const ExcelUploadPage: React.FC = () => {
                                     </Box>
                                   )}
 
-                                  {/* Show location data summary if available */}
-                                  {fileInfo.allLocationsData && fileInfo.allLocationsData.length > 0 && (
-                                    <Box
-                                      sx={{
-                                        background: alpha(theme.palette.info.main, 0.1),
-                                        borderRadius: 1,
-                                        p: 1.5,
-                                        mt: 1,
-                                      }}
-                                    >
-                                      <Typography
-                                        variant="body2"
-                                        sx={{ fontWeight: 600, mb: 1, color: "info.main" }}
-                                      >
-                                        📊 Data Summary:
-                                      </Typography>
-                                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                                        {fileInfo.allLocationsData.map((locData, idx) => (
-                                          <Chip
-                                            key={idx}
-                                            label={`${locData.location}: ${locData.categories?.length || 0} categories`}
-                                            size="small"
-                                            color="info"
-                                            variant="outlined"
-                                          />
-                                        ))}
-                                      </Box>
-                                    </Box>
-                                  )}
+                               
                                 </Box>
                               </Box>
                             </Box>
