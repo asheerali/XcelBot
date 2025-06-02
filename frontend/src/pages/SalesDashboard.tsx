@@ -1,4 +1,4 @@
-// Updated SalesDashboard.tsx to use backend data structure
+// Updated SalesDashboard.tsx with fixed date range modal and consistent styling
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -18,8 +18,18 @@ import {
   IconButton,
   Tooltip,
   Chip,
-  Button
+  Button,
+  Alert,
+  CircularProgress,
+  Dialog,
+  TextField,
+  Divider,
+  Popover,
+  MenuList,
+  Checkbox,
+  ListItemText
 } from '@mui/material';
+import axios from 'axios';
 
 // For charts
 import { ResponsiveBar } from '@nivo/bar';
@@ -32,16 +42,25 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import CloseIcon from '@mui/icons-material/Close';
+import SearchIcon from '@mui/icons-material/Search';
 
 // Components
 import FinancialTablesComponent from '../components/FinancialTablesComponent';
+import DateRangeSelector from '../components/DateRangeSelector';
 
 // Import Redux hooks and actions
 import { useAppDispatch, useAppSelector } from '../typedHooks';
 import { 
   selectSalesWideLocation, 
-  updateSalesWideFilters 
+  updateSalesWideFilters,
+  setTableData,
+  setLoading,
+  setError
 } from '../store/excelSlice';
+
+// API URL for Sales Wide filter
+const SALES_WIDE_FILTER_API_URL = 'http://localhost:8000/api/companywide/filter';
 
 // TabPanel Component
 interface TabPanelProps {
@@ -69,6 +88,467 @@ function TabPanel(props: TabPanelProps) {
     </div>
   );
 }
+
+// Multi-Select Filter Component matching the image design
+interface MultiSelectFilterProps {
+  id: string;
+  label: string;
+  value: string[];
+  options: string[];
+  onChange: (value: string[]) => void;
+  placeholder?: string;
+  icon?: React.ReactNode;
+}
+
+const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
+  id,
+  label,
+  value,
+  options,
+  onChange,
+  placeholder = "Select options",
+  icon
+}) => {
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [searchText, setSearchText] = useState('');
+  const open = Boolean(anchorEl);
+
+  const filteredOptions = options.filter(option =>
+    option.toLowerCase().includes(searchText.toLowerCase())
+  );
+
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+    setSearchText('');
+  };
+
+  const handleToggle = (option: string) => {
+    const newValue = value.includes(option)
+      ? value.filter(item => item !== option)
+      : [...value, option];
+    onChange(newValue);
+  };
+
+  const handleSelectAll = () => {
+    if (value.length === options.length) {
+      onChange([]);
+    } else {
+      onChange([...options]);
+    }
+  };
+
+  const handleClear = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    onChange([]);
+  };
+
+  const displayText = value.length === 0 
+    ? placeholder 
+    : value.length === 1 
+      ? value[0]
+      : `Multiple Loc... (${value.length})`;
+
+  return (
+    <Box sx={{ position: 'relative', width: '100%' }}>
+      <Typography 
+        variant="body2" 
+        sx={{ 
+          mb: 1, 
+          color: '#666',
+          fontSize: '0.875rem',
+          fontWeight: 500
+        }}
+      >
+        {label}
+      </Typography>
+      
+      <Box
+        onClick={handleClick}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          border: '2px solid #e0e0e0',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          cursor: 'pointer',
+          backgroundColor: '#fff',
+          minHeight: '48px',
+          position: 'relative',
+          '&:hover': {
+            borderColor: '#1976d2',
+          }
+        }}
+      >
+        {icon && (
+          <Box sx={{ color: '#1976d2', mr: 1.5, display: 'flex', alignItems: 'center' }}>
+            {icon}
+          </Box>
+        )}
+        
+        <Typography 
+          variant="body1" 
+          sx={{ 
+            flexGrow: 1,
+            color: value.length > 0 ? '#333' : '#999',
+            fontSize: '0.95rem'
+          }}
+        >
+          {displayText}
+        </Typography>
+        
+        {value.length > 0 && (
+          <IconButton
+            size="small"
+            onClick={handleClear}
+            sx={{
+              width: 20,
+              height: 20,
+              backgroundColor: '#666',
+              color: 'white',
+              fontSize: '12px',
+              mr: 1,
+              '&:hover': {
+                backgroundColor: '#333',
+              }
+            }}
+          >
+            <CloseIcon sx={{ fontSize: '12px' }} />
+          </IconButton>
+        )}
+        
+        <SearchIcon sx={{ color: '#666', fontSize: '1.2rem' }} />
+      </Box>
+
+      <Popover
+        open={open}
+        anchorEl={anchorEl}
+        onClose={handleClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: {
+            width: anchorEl?.offsetWidth || 'auto',
+            maxHeight: 400,
+            mt: 1,
+            borderRadius: 2,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+          }
+        }}
+      >
+        {/* Search Box */}
+        <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0' }}>
+          <TextField
+            fullWidth
+            placeholder="Search..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            size="small"
+            InputProps={{
+              startAdornment: <SearchIcon sx={{ mr: 1, color: '#666' }} />,
+              sx: {
+                borderRadius: 2,
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#1976d2',
+                  borderWidth: '2px'
+                }
+              }
+            }}
+          />
+        </Box>
+
+        {/* Select All */}
+        <Box sx={{ p: 1 }}>
+          <Box
+            onClick={handleSelectAll}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              p: 1,
+              cursor: 'pointer',
+              borderRadius: 1,
+              '&:hover': {
+                backgroundColor: '#f5f5f5',
+              }
+            }}
+          >
+            <Checkbox
+              checked={value.length === options.length}
+              indeterminate={value.length > 0 && value.length < options.length}
+              size="small"
+              sx={{ p: 0, mr: 2 }}
+            />
+            <ListItemText primary="Select All" />
+          </Box>
+        </Box>
+
+        <Divider />
+
+        {/* Options List */}
+        <MenuList sx={{ py: 0, maxHeight: 250, overflow: 'auto' }}>
+          {filteredOptions.length === 0 ? (
+            <MenuItem disabled>
+              <ListItemText primary="No options found" />
+            </MenuItem>
+          ) : (
+            filteredOptions.map((option) => (
+              <MenuItem 
+                key={option} 
+                onClick={() => handleToggle(option)}
+                dense
+                sx={{ py: 1 }}
+              >
+                <Checkbox 
+                  checked={value.includes(option)} 
+                  size="small" 
+                  sx={{ p: 0, mr: 2 }}
+                />
+                <ListItemText primary={option} />
+              </MenuItem>
+            ))
+          )}
+        </MenuList>
+      </Popover>
+    </Box>
+  );
+};
+
+// Enhanced Date Range Selector Component - Fixed Modal with Button Trigger
+interface DateRangeSelectorComponentProps {
+  onDateRangeSelect: (dateRange: any) => void;
+}
+
+const DateRangeSelectorComponent: React.FC<DateRangeSelectorComponentProps> = ({
+  onDateRangeSelect
+}) => {
+  const [open, setOpen] = useState(false);
+  const [selectedRange, setSelectedRange] = useState<string>('');
+  const [tempRange, setTempRange] = useState<any>(null);
+
+  const handleClick = () => {
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    setTempRange(null);
+  };
+
+  const handleTempDateRangeSelect = (range: any) => {
+    setTempRange(range);
+  };
+
+  const handleSetDateRange = () => {
+    if (tempRange) {
+      // Format the display text  
+      const startDate = tempRange.startDate.toLocaleDateString();
+      const endDate = tempRange.endDate.toLocaleDateString();
+      setSelectedRange(`${startDate} - ${endDate}`);
+      
+      // Pass the range to parent
+      onDateRangeSelect(tempRange);
+    }
+    
+    // Close the modal
+    handleClose();
+  };
+
+  const handleCancel = () => {
+    setTempRange(null);
+    handleClose();
+  };
+
+  const handleClear = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    setSelectedRange('');
+    onDateRangeSelect(null);
+  };
+
+  return (
+    <>
+      {/* Date Range Selector Button */}
+      <Box sx={{ position: 'relative', width: '100%' }}>
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            mb: 1, 
+            color: '#666',
+            fontSize: '0.875rem',
+            fontWeight: 500
+          }}
+        >
+          Date Range
+        </Typography>
+        
+        <Box
+          onClick={handleClick}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            border: '2px solid #e0e0e0',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            cursor: 'pointer',
+            backgroundColor: '#fff',
+            minHeight: '48px',
+            position: 'relative',
+            '&:hover': {
+              borderColor: '#1976d2',
+            }
+          }}
+        >
+          <Box sx={{ color: '#1976d2', mr: 1.5, display: 'flex', alignItems: 'center' }}>
+            <CalendarTodayIcon />
+          </Box>
+          
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              flexGrow: 1,
+              color: selectedRange ? '#333' : '#999',
+              fontSize: '0.95rem'
+            }}
+          >
+            {selectedRange || 'Select date range'}
+          </Typography>
+          
+          {selectedRange && (
+            <IconButton
+              size="small"
+              onClick={handleClear}
+              sx={{
+                width: 20,
+                height: 20,
+                backgroundColor: '#666',
+                color: 'white',
+                fontSize: '12px',
+                mr: 1,
+                '&:hover': {
+                  backgroundColor: '#333',
+                }
+              }}
+            >
+              <CloseIcon sx={{ fontSize: '12px' }} />
+            </IconButton>
+          )}
+          
+          <SearchIcon sx={{ color: '#666', fontSize: '1.2rem' }} />
+        </Box>
+      </Box>
+
+      {/* Fixed Modal Dialog - Made even bigger with buttons at bottom right */}
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        maxWidth={false}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            overflow: 'visible',
+            width: '1200px',
+            height: '700px',
+            maxWidth: '95vw',
+            maxHeight: '95vh'
+          }
+        }}
+        sx={{
+          '& .MuiDialog-container': {
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 2
+          },
+          '& .MuiBackdrop-root': {
+            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+          }
+        }}
+      >
+        <Box sx={{ 
+          p: 4, 
+          width: '100%', 
+          height: '100%', 
+          display: 'flex', 
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}>
+          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+            Select Date Range
+          </Typography>
+          
+          {/* Container for DateRangeSelector with more space */}
+          <Box sx={{ 
+            flexGrow: 1,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '500px',
+            mb: 3,
+            overflow: 'auto'
+          }}>
+            <DateRangeSelector onSelect={handleTempDateRangeSelect} />
+          </Box>
+          
+          {/* Action Buttons - Moved to bottom right */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'flex-end', 
+            pt: 2, 
+            borderTop: '1px solid #e0e0e0',
+            gap: 2,
+            flexShrink: 0
+          }}>
+            <Button
+              variant="outlined"
+              onClick={handleCancel}
+              sx={{
+                borderColor: '#e0e0e0',
+                color: '#666',
+                minWidth: '100px',
+                textTransform: 'uppercase',
+                py: 1.5,
+                px: 3,
+                '&:hover': {
+                  borderColor: '#999',
+                  backgroundColor: '#f5f5f5',
+                }
+              }}
+            >
+              CANCEL
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleSetDateRange}
+              disabled={!tempRange}
+              sx={{
+                backgroundColor: '#1976d2',
+                minWidth: '160px',
+                textTransform: 'uppercase',
+                py: 1.5,
+                px: 3,
+                '&:hover': {
+                  backgroundColor: '#1565c0',
+                },
+                '&:disabled': {
+                  backgroundColor: '#ccc'
+                }
+              }}
+            >
+              SET DATE RANGE
+            </Button>
+          </Box>
+        </Box>
+      </Dialog>
+    </>
+  );
+};
 
 // Chart Base Component with improved layout to prevent text cutoff
 interface BaseChartProps {
@@ -149,7 +629,9 @@ export default function SalesDashboard() {
     salesWideFiles,
     salesWideLocations,
     currentSalesWideLocation,
-    salesWideFilters
+    salesWideFilters,
+    loading,
+    error
   } = useAppSelector((state) => state.excel);
 
   // Find current data for the selected location
@@ -159,18 +641,151 @@ export default function SalesDashboard() {
   const [tabValue, setTabValue] = useState(0);
   const [chartTab, setChartTab] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [filterError, setFilterError] = useState<string>('');
+  
+  // Filter states
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([currentSalesWideLocation || '']);
+  const [selectedDateRange, setSelectedDateRange] = useState<any>(null);
+  
+  // Current table data from local state that gets updated from API calls
+  const [currentTableData, setCurrentTableData] = useState<any>({
+    table1: [],
+    table2: [],
+    table3: [],
+    table4: [],
+    table5: [],
+    table6: [],
+    table7: []
+  });
 
-  // Use location and other filters from Redux state
-  const location = salesWideFilters.location;
-  const helper = salesWideFilters.helper || 'Helper 1';
-  const year = salesWideFilters.year || '2025';
-  const equator = salesWideFilters.equator || 'Equator A';
-
-  // Extract data arrays from backend response
+  // Extract data arrays from backend response or use defaults
   const locations = currentSalesWideData?.locations || salesWideLocations || ['Midtown East', 'Downtown West', 'Uptown North', 'Southside'];
-  const helpers = ['Helper 1', 'Helper 2', 'Helper 3', 'Helper 4'];
-  const years = currentSalesWideData?.years || [2024, 2025, 2026];
-  const equators = ['Equator A', 'Equator B', 'Equator C', 'Equator D'];
+
+  // Initialize local state with current data
+  useEffect(() => {
+    if (currentSalesWideData) {
+      setCurrentTableData({
+        table1: currentSalesWideData.table1 || [],
+        table2: currentSalesWideData.table2 || [],
+        table3: currentSalesWideData.table3 || [],
+        table4: currentSalesWideData.table4 || [],
+        table5: currentSalesWideData.table5 || [],
+        table6: currentSalesWideData.table6 || [],
+        table7: currentSalesWideData.table7 || []
+      });
+    }
+  }, [currentSalesWideData]);
+
+  // Initialize selected locations
+  useEffect(() => {
+    if (locations.length > 0 && selectedLocations.length === 0) {
+      setSelectedLocations([locations[0]]);
+    }
+  }, [locations, selectedLocations]);
+
+  // Apply filters with backend API call
+  const handleApplyFilters = async () => {
+    setIsLoading(true);
+    setFilterError('');
+    
+    try {
+      // Find the current sales wide file data - check all selected locations
+      let currentFile = null;
+      
+      // If multiple locations selected, find the first file that matches any of them
+      for (const location of selectedLocations) {
+        currentFile = salesWideFiles.find(f => f.location === location);
+        if (currentFile) break;
+      }
+      
+      // If no file found in selected locations, try current location
+      if (!currentFile) {
+        currentFile = salesWideFiles.find(f => f.location === currentSalesWideLocation);
+      }
+      
+      if (!currentFile) {
+        throw new Error('No Sales Wide data found for selected location(s)');
+      }
+
+      // Prepare the request payload with multiple locations
+      const payload = {
+        fileName: currentFile.fileName,
+        fileContent: currentFile.fileContent,
+        // Send all selected locations, not just the first one
+        locations: selectedLocations.length > 0 ? selectedLocations : [currentFile.location],
+        // Keep single location for backward compatibility
+        location: selectedLocations.length > 0 ? selectedLocations[0] : currentFile.location,
+        startDate: selectedDateRange?.startDateStr || null,
+        endDate: selectedDateRange?.endDateStr || null,
+        dashboard: 'Sales Wide'
+      };
+
+      console.log('🚀 Sending Sales Wide filter request:', payload);
+
+      // Make API call to sales wide filter endpoint
+      const response = await axios.post(SALES_WIDE_FILTER_API_URL, payload);
+
+      console.log('📥 Received Sales Wide filter response:', response.data);
+
+      if (response.data) {
+        // Update local table data state
+        setCurrentTableData({
+          table1: response.data.table1 || [],
+          table2: response.data.table2 || [],
+          table3: response.data.table3 || [],
+          table4: response.data.table4 || [],
+          table5: response.data.table5 || [],
+          table6: response.data.table6 || [],
+          table7: response.data.table7 || []
+        });
+
+        // Also update Redux state if needed
+        dispatch(setTableData(response.data));
+
+        // Update Redux filters
+        dispatch(updateSalesWideFilters({ 
+          location: selectedLocations.join(','), // Store all locations as comma-separated string
+          dateRange: selectedDateRange ? `${selectedDateRange.startDateStr} - ${selectedDateRange.endDateStr}` : ''
+        }));
+
+        // Update current location if changed (use first selected location)
+        if (selectedLocations.length > 0 && selectedLocations[0] !== currentSalesWideLocation) {
+          dispatch(selectSalesWideLocation(selectedLocations[0]));
+        }
+      }
+
+    } catch (err: any) {
+      console.error('❌ Sales Wide filter error:', err);
+      
+      let errorMessage = 'Error applying filters';
+      
+      if (axios.isAxiosError(err)) {
+        if (err.response) {
+          const detail = err.response.data?.detail;
+          errorMessage = detail || `Server error: ${err.response.status}`;
+        } else if (err.request) {
+          errorMessage = 'No response from server. Please check if the backend is running.';
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setFilterError(errorMessage);
+      dispatch(setError(errorMessage));
+      
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handlers for filter changes
+  const handleLocationChange = (newLocations: string[]) => {
+    setSelectedLocations(newLocations);
+  };
+
+  const handleDateRangeSelect = (dateRange: any) => {
+    setSelectedDateRange(dateRange);
+  };
 
   // Process backend data for charts
   const processTableDataForCharts = (tableData: any[], keys: string[]) => {
@@ -187,56 +802,54 @@ export default function SalesDashboard() {
       });
   };
 
-  // Chart data from backend tables
+  // Chart data from local table data
   const salesData = processTableDataForCharts(
-    currentSalesWideData?.table1 || [], 
+    currentTableData.table1 || [], 
     ['Tw vs. Lw', 'Tw vs. Ly']
   );
 
   const ordersData = processTableDataForCharts(
-    currentSalesWideData?.table2 || [], 
+    currentTableData.table2 || [], 
     ['Tw vs. Lw', 'Tw vs. Ly']
   );
 
   const avgTicketData = processTableDataForCharts(
-    currentSalesWideData?.table3 || [], 
+    currentTableData.table3 || [], 
     ['Tw vs. Lw', 'Tw vs. Ly']
   );
 
   const laborHrsData = processTableDataForCharts(
-    currentSalesWideData?.table6 || [], 
+    currentTableData.table6 || [], 
     ['Tw Lb Hrs', 'Lw Lb Hrs']
   );
 
   const spmhData = processTableDataForCharts(
-    currentSalesWideData?.table7 || [], 
+    currentTableData.table7 || [], 
     ['Tw SPMH', 'Lw SPMH']
   );
 
   const laborCostData = processTableDataForCharts(
-    currentSalesWideData?.table5 || [], 
+    currentTableData.table5 || [], 
     ['Tw Reg Pay', 'Lw Reg Pay']
   );
 
   const laborPercentageData = processTableDataForCharts(
-    currentSalesWideData?.table5 || [], 
+    currentTableData.table5 || [], 
     ['Tw Lc %', 'Lw Lc %']
   );
 
   const cogsData = processTableDataForCharts(
-    currentSalesWideData?.table4 || [], 
+    currentTableData.table4 || [], 
     ['Tw COGS', 'Lw COGS']
   );
 
   const cogsPercentageData = processTableDataForCharts(
-    currentSalesWideData?.table4 || [], 
+    currentTableData.table4 || [], 
     ['Tw Fc %', 'Lw Fc %']
   );
 
-  // Create financial tables structure from backend data
+  // Create financial tables structure from local table data
   const financialTables = React.useMemo(() => {
-    if (!currentSalesWideData) return [];
-
     const createTableFromBackendData = (tableData: any[], title: string, columns: string[]) => {
       if (!tableData || tableData.length === 0) return { title, columns, data: [] };
       
@@ -257,83 +870,42 @@ export default function SalesDashboard() {
 
     return [
       createTableFromBackendData(
-        currentSalesWideData.table1 || [],
+        currentTableData.table1 || [],
         'Sales',
         ['Store', 'Tw Sales', 'Lw Sales', 'Ly Sales', 'Tw vs. Lw', 'Tw vs. Ly']
       ),
       createTableFromBackendData(
-        currentSalesWideData.table2 || [],
+        currentTableData.table2 || [],
         'Orders',
         ['Store', 'Tw Orders', 'Lw Orders', 'Ly Orders', 'Tw vs. Lw', 'Tw vs. Ly']
       ),
       createTableFromBackendData(
-        currentSalesWideData.table3 || [],
+        currentTableData.table3 || [],
         'Average Ticket',
         ['Store', 'Tw Avg Ticket', 'Lw Avg Ticket', 'Ly Avg Ticket', 'Tw vs. Lw', 'Tw vs. Ly']
       ),
       createTableFromBackendData(
-        currentSalesWideData.table4 || [],
+        currentTableData.table4 || [],
         'COGS',
         ['Store', 'Tw COGS', 'Lw COGS', 'Tw vs. Lw', 'Tw Fc %', 'Lw Fc %']
       ),
       createTableFromBackendData(
-        currentSalesWideData.table5 || [],
+        currentTableData.table5 || [],
         'Regular Pay',
         ['Store', 'Tw Reg Pay', 'Lw Reg Pay', 'Tw vs. Lw', 'Tw Lc %', 'Lw Lc %']
       ),
       createTableFromBackendData(
-        currentSalesWideData.table6 || [],
+        currentTableData.table6 || [],
         'Labor Hours',
         ['Store', 'Tw Lb Hrs', 'Lw Lb Hrs', 'Tw vs. Lw']
       ),
       createTableFromBackendData(
-        currentSalesWideData.table7 || [],
+        currentTableData.table7 || [],
         'SPMH',
         ['Store', 'Tw SPMH', 'Lw SPMH', 'Tw vs. Lw']
       )
     ];
-  }, [currentSalesWideData]);
-
-  // Inject the rotating animation styles
-  React.useEffect(() => {
-    const styleElement = document.createElement('style');
-    styleElement.textContent = `
-      @keyframes rotating {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-      }
-      .rotating {
-        animation: rotating 2s linear infinite;
-      }
-    `;
-    document.head.appendChild(styleElement);
-    
-    return () => {
-      document.head.removeChild(styleElement);
-    };
-  }, []);
-
-  // Handlers for filter changes
-  const handleLocationChange = (event: SelectChangeEvent) => {
-    const newLocation = event.target.value;
-    dispatch(selectSalesWideLocation(newLocation));
-    dispatch(updateSalesWideFilters({ location: newLocation }));
-  };
-
-  const handleHelperChange = (event: SelectChangeEvent) => {
-    const newHelper = event.target.value;
-    dispatch(updateSalesWideFilters({ helper: newHelper }));
-  };
-
-  const handleYearChange = (event: SelectChangeEvent) => {
-    const newYear = event.target.value;
-    dispatch(updateSalesWideFilters({ year: newYear }));
-  };
-
-  const handleEquatorChange = (event: SelectChangeEvent) => {
-    const newEquator = event.target.value;
-    dispatch(updateSalesWideFilters({ equator: newEquator }));
-  };
+  }, [currentTableData]);
 
   // Handle main tab change
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -343,15 +915,6 @@ export default function SalesDashboard() {
   // Handle chart tab change
   const handleChartTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setChartTab(newValue);
-  };
-
-  // Handle refresh - simulate data loading
-  const handleRefresh = () => {
-    setIsLoading(true);
-    // Simulate data loading
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
   };
 
   // Format values for charts
@@ -482,7 +1045,7 @@ export default function SalesDashboard() {
             fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }
           }}
         >
-          Sales Wide Dashboard
+          Companywide Sales Dashboard
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -517,145 +1080,158 @@ export default function SalesDashboard() {
         </Card>
       )}
 
+      {/* Error Alert */}
+      {(filterError || error) && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => {
+          setFilterError('');
+          dispatch(setError(null));
+        }}>
+          {filterError || error}
+        </Alert>
+      )}
+
       {/* Data Info Display */}
       {currentSalesWideData && (
-        <Card sx={{ mb: 3, p: 2, borderRadius: 2, backgroundColor: '#f8f9fa' }}>
-          <Typography variant="body1">
-            <strong>Data Source:</strong> {currentSalesWideData.fileName || 'Sales Wide Data'} | 
-            <strong> Locations:</strong> {locations.length} stores | 
-            <strong> Current Selection:</strong> {currentSalesWideLocation || 'All Stores'}
+        <Alert severity="success" sx={{ mb: 3 }}>
+          <Typography variant="body2">
+            <strong>Data loaded:</strong> {currentSalesWideData.fileName || 'Sales Wide Data'} | 
+            <strong> Location:</strong> {selectedLocations[0]}
+            {selectedDateRange && (
+              <>
+                {' | '}
+                <strong> Date Range:</strong> {selectedDateRange.startDate.toLocaleDateString()} - {selectedDateRange.endDate.toLocaleDateString()}
+              </>
+            )}
           </Typography>
-          {currentSalesWideData.dates && (
-            <Typography variant="body2" color="text.secondary">
-              <strong>Date Ranges Available:</strong> {currentSalesWideData.dates.length} periods ({currentSalesWideData.dates[0]} to {currentSalesWideData.dates[currentSalesWideData.dates.length - 1]})
-            </Typography>
-          )}
-        </Card>
+        </Alert>
       )}
 
       {/* Filters Section */}
       <Card elevation={3} sx={{ mb: 3, borderRadius: 2, overflow: 'hidden' }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <FilterListIcon color="primary" />
-              <Typography variant="h6" sx={{ fontWeight: 500 }}>
-                Filters
-              </Typography>
-            </Box>
-            <Button 
-              variant="outlined" 
-              size="small" 
-              color="primary"
-              disabled={isLoading}
-              onClick={handleRefresh}
-              startIcon={isLoading ? <RefreshIcon className="rotating" /> : <RefreshIcon />}
-            >
-              {isLoading ? 'Loading...' : 'Apply Filters'}
-            </Button>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+            <FilterListIcon color="primary" />
+            <Typography variant="h6" sx={{ fontWeight: 500 }}>
+              Filters
+            </Typography>
           </Box>
 
           <Grid container spacing={3}>
-            {/* Location filter */}
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel id="location-select-label">Location</InputLabel>
-                <Select
-                  labelId="location-select-label"
-                  id="location-select"
-                  value={location}
-                  label="Location"
-                  onChange={handleLocationChange}
-                  startAdornment={<PlaceIcon sx={{ mr: 1, ml: -0.5, color: 'primary.light' }} />}
-                >
-                  {locations.map(loc => (
-                    <MenuItem key={loc} value={loc}>{loc}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+            {/* Location filter - Using MultiSelectFilter to match design */}
+            <Grid item xs={12} sm={6}>
+              <MultiSelectFilter
+                id="location-filter"
+                label="Location"
+                value={selectedLocations}
+                options={locations}
+                onChange={handleLocationChange}
+                placeholder="Multiple Loc..."
+                icon={<PlaceIcon />}
+              />
             </Grid>
 
-            {/* Helper filter */}
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel id="helper-select-label">Helper</InputLabel>
-                <Select
-                  labelId="helper-select-label"
-                  id="helper-select"
-                  value={helper}
-                  label="Helper"
-                  onChange={handleHelperChange}
-                  startAdornment={<InfoOutlinedIcon sx={{ mr: 1, ml: -0.5, color: 'secondary.light' }} />}
-                >
-                  {helpers.map(h => (
-                    <MenuItem key={h} value={h}>{h}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* Year filter */}
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel id="year-select-label">Year</InputLabel>
-                <Select
-                  labelId="year-select-label"
-                  id="year-select"
-                  value={year}
-                  label="Year"
-                  onChange={handleYearChange}
-                  startAdornment={<CalendarTodayIcon sx={{ mr: 1, ml: -0.5, color: 'info.light' }} />}
-                >
-                  {years.map(y => (
-                    <MenuItem key={y} value={y.toString()}>{y}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* Equator filter */}
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel id="equator-select-label">Equator</InputLabel>
-                <Select
-                  labelId="equator-select-label"
-                  id="equator-select"
-                  value={equator}
-                  label="Equator"
-                  onChange={handleEquatorChange}
-                  startAdornment={<IconButton size="small" sx={{ mr: 0.5, ml: -1, p: 0 }}><BarChartIcon fontSize="small" color="success" /></IconButton>}
-                >
-                  {equators.map(eq => (
-                    <MenuItem key={eq} value={eq}>{eq}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+            {/* Date Range filter */}
+            <Grid item xs={12} sm={6}>
+              <DateRangeSelectorComponent
+                onDateRangeSelect={handleDateRangeSelect}
+              />
             </Grid>
           </Grid>
 
-          {/* Active filters */}
-          <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            <Chip 
-              label={`Helper: ${helper}`} 
-              color="secondary" 
-              variant="outlined" 
-              size="small" 
-              icon={<InfoOutlinedIcon />} 
-            />
-            <Chip 
-              label={`Year: ${year}`} 
-              color="info" 
-              variant="outlined" 
-              size="small" 
-              icon={<CalendarTodayIcon />} 
-            />
-            <Chip 
-              label={`Equator: ${equator}`} 
-              color="success" 
-              variant="outlined" 
-              size="small" 
-              icon={<BarChartIcon />} 
-            />
+          {/* Active filters and Apply button */}
+          <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {/* Active filter chips */}
+            {(selectedLocations.length > 0 || selectedDateRange) && (
+              <>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Active Filters:
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                  {selectedLocations.length > 0 && (
+                    <Chip 
+                      label={selectedLocations.length === 1 
+                        ? `Location: ${selectedLocations[0]}` 
+                        : `Location: Multiple Locations`
+                      }
+                      onDelete={() => setSelectedLocations([])}
+                      sx={{
+                        backgroundColor: '#e3f2fd',
+                        color: '#1976d2',
+                        border: '1px solid #90caf9',
+                        borderRadius: '20px',
+                        height: '32px',
+                        fontSize: '0.875rem',
+                        '& .MuiChip-icon': {
+                          color: '#1976d2',
+                        },
+                        '& .MuiChip-deleteIcon': {
+                          color: '#1976d2',
+                          fontSize: '18px'
+                        }
+                      }}
+                      deleteIcon={<CloseIcon />}
+                    />
+                  )}
+                  
+                  {selectedDateRange && (
+                    <Chip
+                      label={`Date Range: ${selectedDateRange.startDate.toLocaleDateString()} - ${selectedDateRange.endDate.toLocaleDateString()}`}
+                      onDelete={() => setSelectedDateRange(null)}
+                      sx={{
+                        backgroundColor: '#e8d5f2',
+                        color: '#7b1fa2',
+                        border: '1px solid #ce93d8',
+                        borderRadius: '20px',
+                        height: '32px',
+                        fontSize: '0.875rem',
+                        '& .MuiChip-icon': {
+                          color: '#7b1fa2',
+                        },
+                        '& .MuiChip-deleteIcon': {
+                          color: '#7b1fa2',
+                          fontSize: '18px'
+                        }
+                      }}
+                      deleteIcon={<CloseIcon />}
+                    />
+                  )}
+                </Box>
+              </>
+            )}
+
+            {/* Apply Filters Button - positioned at bottom left */}
+            <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+              <Button
+                variant="contained"
+                onClick={handleApplyFilters}
+                disabled={isLoading || loading}
+                startIcon={
+                  (isLoading || loading) ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : null
+                }
+                sx={{
+                  backgroundColor: '#1976d2',
+                  color: 'white',
+                  fontWeight: 600,
+                  py: 1.5,
+                  px: 4,
+                  borderRadius: '8px',
+                  textTransform: 'uppercase',
+                  fontSize: '0.875rem',
+                  minWidth: '160px',
+                  '&:hover': {
+                    backgroundColor: '#1565c0',
+                  },
+                  '&:disabled': {
+                    backgroundColor: '#ccc',
+                    color: '#666'
+                  }
+                }}
+              >
+                {(isLoading || loading) ? 'Loading...' : 'APPLY FILTERS'}
+              </Button>
+            </Box>
           </Box>
         </CardContent>
       </Card>
@@ -686,8 +1262,8 @@ export default function SalesDashboard() {
                 }
               }}
             >
-              <Tab label="Financial Dashboard" />
-              <Tab label="Day of Week Analysis" />
+              <Tab label="Tables" />
+              <Tab label="Graphs" />
             </Tabs>
   
             {/* Financial Dashboard Tab */}

@@ -1213,7 +1213,7 @@ export function Financials() {
       // Prepare the request payload
       const payload = {
         fileName: currentFile.fileName,
-        fileContent: currentFile.fileContent,
+        // fileContent: currentFile.fileContent,
         location: selectedLocations[0] || '',
         startDate: selectedDateRange?.startDateStr || null,
         endDate: selectedDateRange?.endDateStr || null,
