@@ -378,7 +378,6 @@ def sales_analysis_tables(df, location_filter='All', start_date=None, end_date=N
 
 
 def create_sales_overview_tables(df, location_filter='All', start_date=None, end_date=None):
-    print("i am here in sales split utils printing for sales by categories dates", start_date, end_date)
     
     # Make a copy of the dataframe
     df_copy = df.copy()
@@ -586,6 +585,8 @@ def create_sales_overview_tables(df, location_filter='All', start_date=None, end
         })
         
         thirteen_week_category_table = pd.concat([thirteen_week_category_table, grand_total_row], ignore_index=True)
+
+    print("i am here in sales split utils printing for sales by categories dates", start_date, end_date,"thirteen_week_start_date" ,thirteen_week_start_date, previous_start_date, previous_end_date)
 
     return {
         'sales_by_day_table': sales_by_day_table,
