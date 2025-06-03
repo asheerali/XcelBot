@@ -1,183 +1,184 @@
 import React from 'react';
 
-// Sample data based on the image
-const salesData = {
-  sales: 45000.00,
-  periods: [
-    { period: 'Tw', change: '0%', inHouse: '50.00%', inHouseChange: '3.00%', firstParty: '25.00%', firstPartyChange: '3.00%', thirdParty: '17.00%', thirdPartyChange: '3.00%', catering: '8.00%', cateringChange: '3.00%', total: '100.00%' },
-    { period: 'Lw', change: '5.00%', inHouse: '50.00%', inHouseChange: '3.00%', firstParty: '25.00%', firstPartyChange: '3.00%', thirdParty: '17.00%', thirdPartyChange: '3.00%', catering: '8.00%', cateringChange: '3.00%', total: '100.00%' },
-    { period: 'L4wt', change: '15.00%', inHouse: '45.00%', inHouseChange: '-4.00%', firstParty: '23.00%', firstPartyChange: '-5.00%', thirdParty: '22.00%', thirdPartyChange: '-4.00%', catering: '10.00%', cateringChange: '-4.00%', total: '100.00%' },
-    { period: 'Ly', change: '25.00%', inHouse: '50.00%', inHouseChange: '3.00%', firstParty: '25.00%', firstPartyChange: '3.00%', thirdParty: '17.00%', thirdPartyChange: '3.00%', catering: '8.00%', cateringChange: '3.00%', total: '100.00%' },
-    { period: 'Bdg', change: '-12.00%', inHouse: '50.00%', inHouseChange: '-14.00%', firstParty: '25.00%', firstPartyChange: '-14.00%', thirdParty: '17.00%', thirdPartyChange: '-14.00%', catering: '8.00%', cateringChange: '-14.00%', total: '100.00%' }
-  ]
+// Interface for the comprehensive financial data structure
+interface FinancialDashboardProps {
+  financialData: {
+    table1?: Array<{
+      financials_avg_ticket?: number;
+      financials_food_cost?: number;
+      financials_labor_cost?: number;
+      financials_lmph?: number;
+      financials_prime_cost?: number;
+      financials_sales?: number;
+      financials_spmh?: number;
+    }>;
+    table6?: any[]; // Sales data
+    table7?: any[]; // Labor cost data
+    table8?: any[]; // Average ticket data
+    table9?: any[]; // Prime cost data
+    table10?: any[]; // Food cost data
+    table11?: any[]; // SPMH data
+    table12?: any[]; // LPMH data
+    table13?: any[]; // Weekly sales by day
+    table14?: any[]; // Orders by day
+    table15?: any[]; // Average ticket by day
+    table16?: any[]; // KPI vs Budget
+    [key: string]: any;
+  };
+}
+
+// Debug component to check table1 data
+const DebugDataDisplay = ({ table1Data }: { table1Data: any }) => {
+  return (
+    <div style={{
+      background: '#fee2e2',
+      border: '1px solid #fecaca',
+      borderRadius: '8px',
+      padding: '16px',
+      marginBottom: '16px',
+      fontSize: '12px',
+      fontFamily: 'monospace'
+    }}>
+      <strong>DEBUG - Table1 Data:</strong>
+      <pre>{JSON.stringify(table1Data, null, 2)}</pre>
+    </div>
+  );
 };
 
-const avgTicketData = {
-  avgTicket: 14.59,
-  periods: [
-    { period: 'Tw', change: '0%', inHouse: '$16.25', inHouseChange: '3.00%', firstParty: '$16.25', firstPartyChange: '3.00%', thirdParty: '$16.25', thirdPartyChange: '3.00%', catering: '$16.25', cateringChange: '3.00%', avg: '$16.25' },
-    { period: 'Lw', change: '5.00%', inHouse: '$16.25', inHouseChange: '3.00%', firstParty: '$16.25', firstPartyChange: '3.00%', thirdParty: '$16.25', thirdPartyChange: '3.00%', catering: '$16.25', cateringChange: '3.00%', avg: '$16.25' },
-    { period: 'L4wt', change: '-15.00%', inHouse: '$16.57', inHouseChange: '-5.00%', firstParty: '$16.57', firstPartyChange: '-5.00%', thirdParty: '$16.57', thirdPartyChange: '-5.00%', catering: '$16.57', cateringChange: '-5.00%', avg: '$16.57' },
-    { period: 'Ly', change: '25.00%', inHouse: '$14.50', inHouseChange: '3.00%', firstParty: '$14.50', firstPartyChange: '3.00%', thirdParty: '$14.50', thirdPartyChange: '3.00%', catering: '$14.50', cateringChange: '3.00%', avg: '$14.50' },
-    { period: 'Bdg', change: '-12.00%', inHouse: '$19.50', inHouseChange: '-14.00%', firstParty: '$19.50', firstPartyChange: '-14.00%', thirdParty: '$19.50', thirdPartyChange: '-14.00%', catering: '$19.50', cateringChange: '-14.00%', avg: '$19.50' }
-  ]
-};
-
-const laborCostData = {
-  laborCost: '35.25%',
-  periods: [
-    { period: 'Tw', change: '0%', manager: '15.25%', managerChange: '3.00%', foh: '15.25%', fohChange: '3.00%', boh: '15.25%', bohChange: '3.00%', training: '15.25%', trainingChange: '3.00%', other: '15.25%' },
-    { period: 'Lw', change: '5.00%', manager: '15.25%', managerChange: '3.00%', foh: '15.25%', fohChange: '3.00%', boh: '15.25%', bohChange: '3.00%', training: '15.25%', trainingChange: '3.00%', other: '15.25%' },
-    { period: 'L4wt', change: '-15.00%', manager: '18.25%', managerChange: '-5.00%', foh: '15.25%', fohChange: '-5.00%', boh: '16.25%', bohChange: '-5.00%', training: '19.25%', trainingChange: '-4.00%', other: '18.25%' },
-    { period: 'Ly', change: '25.00%', manager: '15.25%', managerChange: '3.00%', foh: '15.25%', fohChange: '3.00%', boh: '15.25%', bohChange: '3.00%', training: '15.25%', trainingChange: '3.00%', other: '15.25%' },
-    { period: 'Bdg', change: '-12.00%', manager: '15.25%', managerChange: '-14.00%', foh: '15.25%', fohChange: '-14.00%', boh: '16.25%', bohChange: '-14.00%', training: '15.25%', trainingChange: '-14.00%', other: '15.25%' }
-  ]
-};
-
-const spmhData = {
-  spmh: 65.25,
-  periods: [
-    { period: 'Tw', dollarChange: '$65.15', percentChange: '5.00%' },
-    { period: 'Lw', dollarChange: '$66.15', percentChange: '6.00%' },
-    { period: 'L4wt', dollarChange: '$64.25', percentChange: '-15.00%' },
-    { period: 'Ly', dollarChange: '$44.25', percentChange: '25.00%' },
-    { period: 'Bdg', dollarChange: '$64.29', percentChange: '-12.00%' }
-  ]
-};
-
-const lpmhData = {
-  spmh: 15.24,
-  periods: [
-    { period: 'Tw', dollarChange: '$17.25', percentChange: '5.00%' },
-    { period: 'Lw', dollarChange: '$17.25', percentChange: '5.00%' },
-    { period: 'L4wt', dollarChange: '$15.25', percentChange: '-15.00%' },
-    { period: 'Ly', dollarChange: '$14.66', percentChange: '25.00%' },
-    { period: 'Bdg', dollarChange: '$18.25', percentChange: '-12.00%' }
-  ]
-};
-
-const kpiData = [
-  { metric: 'Net Sales', thisWeek: '3,406,791', budget: '3,178,203', twBdg: '-61.5', percent: '8%' },
-  { metric: 'Orders', thisWeek: '152,562', budget: '423,065', twBdg: '-63.9', percent: '89%' },
-  { metric: 'Avg Ticket', thisWeek: '22.93', budget: '21.69', twBdg: '+3.7', percent: '5%' },
-  { metric: 'Food Cost %', thisWeek: '32.8%', budget: '29.6%', twBdg: '+3.0', percent: '6%' }
-];
-
-// Weekly sales chart data
-const weeklySalesData = [
-  { day: 'Mon', thisWeek: 8.5, lastWeek: 8.2, lastYear: 7.8 },
-  { day: 'Tue', thisWeek: 8.8, lastWeek: 8.1, lastYear: 7.5 },
-  { day: 'Wed', thisWeek: 9.2, lastWeek: 8.9, lastYear: 8.1 },
-  { day: 'Thu', thisWeek: 8.1, lastWeek: 8.8, lastYear: 7.9 },
-  { day: 'Fri', thisWeek: 8.9, lastWeek: 8.5, lastYear: 8.2 },
-  { day: 'Sat', thisWeek: 8.7, lastWeek: 8.4, lastYear: 8.0 },
-  { day: 'Sun', thisWeek: 8.6, lastWeek: 8.3, lastYear: 7.7 }
-];
-
-const ordersByDayData = [
-  { day: 'Monday', thisWeek: 850, lastWeek: 780, lastYear: 720 },
-  { day: 'Tuesday', thisWeek: 920, lastWeek: 880, lastYear: 810 },
-  { day: 'Wednesday', thisWeek: 780, lastWeek: 760, lastYear: 690 },
-  { day: 'Thursday', thisWeek: 680, lastWeek: 650, lastYear: 620 },
-  { day: 'Friday', thisWeek: 750, lastWeek: 720, lastYear: 680 },
-  { day: 'Saturday', thisWeek: 820, lastWeek: 800, lastYear: 750 },
-  { day: 'Sunday', thisWeek: 780, lastWeek: 740, lastYear: 700 }
-];
-
-// Utility function to format change values
-const formatChange = (value) => {
+// Utility function to format change values with modern styling
+const formatChange = (value: string) => {
   const numValue = parseFloat(value.replace('%', ''));
   const isPositive = numValue >= 0;
   return {
     value: value,
-    color: isPositive ? '#2e7d32' : '#d32f2f',
+    color: isPositive ? '#059669' : '#dc2626',
     arrow: isPositive ? '▲' : '▼'
   };
 };
 
-// Simple Line Chart Component
-const SimpleLineChart = ({ data, title, height = 250 }) => {
-  const maxValue = Math.max(...data.map(d => Math.max(d.thisWeek || 0, d.lastWeek || 0, d.lastYear || 0)));
-  const minValue = Math.min(...data.map(d => Math.min(d.thisWeek || 0, d.lastWeek || 0, d.lastYear || 0)));
+// Modern Line Chart Component with real data
+const ModernLineChart = ({ data, title, height = 300, dataKeys = ['This Week', 'Last Week', 'Last Year'] }: any) => {
+  if (!data || data.length === 0) {
+    return (
+      <div style={{ 
+        padding: '32px', 
+        background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', 
+        borderRadius: '24px', 
+        boxShadow: '0 20px 40px rgba(0,0,0,0.08), 0 8px 25px rgba(0,0,0,0.04)',
+        border: '1px solid #e2e8f0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: height,
+        width: '100%'
+      }}>
+        <span style={{ color: '#64748b', fontSize: '16px', fontWeight: '500' }}>No data available for {title}</span>
+      </div>
+    );
+  }
+
+  const maxValue = Math.max(...data.map((d: any) => Math.max(...dataKeys.map(key => d[key] || 0))));
+  const minValue = Math.min(...data.map((d: any) => Math.min(...dataKeys.map(key => d[key] || 0))));
   const range = maxValue - minValue || 1;
   
-  const getY = (value) => {
-    return height - 40 - ((value - minValue) / range) * (height - 80);
+  const getY = (value: number) => {
+    return height - 80 - ((value - minValue) / range) * (height - 140);
   };
   
-  const getX = (index) => {
-    return 60 + (index * (320 / (data.length - 1)));
+  const getX = (index: number) => {
+    return 100 + (index * (400 / (data.length - 1)));
   };
+
+  const colors = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444'];
+  const labels = ['This Week', 'Last Week', 'Last Year', 'L4wt', 'Budget'];
 
   return (
     <div style={{ 
-      padding: '20px', 
-      background: '#fff', 
-      borderRadius: '8px', 
-      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+      padding: '32px', 
+      background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', 
+      borderRadius: '24px', 
+      boxShadow: '0 20px 40px rgba(0,0,0,0.08), 0 8px 25px rgba(0,0,0,0.04)',
+      border: '1px solid #e2e8f0',
       width: '100%',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      overflow: 'hidden'
     }}>
-      <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: '600' }}>{title}</h3>
-      <div style={{ overflow: 'auto' }}>
-        <svg width="400" height={height} style={{ overflow: 'visible', minWidth: '350px' }}>
+      <h3 style={{ 
+        margin: '0 0 28px 0', 
+        fontSize: '24px', 
+        fontWeight: '700', 
+        color: '#1e293b',
+        letterSpacing: '-0.01em'
+      }}>
+        {title}
+      </h3>
+      <div style={{ overflow: 'auto', width: '100%' }}>
+        <svg width="100%" height={height} viewBox="0 0 600 300" style={{ overflow: 'visible', minWidth: '500px' }}>
           {/* Grid lines */}
           {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
             <line
               key={i}
-              x1="60"
-              y1={40 + ratio * (height - 80)}
-              x2="380"
-              y2={40 + ratio * (height - 80)}
-              stroke="#e0e0e0"
+              x1="100"
+              y1={70 + ratio * (height - 140)}
+              x2="500"
+              y2={70 + ratio * (height - 140)}
+              stroke="#f1f5f9"
               strokeWidth="1"
             />
           ))}
           
-          {/* This Week Line */}
-          <polyline
-            fill="none"
-            stroke="#1976d2"
-            strokeWidth="3"
-            points={data.map((d, i) => `${getX(i)},${getY(d.thisWeek || 0)}`).join(' ')}
-          />
-          
-          {/* Last Week Line */}
-          <polyline
-            fill="none"
-            stroke="#90caf9"
-            strokeWidth="2"
-            points={data.map((d, i) => `${getX(i)},${getY(d.lastWeek || 0)}`).join(' ')}
-          />
-          
-          {/* Last Year Line */}
-          <polyline
-            fill="none"
-            stroke="#424242"
-            strokeWidth="2"
-            points={data.map((d, i) => `${getX(i)},${getY(d.lastYear || 0)}`).join(' ')}
-          />
+          {/* Lines for each data key */}
+          {dataKeys.map((key: string, keyIndex: number) => {
+            if (keyIndex >= colors.length) return null;
+            const strokeWidths = [4, 3, 3, 3, 3];
+            
+            return (
+              <polyline
+                key={key}
+                fill="none"
+                stroke={colors[keyIndex]}
+                strokeWidth={strokeWidths[keyIndex] || 3}
+                points={data.map((d: any, i: number) => `${getX(i)},${getY(d[key] || 0)}`).join(' ')}
+                style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
+              />
+            );
+          })}
           
           {/* Data points */}
-          {data.map((d, i) => (
+          {data.map((d: any, i: number) => (
             <g key={i}>
-              <circle cx={getX(i)} cy={getY(d.thisWeek || 0)} r="4" fill="#1976d2" />
-              <circle cx={getX(i)} cy={getY(d.lastWeek || 0)} r="3" fill="#90caf9" />
-              <circle cx={getX(i)} cy={getY(d.lastYear || 0)} r="3" fill="#424242" />
+              {dataKeys.map((key: string, keyIndex: number) => {
+                if (keyIndex >= colors.length) return null;
+                const radii = [6, 5, 5, 5, 5];
+                
+                return (
+                  <circle 
+                    key={key}
+                    cx={getX(i)} 
+                    cy={getY(d[key] || 0)} 
+                    r={radii[keyIndex] || 5} 
+                    fill={colors[keyIndex]} 
+                    stroke="#ffffff"
+                    strokeWidth="3"
+                    style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}
+                  />
+                );
+              })}
             </g>
           ))}
           
           {/* X-axis labels */}
-          {data.map((d, i) => (
+          {data.map((d: any, i: number) => (
             <text
               key={i}
               x={getX(i)}
-              y={height - 10}
+              y={height - 30}
               textAnchor="middle"
-              fontSize="12"
-              fill="#666"
+              fontSize="14"
+              fill="#64748b"
+              fontWeight="600"
             >
-              {d.day}
+              {d.Day || d.day || d.label || i + 1}
             </text>
           ))}
           
@@ -185,11 +186,12 @@ const SimpleLineChart = ({ data, title, height = 250 }) => {
           {[minValue, (minValue + maxValue) / 2, maxValue].map((value, i) => (
             <text
               key={i}
-              x="50"
+              x="90"
               y={getY(value) + 4}
               textAnchor="end"
-              fontSize="12"
-              fill="#666"
+              fontSize="14"
+              fill="#64748b"
+              fontWeight="600"
             >
               {value.toFixed(1)}
             </text>
@@ -198,161 +200,350 @@ const SimpleLineChart = ({ data, title, height = 250 }) => {
       </div>
       
       {/* Legend */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '10px', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <div style={{ width: '12px', height: '3px', background: '#1976d2' }}></div>
-          <span style={{ fontSize: '12px', color: '#666' }}>This Week</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <div style={{ width: '12px', height: '2px', background: '#90caf9' }}></div>
-          <span style={{ fontSize: '12px', color: '#666' }}>Last Week</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <div style={{ width: '12px', height: '2px', background: '#424242' }}></div>
-          <span style={{ fontSize: '12px', color: '#666' }}>Last Year</span>
-        </div>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginTop: '20px', flexWrap: 'wrap' }}>
+        {dataKeys.map((key: string, index: number) => {
+          if (index >= colors.length) return null;
+          
+          return (
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ 
+                width: '20px', 
+                height: '4px', 
+                background: colors[index], 
+                borderRadius: '2px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}></div>
+              <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>
+                {labels[index] || key}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 };
 
-// Simple Bar Chart Component
-const SimpleBarChart = ({ data, title, height = 250 }) => {
-  const maxValue = Math.max(...data.map(d => Math.max(d.thisWeek || 0, d.lastWeek || 0, d.lastYear || 0)));
-  const barWidth = 15;
-  const groupWidth = 60;
+// Modern Bar Chart Component with real data and full width
+const ModernBarChart = ({ data, title, height = 300 }: any) => {
+  if (!data || data.length === 0) {
+    return (
+      <div style={{ 
+        padding: '32px', 
+        background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', 
+        borderRadius: '24px', 
+        boxShadow: '0 20px 40px rgba(0,0,0,0.08), 0 8px 25px rgba(0,0,0,0.04)',
+        border: '1px solid #e2e8f0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: height,
+        width: '100%'
+      }}>
+        <span style={{ color: '#64748b', fontSize: '16px', fontWeight: '500' }}>No data available for {title}</span>
+      </div>
+    );
+  }
+
+  const maxValue = Math.max(...data.map((d: any) => Math.max(d['This Week'] || 0, d['Last Week'] || 0, d['Last Year'] || 0)));
+  const barWidth = 20;
+  const groupWidth = 80;
   
-  const getY = (value) => {
-    return height - 40 - (value / maxValue) * (height - 80);
+  const getY = (value: number) => {
+    return height - 80 - (value / maxValue) * (height - 140);
   };
   
-  const getX = (index, barIndex) => {
-    return 60 + (index * groupWidth) + (barIndex * (barWidth + 2));
+  const getX = (index: number, barIndex: number) => {
+    return 100 + (index * groupWidth) + (barIndex * (barWidth + 4));
   };
+
+  const colors = ['#3b82f6', '#f59e0b', '#10b981'];
 
   return (
     <div style={{ 
-      padding: '20px', 
-      background: '#fff', 
-      borderRadius: '8px', 
-      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+      padding: '32px', 
+      background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', 
+      borderRadius: '24px', 
+      boxShadow: '0 20px 40px rgba(0,0,0,0.08), 0 8px 25px rgba(0,0,0,0.04)',
+      border: '1px solid #e2e8f0',
       width: '100%',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      overflow: 'hidden'
     }}>
-      <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', fontWeight: '600' }}>{title}</h3>
-      <div style={{ overflow: 'auto' }}>
-        <svg width="500" height={height} style={{ overflow: 'visible', minWidth: '400px' }}>
+      <h3 style={{ 
+        margin: '0 0 28px 0', 
+        fontSize: '24px', 
+        fontWeight: '700', 
+        color: '#1e293b',
+        letterSpacing: '-0.01em'
+      }}>
+        {title}
+      </h3>
+      <div style={{ overflow: 'auto', width: '100%' }}>
+        <svg width="100%" height={height} viewBox="0 0 700 300" style={{ overflow: 'visible', minWidth: '600px' }}>
+          {/* Grid lines */}
+          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
+            <line
+              key={i}
+              x1="100"
+              y1={70 + ratio * (height - 140)}
+              x2="680"
+              y2={70 + ratio * (height - 140)}
+              stroke="#f1f5f9"
+              strokeWidth="1"
+            />
+          ))}
+          
           {/* Bars */}
-          {data.map((d, i) => (
+          {data.map((d: any, i: number) => (
             <g key={i}>
               <rect
                 x={getX(i, 0)}
-                y={getY(d.thisWeek || 0)}
+                y={getY(d['This Week'] || 0)}
                 width={barWidth}
-                height={(d.thisWeek || 0) / maxValue * (height - 80)}
-                fill="#1976d2"
+                height={(d['This Week'] || 0) / maxValue * (height - 140)}
+                fill={colors[0]}
+                rx="6"
+                style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
               />
               <rect
                 x={getX(i, 1)}
-                y={getY(d.lastWeek || 0)}
+                y={getY(d['Last Week'] || 0)}
                 width={barWidth}
-                height={(d.lastWeek || 0) / maxValue * (height - 80)}
-                fill="#90caf9"
+                height={(d['Last Week'] || 0) / maxValue * (height - 140)}
+                fill={colors[1]}
+                rx="6"
+                style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
               />
               <rect
                 x={getX(i, 2)}
-                y={getY(d.lastYear || 0)}
+                y={getY(d['Last Year'] || 0)}
                 width={barWidth}
-                height={(d.lastYear || 0) / maxValue * (height - 80)}
-                fill="#424242"
+                height={(d['Last Year'] || 0) / maxValue * (height - 140)}
+                fill={colors[2]}
+                rx="6"
+                style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
               />
             </g>
           ))}
           
           {/* X-axis labels */}
-          {data.map((d, i) => (
+          {data.map((d: any, i: number) => (
             <text
               key={i}
               x={getX(i, 1)}
-              y={height - 10}
+              y={height - 30}
               textAnchor="middle"
-              fontSize="10"
-              fill="#666"
-              transform={`rotate(-45, ${getX(i, 1)}, ${height - 10})`}
+              fontSize="12"
+              fill="#64748b"
+              fontWeight="600"
+              transform={`rotate(-45, ${getX(i, 1)}, ${height - 30})`}
             >
-              {d.day}
+              {d.Day}
+            </text>
+          ))}
+          
+          {/* Y-axis labels */}
+          {[0, maxValue / 2, maxValue].map((value, i) => (
+            <text
+              key={i}
+              x="90"
+              y={getY(value) + 4}
+              textAnchor="end"
+              fontSize="14"
+              fill="#64748b"
+              fontWeight="600"
+            >
+              {value.toFixed(0)}
             </text>
           ))}
         </svg>
       </div>
       
       {/* Legend */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '10px', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <div style={{ width: '12px', height: '12px', background: '#1976d2' }}></div>
-          <span style={{ fontSize: '12px', color: '#666' }}>This Week</span>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginTop: '20px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ width: '20px', height: '20px', background: colors[0], borderRadius: '6px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}></div>
+          <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>This Week</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <div style={{ width: '12px', height: '12px', background: '#90caf9' }}></div>
-          <span style={{ fontSize: '12px', color: '#666' }}>Last Week</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ width: '20px', height: '20px', background: colors[1], borderRadius: '6px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}></div>
+          <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>Last Week</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <div style={{ width: '12px', height: '12px', background: '#424242' }}></div>
-          <span style={{ fontSize: '12px', color: '#666' }}>Last Year</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ width: '20px', height: '20px', background: colors[2], borderRadius: '6px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}></div>
+          <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>Last Year</span>
         </div>
       </div>
     </div>
   );
 };
 
-// Table component for financial data
-const FinancialDataTable = ({ title, mainValue, data, columns }) => {
+// Responsive Financial Data Table Component
+const ResponsiveFinancialTable = ({ title, mainValue, data, columns, isCompact = false }: any) => {
+  if (!data || data.length === 0) {
+    return (
+      <div style={{ 
+        background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', 
+        borderRadius: '24px', 
+        boxShadow: '0 20px 40px rgba(0,0,0,0.08), 0 8px 25px rgba(0,0,0,0.04)',
+        border: '1px solid #e2e8f0',
+        padding: '32px',
+        textAlign: 'center'
+      }}>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: '24px', fontWeight: '700', color: '#1e293b' }}>{title}</h3>
+        <div style={{ 
+          fontSize: '36px', 
+          fontWeight: '800', 
+          background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+          marginBottom: '16px'
+        }}>
+          {mainValue}
+        </div>
+        <span style={{ color: '#64748b', fontSize: '16px' }}>No breakdown data available</span>
+      </div>
+    );
+  }
+
+  // For mobile, show fewer columns
+  const priorityColumns = columns.slice(0, isCompact ? 4 : columns.length);
+
   return (
     <div style={{ 
-      background: '#fff', 
-      borderRadius: '12px', 
-      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-      border: '1px solid #e0e0e0',
+      background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', 
+      borderRadius: '24px', 
+      boxShadow: '0 20px 40px rgba(0,0,0,0.08), 0 8px 25px rgba(0,0,0,0.04)',
+      border: '1px solid #e2e8f0',
       transition: 'all 0.3s ease',
-      height: '100%',
       width: '100%',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      overflow: 'hidden'
     }}>
-      <div style={{ padding: '16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#333' }}>{title}</h3>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#1976d2' }}>{mainValue}</div>
+      <div style={{ padding: '32px 28px' }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '28px', 
+          flexWrap: 'wrap', 
+          gap: '16px' 
+        }}>
+          <h3 style={{ 
+            margin: 0, 
+            fontSize: '26px', 
+            fontWeight: '700', 
+            color: '#1e293b',
+            letterSpacing: '-0.01em'
+          }}>
+            {title}
+          </h3>
+          <div style={{ 
+            fontSize: '36px', 
+            fontWeight: '800', 
+            background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}>
+            {mainValue}
+          </div>
         </div>
         
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '300px' }}>
+        <div style={{ 
+          overflowX: 'auto', 
+          borderRadius: '16px', 
+          backgroundColor: '#f8fafc',
+          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.06)'
+        }}>
+          <table style={{ 
+            width: '100%', 
+            borderCollapse: 'collapse', 
+            fontSize: '14px', 
+            minWidth: isCompact ? '400px' : '600px'
+          }}>
             <thead>
-              <tr style={{ backgroundColor: '#f5f5f5' }}>
-                <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px', borderBottom: '1px solid #ddd' }}>Time Period</th>
-                <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px', borderBottom: '1px solid #ddd' }}>% Change</th>
-                {columns.map((col, index) => (
-                  <th key={index} style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px', borderBottom: '1px solid #ddd' }}>
+              <tr style={{ backgroundColor: '#f1f5f9' }}>
+                <th style={{ 
+                  padding: '20px 16px', 
+                  textAlign: 'left', 
+                  fontWeight: '700', 
+                  fontSize: '13px', 
+                  color: '#475569', 
+                  borderRadius: '16px 0 0 0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
+                  Time Period
+                </th>
+                <th style={{ 
+                  padding: '20px 16px', 
+                  textAlign: 'left', 
+                  fontWeight: '700', 
+                  fontSize: '13px', 
+                  color: '#475569',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
+                  % Change
+                </th>
+                {priorityColumns.map((col: any, index: number) => (
+                  <th key={index} style={{ 
+                    padding: '20px 16px', 
+                    textAlign: 'left', 
+                    fontWeight: '700', 
+                    fontSize: '13px', 
+                    color: '#475569',
+                    borderRadius: index === priorityColumns.length - 1 ? '0 16px 0 0' : '0',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                  }}>
                     {col.label}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {data.map((row, index) => (
-                <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#fff' : '#f9f9f9' }}>
-                  <td style={{ padding: '6px 4px', fontWeight: '600', borderBottom: '1px solid #eee' }}>{row.period}</td>
-                  <td style={{ padding: '6px 4px', borderBottom: '1px solid #eee' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                      <span style={{ color: formatChange(row.change).color, fontSize: '10px' }}>
-                        {formatChange(row.change).arrow}
+              {data.map((row: any, index: number) => (
+                <tr key={index} style={{ 
+                  backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc',
+                  borderBottom: index === data.length - 1 ? 'none' : '1px solid #e2e8f0'
+                }}>
+                  <td style={{ 
+                    padding: '16px', 
+                    fontWeight: '700', 
+                    color: '#334155',
+                    fontSize: '15px'
+                  }}>
+                    {row['Time Period']}
+                  </td>
+                  <td style={{ padding: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ 
+                        color: formatChange(row['% Change'] || '0%').color, 
+                        fontSize: '14px',
+                        fontWeight: '700'
+                      }}>
+                        {formatChange(row['% Change'] || '0%').arrow}
                       </span>
-                      <span style={{ color: formatChange(row.change).color, fontWeight: '600' }}>
-                        {row.change}
+                      <span style={{ 
+                        color: formatChange(row['% Change'] || '0%').color, 
+                        fontWeight: '700',
+                        fontSize: '15px'
+                      }}>
+                        {row['% Change']}
                       </span>
                     </div>
                   </td>
-                  {columns.map((col, colIndex) => (
-                    <td key={colIndex} style={{ padding: '6px 4px', borderBottom: '1px solid #eee' }}>
+                  {priorityColumns.map((col: any, colIndex: number) => (
+                    <td key={colIndex} style={{ 
+                      padding: '16px', 
+                      color: '#64748b',
+                      fontWeight: '600',
+                      fontSize: '14px'
+                    }}>
                       {row[col.key] || '-'}
                     </td>
                   ))}
@@ -366,349 +557,560 @@ const FinancialDataTable = ({ title, mainValue, data, columns }) => {
   );
 };
 
-const ComprehensiveFinancialDashboard = () => {
+// Compact metric cards for SPMH and LPMH
+const MetricCard = ({ title, value, data }: any) => {
+  return (
+    <div style={{ 
+      background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', 
+      borderRadius: '24px', 
+      boxShadow: '0 20px 40px rgba(0,0,0,0.08), 0 8px 25px rgba(0,0,0,0.04)',
+      border: '1px solid #e2e8f0',
+      width: '100%',
+      boxSizing: 'border-box',
+      overflow: 'hidden'
+    }}>
+      <div style={{ padding: '28px 24px' }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '24px', 
+          flexWrap: 'wrap', 
+          gap: '12px' 
+        }}>
+          <h3 style={{ 
+            margin: 0, 
+            fontSize: '22px', 
+            fontWeight: '700', 
+            color: '#1e293b',
+            letterSpacing: '-0.01em'
+          }}>
+            {title}
+          </h3>
+          <div style={{ 
+            fontSize: '32px', 
+            fontWeight: '800', 
+            background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}>
+            {value}
+          </div>
+        </div>
+        
+        {data && data.length > 0 ? (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px', minWidth: '300px' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f1f5f9' }}>
+                  <th style={{ 
+                    padding: '16px 12px', 
+                    textAlign: 'left', 
+                    fontWeight: '700', 
+                    fontSize: '12px', 
+                    color: '#475569', 
+                    borderRadius: '12px 0 0 12px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                  }}>
+                    Period
+                  </th>
+                  <th style={{ 
+                    padding: '16px 12px', 
+                    textAlign: 'left', 
+                    fontWeight: '700', 
+                    fontSize: '12px', 
+                    color: '#475569',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                  }}>
+                    $ Change
+                  </th>
+                  <th style={{ 
+                    padding: '16px 12px', 
+                    textAlign: 'left', 
+                    fontWeight: '700', 
+                    fontSize: '12px', 
+                    color: '#475569', 
+                    borderRadius: '0 12px 12px 0',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                  }}>
+                    % Change
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((row: any, index: number) => (
+                  <tr key={index} style={{ 
+                    backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc',
+                    borderBottom: index === data.length - 1 ? 'none' : '1px solid #e2e8f0'
+                  }}>
+                    <td style={{ 
+                      padding: '14px 12px', 
+                      fontWeight: '700', 
+                      color: '#334155',
+                      fontSize: '14px'
+                    }}>
+                      {row['Time Period']}
+                    </td>
+                    <td style={{ 
+                      padding: '14px 12px', 
+                      color: '#64748b',
+                      fontWeight: '600'
+                    }}>
+                      {row['$ Change']}
+                    </td>
+                    <td style={{ padding: '14px 12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ 
+                          color: formatChange(row['% Change'] || '0%').color, 
+                          fontSize: '12px',
+                          fontWeight: '700'
+                        }}>
+                          {formatChange(row['% Change'] || '0%').arrow}
+                        </span>
+                        <span style={{ 
+                          color: formatChange(row['% Change'] || '0%').color, 
+                          fontWeight: '700'
+                        }}>
+                          {row['% Change']}
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', color: '#64748b', fontStyle: 'italic' }}>
+            No breakdown data available
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const ComprehensiveFinancialDashboard: React.FC<FinancialDashboardProps> = ({ financialData }) => {
+  console.log('🔍 ComprehensiveFinancialDashboard received data:', financialData);
+  
+  // Extract real data from table1 with better error handling
+  const table1Data = financialData?.table1?.[0] || {};
+  console.log('📊 Table1 extracted data:', table1Data);
+  
+  // Helper functions
+  const formatCurrency = (value: number): string => {
+    if (isNaN(value) || value === null || value === undefined) return '$0';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value);
+  };
+
+  const formatPercentage = (value: number): string => {
+    if (isNaN(value) || value === null || value === undefined) return '0.0%';
+    return `${value.toFixed(1)}%`;
+  };
+
+  const formatDollar = (value: number): string => {
+    if (isNaN(value) || value === null || value === undefined) return '$0.00';
+    return `$${value.toFixed(2)}`;
+  };
+
+  // Extract real data from tables
+  const salesData = financialData?.table6 || [];
+  const laborCostData = financialData?.table7 || [];
+  const avgTicketData = financialData?.table8 || [];
+  const primeCostData = financialData?.table9 || [];
+  const foodCostData = financialData?.table10 || [];
+  const spmhData = financialData?.table11 || [];
+  const lpmhData = financialData?.table12 || [];
+  const weeklySalesData = financialData?.table13 || [];
+  const ordersByDayData = financialData?.table14 || [];
+  const avgTicketByDayData = financialData?.table15 || []; // Added this for average ticket graph
+  const kpiData = financialData?.table16 || [];
+
+  // Main values from table1 (dynamic) - with fallbacks
+  const mainSalesValue = formatCurrency(table1Data.financials_sales || 0);
+  const mainLaborCostValue = formatPercentage(table1Data.financials_labor_cost || 0);
+  const mainAvgTicketValue = formatDollar(table1Data.financials_avg_ticket || 0);
+  const mainPrimeCostValue = formatPercentage(table1Data.financials_prime_cost || 0);
+  const mainFoodCostValue = formatPercentage(table1Data.financials_food_cost || 0);
+  const mainSpmhValue = formatDollar(table1Data.financials_spmh || 0);
+  const mainLpmhValue = formatDollar(table1Data.financials_lmph || 0);
+
+  console.log('💰 Formatted main values:', {
+    sales: mainSalesValue,
+    laborCost: mainLaborCostValue,
+    avgTicket: mainAvgTicketValue,
+    primeCost: mainPrimeCostValue,
+    foodCost: mainFoodCostValue,
+    spmh: mainSpmhValue,
+    lpmh: mainLpmhValue
+  });
+
+  // Column definitions for tables
+  const salesColumns = [
+    { label: 'In-House', key: 'In-House' },
+    { label: '% (+/-)', key: '% (+/-)_In-House' },
+    { label: '1P', key: '1p' },
+    { label: '% (+/-)', key: '% (+/-)_1p' },
+    { label: '3P', key: '3p' },
+    { label: '% (+/-)', key: '% (+/-)_3p' },
+    { label: 'Catering', key: 'Catering' },
+    { label: 'Total', key: 'TTL' }
+  ];
+
+  const laborColumns = [
+    { label: 'Manager', key: 'Manager' },
+    { label: '% (+/-)', key: '% (+/-)_Manager' },
+    { label: 'FOH', key: 'FOH' },
+    { label: '% (+/-)', key: '% (+/-)_FOH' },
+    { label: 'BOH', key: 'BOH' },
+    { label: '% (+/-)', key: '% (+/-)_BOH' },
+    { label: 'Training', key: 'Training' },
+    { label: 'Other', key: 'Other' }
+  ];
+
+  const avgTicketColumns = [
+    { label: 'In-House', key: 'In-House' },
+    { label: '% (+/-)', key: '% (+/-)_In-House' },
+    { label: '1P', key: '1p' },
+    { label: '% (+/-)', key: '% (+/-)_1p' },
+    { label: '3P', key: '3p' },
+    { label: '% (+/-)', key: '% (+/-)_3p' },
+    { label: 'Catering', key: 'Catering' },
+    { label: 'Avg', key: 'Avg' }
+  ];
+
+  const primeCostColumns = [
+    { label: 'Labor', key: 'Labor' },
+    { label: '% (+/-)', key: '% (+/-)_Labor' },
+    { label: 'Food', key: 'Food' },
+    { label: '% (+/-)', key: '% (+/-)_Food' },
+    { label: 'Paper', key: 'Paper' },
+    { label: '% (+/-)', key: '% (+/-)_Paper' },
+    { label: 'OK', key: 'OK' },
+    { label: 'Other', key: 'Other' }
+  ];
+
+  const foodCostColumns = [
+    { label: 'Johns', key: 'Johns' },
+    { label: '% (+/-)', key: '% (+/-)_Johns' },
+    { label: 'Terra', key: 'Terra' },
+    { label: '% (+/-)', key: '% (+/-)_Terra' },
+    { label: 'Metro', key: 'Metro' },
+    { label: '% (+/-)', key: '% (+/-)_Metro' },
+    { label: 'Victory', key: 'Victory' },
+    { label: 'CK', key: 'Ck' }
+  ];
+
+  // Container styles with modern design
   const containerStyle = {
-    padding: '24px',
-    backgroundColor: '#f8f9fa',
+    padding: '40px 32px',
+    backgroundColor: '#f8fafc',
     minHeight: '100vh',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     maxWidth: '100vw',
     overflow: 'hidden'
   };
 
   const headerStyle = {
-    marginBottom: '32px',
-    textAlign: 'center'
+    marginBottom: '48px',
+    textAlign: 'center' as const
   };
 
   const titleStyle = {
-    fontSize: 'clamp(24px, 5vw, 36px)',
-    fontWeight: '700',
-    color: '#1976d2',
-    margin: '0 0 8px 0'
+    fontSize: 'clamp(32px, 5vw, 48px)',
+    fontWeight: '800',
+    background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+    margin: '0 0 16px 0',
+    letterSpacing: '-0.02em'
   };
 
   const subtitleStyle = {
-    fontSize: 'clamp(14px, 3vw, 18px)',
-    color: '#666',
-    margin: 0
+    fontSize: 'clamp(18px, 3vw, 22px)',
+    color: '#64748b',
+    margin: 0,
+    fontWeight: '600'
   };
 
   // Responsive grid styles
-  const baseGridStyle = {
+  const singleColumnGrid = {
     display: 'grid',
-    gap: '24px',
-    marginBottom: '32px',
+    gridTemplateColumns: '1fr',
+    gap: '32px',
+    marginBottom: '48px',
     width: '100%'
   };
 
-  // Two column layout for larger items
   const twoColumnGrid = {
-    ...baseGridStyle,
-    gridTemplateColumns: 'repeat(auto-fit, minmax(min(400px, 100%), 1fr))',
-    '@media (max-width: 768px)': {
-      gridTemplateColumns: '1fr',
-      gap: '16px'
-    }
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(500px, 100%), 1fr))',
+    gap: '32px',
+    marginBottom: '48px',
+    width: '100%'
   };
 
-  // Three column layout - FIXED for proper responsiveness
-  const threeColumnGrid = {
-    ...baseGridStyle,
-    // Desktop: 3 columns, Tablet: 2 columns, Mobile: 1 column
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-    '@media (min-width: 1024px)': {
-      gridTemplateColumns: 'repeat(3, 1fr)'
-    },
-    '@media (max-width: 768px)': {
-      gridTemplateColumns: '1fr',
-      gap: '16px'
-    }
-  };
-
-  // Charts grid - ensures responsive behavior
   const chartsGrid = {
-    ...baseGridStyle,
-    gridTemplateColumns: 'repeat(auto-fit, minmax(min(350px, 100%), 1fr))',
-    '@media (max-width: 768px)': {
-      gridTemplateColumns: '1fr',
-      gap: '16px'
-    }
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(450px, 100%), 1fr))',
+    gap: '32px',
+    marginBottom: '48px',
+    width: '100%'
   };
 
-  // Bottom section with mixed layouts
-  const bottomGrid = {
-    ...baseGridStyle,
-    gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))',
-    '@media (min-width: 1200px)': {
-      gridTemplateColumns: '1fr 1fr 1.2fr' // Average Ticket, Labor Chart, KPI Table
-    },
-    '@media (max-width: 768px)': {
-      gridTemplateColumns: '1fr',
-      gap: '16px'
-    }
+  // Single row for orders chart
+  const singleRowGrid = {
+    display: 'grid',
+    gridTemplateColumns: '1fr',
+    gap: '32px',
+    marginBottom: '48px',
+    width: '100%'
   };
 
   return (
     <div style={containerStyle}>
+      {/* Debug Display - Remove in production */}
+      {/* <DebugDataDisplay table1Data={table1Data} /> */}
+
       {/* Header */}
       <div style={headerStyle}>
         <h1 style={titleStyle}>Financial Dashboard</h1>
         <p style={subtitleStyle}>Comprehensive Financial Analytics & Performance Metrics</p>
       </div>
 
-      {/* Top Row - Main Financial Tables */}
-      <div style={twoColumnGrid}>
-        <FinancialDataTable
+      {/* Single Column Layout for Main Financial Tables */}
+      <div style={singleColumnGrid}>
+        <ResponsiveFinancialTable
           title="Sales"
-          mainValue="$45,000.00"
-          data={salesData.periods}
-          columns={[
-            { label: 'In-House', key: 'inHouse' },
-            { label: '% (+/-)', key: 'inHouseChange' },
-            { label: '1p', key: 'firstParty' },
-            { label: '% (+/-)', key: 'firstPartyChange' },
-            { label: '3p', key: 'thirdParty' },
-            { label: '% (+/-)', key: 'thirdPartyChange' },
-            { label: 'Catering', key: 'catering' },
-            { label: '% (+/-)', key: 'cateringChange' },
-            { label: 'TTL', key: 'total' }
-          ]}
+          mainValue={mainSalesValue}
+          data={salesData}
+          columns={salesColumns}
         />
-        <FinancialDataTable
+        
+        <ResponsiveFinancialTable
           title="Labor Cost"
-          mainValue="35.25%"
-          data={laborCostData.periods}
-          columns={[
-            { label: 'Manager', key: 'manager' },
-            { label: '% (+/-)', key: 'managerChange' },
-            { label: 'FOH', key: 'foh' },
-            { label: '% (+/-)', key: 'fohChange' },
-            { label: 'BOH', key: 'boh' },
-            { label: '% (+/-)', key: 'bohChange' },
-            { label: 'Training', key: 'training' },
-            { label: '% (+/-)', key: 'trainingChange' },
-            { label: 'Other', key: 'other' }
-          ]}
+          mainValue={mainLaborCostValue}
+          data={laborCostData}
+          columns={laborColumns}
         />
-      </div>
-
-      {/* Second Row - Average Ticket & Prime Cost */}
-      <div style={twoColumnGrid}>
-        <FinancialDataTable
+        
+        <ResponsiveFinancialTable
           title="Avg Ticket"
-          mainValue="$14.59"
-          data={avgTicketData.periods}
-          columns={[
-            { label: 'In-House', key: 'inHouse' },
-            { label: '% (+/-)', key: 'inHouseChange' },
-            { label: '1p', key: 'firstParty' },
-            { label: '% (+/-)', key: 'firstPartyChange' },
-            { label: '3p', key: 'thirdParty' },
-            { label: '% (+/-)', key: 'thirdPartyChange' },
-            { label: 'Catering', key: 'catering' },
-            { label: '% (+/-)', key: 'cateringChange' },
-            { label: 'Avg', key: 'avg' }
-          ]}
+          mainValue={mainAvgTicketValue}
+          data={avgTicketData}
+          columns={avgTicketColumns}
         />
-        <FinancialDataTable
+        
+        <ResponsiveFinancialTable
           title="Prime Cost"
-          mainValue="70.50%"
-          data={laborCostData.periods}
-          columns={[
-            { label: 'Labor', key: 'manager' },
-            { label: '% (+/-)', key: 'managerChange' },
-            { label: 'Food', key: 'foh' },
-            { label: '% (+/-)', key: 'fohChange' },
-            { label: 'Paper', key: 'boh' },
-            { label: '% (+/-)', key: 'bohChange' },
-            { label: 'OK', key: 'training' },
-            { label: '% (+/-)', key: 'trainingChange' },
-            { label: 'Other', key: 'other' }
-          ]}
+          mainValue={mainPrimeCostValue}
+          data={primeCostData}
+          columns={primeCostColumns}
         />
-      </div>
-
-      {/* FIXED: Third Row - Food Cost, SPMH, LPMH - Now properly in one row on laptop */}
-      <div style={threeColumnGrid}>
-        <FinancialDataTable
+        
+        <ResponsiveFinancialTable
           title="Food Cost"
-          mainValue="35.25%"
-          data={laborCostData.periods}
-          columns={[
-            { label: 'Johns', key: 'manager' },
-            { label: '% (+/-)', key: 'managerChange' },
-            { label: 'Terra', key: 'foh' },
-            { label: '% (+/-)', key: 'fohChange' },
-            { label: 'Metro', key: 'boh' },
-            { label: '% (+/-)', key: 'bohChange' },
-            { label: 'Victory', key: 'training' },
-            { label: '% (+/-)', key: 'trainingChange' },
-            { label: 'Ck', key: 'other' }
-          ]}
+          mainValue={mainFoodCostValue}
+          data={foodCostData}
+          columns={foodCostColumns}
+        />
+      </div>
+
+      {/* SPMH and LPMH Cards - Side by Side */}
+      <div style={twoColumnGrid}>
+        <MetricCard
+          title="SPMH"
+          value={mainSpmhValue}
+          data={spmhData}
         />
         
-        {/* SPMH Card */}
-        <div style={{ 
-          background: '#fff', 
-          borderRadius: '12px', 
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          border: '1px solid #e0e0e0',
-          height: 'fit-content',
-          width: '100%',
-          boxSizing: 'border-box'
-        }}>
-          <div style={{ padding: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>SPMH</h3>
-              <div style={{ fontSize: '24px', fontWeight: '700', color: '#1976d2' }}>$65.25</div>
-            </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '200px' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#f5f5f5' }}>
-                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>Time Period</th>
-                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>$ Change</th>
-                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>% Change</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {spmhData.periods.map((row, index) => (
-                    <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#fff' : '#f9f9f9' }}>
-                      <td style={{ padding: '6px 4px', fontWeight: '600' }}>{row.period}</td>
-                      <td style={{ padding: '6px 4px' }}>{row.dollarChange}</td>
-                      <td style={{ padding: '6px 4px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                          <span style={{ color: formatChange(row.percentChange).color, fontSize: '10px' }}>
-                            {formatChange(row.percentChange).arrow}
-                          </span>
-                          <span style={{ color: formatChange(row.percentChange).color, fontWeight: '600' }}>
-                            {row.percentChange}
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-        
-        {/* LPMH Card */}
-        <div style={{ 
-          background: '#fff', 
-          borderRadius: '12px', 
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          border: '1px solid #e0e0e0',
-          height: 'fit-content',
-          width: '100%',
-          boxSizing: 'border-box'
-        }}>
-          <div style={{ padding: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>LPMH</h3>
-              <div style={{ fontSize: '24px', fontWeight: '700', color: '#1976d2' }}>$15.24</div>
-            </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '200px' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#f5f5f5' }}>
-                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>Time Period</th>
-                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>$ Change</th>
-                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>% Change</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lpmhData.periods.map((row, index) => (
-                    <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#fff' : '#f9f9f9' }}>
-                      <td style={{ padding: '6px 4px', fontWeight: '600' }}>{row.period}</td>
-                      <td style={{ padding: '6px 4px' }}>{row.dollarChange}</td>
-                      <td style={{ padding: '6px 4px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                          <span style={{ color: formatChange(row.percentChange).color, fontSize: '10px' }}>
-                            {formatChange(row.percentChange).arrow}
-                          </span>
-                          <span style={{ color: formatChange(row.percentChange).color, fontWeight: '600' }}>
-                            {row.percentChange}
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        <MetricCard
+          title="LPMH"
+          value={mainLpmhValue}
+          data={lpmhData}
+        />
       </div>
 
-      {/* Charts Section */}
+      {/* Charts Section - Weekly Sales and Average Ticket */}
       <div style={chartsGrid}>
-        <SimpleLineChart data={weeklySalesData} title="Weekly Sales" />
-        <SimpleBarChart data={ordersByDayData} title="Orders by Day of Week" />
+        <ModernLineChart 
+          data={weeklySalesData} 
+          title="Weekly Sales Trends" 
+          dataKeys={['This Week', 'Last Week', 'Last Year', 'L4wt', 'Bdg']}
+        />
+        <ModernLineChart 
+          data={avgTicketByDayData} 
+          title="Average Ticket by Day" 
+          dataKeys={['This Week', 'Last Week', 'Last Year', 'L4wt', 'Bdg']}
+        />
       </div>
 
-      {/* FIXED: Bottom Row - Average Ticket, Labor Cost vs Labor Hours, KPI vs Budget */}
-      <div style={bottomGrid}>
-        <SimpleLineChart data={weeklySalesData} title="Average Ticket" height={200} />
-        
-      
+      {/* Orders Chart - Single Row as requested */}
+      <div style={singleRowGrid}>
+        <ModernBarChart 
+          data={ordersByDayData} 
+          title="Orders by Day of Week" 
+        />
+      </div>
 
-        {/* KPI vs Budget Table */}
-        <div style={{ 
-          background: '#fff', 
-          borderRadius: '12px', 
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          border: '1px solid #e0e0e0',
-          height: 'fit-content',
-          width: '100%',
-          boxSizing: 'border-box'
-        }}>
-          <div style={{ padding: '16px' }}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '600' }}>KPI vs Budget</h3>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', minWidth: '300px' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#f5f5f5' }}>
-                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>Metric</th>
-                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>This Week</th>
-                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>Budget</th>
-                    <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', fontSize: '11px' }}>Tw/Bdg (+/-)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {kpiData.map((row, index) => (
-                    <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#fff' : '#f9f9f9' }}>
-                      <td style={{ padding: '6px 4px', fontWeight: '600' }}>{row.metric}</td>
-                      <td style={{ padding: '6px 4px' }}>{row.thisWeek}</td>
-                      <td style={{ padding: '6px 4px' }}>{row.budget}</td>
-                      <td style={{ padding: '6px 4px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-                          <span style={{ 
-                            color: row.twBdg.startsWith('+') ? '#2e7d32' : '#d32f2f',
-                            fontWeight: '600' 
-                          }}>
-                            {row.twBdg}
-                          </span>
-                          <span style={{ 
-                            background: '#e3f2fd',
-                            color: '#1976d2',
-                            padding: '2px 6px',
-                            borderRadius: '12px',
-                            fontSize: '10px'
-                          }}>
-                            {row.percent}
-                          </span>
-                        </div>
-                      </td>
+      {/* Bottom Row - KPI vs Budget Table */}
+      <div style={singleColumnGrid}>
+        {kpiData.length > 0 && (
+          <div style={{ 
+            background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', 
+            borderRadius: '24px', 
+            boxShadow: '0 20px 40px rgba(0,0,0,0.08), 0 8px 25px rgba(0,0,0,0.04)',
+            border: '1px solid #e2e8f0',
+            width: '100%',
+            boxSizing: 'border-box',
+            overflow: 'hidden'
+          }}>
+            <div style={{ padding: '32px 28px' }}>
+              <h3 style={{ 
+                margin: '0 0 28px 0', 
+                fontSize: '26px', 
+                fontWeight: '700', 
+                color: '#1e293b',
+                letterSpacing: '-0.01em'
+              }}>
+                KPI vs Budget
+              </h3>
+              <div style={{ 
+                overflowX: 'auto', 
+                borderRadius: '16px', 
+                backgroundColor: '#f8fafc',
+                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.06)'
+              }}>
+                <table style={{ 
+                  width: '100%', 
+                  borderCollapse: 'collapse', 
+                  fontSize: '14px', 
+                  minWidth: '500px' 
+                }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f1f5f9' }}>
+                      <th style={{ 
+                        padding: '20px 16px', 
+                        textAlign: 'left', 
+                        fontWeight: '700', 
+                        fontSize: '13px', 
+                        color: '#475569', 
+                        borderRadius: '16px 0 0 0',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Metric
+                      </th>
+                      <th style={{ 
+                        padding: '20px 16px', 
+                        textAlign: 'left', 
+                        fontWeight: '700', 
+                        fontSize: '13px', 
+                        color: '#475569',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        This Week
+                      </th>
+                      <th style={{ 
+                        padding: '20px 16px', 
+                        textAlign: 'left', 
+                        fontWeight: '700', 
+                        fontSize: '13px', 
+                        color: '#475569',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Budget
+                      </th>
+                      <th style={{ 
+                        padding: '20px 16px', 
+                        textAlign: 'left', 
+                        fontWeight: '700', 
+                        fontSize: '13px', 
+                        color: '#475569', 
+                        borderRadius: '0 16px 0 0',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        Tw/Bdg (+/-)
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {kpiData.map((row, index) => (
+                      <tr key={index} style={{ 
+                        backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc',
+                        borderBottom: index === kpiData.length - 1 ? 'none' : '1px solid #e2e8f0'
+                      }}>
+                        <td style={{ 
+                          padding: '16px', 
+                          fontWeight: '700', 
+                          color: '#334155',
+                          fontSize: '15px'
+                        }}>
+                          {row.Metric}
+                        </td>
+                        <td style={{ 
+                          padding: '16px', 
+                          color: '#64748b',
+                          fontWeight: '600'
+                        }}>
+                          {row['This Week']}
+                        </td>
+                        <td style={{ 
+                          padding: '16px', 
+                          color: '#64748b',
+                          fontWeight: '600'
+                        }}>
+                          {row.Budget}
+                        </td>
+                        <td style={{ padding: '16px' }}>
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '12px', 
+                            flexWrap: 'wrap' 
+                          }}>
+                            <span style={{ 
+                              color: row['Tw/Bdg (+/-)'].startsWith('+') ? '#059669' : '#dc2626',
+                              fontWeight: '700',
+                              fontSize: '16px'
+                            }}>
+                              {row['Tw/Bdg (+/-)']}
+                            </span>
+                            <span style={{ 
+                              background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                              color: '#1d4ed8',
+                              padding: '6px 12px',
+                              borderRadius: '16px',
+                              fontSize: '12px',
+                              fontWeight: '700',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em'
+                            }}>
+                              {row['Percent Change']}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -34,39 +34,46 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
   // Use provided initialState or default
   const [state, setState] = useState(initialState || defaultState);
 
-  // Helper function to get the most recent Monday (or today if today is Monday)
-  const getMostRecentMonday = (date: Date): Date => {
-    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-    const daysFromLastMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Sunday becomes 6, others are days since Monday
-    return addDays(date, -daysFromLastMonday);
+  // Helper function to get the start of the current week (Monday)
+  const getCurrentWeekStart = (date: Date): Date => {
+    return startOfWeek(date, { weekStartsOn: 1 }); // Monday = 1
   };
 
-  // Helper function to create week-based ranges that end on Monday
-  const createWeekBasedRange = (totalDays: number) => {
+  // Helper function to get the previous complete week (Monday to Sunday)
+  const getPreviousWeek = () => {
+    const today = new Date();
+    const currentWeekStart = getCurrentWeekStart(today);
+    
+    // Get the start of last week (7 days before current week start)
+    const lastWeekStart = addDays(currentWeekStart, -7);
+    // Get the end of last week (6 days after last week start = Sunday)
+    const lastWeekEnd = addDays(lastWeekStart, 6);
+    
+    return {
+      startDate: lastWeekStart,
+      endDate: lastWeekEnd
+    };
+  };
+
+  // Helper function to get X complete weeks before the current week
+  const getPreviousXWeeks = (numWeeks: number) => {
     return () => {
       const today = new Date();
+      const currentWeekStart = getCurrentWeekStart(today);
       
-      // Calculate the original date range
-      const originalStartDate = addDays(today, -(totalDays - 1)); // -1 because we include today
-      
-      // Find the most recent Monday
-      const lastMonday = getMostRecentMonday(today);
-      
-      // Calculate how many days we're losing by ending on Monday instead of today
-      const dayOfWeek = today.getDay();
-      const daysLost = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Days from Monday to today
-      
-      // Extend the start date by the number of days lost
-      const adjustedStartDate = addDays(originalStartDate, -daysLost);
+      // Start from X weeks before the current week
+      const startDate = addDays(currentWeekStart, -(numWeeks * 7));
+      // End at the day before the current week starts (last Sunday)
+      const endDate = addDays(currentWeekStart, -1);
       
       return {
-        startDate: adjustedStartDate,
-        endDate: lastMonday
+        startDate,
+        endDate
       };
     };
   };
 
-  // Define static ranges - UPDATED with week-end adjustment
+  // Define static ranges - UPDATED with proper week logic
   const staticRanges = createStaticRanges([
     {
       label: 'Today',
@@ -84,29 +91,37 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
     },
     {
       label: 'Last 7 Days',
-      range: createWeekBasedRange(7)
+      range: () => ({
+        startDate: addDays(new Date(), -6), // 6 days ago + today = 7 days
+        endDate: new Date()
+      })
     },
     {
       label: 'Last 30 Days',
       range: () => ({
-        startDate: addDays(new Date(), -29),
+        startDate: addDays(new Date(), -29), // 29 days ago + today = 30 days
         endDate: new Date()
       })
     },
-    // UPDATED: Last 4 weeks with Monday adjustment
+    {
+      label: 'Last Week',
+      range: getPreviousWeek
+    },
+    {
+      label: 'Last 2 Weeks',
+      range: getPreviousXWeeks(2)
+    },
     {
       label: 'Last 4 Weeks',
-      range: createWeekBasedRange(28) // 4 weeks * 7 days
+      range: getPreviousXWeeks(4)
     },
-    // UPDATED: Last 8 weeks with Monday adjustment
     {
       label: 'Last 8 Weeks',
-      range: createWeekBasedRange(56) // 8 weeks * 7 days
+      range: getPreviousXWeeks(8)
     },
-    // UPDATED: Last 13 weeks with Monday adjustment
     {
       label: 'Last 13 Weeks',
-      range: createWeekBasedRange(91) // 13 weeks * 7 days
+      range: getPreviousXWeeks(13)
     },
     {
       label: 'This Month',
@@ -130,22 +145,9 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
       label: 'This Week',
       range: () => ({
         startDate: startOfWeek(new Date(), { weekStartsOn: 1 }), // Start on Monday
-        endDate: endOfWeek(new Date(), { weekStartsOn: 1 })
+        endDate: endOfWeek(new Date(), { weekStartsOn: 1 })     // End on Sunday
       })
     },
-    {
-      label: 'Last Week',
-      range: () => {
-        const now = new Date();
-        const lastWeekStart = startOfWeek(addDays(now, -7), { weekStartsOn: 1 });
-        const lastWeekEnd = endOfWeek(addDays(now, -7), { weekStartsOn: 1 });
-        return {
-          startDate: lastWeekStart,
-          endDate: lastWeekEnd
-        };
-      }
-    },
-  
   ]);
 
   // Handle date range selection
@@ -197,6 +199,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
         inputRanges={[]}
         showDateDisplay={false}
         showMonthAndYearPickers={true}
+        weekStartsOn={1}
       />
     </Box>
   );

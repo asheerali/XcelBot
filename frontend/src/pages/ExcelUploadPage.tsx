@@ -1182,16 +1182,7 @@ const ExcelUploadPage: React.FC = () => {
                                       getStatusColor(fileInfo.status) as any
                                     }
                                   />
-                                  {fileInfo.categories &&
-                                    fileInfo.categories.length > 0 && (
-                                      <Chip
-                                        label={`${fileInfo.categories.length} categories`}
-                                        size="small"
-                                        color="info"
-                                        variant="outlined"
-                                        icon={<CategoryIcon />}
-                                      />
-                                    )}
+                                
                                 </Stack>
 
                                 {/* UPDATED: Enhanced location display with multiple location support */}
@@ -1205,13 +1196,7 @@ const ExcelUploadPage: React.FC = () => {
                                         gap: 1,
                                       }}
                                     >
-                                      <PlaceIcon fontSize="small" color="primary" />
-                                      <Typography
-                                        variant="body2"
-                                        sx={{ fontWeight: 600, color: "primary.main" }}
-                                      >
-                                        Primary Location: {fileInfo.primaryLocation}
-                                      </Typography>
+                            
                                     </Box>
                                   )}
 
@@ -1241,10 +1226,10 @@ const ExcelUploadPage: React.FC = () => {
                                           variant="outlined"
                                           color={
                                             location === fileInfo.primaryLocation 
-                                              ? "primary" 
+                                              ? "default" 
                                               : "default"
                                           }
-                                          icon={location === fileInfo.primaryLocation ? <StarIcon /> : <LocationOnIcon />}
+                                          icon={location === fileInfo.primaryLocation ? <LocationOnIcon /> : <LocationOnIcon />}
                                         />
                                       ))}
                                     </Box>

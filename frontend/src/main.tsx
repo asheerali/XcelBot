@@ -29,6 +29,7 @@ import ProductMixDashboard from "./pages/ProductMixDashboard";
 import DateRangeSelector from "./components/DateRangeSelector";
 import SalesSplitDashboard from "./components/SalesSplitDashboard";
 import ComprehensiveFinancialDashboard from "./components/ComprehensiveFinancialDashboard";
+import HomePage from "./pages/HomePage";
 const router = createBrowserRouter([
   {
     Component: App,
@@ -62,6 +63,7 @@ const router = createBrowserRouter([
             path: "SalesSplitDashboard",
             Component: SalesSplitDashboard,
           },
+          
            {
             path: "daterange",
             Component: DateRangeSelector,
@@ -102,12 +104,19 @@ const router = createBrowserRouter([
             path: "ComingSoon",
             Component: ComingSoon,
           },
+
           {
             path: "*",
             Component: NotFoundView,
           },
         ],
       },
+       {
+        path: "HomePage",
+        Component: HomePage,
+         
+        },
+      
       {
         path: "*",
         Component: NotFoundView,
