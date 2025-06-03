@@ -165,7 +165,7 @@ def process_pmix_file(file_data: Union[io.BytesIO, str],start_date=None, end_dat
      
     p3 = create_sales_by_category_tables(df, location_filter=location_filter, start_date=start_date, end_date=end_date)
     
-    sales_by_category_tables_df = p3['sales_by_category_tables']
+    sales_by_category_tables_df = p3['sales_by_category_table']
     category_comparison_table_df = p3['category_comparison_table']
     
     top_vs_bottom_comparison_df  = create_top_vs_bottom_comparison(df, location_filter=location_filter, start_date=start_date, end_date=end_date)
