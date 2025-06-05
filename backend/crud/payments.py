@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models import payments as payment_model
+from models_db import payments as payment_model
 from schemas import payments as payment_schema
 from datetime import datetime
 
