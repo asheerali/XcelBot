@@ -109,7 +109,7 @@ interface ExcelState {
 
   // Global categories - aggregated from all files
   allCategories: string[];
-  
+
   // Files by type
   files: FileData[];
   financialFiles: FinancialData[];
@@ -258,21 +258,34 @@ const addCategoriesToState = (
   if (!categories || categories.length === 0) return;
 
   // Add to global categories
-  const newGlobalCategories = [...new Set([...state.allCategories, ...categories])];
+  const newGlobalCategories = [
+    ...new Set([...state.allCategories, ...categories]),
+  ];
   state.allCategories = newGlobalCategories;
 
   // Add to dashboard-specific categories
   if (dashboardName === "Sales Split") {
-    const newSalesCategories = [...new Set([...state.salesCategories, ...categories])];
+    const newSalesCategories = [
+      ...new Set([...state.salesCategories, ...categories]),
+    ];
     state.salesCategories = newSalesCategories;
   } else if (dashboardName === "Financials") {
-    const newFinancialCategories = [...new Set([...state.financialCategories, ...categories])];
+    const newFinancialCategories = [
+      ...new Set([...state.financialCategories, ...categories]),
+    ];
     state.financialCategories = newFinancialCategories;
   } else if (dashboardName === "Sales Wide") {
-    const newSalesWideCategories = [...new Set([...state.salesWideCategories, ...categories])];
+    const newSalesWideCategories = [
+      ...new Set([...state.salesWideCategories, ...categories]),
+    ];
     state.salesWideCategories = newSalesWideCategories;
-  } else if (dashboardName === "Product Mix" || dashboardName === "Product Mix ") {
-    const newProductMixCategories = [...new Set([...state.productMixCategories, ...categories])];
+  } else if (
+    dashboardName === "Product Mix" ||
+    dashboardName === "Product Mix "
+  ) {
+    const newProductMixCategories = [
+      ...new Set([...state.productMixCategories, ...categories]),
+    ];
     state.productMixCategories = newProductMixCategories;
   }
 };
@@ -287,7 +300,7 @@ const addLocationToDashboardList = (
   if (!state.allLocations.includes(location)) {
     state.allLocations.push(location);
   }
-  
+
   // Only add to specific dashboard location lists based on dashboard type
   if (
     dashboardName === "Sales Split" &&
@@ -352,7 +365,11 @@ export const excelSlice = createSlice({
 
       // Update categories if present in table data
       if (action.payload.categories) {
-        addCategoriesToState(state, action.payload.categories, action.payload.dashboardName);
+        addCategoriesToState(
+          state,
+          action.payload.categories,
+          action.payload.dashboardName
+        );
       }
 
       // Update the active file with this data if there is an active file
@@ -360,7 +377,8 @@ export const excelSlice = createSlice({
         state.files[state.activeFileIndex].data = action.payload;
         // Update categories for the active file
         if (action.payload.categories) {
-          state.files[state.activeFileIndex].categories = action.payload.categories;
+          state.files[state.activeFileIndex].categories =
+            action.payload.categories;
         }
       }
     },
@@ -408,6 +426,8 @@ export const excelSlice = createSlice({
         categories?: string[];
       }>
     ) => {
+      console.log("🔁 Persisting this data:", action.payload);
+
       // Check if file already exists for this location
       const existingFileIndex = state.files.findIndex(
         (f) => f.location === action.payload.location
@@ -415,7 +435,8 @@ export const excelSlice = createSlice({
 
       // Get the dashboard type from the data
       const dashboardName = action.payload.data.dashboardName;
-      const categories = action.payload.categories || action.payload.data.categories || [];
+      const categories =
+        action.payload.categories || action.payload.data.categories || [];
 
       // Create file data with upload timestamp, file content, and categories
       const fileData: FileData = {
@@ -440,7 +461,7 @@ export const excelSlice = createSlice({
 
       // Add location to appropriate dashboard lists
       addLocationToDashboardList(state, action.payload.location, dashboardName);
-      
+
       // Add categories to state
       addCategoriesToState(state, categories, dashboardName);
 
@@ -472,7 +493,8 @@ export const excelSlice = createSlice({
         (f) => f.location === action.payload.location
       );
 
-      const categories = action.payload.categories || action.payload.data.categories || [];
+      const categories =
+        action.payload.categories || action.payload.data.categories || [];
 
       // Create financial data with upload timestamp, file content, and categories
       const financialData: FinancialData = {
@@ -529,7 +551,8 @@ export const excelSlice = createSlice({
         (f) => f.location === action.payload.location
       );
 
-      const categories = action.payload.categories || action.payload.data.categories || [];
+      const categories =
+        action.payload.categories || action.payload.data.categories || [];
 
       // Create sales data with upload timestamp, file content, and categories
       const salesData: SalesData = {
@@ -583,7 +606,8 @@ export const excelSlice = createSlice({
         (f) => f.location === action.payload.location
       );
 
-      const categories = action.payload.categories || action.payload.data.categories || [];
+      const categories =
+        action.payload.categories || action.payload.data.categories || [];
 
       // Create sales wide data with upload timestamp, file content, and categories
       const salesWideData: SalesWideData = {
@@ -636,7 +660,7 @@ export const excelSlice = createSlice({
       }>
     ) => {
       // console.log('🎯 addProductMixData action received:', action.payload);
-      
+
       // Check if product mix file already exists for this location
       const existingIndex = state.productMixFiles.findIndex(
         (f) => f.location === action.payload.location
@@ -644,7 +668,8 @@ export const excelSlice = createSlice({
 
       // console.log('Existing Product Mix file index:', existingIndex);
 
-      const categories = action.payload.categories || action.payload.data.categories || [];
+      const categories =
+        action.payload.categories || action.payload.data.categories || [];
       // console.log('Categories for Product Mix:', categories);
 
       // Create product mix data with upload timestamp, file content, and categories
@@ -689,14 +714,17 @@ export const excelSlice = createSlice({
       ) {
         state.currentProductMixLocation = action.payload.location;
         state.productMixFilters.location = action.payload.location;
-        console.log('Set current Product Mix location:', action.payload.location);
+        console.log(
+          "Set current Product Mix location:",
+          action.payload.location
+        );
       }
 
-      console.log('Product Mix state after update:', {
+      console.log("Product Mix state after update:", {
         filesCount: state.productMixFiles.length,
         locations: state.productMixLocations,
         currentLocation: state.currentProductMixLocation,
-        categories: state.productMixCategories
+        categories: state.productMixCategories,
       });
     },
     // Now just maintains the allLocations list
@@ -782,7 +810,10 @@ export const excelSlice = createSlice({
         } else if (file.dashboard === "Sales Wide") {
           state.currentSalesWideLocation = location;
           state.salesWideFilters.location = location;
-        } else if (file.dashboard === "Product Mix" || file.dashboard === "Product Mix ") {
+        } else if (
+          file.dashboard === "Product Mix" ||
+          file.dashboard === "Product Mix "
+        ) {
           state.currentProductMixLocation = location;
           state.productMixFilters.location = location;
         }
@@ -938,7 +969,9 @@ export const excelSlice = createSlice({
 
         // Update active file index in main files array
         const fileIndex = state.files.findIndex(
-          (f) => f.location === location && (f.dashboard === "Product Mix" || f.dashboard === "Product Mix ")
+          (f) =>
+            f.location === location &&
+            (f.dashboard === "Product Mix" || f.dashboard === "Product Mix ")
         );
         if (fileIndex >= 0) {
           state.activeFileIndex = fileIndex;
@@ -968,7 +1001,10 @@ export const excelSlice = createSlice({
       state,
       action: PayloadAction<Partial<typeof initialState.productMixFilters>>
     ) => {
-      state.productMixFilters = { ...state.productMixFilters, ...action.payload };
+      state.productMixFilters = {
+        ...state.productMixFilters,
+        ...action.payload,
+      };
     },
     resetExcelData: (state) => {
       return initialState;
@@ -1106,7 +1142,10 @@ export const selectFileAndFetchData =
         dispatch(selectFinancialLocation(location));
       } else if (file.dashboard === "Sales Wide") {
         dispatch(selectSalesWideLocation(location));
-      } else if (file.dashboard === "Product Mix" || file.dashboard === "Product Mix ") {
+      } else if (
+        file.dashboard === "Product Mix" ||
+        file.dashboard === "Product Mix "
+      ) {
         dispatch(selectProductMixLocation(location));
       } else {
         // Fallback to general selection
@@ -1128,79 +1167,117 @@ export const selectFileAndFetchData =
 
 // Selectors for accessing state data
 export const selectExcelFile = (state: { excel: ExcelState }) => state.excel;
-export const selectTableData = (state: { excel: ExcelState }) => state.excel.tableData;
-export const selectAnalyticsData = (state: { excel: ExcelState }) => state.excel.analyticsData;
-export const selectLoading = (state: { excel: ExcelState }) => state.excel.loading;
+export const selectTableData = (state: { excel: ExcelState }) =>
+  state.excel.tableData;
+export const selectAnalyticsData = (state: { excel: ExcelState }) =>
+  state.excel.analyticsData;
+export const selectLoading = (state: { excel: ExcelState }) =>
+  state.excel.loading;
 export const selectError = (state: { excel: ExcelState }) => state.excel.error;
-export const selectCurrentLocation = (state: { excel: ExcelState }) => state.excel.location;
-export const selectAllLocations = (state: { excel: ExcelState }) => state.excel.allLocations;
+export const selectCurrentLocation = (state: { excel: ExcelState }) =>
+  state.excel.location;
+export const selectAllLocations = (state: { excel: ExcelState }) =>
+  state.excel.allLocations;
 
 // Categories selectors
-export const selectAllCategories = (state: { excel: ExcelState }) => state.excel.allCategories;
-export const selectSalesCategories = (state: { excel: ExcelState }) => state.excel.salesCategories;
-export const selectFinancialCategories = (state: { excel: ExcelState }) => state.excel.financialCategories;
-export const selectSalesWideCategories = (state: { excel: ExcelState }) => state.excel.salesWideCategories;
-export const selectProductMixCategories = (state: { excel: ExcelState }) => state.excel.productMixCategories;
+export const selectAllCategories = (state: { excel: ExcelState }) =>
+  state.excel.allCategories;
+export const selectSalesCategories = (state: { excel: ExcelState }) =>
+  state.excel.salesCategories;
+export const selectFinancialCategories = (state: { excel: ExcelState }) =>
+  state.excel.financialCategories;
+export const selectSalesWideCategories = (state: { excel: ExcelState }) =>
+  state.excel.salesWideCategories;
+export const selectProductMixCategories = (state: { excel: ExcelState }) =>
+  state.excel.productMixCategories;
 
 // Dashboard-specific selectors
-export const selectSalesLocations = (state: { excel: ExcelState }) => state.excel.salesLocations;
-export const selectFinancialLocations = (state: { excel: ExcelState }) => state.excel.financialLocations;
-export const selectSalesWideLocations = (state: { excel: ExcelState }) => state.excel.salesWideLocations;
-export const selectProductMixLocations = (state: { excel: ExcelState }) => state.excel.productMixLocations;
+export const selectSalesLocations = (state: { excel: ExcelState }) =>
+  state.excel.salesLocations;
+export const selectFinancialLocations = (state: { excel: ExcelState }) =>
+  state.excel.financialLocations;
+export const selectSalesWideLocations = (state: { excel: ExcelState }) =>
+  state.excel.salesWideLocations;
+export const selectProductMixLocations = (state: { excel: ExcelState }) =>
+  state.excel.productMixLocations;
 
 // Current location selectors
-export const selectCurrentSalesLocation = (state: { excel: ExcelState }) => state.excel.currentSalesLocation;
-export const selectCurrentFinancialLocation = (state: { excel: ExcelState }) => state.excel.currentFinancialLocation;
-export const selectCurrentSalesWideLocation = (state: { excel: ExcelState }) => state.excel.currentSalesWideLocation;
-export const selectCurrentProductMixLocation = (state: { excel: ExcelState }) => state.excel.currentProductMixLocation;
+export const selectCurrentSalesLocation = (state: { excel: ExcelState }) =>
+  state.excel.currentSalesLocation;
+export const selectCurrentFinancialLocation = (state: { excel: ExcelState }) =>
+  state.excel.currentFinancialLocation;
+export const selectCurrentSalesWideLocation = (state: { excel: ExcelState }) =>
+  state.excel.currentSalesWideLocation;
+export const selectCurrentProductMixLocation = (state: { excel: ExcelState }) =>
+  state.excel.currentProductMixLocation;
 
 // Filter selectors
-export const selectSalesFilters = (state: { excel: ExcelState }) => state.excel.salesFilters;
-export const selectFinancialFilters = (state: { excel: ExcelState }) => state.excel.financialFilters;
-export const selectSalesWideFilters = (state: { excel: ExcelState }) => state.excel.salesWideFilters;
-export const selectProductMixFilters = (state: { excel: ExcelState }) => state.excel.productMixFilters;
+export const selectSalesFilters = (state: { excel: ExcelState }) =>
+  state.excel.salesFilters;
+export const selectFinancialFilters = (state: { excel: ExcelState }) =>
+  state.excel.financialFilters;
+export const selectSalesWideFilters = (state: { excel: ExcelState }) =>
+  state.excel.salesWideFilters;
+export const selectProductMixFilters = (state: { excel: ExcelState }) =>
+  state.excel.productMixFilters;
 
 // File data selectors
 export const selectFiles = (state: { excel: ExcelState }) => state.excel.files;
-export const selectFinancialFiles = (state: { excel: ExcelState }) => state.excel.financialFiles;
-export const selectSalesFiles = (state: { excel: ExcelState }) => state.excel.salesFiles;
-export const selectSalesWideFiles = (state: { excel: ExcelState }) => state.excel.salesWideFiles;
-export const selectProductMixFiles = (state: { excel: ExcelState }) => state.excel.productMixFiles;
+export const selectFinancialFiles = (state: { excel: ExcelState }) =>
+  state.excel.financialFiles;
+export const selectSalesFiles = (state: { excel: ExcelState }) =>
+  state.excel.salesFiles;
+export const selectSalesWideFiles = (state: { excel: ExcelState }) =>
+  state.excel.salesWideFiles;
+export const selectProductMixFiles = (state: { excel: ExcelState }) =>
+  state.excel.productMixFiles;
 
 // Data by location selectors
-export const selectSalesDataByLocation = (state: { excel: ExcelState }, location: string) =>
-  state.excel.salesFiles.find(f => f.location === location);
+export const selectSalesDataByLocation = (
+  state: { excel: ExcelState },
+  location: string
+) => state.excel.salesFiles.find((f) => f.location === location);
 
-export const selectFinancialDataByLocation = (state: { excel: ExcelState }, location: string) =>
-  state.excel.financialFiles.find(f => f.location === location);
+export const selectFinancialDataByLocation = (
+  state: { excel: ExcelState },
+  location: string
+) => state.excel.financialFiles.find((f) => f.location === location);
 
-export const selectSalesWideDataByLocation = (state: { excel: ExcelState }, location: string) =>
-  state.excel.salesWideFiles.find(f => f.location === location);
+export const selectSalesWideDataByLocation = (
+  state: { excel: ExcelState },
+  location: string
+) => state.excel.salesWideFiles.find((f) => f.location === location);
 
-export const selectProductMixDataByLocation = (state: { excel: ExcelState }, location: string) =>
-  state.excel.productMixFiles.find(f => f.location === location);
+export const selectProductMixDataByLocation = (
+  state: { excel: ExcelState },
+  location: string
+) => state.excel.productMixFiles.find((f) => f.location === location);
 
 // Categories by location selectors
-export const selectCategoriesByLocation = (state: { excel: ExcelState }, location: string, dashboardType?: string) => {
+export const selectCategoriesByLocation = (
+  state: { excel: ExcelState },
+  location: string,
+  dashboardType?: string
+) => {
   let file;
-  
+
   switch (dashboardType) {
-    case 'Sales Split':
-      file = state.excel.salesFiles.find(f => f.location === location);
+    case "Sales Split":
+      file = state.excel.salesFiles.find((f) => f.location === location);
       break;
-    case 'Financials':
-      file = state.excel.financialFiles.find(f => f.location === location);
+    case "Financials":
+      file = state.excel.financialFiles.find((f) => f.location === location);
       break;
-    case 'Sales Wide':
-      file = state.excel.salesWideFiles.find(f => f.location === location);
+    case "Sales Wide":
+      file = state.excel.salesWideFiles.find((f) => f.location === location);
       break;
-    case 'Product Mix':
-      file = state.excel.productMixFiles.find(f => f.location === location);
+    case "Product Mix":
+      file = state.excel.productMixFiles.find((f) => f.location === location);
       break;
     default:
-      file = state.excel.files.find(f => f.location === location);
+      file = state.excel.files.find((f) => f.location === location);
   }
-  
+
   return file?.categories || [];
 };
 

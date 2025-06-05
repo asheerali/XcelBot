@@ -7,7 +7,9 @@ import {
   Navigate,
 } from "react-router-dom";
 import { Provider } from "react-redux";
-import { store } from "./store";
+// import { store } from "./store";
+import { store, persistor } from "./store"; // UPDATED
+import { PersistGate } from "redux-persist/integration/react"; // NEW
 import App from "./App";
 import Layout from "./layouts/Dashboard";
 import ManageReports from "./pages/ManageReports";
@@ -128,9 +130,12 @@ const router = createBrowserRouter([
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Provider store={store}>
+            <PersistGate loading={null} persistor={persistor}> {/* NEW */}
+
       <HelmetProvider>
         <RouterProvider router={router} />
       </HelmetProvider>
+      </PersistGate>
     </Provider>
   </React.StrictMode>
 );

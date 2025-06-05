@@ -41,6 +41,7 @@
     "react-router-dom": "^6.26.1",
     "recharts": "^2.7.2",
     "redux-persist": "^6.0.0",
+    "redux-persist-transform-filter": "^0.0.22",
     "sheetjs": "^2.0.0",
     "simplebar-react": "^3.2.6",
     "xlsx": "^0.18.5"
