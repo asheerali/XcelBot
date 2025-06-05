@@ -14,6 +14,8 @@ from utils import find_file_in_directory
 from sales_analytics import generate_sales_analytics
 from financials_dashboard.financials_processor import process_financials_file
 
+
+
 # Initialize FastAPI app
 app = FastAPI()
 
@@ -46,6 +48,13 @@ app.include_router(pmix_filter.router)
 app.include_router(financials_filter.router)
 app.include_router(companywide_filter.router)
 app.include_router(health.router)
+
+# for the databases
+from routers import users, payments, subscriptions
+
+app.include_router(users.router)
+app.include_router(payments.router)
+app.include_router(subscriptions.router)
 
 
 if __name__ == "__main__":
