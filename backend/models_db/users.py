@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum as SQLAEnum
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Enum as SQLAEnum
 from datetime import datetime
 from database import Base
 import enum
@@ -23,3 +23,5 @@ class User(Base):
     role = Column(SQLAEnum(RoleEnum), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    store_id = Column(Integer, ForeignKey("stores.id"))
+

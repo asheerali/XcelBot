@@ -50,11 +50,23 @@ app.include_router(companywide_filter.router)
 app.include_router(health.router)
 
 # for the databases
-from routers import users, payments, subscriptions
+from routers import (users, 
+                     payments, 
+                     subscriptions, 
+                     stores,
+                     dashboards, 
+                     user_dashboard_permissions,
+                     uploaded_files,    
+                     file_permissions)
 
 app.include_router(users.router)
 app.include_router(payments.router)
 app.include_router(subscriptions.router)
+app.include_router(stores.router)
+app.include_router(dashboards.router)
+app.include_router(user_dashboard_permissions.router)
+app.include_router(uploaded_files.router)
+app.include_router(file_permissions.router)
 
 
 if __name__ == "__main__":
