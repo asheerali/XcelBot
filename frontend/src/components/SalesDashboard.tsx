@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   BarChart,
   Bar,
@@ -18,12 +18,19 @@ import {
 interface ProductMixData {
   table1?: Array<{
     net_sales?: number[];
+    net_sales_change?: number[];
     orders?: number[];
+    orders_change?: number[];
     qty_sold?: number[];
+    qty_sold_change?: number[];
     average_order_value?: number[];
+    average_order_value_change?: number[];
     average_items_per_order?: number[];
+    average_items_per_order_change?: number[];
     unique_orders?: number[];
+    unique_orders_change?: number[];
     total_quantity?: number[];
+    total_quantity_change?: number[];
   }>;
   table2?: Array<{
     Category: string;
@@ -62,6 +69,17 @@ interface ProductMixData {
     Item: string;
     Price: number;
   }>;
+  table10?: Array<{
+    "Sales Category": string;
+    "Grand Total": number;
+    [key: string]: any; // This allows any week keys like "Week 14", "Week 15", etc.
+  }>;
+  table11?: Array<{
+    "Sales Category": string;
+    "This_4_Weeks_Sales": number;
+    "Last_4_Weeks_Sales": number;
+    "Percent_Change": number;
+  }>;
   servers?: string[];
   categories?: string[];
   locations?: string[];
@@ -72,13 +90,53 @@ interface SalesDashboardProps {
 }
 
 const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
-  // Extract summary data from table1
+  // State for hover functionality
+  const [hoveredPoint, setHoveredPoint] = useState<{
+    categoryIndex: number;
+    weekIndex: number;
+    data: any;
+  } | null>(null);
+
+  // Extract summary data from table1 with proper handling
   const summaryData = productMixData?.table1?.[0] || {};
-  const netSales = summaryData.net_sales?.[0] || 0;
-  const orders = summaryData.orders?.[0] || 0;
-  const qtySold = summaryData.qty_sold?.[0] || 0;
-  const averageOrderValue = summaryData.average_order_value?.[0] || 0;
-  const averageItemsPerOrder = summaryData.average_items_per_order?.[0] || 0;
+  
+  // Helper function to safely get values and changes
+  const getSafeValue = (data: any, defaultValue: any = 0) => {
+    if (Array.isArray(data) && data.length > 0) {
+      return data[0] !== null && data[0] !== undefined ? data[0] : defaultValue;
+    }
+    return data !== null && data !== undefined ? data : defaultValue;
+  };
+
+  // Helper function to safely get change values (return exact value from backend)
+  const getSafeChangeValue = (data: any) => {
+    if (Array.isArray(data) && data.length > 0) {
+      return data[0]; // Return exact value, including -1, null, etc.
+    }
+    return data; // Return exact value as is
+  };
+
+  // Extract values from table1
+  const netSales = getSafeValue(summaryData.net_sales, 0);
+  const netSalesChange = getSafeChangeValue(summaryData.net_sales_change);
+  
+  const orders = getSafeValue(summaryData.orders, 0);
+  const ordersChange = getSafeChangeValue(summaryData.orders_change);
+  
+  const qtySold = getSafeValue(summaryData.qty_sold, 0);
+  const qtySoldChange = getSafeChangeValue(summaryData.qty_sold_change);
+  
+  const averageOrderValue = getSafeValue(summaryData.average_order_value, 0);
+  const averageOrderValueChange = getSafeChangeValue(summaryData.average_order_value_change);
+  
+  const averageItemsPerOrder = getSafeValue(summaryData.average_items_per_order, 0);
+  const averageItemsPerOrderChange = getSafeChangeValue(summaryData.average_items_per_order_change);
+  
+  const uniqueOrders = getSafeValue(summaryData.unique_orders, 0);
+  const uniqueOrdersChange = getSafeChangeValue(summaryData.unique_orders_change);
+  
+  const totalQuantity = getSafeValue(summaryData.total_quantity, 0);
+  const totalQuantityChange = getSafeChangeValue(summaryData.total_quantity_change);
 
   // Transform table3 data for menu group chart (Menu Group -> Sales)
   const transformMenuGroupData = () => {
@@ -92,9 +150,9 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
     }));
   };
 
-  // Transform table2 data for pie charts (Category -> Sales/Percentage)
+  // Transform table10 data for category sales (using current week data)
   const transformCategoryData = () => {
-    if (!productMixData?.table2 || productMixData.table2.length === 0) {
+    if (!productMixData?.table10 || productMixData.table10.length === 0) {
       return {
         category1Data: [{ name: "No Data", value: 100, color: "#cccccc" }],
         category2Data: [{ name: "No Data", value: 100, color: "#cccccc" }],
@@ -104,17 +162,44 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
     // Color palette for categories
     const colors = [
       "#69c0b8",
-      "#4296a3",
+      "#4296a3", 
       "#f0d275",
       "#e74c3c",
       "#9b59b6",
       "#3498db",
     ];
 
-    // Create category data with actual percentages
-    const allCategoryData = productMixData.table2.map((item, index) => ({
-      name: item.Category || "Unknown",
-      value: Math.round(item.Percentage || 0),
+    // Filter out empty categories and Grand Total, then calculate percentages
+    const validCategories = productMixData.table10.filter(
+      item => item['Sales Category'] && 
+               item['Sales Category'] !== 'Grand Total' && 
+               item['Sales Category'] !== ''
+    );
+
+    // Get the latest week dynamically
+    const sampleEntry = validCategories[0];
+    if (!sampleEntry) return {
+      category1Data: [{ name: "No Data", value: 100, color: "#cccccc" }],
+      category2Data: [{ name: "No Data", value: 100, color: "#cccccc" }],
+    };
+
+    const weekKeys = Object.keys(sampleEntry)
+      .filter(key => key.startsWith('Week ') && !isNaN(parseInt(key.split(' ')[1])))
+      .sort((a, b) => {
+        const weekA = parseInt(a.split(' ')[1]);
+        const weekB = parseInt(b.split(' ')[1]);
+        return weekB - weekA; // Sort descending to get latest week first
+      });
+
+    const latestWeekKey = weekKeys[0] || 'Grand Total';
+
+    // Calculate total for percentage calculation
+    const totalSales = validCategories.reduce((sum, item) => sum + (item[latestWeekKey] || 0), 0);
+
+    // Create category data with calculated percentages
+    const allCategoryData = validCategories.map((item, index) => ({
+      name: item['Sales Category'] || "Unknown",
+      value: totalSales > 0 ? Math.round(((item[latestWeekKey] || 0) / totalSales) * 100) : 0,
       color: colors[index % colors.length],
     }));
 
@@ -239,6 +324,111 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
     }).format(value);
   };
 
+  // Format percentage change with proper styling - show exact backend values
+  const formatPercentageChange = (value: any) => {
+    // If value is null or undefined, show as is
+    if (value === null || value === undefined) {
+      return { text: "null", color: "#666", arrow: "" };
+    }
+    
+    // If value is exactly -1, show it as -1%
+    if (value === -1) {
+      return { text: "-1%", color: "#d32f2f", arrow: "▼" };
+    }
+    
+    // If it's a number, format it as percentage
+    if (typeof value === 'number') {
+      const isPositive = value > 0;
+      const isZero = value === 0;
+      
+      if (isZero) {
+        return { text: "0%", color: "#666", arrow: "" };
+      }
+      
+      return {
+        text: `${isPositive ? "+" : ""}${value.toFixed(1)}%`,
+        color: isPositive ? "#2e7d32" : "#d32f2f",
+        arrow: isPositive ? "▲" : "▼"
+      };
+    }
+    
+    // For any other type, convert to string
+    return { text: String(value), color: "#666", arrow: "" };
+  };
+
+  // Stat card component with change indicator
+  const StatCard = ({ 
+    title, 
+    value, 
+    change, 
+    color, 
+    formatValue = (v) => v.toString() 
+  }) => {
+    const changeFormatted = formatPercentageChange(change);
+    
+    return (
+      <div
+        style={{
+          padding: "24px",
+          borderRadius: "8px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-start",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+          transition: "transform 0.3s ease, box-shadow 0.3s ease",
+          backgroundColor: "white",
+          height: "100%",
+        }}
+        className="stat-card"
+      >
+        <div
+          style={{
+            fontSize: "32px",
+            fontWeight: "bold",
+            color: color,
+            marginBottom: "4px",
+          }}
+        >
+          {formatValue(value)}
+        </div>
+        <div style={{ fontSize: "16px", color: "#666", marginBottom: "8px" }}>
+          {title}
+        </div>
+        
+        {/* Change indicator */}
+        <div style={{ 
+          display: "flex", 
+          alignItems: "center", 
+          gap: "6px",
+          marginTop: "auto"
+        }}>
+          {changeFormatted.arrow && (
+            <span style={{ 
+              color: changeFormatted.color, 
+              fontSize: "12px",
+              fontWeight: "bold"
+            }}>
+              {changeFormatted.arrow}
+            </span>
+          )}
+          <span style={{ 
+            color: changeFormatted.color,
+            fontSize: "14px",
+            fontWeight: "600"
+          }}>
+            {changeFormatted.text}
+          </span>
+          <span style={{ 
+            color: "#999",
+            fontSize: "12px"
+          }}>
+            
+          </span>
+        </div>
+      </div>
+    );
+  };
+
   // Category legend component
   const CategoryLegend = ({ data }) => (
     <div
@@ -281,6 +471,398 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
     </div>
   );
 
+  // Enhanced Sales Trend Chart Component with Clickable Line Points
+  const SalesTrendChart = () => {
+    // Get all categories from table10 (dynamic, not limited)
+    const allCategories = (productMixData?.table10 || [])
+      .filter(item => item['Sales Category'] && 
+                     item['Sales Category'] !== 'Grand Total' && 
+                     item['Sales Category'] !== '');
+
+    if (allCategories.length === 0) {
+      return (
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          height: '100%',
+          color: '#666',
+          fontSize: '16px'
+        }}>
+          No category data available
+        </div>
+      );
+    }
+
+    // Dynamically detect available weeks from table10 data
+    const sampleEntry = allCategories[0];
+    const allKeys = Object.keys(sampleEntry);
+    const weekKeys = allKeys
+      .filter(key => key.startsWith('Week ') && !isNaN(parseInt(key.split(' ')[1])))
+      .sort((a, b) => {
+        const weekA = parseInt(a.split(' ')[1]);
+        const weekB = parseInt(b.split(' ')[1]);
+        return weekA - weekB;
+      });
+
+    if (weekKeys.length === 0) {
+      return (
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          height: '100%',
+          color: '#666',
+          fontSize: '16px'
+        }}>
+          No week data found
+        </div>
+      );
+    }
+
+    // Generate dynamic color palette based on number of categories
+    const generateColors = (count) => {
+      const baseColors = ['#4285f4', '#8bc34a', '#ff9800', '#9c27b0', '#f44336', '#00bcd4', '#795548', '#607d8b', '#e91e63', '#3f51b5'];
+      const colors = [];
+      for (let i = 0; i < count; i++) {
+        if (i < baseColors.length) {
+          colors.push(baseColors[i]);
+        } else {
+          // Generate additional colors using HSL
+          const hue = (i * 137.508) % 360; // Golden angle approximation for good color distribution
+          colors.push(`hsl(${hue}, 70%, 50%)`);
+        }
+      }
+      return colors;
+    };
+
+    const colors = generateColors(allCategories.length);
+    
+    // Calculate max value for scaling from all week data
+    const allValues = allCategories.flatMap(cat => 
+      weekKeys.map(weekKey => cat[weekKey] || 0)
+    );
+    const maxValue = Math.max(...allValues);
+    
+    // Fixed dimensions and margins for proper alignment
+    const svgWidth = 800;
+    const svgHeight = 400;
+    const margin = { top: 40, right: 80, bottom: 60, left: 80 };
+    const chartWidth = svgWidth - margin.left - margin.right;
+    const chartHeight = svgHeight - margin.top - margin.bottom;
+    
+    // Scale functions with proper handling for single week
+    const xScale = (index) => {
+      if (weekKeys.length === 1) {
+        // Center the single point
+        return margin.left + chartWidth / 2;
+      }
+      return margin.left + (index * chartWidth / (weekKeys.length - 1));
+    };
+    
+    const yScale = (value) => {
+      return margin.top + chartHeight - ((value / maxValue) * chartHeight);
+    };
+
+    // Enhanced Custom tooltip component with complete table10 data
+    const CustomTooltip = ({ category, weekIndex }) => {
+      if (!hoveredPoint || hoveredPoint.categoryIndex !== category || hoveredPoint.weekIndex !== weekIndex) {
+        return null;
+      }
+
+      const categoryData = allCategories[category];
+      const weekKey = weekKeys[weekIndex];
+      const currentWeekValue = categoryData[weekKey] || 0;
+
+      // Get all table11 data for additional context
+      const table11Data = (productMixData?.table11 || []).find(
+        item => item['Sales Category'] === categoryData['Sales Category']
+      );
+
+      const point = {
+        x: xScale(weekIndex),
+        y: yScale(currentWeekValue),
+        value: currentWeekValue
+      };
+
+      return (
+        <div
+          style={{
+            position: 'absolute',
+            left: Math.min(point.x + 15, 600), // Prevent tooltip from going off-screen
+            top: Math.max(point.y - 120, 10),
+            background: 'rgba(0, 0, 0, 0.95)',
+            color: 'white',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            fontSize: '12px',
+            pointerEvents: 'none',
+            zIndex: 1000,
+            minWidth: '200px',
+            maxWidth: '300px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            border: `2px solid ${colors[category]}`
+          }}
+        >
+          <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '14px', color: colors[category] }}>
+            {categoryData['Sales Category']}
+          </div>
+          
+          <div style={{ marginBottom: '6px', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '6px' }}>
+            <strong>Current Week ({weekKey}):</strong> {formatCurrency(currentWeekValue)}
+          </div>
+
+          <div style={{ marginBottom: '4px' }}>
+            <strong>Grand Total:</strong> {formatCurrency(categoryData['Grand Total'] || 0)}
+          </div>
+          
+          {table11Data && (
+            <>
+              <div style={{ marginBottom: '4px' }}>
+                <strong>Last 4 Weeks:</strong> {formatCurrency(table11Data['This_4_Weeks_Sales'] || 0)}
+              </div>
+              <div style={{ marginBottom: '4px' }}>
+                <strong>Previous 4 Weeks:</strong> {formatCurrency(table11Data['Last_4_Weeks_Sales'] || 0)}
+              </div>
+              <div style={{ 
+                color: (table11Data['Percent_Change'] || 0) >= 0 ? '#4ade80' : '#f87171',
+                fontWeight: 'bold'
+              }}>
+                <strong>Change:</strong> {(table11Data['Percent_Change'] || 0) >= 0 ? '+' : ''}{table11Data['Percent_Change'] || 0}%
+              </div>
+            </>
+          )}
+
+          {/* Show all available weeks data */}
+          {weekKeys.length > 1 && (
+            <div style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+              <div style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '4px' }}>All Weeks:</div>
+              <div style={{ fontSize: '10px', maxHeight: '80px', overflowY: 'auto' }}>
+                {weekKeys.map(wk => (
+                  <div key={wk} style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between',
+                    marginBottom: '2px',
+                    backgroundColor: wk === weekKey ? 'rgba(255,255,255,0.1)' : 'transparent',
+                    padding: '2px 4px',
+                    borderRadius: '3px'
+                  }}>
+                    <span>{wk}:</span>
+                    <span>{formatCurrency(categoryData[wk] || 0)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    return (
+      <div style={{ position: 'relative', width: '100%', height: '450px' }}>
+        <svg 
+          width="100%" 
+          height="100%" 
+          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+          style={{ 
+            width: "100%", 
+            height: "100%",
+            background: 'white'
+          }}
+        >
+          {/* Grid lines */}
+          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
+            <line
+              key={i}
+              x1={margin.left}
+              y1={margin.top + ratio * chartHeight}
+              x2={margin.left + chartWidth}
+              y2={margin.top + ratio * chartHeight}
+              stroke="#e0e0e0"
+              strokeWidth="1"
+            />
+          ))}
+          
+          {/* Vertical grid lines for weeks */}
+          {weekKeys.map((_, index) => (
+            <line
+              key={index}
+              x1={xScale(index)}
+              y1={margin.top}
+              x2={xScale(index)}
+              y2={margin.top + chartHeight}
+              stroke="#f0f0f0"
+              strokeWidth="1"
+            />
+          ))}
+          
+          {/* Chart lines for each category */}
+          {allCategories.map((category, catIndex) => {
+            // Get actual data points from table10
+            const dataPoints = weekKeys.map((weekKey, weekIndex) => {
+              const value = category[weekKey] || 0;
+              return {
+                x: xScale(weekIndex),
+                y: yScale(value),
+                value: value,
+                weekIndex: weekIndex
+              };
+            });
+
+            return (
+              <g key={catIndex}>
+                {/* Line (only draw if more than one point) */}
+                {weekKeys.length > 1 && (
+                  <polyline
+                    fill="none"
+                    stroke={colors[catIndex]}
+                    strokeWidth={catIndex === 0 ? 3 : 2}
+                    points={dataPoints.map(p => `${p.x},${p.y}`).join(' ')}
+                    style={{ filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.1))' }}
+                  />
+                )}
+                
+                {/* Invisible thick line for better hover detection */}
+                {weekKeys.length > 1 && (
+                  <polyline
+                    fill="none"
+                    stroke="transparent"
+                    strokeWidth="12"
+                    points={dataPoints.map(p => `${p.x},${p.y}`).join(' ')}
+                    style={{ cursor: 'pointer' }}
+                    onMouseEnter={(e) => {
+                      // Find the closest point to mouse position
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const svgRect = e.currentTarget.closest('svg')?.getBoundingClientRect();
+                      if (svgRect) {
+                        const mouseX = ((e.clientX - svgRect.left) / svgRect.width) * svgWidth;
+                        let closestIndex = 0;
+                        let minDistance = Math.abs(mouseX - dataPoints[0].x);
+                        
+                        dataPoints.forEach((point, idx) => {
+                          const distance = Math.abs(mouseX - point.x);
+                          if (distance < minDistance) {
+                            minDistance = distance;
+                            closestIndex = idx;
+                          }
+                        });
+                        
+                        setHoveredPoint({
+                          categoryIndex: catIndex,
+                          weekIndex: closestIndex,
+                          data: {
+                            category: category['Sales Category'],
+                            week: weekKeys[closestIndex],
+                            value: dataPoints[closestIndex].value,
+                            fullData: category
+                          }
+                        });
+                      }
+                    }}
+                    onMouseLeave={() => setHoveredPoint(null)}
+                  />
+                )}
+                
+                {/* Data points - Enhanced clickable areas */}
+                {dataPoints.map((point, pointIndex) => (
+                  <g key={pointIndex}>
+                    {/* Invisible large clickable area */}
+                    <circle
+                      cx={point.x}
+                      cy={point.y}
+                      r={15}
+                      fill="transparent"
+                      style={{ cursor: 'pointer' }}
+                      onMouseEnter={() => setHoveredPoint({
+                        categoryIndex: catIndex,
+                        weekIndex: pointIndex,
+                        data: {
+                          category: category['Sales Category'],
+                          week: weekKeys[pointIndex],
+                          value: point.value,
+                          fullData: category
+                        }
+                      })}
+                      onMouseLeave={() => setHoveredPoint(null)}
+                      onClick={() => {
+                        // You can add click functionality here if needed
+                        console.log(`Clicked on ${category['Sales Category']} - ${weekKeys[pointIndex]}: ${formatCurrency(point.value)}`);
+                      }}
+                    />
+                    
+                    {/* Visible data point */}
+                    <circle
+                      cx={point.x}
+                      cy={point.y}
+                      r={catIndex === 0 ? 6 : 5}
+                      fill={colors[catIndex]}
+                      stroke="white"
+                      strokeWidth="2"
+                      style={{ 
+                        filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.2))',
+                        pointerEvents: 'none'
+                      }}
+                    />
+                  </g>
+                ))}
+              </g>
+            );
+          })}
+          
+          {/* X-axis labels */}
+          {weekKeys.map((weekKey, index) => (
+            <text
+              key={index}
+              x={xScale(index)}
+              y={svgHeight - 20}
+              textAnchor="middle"
+              fontSize="12"
+              fill="#666"
+              fontWeight="500"
+            >
+              {weekKey}
+            </text>
+          ))}
+          
+          {/* Y-axis labels */}
+          {[0, maxValue/4, maxValue/2, (maxValue*3)/4, maxValue].map((value, i) => (
+            <text
+              key={i}
+              x={margin.left - 10}
+              y={yScale(value) + 4}
+              textAnchor="end"
+              fontSize="12"
+              fill="#666"
+              fontWeight="500"
+            >
+              {value >= 1000 ? `${(value/1000).toFixed(0)}k` : value.toFixed(0)}
+            </text>
+          ))}
+          
+          {/* Chart title */}
+          <text
+            x={svgWidth / 2}
+            y={25}
+            textAnchor="middle"
+            fontSize="16"
+            fill="#333"
+            fontWeight="bold"
+          >
+            Sales Trend by Category ({weekKeys.length} Week{weekKeys.length !== 1 ? 's' : ''})
+          </text>
+        </svg>
+
+        {/* Render enhanced tooltips */}
+        {hoveredPoint && (
+          <CustomTooltip
+            category={hoveredPoint.categoryIndex}
+            weekIndex={hoveredPoint.weekIndex}
+          />
+        )}
+      </div>
+    );
+  };
+
   return (
     <div
       style={{
@@ -293,7 +875,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
           '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
       }}
     >
-      {/* First row - Stats Cards + Sales by Menu Group */}
+      {/* First row - Enhanced Stats Cards with Changes */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
         {/* Stats Cards in left half */}
         <div style={{ width: "calc(50% - 12px)", minWidth: "300px" }}>
@@ -305,83 +887,32 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
               marginBottom: "24px",
             }}
           >
-            <div
-              style={{
-                padding: "24px",
-                borderRadius: "8px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-start",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-                transition: "transform 0.3s ease, box-shadow 0.3s ease",
-                backgroundColor: "white",
-              }}
-              className="stat-card"
-            >
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  color: "#1e88e5",
-                }}
-              >
-                {formatCurrency(netSales)}
-              </div>
-              <div style={{ fontSize: "16px", color: "#666" }}>Net Sales</div>
-            </div>
-
-            <div
-              style={{
-                padding: "24px",
-                borderRadius: "8px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-start",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-                transition: "transform 0.3s ease, box-shadow 0.3s ease",
-                backgroundColor: "white",
-              }}
-              className="stat-card"
-            >
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  color: "#7cb342",
-                }}
-              >
-                {orders}
-              </div>
-              <div style={{ fontSize: "16px", color: "#666" }}>Orders</div>
-            </div>
-
-            <div
-              style={{
-                padding: "24px",
-                borderRadius: "8px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-start",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-                transition: "transform 0.3s ease, box-shadow 0.3s ease",
-                backgroundColor: "white",
-              }}
-              className="stat-card"
-            >
-              <div
-                style={{
-                  fontSize: "32px",
-                  fontWeight: "bold",
-                  color: "#fb8c00",
-                }}
-              >
-                {qtySold}
-              </div>
-              <div style={{ fontSize: "16px", color: "#666" }}>Qty Sold</div>
-            </div>
+            <StatCard
+              title="Net Sales"
+              value={netSales}
+              change={netSalesChange}
+              color="#1e88e5"
+              formatValue={formatCurrency}
+            />
+            
+            <StatCard
+              title="Orders"
+              value={orders}
+              change={ordersChange}
+              color="#7cb342"
+              formatValue={(v) => v.toLocaleString()}
+            />
+            
+            <StatCard
+              title="Qty Sold"
+              value={qtySold}
+              change={qtySoldChange}
+              color="#fb8c00"
+              formatValue={(v) => v.toLocaleString()}
+            />
           </div>
 
-          {/* Additional Stats Cards */}
+          {/* Second row of stats */}
           <div
             style={{
               display: "grid",
@@ -390,352 +921,180 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
               marginBottom: "24px",
             }}
           >
-            <div
-              style={{
-                padding: "20px",
-                borderRadius: "8px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-start",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-                backgroundColor: "white",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "24px",
-                  fontWeight: "bold",
-                  color: "#9c27b0",
-                }}
-              >
-                {formatCurrency(averageOrderValue)}
-              </div>
-              <div style={{ fontSize: "14px", color: "#666" }}>
-                Avg Order Value
-              </div>
-            </div>
+            <StatCard
+              title="Avg Order Value"
+              value={averageOrderValue}
+              change={averageOrderValueChange}
+              color="#9c27b0"
+              formatValue={formatCurrency}
+            />
 
-            <div
-              style={{
-                padding: "20px",
-                borderRadius: "8px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-start",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-                backgroundColor: "white",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "24px",
-                  fontWeight: "bold",
-                  color: "#f44336",
-                }}
-              >
-                {averageItemsPerOrder.toFixed(1)}
-              </div>
-              <div style={{ fontSize: "14px", color: "#666" }}>
-                Avg Items/Order
-              </div>
-            </div>
+            <StatCard
+              title="Avg Items/Order"
+              value={averageItemsPerOrder}
+              change={averageItemsPerOrderChange}
+              color="#f44336"
+              formatValue={(v) => v.toFixed(1)}
+            />
           </div>
 
-          {/* Menu Group Chart */}
-          {/* <div
+          {/* Third row - Additional metrics */}
+          <div
             style={{
-              padding: "16px",
-              borderRadius: "8px",
-              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-              backgroundColor: "white",
+              display: "grid",
+              gridTemplateColumns: "repeat(2, 1fr)",
+              gap: "16px",
             }}
           >
-            <div
-              style={{
-                fontSize: "18px",
-                fontWeight: "bold",
-                marginBottom: "8px",
-              }}
-            >
-              Sales by Menu Group
-            </div>
-            <div style={{ height: "200px" }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={menuGroupData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="rgba(0,0,0,0.1)"
-                  />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                  <YAxis axisLine={false} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: 8,
-                      boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-                      border: "none",
-                    }}
-                    formatter={(value) => [`${value}k`, "Sales"]}
-                  />
-                  <Bar
-                    dataKey="value"
-                    fill="#4CB0B0"
-                    barSize={30}
-                    radius={[4, 4, 0, 0]}
-                    animationDuration={1500}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div> */}
+            <StatCard
+              title="Unique Orders"
+              value={uniqueOrders}
+              change={uniqueOrdersChange}
+              color="#00bcd4"
+              formatValue={(v) => v.toLocaleString()}
+            />
+
+            <StatCard
+              title="Total Quantity"
+              value={totalQuantity}
+              change={totalQuantityChange}
+              color="#795548"
+              formatValue={(v) => v.toLocaleString()}
+            />
+          </div>
         </div>
 
-        {/* Category Pie Charts on right */}
+        {/* Enhanced Sales Trend Chart with Clickable Points */}
         <div
-          style={{ width: "calc(50% - 12px)", minWidth: "300px", flexGrow: 1 }}
+          style={{ width: "calc(50% - 12px)", minWidth: "400px", flexGrow: 1 }}
         >
           <div
             style={{
-              padding: "16px",
+              padding: "20px",
               borderRadius: "8px",
               height: "100%",
               boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
               backgroundColor: "white",
+              minHeight: "500px"
             }}
           >
             <div
               style={{
                 fontSize: "18px",
                 fontWeight: "bold",
-                marginBottom: "8px",
+                marginBottom: "20px",
               }}
             >
-              Sales by Category
+              Sales Trend by Category
             </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(1, 1fr)",
-                gap: "16px",
-              }}
-            >
-              {/* Main pie chart */}
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                <div style={{ height: "300px" }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={category1Data}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={100}
-                        dataKey="value"
-                        labelLine={false}
-                        label={renderCustomizedLabel}
-                      >
-                        {category1Data.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <CategoryLegend data={category1Data} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+            
+            {/* Enhanced Line Chart with clickable points */}
+            <SalesTrendChart />
 
-      {/* Second row - Sales by Server and Top Selling Items */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
-        {/* Sales by Server */}
-        {/* <div style={{ width: "calc(50% - 12px)", minWidth: "300px" }}>
-          <div
-            style={{
-              padding: "16px",
-              borderRadius: "8px",
-              height: "100%",
-              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-              backgroundColor: "white",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "18px",
-                fontWeight: "bold",
-                marginBottom: "16px",
-              }}
-            >
-              Highest-Grossing Servers
-            </div>
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "20px" }}
-            >
-              {serverData.map((item, index) => (
-                <div
-                  key={index}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    marginBottom: "4px",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: "500",
-                        maxWidth: "200px",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {item.name}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "12px",
-                        color: "#666",
-                        marginLeft: "auto",
-                      }}
-                    >
-                      {item.value}%
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      width: "100%",
-                      height: "24px",
-                      backgroundColor: "rgba(76, 176, 176, 0.1)",
-                      borderRadius: "12px",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div
-                      style={{
-                        height: "100%",
-                        width: `${item.value}%`,
-                        backgroundColor: "#4CB0B0",
-                        borderRadius: "12px",
-                        transition: "width 0.8s ease",
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div> */}
+            {/* Legend and Category Stats - Show ALL categories from table11 or table10 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' }}>
+              {(() => {
+                // Get ALL categories from table11 first, then fallback to table10
+                let allCategories = (productMixData?.table11 || [])
+                  .filter(item => item['Sales Category'] && item['Sales Category'] !== 'Grand Total' && item['Sales Category'] !== '')
+                  .sort((a, b) => (b['This_4_Weeks_Sales'] || 0) - (a['This_4_Weeks_Sales'] || 0));
 
-        {/* Top Selling Items */}
-        <div
-          style={{ width: "calc(50% - 12px)", minWidth: "300px", flexGrow: 1 }}
-        >
-          <div
-            style={{
-              padding: "16px",
-              borderRadius: "8px",
-              height: "100%",
-              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-              backgroundColor: "white",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "18px",
-                fontWeight: "bold",
-                marginBottom: "16px",
-              }}
-            >
-              Top Selling Items
-            </div>
+                // If no table11 data, use table10
+                if (allCategories.length === 0) {
+                  allCategories = (productMixData?.table10 || [])
+                    .filter(item => item['Sales Category'] && item['Sales Category'] !== 'Grand Total' && item['Sales Category'] !== '')
+                    .sort((a, b) => (b['Grand Total'] || 0) - (a['Grand Total'] || 0));
+                }
 
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "16px",
-              }}
-            >
-              {topSellingItems.map((item, index) => {
-                const maxQuantity = Math.max(
-                  ...topSellingItems.map((i) => i.total)
-                );
-                const barWidth =
-                  maxQuantity > 0 ? (item.total / maxQuantity) * 100 : 0;
+                // Generate colors for all categories
+                const generateColors = (count) => {
+                  const baseColors = ['#4285f4', '#8bc34a', '#ff9800', '#9c27b0', '#f44336', '#00bcd4', '#795548', '#607d8b', '#e91e63', '#3f51b5'];
+                  const colors = [];
+                  for (let i = 0; i < count; i++) {
+                    if (i < baseColors.length) {
+                      colors.push(baseColors[i]);
+                    } else {
+                      // Generate additional colors using HSL
+                      const hue = (i * 137.508) % 360;
+                      colors.push(`hsl(${hue}, 70%, 50%)`);
+                    }
+                  }
+                  return colors;
+                };
 
-                return (
-                  <div
-                    key={index}
-                    style={{
-                      borderBottom:
-                        index < topSellingItems.length - 1
-                          ? "1px solid #eee"
-                          : "none",
-                      paddingBottom: "12px",
-                    }}
-                  >
+                const colors = generateColors(allCategories.length);
+
+                // Get the latest week key dynamically for current sales
+                const sampleTable10Entry = (productMixData?.table10 || [])[0];
+                const weekKeys = sampleTable10Entry ? Object.keys(sampleTable10Entry)
+                  .filter(key => key.startsWith('Week ') && !isNaN(parseInt(key.split(' ')[1])))
+                  .sort((a, b) => {
+                    const weekA = parseInt(a.split(' ')[1]);
+                    const weekB = parseInt(b.split(' ')[1]);
+                    return weekB - weekA; // Sort descending to get latest week first
+                  }) : [];
+
+                const latestWeekKey = weekKeys[0]; // Get the most recent week
+
+                return allCategories.map((category, index) => {
+                  // Get current week sales from table10
+                  const table10Entry = (productMixData?.table10 || []).find(
+                    item => item['Sales Category'] === category['Sales Category']
+                  );
+                  const currentSales = table10Entry ? (table10Entry[latestWeekKey] || table10Entry['Grand Total'] || 0) : 0;
+                  
+                  const lastWeeksSales = category['This_4_Weeks_Sales'] || category['Grand Total'] || 0;
+                  const percentChange = category['Percent_Change'] || 0;
+
+                  return (
                     <div
+                      key={index}
                       style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: "8px",
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '12px 16px',
+                        backgroundColor: '#f8f9fa',
+                        borderRadius: '8px',
+                        borderLeft: `4px solid ${colors[index]}`,
+                        minHeight: '60px'
                       }}
                     >
                       <div
                         style={{
-                          fontSize: "14px",
-                          fontWeight: "500",
-                          maxWidth: "200px",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {item.name}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: "14px",
-                          fontWeight: "bold",
-                          color: "#4CB0B0",
-                        }}
-                      >
-                        {item.total}
-                      </div>
-                    </div>
-                    <div
-                      style={{
-                        width: "100%",
-                        height: "8px",
-                        backgroundColor: "rgba(76, 176, 176, 0.1)",
-                        borderRadius: "4px",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: "100%",
-                          width: `${barWidth}%`,
-                          backgroundColor: "#4CB0B0",
-                          borderRadius: "4px",
-                          transition: "width 0.8s ease",
+                          width: '16px',
+                          height: '16px',
+                          borderRadius: '50%',
+                          backgroundColor: colors[index],
+                          marginRight: '16px'
                         }}
                       />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: '600', fontSize: '15px', color: '#333', marginBottom: '4px' }}>
+                          {category['Sales Category']}
+                        </div>
+                        <div style={{ fontSize: '13px', color: '#666' }}>
+                          Total Sales: {formatCurrency(lastWeeksSales)}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        {category['Percent_Change'] !== undefined && (
+                          <div style={{ 
+                            fontSize: '16px', 
+                            fontWeight: 'bold',
+                            color: percentChange >= 0 ? '#2e7d32' : '#d32f2f',
+                            marginBottom: '4px'
+                          }}>
+                            {percentChange >= 0 ? '+' : ''}{percentChange}%
+                          </div>
+                        )}
+                        <div style={{ fontSize: '13px', fontWeight: '500', color: '#333' }}>
+                          Current: {formatCurrency(currentSales)}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
             </div>
           </div>
         </div>

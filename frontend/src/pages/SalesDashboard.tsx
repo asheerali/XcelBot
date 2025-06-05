@@ -1,4 +1,4 @@
-// Updated SalesDashboard.tsx with fixed date range modal and consistent styling
+// Updated SalesDashboard.tsx with proper data formatting for FinancialTablesComponent
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -848,63 +848,23 @@ export default function SalesDashboard() {
     ['Tw Fc %', 'Lw Fc %']
   );
 
-  // Create financial tables structure from local table data
-  const financialTables = React.useMemo(() => {
-    const createTableFromBackendData = (tableData: any[], title: string, columns: string[]) => {
-      if (!tableData || tableData.length === 0) return { title, columns, data: [] };
-      
-      return {
-        title,
-        columns,
-        data: tableData.map(row => ({
-          store: row.Store,
-          value1: row[columns[1]?.replace('Tw ', 'Tw ').replace('Store', '')] || 0,
-          value2: row[columns[2]?.replace('Lw ', 'Lw ').replace('Store', '')] || 0,
-          value3: row[columns[3]?.replace('Ly ', 'Ly ').replace('Store', '')] || 0,
-          change1: typeof row['Tw vs. Lw'] === 'number' ? `${row['Tw vs. Lw'].toFixed(2)}%` : '0%',
-          change2: typeof row['Tw vs. Ly'] === 'number' ? `${row['Tw vs. Ly'].toFixed(2)}%` : '0%',
-          isGrandTotal: row.Store === 'Grand Total'
-        }))
-      };
+  // UPDATED: Create properly formatted financial tables data for FinancialTablesComponent
+  const financialTablesData = React.useMemo(() => {
+    console.log('🔄 Creating financial tables data from currentTableData:', currentTableData);
+    
+    // Return the data in the exact format expected by FinancialTablesComponent
+    const formattedData = {
+      table1: currentTableData.table1 || [], // Sales Performance
+      table2: currentTableData.table2 || [], // Order Volume  
+      table3: currentTableData.table3 || [], // Average Ticket
+      table4: currentTableData.table4 || [], // Cost of Goods Sold
+      table5: currentTableData.table5 || [], // Regular Pay (Labor)
+      table6: currentTableData.table6 || [], // Labor Hours
+      table7: currentTableData.table7 || []  // Sales per Man Hour
     };
-
-    return [
-      createTableFromBackendData(
-        currentTableData.table1 || [],
-        'Sales',
-        ['Store', 'Tw Sales', 'Lw Sales', 'Ly Sales', 'Tw vs. Lw', 'Tw vs. Ly']
-      ),
-      createTableFromBackendData(
-        currentTableData.table2 || [],
-        'Orders',
-        ['Store', 'Tw Orders', 'Lw Orders', 'Ly Orders', 'Tw vs. Lw', 'Tw vs. Ly']
-      ),
-      createTableFromBackendData(
-        currentTableData.table3 || [],
-        'Average Ticket',
-        ['Store', 'Tw Avg Ticket', 'Lw Avg Ticket', 'Ly Avg Ticket', 'Tw vs. Lw', 'Tw vs. Ly']
-      ),
-      createTableFromBackendData(
-        currentTableData.table4 || [],
-        'COGS',
-        ['Store', 'Tw COGS', 'Lw COGS', 'Tw vs. Lw', 'Tw Fc %', 'Lw Fc %']
-      ),
-      createTableFromBackendData(
-        currentTableData.table5 || [],
-        'Regular Pay',
-        ['Store', 'Tw Reg Pay', 'Lw Reg Pay', 'Tw vs. Lw', 'Tw Lc %', 'Lw Lc %']
-      ),
-      createTableFromBackendData(
-        currentTableData.table6 || [],
-        'Labor Hours',
-        ['Store', 'Tw Lb Hrs', 'Lw Lb Hrs', 'Tw vs. Lw']
-      ),
-      createTableFromBackendData(
-        currentTableData.table7 || [],
-        'SPMH',
-        ['Store', 'Tw SPMH', 'Lw SPMH', 'Tw vs. Lw']
-      )
-    ];
+    
+    console.log('✅ Formatted financial tables data:', formattedData);
+    return formattedData;
   }, [currentTableData]);
 
   // Handle main tab change
@@ -1266,11 +1226,11 @@ export default function SalesDashboard() {
               <Tab label="Graphs" />
             </Tabs>
   
-            {/* Financial Dashboard Tab */}
+            {/* Financial Dashboard Tab - UPDATED to pass real backend data */}
             <TabPanel value={tabValue} index={0}>
               <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
-                {/* Pass the financial tables data to the component */}
-                <FinancialTablesComponent financialTables={financialTables} />
+                {/* UPDATED: Pass the formatted backend data to FinancialTablesComponent */}
+                <FinancialTablesComponent financialTables={financialTablesData} />
               </Box>
             </TabPanel>
   

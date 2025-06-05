@@ -57,6 +57,8 @@ import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import MenuAnalysisDashboard from "../components/SalesDashboard";
 import MenuAnalysisDashboardtwo from "../components/MenuAnalysisDashboardtwo";
 import DateRangeSelector from "../components/DateRangeSelector";
+// Import MenuItemsTable component
+import MenuItemsTable from "../components/MenuItemsTable";
 
 // Import Redux hooks
 import { useAppDispatch, useAppSelector } from "../typedHooks";
@@ -588,7 +590,7 @@ export default function ProductMixDashboard() {
       // Prepare the request payload
       const payload = {
         fileName: currentProductMixFile.fileName,
-        fileContent: currentProductMixFile.fileContent,
+
         location: selectedLocations[0] || currentProductMixLocation,
         startDate: formattedStartDate,
         endDate: formattedEndDate,
@@ -1133,10 +1135,37 @@ export default function ProductMixDashboard() {
                     <Typography sx={{ ml: 2 }}>Updating dashboard data...</Typography>
                   </Box>
                 ) : (
-                  <MenuAnalysisDashboard 
-                    key={`performance-${currentProductMixLocation}-${currentProductMixData?.filterTimestamp || 'original'}`}
-                    productMixData={currentProductMixData} 
-                  />
+                  <Box>
+                    {/* Sales Dashboard Component */}
+                    <MenuAnalysisDashboard 
+                      key={`performance-${currentProductMixLocation}-${currentProductMixData?.filterTimestamp || 'original'}`}
+                      productMixData={currentProductMixData} 
+                    />
+                    
+                    {/* Divider */}
+                    <Box sx={{ my: 4 }}>
+                      <Divider sx={{ borderColor: '#e0e0e0', borderWidth: 1 }} />
+                    </Box>
+                    
+                    {/* Menu Items Table Component */}
+                    <Box sx={{ mt: 4 }}>
+                      <Typography 
+                        variant="h5" 
+                        sx={{ 
+                          mb: 3,
+                          fontWeight: 600,
+                          color: 'rgb(9, 43, 117)',
+                          textAlign: 'center'
+                        }}
+                      >
+                      
+                      </Typography>
+                      <MenuItemsTable 
+                        key={`menu-items-${currentProductMixLocation}-${currentProductMixData?.filterTimestamp || 'original'}`}
+                        table12={currentProductMixData?.table12 || []} 
+                      />
+                    </Box>
+                  </Box>
                 )}
               </Box>
             </TabPanel>
