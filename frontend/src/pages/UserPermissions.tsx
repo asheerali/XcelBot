@@ -1,804 +1,474 @@
-import React, { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Grid,
-  FormControlLabel,
-  Switch,
-  Button,
-  Alert,
-  Snackbar,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  CircularProgress,
-  IconButton,
-  Chip,
-  Avatar,
-} from "@mui/material";
-import { styled, alpha } from "@mui/material/styles";
-import SaveIcon from "@mui/icons-material/Save";
-import EditIcon from "@mui/icons-material/Edit";
-import PersonIcon from "@mui/icons-material/Person";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import ViewListIcon from "@mui/icons-material/ViewList";
-import SettingsIcon from "@mui/icons-material/Settings";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CancelIcon from "@mui/icons-material/Cancel";
-import BusinessIcon from "@mui/icons-material/Business";
-import { SelectChangeEvent } from "@mui/material/Select";
+import React, { useState } from "react";
 
-// Styled components for modern design
-const HeroSection = styled(Box)(({ theme }) => ({
-  background: `linear-gradient(135deg, 
-    ${theme.palette.primary.main}15 0%, 
-    ${theme.palette.secondary.main}10 50%, 
-    ${theme.palette.primary.light}08 100%)`,
-  padding: theme.spacing(3, 0),
-  borderRadius: "0 0 20px 20px",
-  marginBottom: theme.spacing(3),
-  position: "relative",
-  overflow: "hidden",
-}));
-
-const ModernCard = styled(Card)(({ theme }) => ({
-  background: `linear-gradient(145deg, 
-    ${theme.palette.background.paper} 0%, 
-    ${alpha(theme.palette.primary.main, 0.02)} 100%)`,
-  backdropFilter: "blur(10px)",
-  borderRadius: "16px",
-  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-  "&:hover": {
-    transform: "translateY(-2px)",
-    boxShadow: `0 8px 25px -8px ${alpha(theme.palette.primary.main, 0.2)}`,
-  },
-}));
-
-const PermissionCard = styled(Paper)(({ theme, isallowed }) => ({
-  padding: theme.spacing(2),
-  textAlign: "center",
-  background: isallowed
-    ? `linear-gradient(135deg, ${alpha(
-        theme.palette.success.main,
-        0.1
-      )} 0%, ${alpha(theme.palette.success.light, 0.05)} 100%)`
-    : `linear-gradient(135deg, ${alpha(
-        theme.palette.error.main,
-        0.1
-      )} 0%, ${alpha(theme.palette.error.light, 0.05)} 100%)`,
-  borderLeft: `4px solid ${
-    isallowed ? theme.palette.success.main : theme.palette.error.main
-  }`,
-  borderRadius: "12px",
-  transition: "all 0.3s ease",
-  height: "140px",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "center",
-}));
-
-const CompactTable = styled(TableContainer)(({ theme }) => ({
-  maxHeight: "300px",
-  borderRadius: "12px",
-  "& .MuiTableCell-root": {
-    padding: theme.spacing(1),
-    fontSize: "0.875rem",
-  },
-  "& .MuiTableHead-root": {
-    background: alpha(theme.palette.primary.main, 0.05),
-  },
-}));
-
-// Mock data
-const MOCK_USERS = [
-  {
-    id: 1,
-    name: "John Doe",
-    email: "john.doe@example.com",
-    role: "Manager",
-    avatar: "JD",
-  },
-  {
-    id: 2,
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    role: "Analyst",
-    avatar: "JS",
-  },
-  {
-    id: 3,
-    name: "Mike Johnson",
-    email: "mike.johnson@example.com",
-    role: "Sales Rep",
-    avatar: "MJ",
-  },
-  {
-    id: 4,
-    name: "Sarah Williams",
-    email: "sarah.williams@example.com",
-    role: "Admin",
-    avatar: "SW",
-  },
-  {
-    id: 5,
-    name: "David Brown",
-    email: "david.brown@example.com",
-    role: "Manager",
-    avatar: "DB",
-  },
-];
-
-const MOCK_PERMISSIONS = {
-  1: { canUploadExcel: true },
-  2: { canUploadExcel: true },
-  3: { canUploadExcel: false },
-  4: { canUploadExcel: true },
-  5: { canUploadExcel: false },
-};
-
-const STORES = [
-  { value: "midtown-east", label: "Midtown East" },
-  { value: "hells-kitchen", label: "Hell's Kitchen" },
-  { value: "lenox-hill", label: "Lenox Hill" },
-  { value: "union-square", label: "Union Square" },
-  { value: "brooklyn", label: "Brooklyn" },
-];
-
-const ExcelUploadPermissions = () => {
-  const [selectedUserId, setSelectedUserId] = useState("");
-  const [permissions, setPermissions] = useState({ canUploadExcel: false });
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState("");
+const PermissionsTable = () => {
+  const [selectedStore, setSelectedStore] = useState(
+    "sophies-cuban-bryant-park"
+  );
+  const [selectedUser, setSelectedUser] = useState("");
+  const [userRoles, setUserRoles] = useState({
+    1: "Manager",
+    2: "Server",
+    3: "Cashier",
+    4: "Kitchen Staff",
+  });
+  const [permissions, setPermissions] = useState({
+    "Excel Upload": { allow: true },
+    "Sales Split": { allow: true },
+    "Product Mix": { allow: true },
+    Financials: { allow: false },
+    "Companywide Sales": { allow: false },
+  });
   const [isEditing, setIsEditing] = useState(false);
-  const [allPermissions, setAllPermissions] = useState(MOCK_PERMISSIONS);
-  const [showPermissionTable, setShowPermissionTable] = useState(false);
-  const [selectedStore, setSelectedStore] = useState("midtown-east");
+  const [success, setSuccess] = useState(false);
 
-  const handleStoreChange = (event) => {
-    setSelectedStore(event.target.value);
-  };
+  const stores = [
+    {
+      value: "sophies-cuban-bryant-park",
+      label: "Sophie's Cuban - Bryant Park",
+    },
+    { value: "sophies-cuban-midtown", label: "Sophie's Cuban - Midtown" },
+    { value: "sophies-cuban-brooklyn", label: "Sophie's Cuban - Brooklyn" },
+  ];
 
-  const handleUserChange = (event) => {
-    const userId = event.target.value;
-    setSelectedUserId(userId);
-    setError("");
+  const users = [
+    { id: 1, name: "John Doe" },
+    { id: 2, name: "Jane Smith" },
+    { id: 3, name: "Mike Johnson" },
+    { id: 4, name: "Sarah Williams" },
+  ];
 
-    if (userId && allPermissions[userId]) {
-      setPermissions(allPermissions[userId]);
-      setIsEditing(false);
-    } else {
-      setPermissions({ canUploadExcel: false });
-    }
-  };
+  const permissionsList = [
+    { key: "Excel Upload", label: "Excel Upload" },
+    { key: "Sales Split", label: "Sales Split" },
+    { key: "Product Mix", label: "Product Mix" },
+    { key: "Financials", label: "Financials" },
+    { key: "Companywide Sales", label: "Companywide Sales" },
+  ];
 
-  const handlePermissionChange = (permission) => {
+  const handleAllowToggle = (permissionKey) => {
+    if (!isEditing) return;
+
     setPermissions((prev) => ({
       ...prev,
-      [permission]: !prev[permission],
+      [permissionKey]: {
+        ...prev[permissionKey],
+        allow: !prev[permissionKey].allow,
+      },
     }));
   };
 
-  const handleSavePermissions = () => {
-    if (!selectedUserId) {
-      setError("Please select a user first");
-      return;
-    }
+  const handleRoleChange = (userId, newRole) => {
+    if (!isEditing) return;
 
-    setLoading(true);
-
-    setTimeout(() => {
-      try {
-        setAllPermissions((prev) => ({
-          ...prev,
-          [selectedUserId]: { ...permissions },
-        }));
-
-        setSuccess(true);
-        setIsEditing(false);
-        setLoading(false);
-        setError("");
-      } catch (err) {
-        setError("Error saving permissions");
-        setLoading(false);
-      }
-    }, 800);
+    setUserRoles((prev) => ({
+      ...prev,
+      [userId]: newRole,
+    }));
   };
 
-  const handleEditToggle = () => {
-    setIsEditing(!isEditing);
+  const handleSave = () => {
+    setSuccess(true);
+    setIsEditing(false);
+    setTimeout(() => setSuccess(false), 3000);
   };
 
-  const handleSuccessClose = () => {
-    setSuccess(false);
-  };
-
-  const togglePermissionTable = () => {
-    setShowPermissionTable(!showPermissionTable);
-  };
-
-  const getUserName = (userId) => {
-    const user = MOCK_USERS.find((u) => u.id === userId);
-    return user ? user.name : "Unknown User";
-  };
-
-  const getSelectedUser = () => {
-    return MOCK_USERS.find((u) => u.id === selectedUserId);
-  };
-
-  const renderUserDetail = () => {
-    const user = getSelectedUser();
+  const getSelectedUserData = () => {
+    const user = users.find((user) => user.id == selectedUser);
     if (!user) return null;
-
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          p: 2,
-          backgroundColor: alpha("#1976d2", 0.05),
-          borderRadius: "12px",
-          border: `1px solid ${alpha("#1976d2", 0.1)}`,
-        }}
-      >
-        <Avatar
-          sx={{
-            bgcolor: "#1976d2",
-            width: 48,
-            height: 48,
-            mr: 2,
-            fontSize: "1.2rem",
-            fontWeight: "bold",
-          }}
-        >
-          {user.avatar}
-        </Avatar>
-        <Box sx={{ flexGrow: 1 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-            {user.name}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {user.email} • {user.role}
-          </Typography>
-        </Box>
-        <Chip
-          label={user.role}
-          color="primary"
-          variant="outlined"
-          size="small"
-        />
-      </Box>
-    );
+    return {
+      ...user,
+      role: userRoles[user.id] || "User",
+    };
   };
 
-  const renderPermissionsTable = () => {
-    return (
-      <CompactTable component={Paper}>
-        <Table stickyHeader size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>
-                <strong>User</strong>
-              </TableCell>
-              <TableCell>
-                <strong>Role</strong>
-              </TableCell>
-              <TableCell align="center">
-                <strong>Excel Upload</strong>
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {Object.entries(allPermissions).map(([userId, userPermissions]) => {
-              const userInfo = MOCK_USERS.find((u) => u.id === Number(userId));
-              return (
-                <TableRow
-                  key={userId}
-                  sx={{
-                    "&:hover": { backgroundColor: alpha("#1976d2", 0.04) },
-                    height: "48px",
-                  }}
-                >
-                  <TableCell>
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <Avatar
-                        sx={{
-                          width: 28,
-                          height: 28,
-                          fontSize: "0.75rem",
-                          mr: 1,
-                          bgcolor: "#1976d2",
-                        }}
-                      >
-                        {userInfo?.avatar}
-                      </Avatar>
-                      {getUserName(Number(userId))}
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={userInfo?.role || "Unknown"}
-                      size="small"
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    {userPermissions.canUploadExcel ? (
-                      <CheckCircleIcon
-                        sx={{ color: "success.main", fontSize: "1.5rem" }}
-                      />
-                    ) : (
-                      <CancelIcon
-                        sx={{ color: "error.main", fontSize: "1.5rem" }}
-                      />
-                    )}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </CompactTable>
-    );
+  const getRoleColor = (role) => {
+    return role === "Manager" ? "#dc3545" : "#6c757d";
   };
 
   return (
-    <Box
-      sx={{
-        height: "100vh",
-        overflow: "hidden",
-        background: "linear-gradient(180deg, #fafafa 0%, #ffffff 100%)",
+    <div
+      style={{
+        padding: "20px",
+        fontFamily: "Arial, sans-serif",
+        backgroundColor: "#f5f5f5",
+        minHeight: "100vh",
       }}
     >
-      {/* Compact Hero Section */}
-      <HeroSection>
-        <Box sx={{ textAlign: "center", px: 3 }}>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              mb: 1,
-            }}
-          >
-            <SettingsIcon sx={{ fontSize: 32, color: "primary.main", mr: 1 }} />
-            <Typography
-              variant="h4"
-              component="h1"
-              sx={{
-                fontWeight: 600,
-                color: "#1a237e",
-                fontSize: { xs: "1.5rem", sm: "2rem" },
-              }}
-            >
-              Excel Upload Permissions
-            </Typography>
-          </Box>
-          <Typography variant="body1" color="text.secondary">
-            Manage user access to Excel file uploads across stores
-          </Typography>
-        </Box>
-      </HeroSection>
-
-      <Box sx={{ px: 3, height: "calc(100vh - 140px)", overflow: "auto" }}>
-        {/* Action Bar */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 2,
+      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        {/* Header */}
+        <div
+          style={{
+            backgroundColor: "white",
+            padding: "20px",
+            borderRadius: "8px",
+            marginBottom: "20px",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
           }}
         >
-          <Button
-            variant={showPermissionTable ? "contained" : "outlined"}
-            onClick={togglePermissionTable}
-            startIcon={
-              showPermissionTable ? <ArrowBackIcon /> : <ViewListIcon />
-            }
-            size="small"
+          <h1
+            style={{
+              fontSize: "24px",
+              fontWeight: "bold",
+              marginBottom: "8px",
+              color: "#333",
+            }}
           >
-            {showPermissionTable ? "Permission Editor" : "View All Permissions"}
-          </Button>
+            User Permissions Management
+          </h1>
+          <p style={{ color: "#666", marginBottom: "20px" }}>
+            Manage user access permissions for Excel uploads and data access
+          </p>
 
-          {error && (
-            <Alert severity="error" sx={{ fontSize: "0.875rem", py: 0.5 }}>
-              {error}
-            </Alert>
-          )}
-        </Box>
-
-        {/* All Permissions Table View */}
-        {showPermissionTable && (
-          <ModernCard>
-            <CardContent sx={{ p: 2 }}>
-              <Typography
-                variant="h6"
-                sx={{ mb: 2, display: "flex", alignItems: "center" }}
+          {/* Controls */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: "15px",
+              alignItems: "end",
+            }}
+          >
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  marginBottom: "5px",
+                }}
               >
-                <ViewListIcon sx={{ mr: 1 }} />
-                All User Permissions
-              </Typography>
-              {renderPermissionsTable()}
-            </CardContent>
-          </ModernCard>
-        )}
+                Store Location
+              </label>
+              <select
+                value={selectedStore}
+                onChange={(e) => setSelectedStore(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  border: "1px solid #ddd",
+                  borderRadius: "4px",
+                  fontSize: "14px",
+                }}
+              >
+                {stores.map((store) => (
+                  <option key={store.value} value={store.value}>
+                    {store.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        {/* Permission Editor View */}
-        {!showPermissionTable && (
-          <ModernCard>
-            <CardContent sx={{ p: 3 }}>
-              <Grid container spacing={3}>
-                {/* Store and User Selection Row */}
-                <Grid item xs={12} md={4}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Store Location</InputLabel>
-                    <Select
-                      value={selectedStore}
-                      label="Store Location"
-                      onChange={handleStoreChange}
-                      startAdornment={
-                        <BusinessIcon sx={{ mr: 1, color: "action.active" }} />
-                      }
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  marginBottom: "5px",
+                }}
+              >
+                Select User
+              </label>
+              <select
+                value={selectedUser}
+                onChange={(e) => setSelectedUser(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  border: "1px solid #ddd",
+                  borderRadius: "4px",
+                  fontSize: "14px",
+                }}
+              >
+                <option value="">Choose a user...</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} ({userRoles[user.id] || "User"})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: "flex", gap: "8px" }}>
+              {selectedUser && (
+                <>
+                  {!isEditing ? (
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      style={{
+                        padding: "8px 16px",
+                        backgroundColor: "#007bff",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                      }}
                     >
-                      {STORES.map((store) => (
-                        <MenuItem key={store.value} value={store.value}>
-                          {store.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                <Grid item xs={12} md={4}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Select User</InputLabel>
-                    <Select
-                      value={selectedUserId}
-                      label="Select User"
-                      onChange={handleUserChange}
-                      startAdornment={
-                        <PersonIcon sx={{ mr: 1, color: "action.active" }} />
-                      }
-                    >
-                      {MOCK_USERS.map((user) => (
-                        <MenuItem key={user.id} value={user.id}>
-                          <Box sx={{ display: "flex", alignItems: "center" }}>
-                            <Avatar
-                              sx={{
-                                width: 24,
-                                height: 24,
-                                fontSize: "0.75rem",
-                                mr: 1,
-                                bgcolor: "#1976d2",
-                              }}
-                            >
-                              {user.avatar}
-                            </Avatar>
-                            {user.name} ({user.role})
-                          </Box>
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                <Grid item xs={12} md={4}>
-                  {selectedUserId && (
-                    <Box sx={{ display: "flex", gap: 1, height: "40px" }}>
-                      {isEditing ? (
-                        <Button
-                          variant="contained"
-                          size="small"
-                          startIcon={
-                            loading ? (
-                              <CircularProgress size={16} color="inherit" />
-                            ) : (
-                              <SaveIcon />
-                            )
-                          }
-                          onClick={handleSavePermissions}
-                          disabled={loading}
-                          fullWidth
-                        >
-                          {loading ? "Saving..." : "Save"}
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<EditIcon />}
-                          onClick={handleEditToggle}
-                          fullWidth
-                        >
-                          Edit
-                        </Button>
-                      )}
-                    </Box>
+                      Edit
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={handleSave}
+                        style={{
+                          padding: "8px 16px",
+                          backgroundColor: "#28a745",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                          fontSize: "14px",
+                        }}
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setIsEditing(false)}
+                        style={{
+                          padding: "8px 16px",
+                          backgroundColor: "#6c757d",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                          fontSize: "14px",
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </>
                   )}
-                </Grid>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
 
-                {/* User Details */}
-                {selectedUserId && (
-                  <Grid item xs={12}>
-                    {renderUserDetail()}
-                  </Grid>
-                )}
-
-                {/* Permission Control */}
-                {selectedUserId && (
-                  <Grid item xs={12}>
-                    <Grid container justifyContent="center">
-                      <Grid item xs={12} sm={8} md={6}>
-                        <PermissionCard
-                          elevation={2}
-                          isallowed={permissions.canUploadExcel}
-                        >
-                          <Typography
-                            variant="h6"
-                            gutterBottom
-                            sx={{ fontWeight: 600 }}
-                          >
-                            Excel Upload Permission
-                          </Typography>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ mb: 2 }}
-                          >
-                            {permissions.canUploadExcel
-                              ? "User can upload Excel files"
-                              : "User cannot upload Excel files"}
-                          </Typography>
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={permissions.canUploadExcel}
-                                onChange={() =>
-                                  isEditing &&
-                                  handlePermissionChange("canUploadExcel")
-                                }
-                                disabled={!isEditing}
-                                color={
-                                  permissions.canUploadExcel
-                                    ? "success"
-                                    : "error"
-                                }
-                                size="medium"
-                              />
-                            }
-                            label={
-                              <Typography variant="body1" fontWeight="bold">
-                                {permissions.canUploadExcel
-                                  ? "Allowed"
-                                  : "Restricted"}
-                              </Typography>
-                            }
-                          />
-                        </PermissionCard>
-
-                        <PermissionCard
-                          elevation={2}
-                          isallowed={permissions.canUploadExcel}
-                        >
-                          <Typography
-                            variant="h6"
-                            gutterBottom
-                            sx={{ fontWeight: 600 }}
-                          >
-                            Sales Split
-                          </Typography>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ mb: 2 }}
-                          >
-                            {permissions.canUploadExcel
-                              ? "User can upload Excel files"
-                              : "User cannot upload Excel files"}
-                          </Typography>
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={permissions.canUploadExcel}
-                                onChange={() =>
-                                  isEditing &&
-                                  handlePermissionChange("canUploadExcel")
-                                }
-                                disabled={!isEditing}
-                                color={
-                                  permissions.canUploadExcel
-                                    ? "success"
-                                    : "error"
-                                }
-                                size="medium"
-                              />
-                            }
-                            label={
-                              <Typography variant="body1" fontWeight="bold">
-                                {permissions.canUploadExcel
-                                  ? "Allowed"
-                                  : "Restricted"}
-                              </Typography>
-                            }
-                          />
-                        </PermissionCard>
-                        <PermissionCard
-                          elevation={2}
-                          isallowed={permissions.canUploadExcel}
-                        >
-                          <Typography
-                            variant="h6"
-                            gutterBottom
-                            sx={{ fontWeight: 600 }}
-                          >
-                            Product Mix
-                          </Typography>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ mb: 2 }}
-                          >
-                            {permissions.canUploadExcel
-                              ? "User can upload Excel files"
-                              : "User cannot upload Excel files"}
-                          </Typography>
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={permissions.canUploadExcel}
-                                onChange={() =>
-                                  isEditing &&
-                                  handlePermissionChange("canUploadExcel")
-                                }
-                                disabled={!isEditing}
-                                color={
-                                  permissions.canUploadExcel
-                                    ? "success"
-                                    : "error"
-                                }
-                                size="medium"
-                              />
-                            }
-                            label={
-                              <Typography variant="body1" fontWeight="bold">
-                                {permissions.canUploadExcel
-                                  ? "Allowed"
-                                  : "Restricted"}
-                              </Typography>
-                            }
-                          />
-                        </PermissionCard>
-                        <PermissionCard
-                          elevation={2}
-                          isallowed={permissions.canUploadExcel}
-                        >
-                          <Typography
-                            variant="h6"
-                            gutterBottom
-                            sx={{ fontWeight: 600 }}
-                          >
-                            Financials
-                          </Typography>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ mb: 2 }}
-                          >
-                            {permissions.canUploadExcel
-                              ? "User can upload Excel files"
-                              : "User cannot upload Excel files"}
-                          </Typography>
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={permissions.canUploadExcel}
-                                onChange={() =>
-                                  isEditing &&
-                                  handlePermissionChange("canUploadExcel")
-                                }
-                                disabled={!isEditing}
-                                color={
-                                  permissions.canUploadExcel
-                                    ? "success"
-                                    : "error"
-                                }
-                                size="medium"
-                              />
-                            }
-                            label={
-                              <Typography variant="body1" fontWeight="bold">
-                                {permissions.canUploadExcel
-                                  ? "Allowed"
-                                  : "Restricted"}
-                              </Typography>
-                            }
-                          />
-                        </PermissionCard>
-                        <PermissionCard
-                          elevation={2}
-                          isallowed={permissions.canUploadExcel}
-                        >
-                          <Typography
-                            variant="h6"
-                            gutterBottom
-                            sx={{ fontWeight: 600 }}
-                          >
-                            Company Wide
-                          </Typography>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ mb: 2 }}
-                          >
-                            {permissions.canUploadExcel
-                              ? "User can upload Excel files"
-                              : "User cannot upload Excel files"}
-                          </Typography>
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={permissions.canUploadExcel}
-                                onChange={() =>
-                                  isEditing &&
-                                  handlePermissionChange("canUploadExcel")
-                                }
-                                disabled={!isEditing}
-                                color={
-                                  permissions.canUploadExcel
-                                    ? "success"
-                                    : "error"
-                                }
-                                size="medium"
-                              />
-                            }
-                            label={
-                              <Typography variant="body1" fontWeight="bold">
-                                {permissions.canUploadExcel
-                                  ? "Allowed"
-                                  : "Restricted"}
-                              </Typography>
-                            }
-                          />
-                        </PermissionCard>
-                      </Grid>
-                    </Grid>
-                  </Grid>
-                )}
-              </Grid>
-            </CardContent>
-          </ModernCard>
+        {/* Success Message */}
+        {success && (
+          <div
+            style={{
+              backgroundColor: "#d4edda",
+              color: "#155724",
+              padding: "12px",
+              borderRadius: "4px",
+              marginBottom: "20px",
+              border: "1px solid #c3e6cb",
+            }}
+          >
+            Permissions updated successfully!
+          </div>
         )}
-      </Box>
 
-      {/* Success Notification */}
-      <Snackbar
-        open={success}
-        autoHideDuration={3000}
-        onClose={handleSuccessClose}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
-      >
-        <Alert
-          onClose={handleSuccessClose}
-          severity="success"
-          sx={{ width: "100%" }}
-        >
-          Permission updated successfully!
-        </Alert>
-      </Snackbar>
-    </Box>
+        {/* User Info and Permissions Table */}
+        {selectedUser && (
+          <div
+            style={{
+              backgroundColor: "white",
+              borderRadius: "8px",
+              overflow: "hidden",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            }}
+          >
+            <div
+              style={{
+                padding: "16px 20px",
+                backgroundColor: "#f8f9fa",
+                borderBottom: "1px solid #dee2e6",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <h2
+                style={{
+                  fontSize: "18px",
+                  fontWeight: "600",
+                  margin: 0,
+                  color: "#333",
+                }}
+              >
+                {stores.find((s) => s.value === selectedStore)?.label}
+              </h2>
+
+              {/* User Role Management */}
+              {getSelectedUserData() && (
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "15px" }}
+                >
+                  <span style={{ fontSize: "14px", color: "#666" }}>
+                    {getSelectedUserData().name}
+                  </span>
+
+                  {/* Role Toggle Buttons */}
+                  <div style={{ display: "flex", gap: "4px" }}>
+                    <button
+                      onClick={() => handleRoleChange(selectedUser, "Manager")}
+                      disabled={!isEditing}
+                      style={{
+                        padding: "4px 12px",
+                        fontSize: "12px",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: isEditing ? "pointer" : "not-allowed",
+                        backgroundColor:
+                          getSelectedUserData().role === "Manager"
+                            ? "#dc3545"
+                            : "#e9ecef",
+                        color:
+                          getSelectedUserData().role === "Manager"
+                            ? "white"
+                            : "#6c757d",
+                        fontWeight:
+                          getSelectedUserData().role === "Manager"
+                            ? "600"
+                            : "normal",
+                        opacity: !isEditing ? 0.7 : 1,
+                      }}
+                    >
+                      Manager
+                    </button>
+                    <button
+                      onClick={() => handleRoleChange(selectedUser, "User")}
+                      disabled={!isEditing}
+                      style={{
+                        padding: "4px 12px",
+                        fontSize: "12px",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: isEditing ? "pointer" : "not-allowed",
+                        backgroundColor:
+                          getSelectedUserData().role === "User"
+                            ? "#6c757d"
+                            : "#e9ecef",
+                        color:
+                          getSelectedUserData().role === "User"
+                            ? "white"
+                            : "#6c757d",
+                        fontWeight:
+                          getSelectedUserData().role === "User"
+                            ? "600"
+                            : "normal",
+                        opacity: !isEditing ? 0.7 : 1,
+                      }}
+                    >
+                      User
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ backgroundColor: "#f8f9fa" }}>
+                  <th
+                    style={{
+                      padding: "12px 20px",
+                      textAlign: "left",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      color: "#6c757d",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    Permission
+                  </th>
+                  <th
+                    style={{
+                      padding: "12px 20px",
+                      textAlign: "center",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      color: "#6c757d",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                    }}
+                  >
+                    Allow
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {permissionsList.map((permission, index) => (
+                  <tr
+                    key={permission.key}
+                    style={{
+                      backgroundColor: index % 2 === 0 ? "white" : "#f8f9fa",
+                      borderBottom: "1px solid #dee2e6",
+                    }}
+                  >
+                    <td
+                      style={{
+                        padding: "12px 20px",
+                        fontSize: "14px",
+                        color: "#333",
+                      }}
+                    >
+                      {permission.label}
+                    </td>
+                    <td style={{ padding: "12px 20px", textAlign: "center" }}>
+                      <input
+                        type="checkbox"
+                        checked={permissions[permission.key]?.allow || false}
+                        onChange={() => handleAllowToggle(permission.key)}
+                        disabled={!isEditing}
+                        style={{
+                          width: "16px",
+                          height: "16px",
+                          cursor: isEditing ? "pointer" : "not-allowed",
+                          opacity: !isEditing ? 0.5 : 1,
+                        }}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {!selectedUser && (
+          <div
+            style={{
+              backgroundColor: "white",
+              padding: "60px 20px",
+              textAlign: "center",
+              borderRadius: "8px",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            }}
+          >
+            <div style={{ color: "#6c757d" }}>
+              <div
+                style={{
+                  fontSize: "48px",
+                  marginBottom: "16px",
+                }}
+              >
+                👤
+              </div>
+              <h3
+                style={{
+                  fontSize: "18px",
+                  fontWeight: "500",
+                  marginBottom: "8px",
+                  color: "#333",
+                }}
+              >
+                Select a User
+              </h3>
+              <p style={{ color: "#6c757d" }}>
+                Choose a user from the dropdown above to view and edit their
+                permissions.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
-export default ExcelUploadPermissions;
+export default PermissionsTable;

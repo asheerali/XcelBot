@@ -460,7 +460,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
             marginBottom: "0px", // reduce or remove
           }}
         >
-          <ResponsiveContainer width="100%" height="100%">
+          {/* <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={dailySalesData}
               margin={{
@@ -506,7 +506,94 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                 animationDuration={1500}
               />
             </BarChart>
-          </ResponsiveContainer>
+          </ResponsiveContainer> */}
+
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart
+              data={calculateTrendline(dailySalesData.map((item, index) => ({
+                ...item,
+                index
+              })))}
+              margin={{
+                top: 10,
+                right: 10,
+                left: 0,
+                bottom: -15,
+              }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                vertical={false}
+                stroke="rgba(0,0,0,0.1)"
+              />
+              <XAxis
+                dataKey="day"
+                axisLine={false}
+                tickLine={false}
+                textAnchor="end"
+                height={60}
+                interval={0}
+                tick={{ fontSize: 12 }}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12 }}
+              />
+              <Tooltip
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                      <div
+                        style={{
+                          backgroundColor: "white",
+                          padding: "16px",
+                          border: "2px solid #4D8D8D",
+                          borderRadius: "8px",
+                          boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+                          minWidth: "200px"
+                        }}
+                      >
+                        <div style={{ fontWeight: "bold", marginBottom: "8px", color: "#333" }}>
+                          Day: {label}
+                        </div>
+                        <div style={{ color: "#666", marginBottom: "4px" }}>
+                          May 30th (The date not the day)
+                        </div>
+                        <div style={{ color: "#666", marginBottom: "4px" }}>
+                          Sales = ${(data.sales * 1000).toLocaleString()}
+                        </div>
+                        <div style={{ color: "#666", marginBottom: "4px" }}>
+                          Orders = 1,000
+                        </div>
+                        <div style={{ color: "#666" }}>
+                          Avg. Ticket = $8.32
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Bar
+                dataKey="sales"
+                fill="#4D8D8D"
+                barSize={60}
+                radius={[4, 4, 0, 0]}
+                animationDuration={1500}
+              />
+              <Line
+                type="monotone"
+                dataKey="trendline"
+                stroke="#0066FF"
+                strokeWidth={3}
+                dot={{ r: 4, fill: "#0066FF", strokeWidth: 2 }}
+                activeDot={{ r: 6, fill: "#0066FF", strokeWidth: 2 }}
+              />
+            </ComposedChart>
+          </ResponsiveContainer> 
+
         </div>
 
         {/* Large centered total value below the chart */}
