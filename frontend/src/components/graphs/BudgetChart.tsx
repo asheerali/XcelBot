@@ -141,7 +141,7 @@ const BudgetChart: React.FC<BudgetChartProps> = ({ data }) => {
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis 
               dataKey="metric" 
-              angle={-45}
+              // angle={-45}
               textAnchor="end"
               height={80}
               fontSize={12}

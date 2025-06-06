@@ -812,6 +812,89 @@ def create_sales_by_category_tables(df, location_filter='All', start_date=None, 
 from datetime import datetime, timedelta
 import pandas as pd
 
+# def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, end_date=None):
+#     """
+#     Create a comparison table of top 10 vs bottom 10 items by sales.
+    
+#     Parameters:
+#     df: DataFrame with sales data
+#     location_filter: 'All' or specific location(s)
+#     start_date: Start date as string 'YYYY-MM-DD'
+#     end_date: End date as string 'YYYY-MM-DD'
+    
+#     Returns:
+#     DataFrame with side-by-side comparison
+#     """
+    
+#     # Make a copy of the dataframe
+#     df_copy = df.copy()
+    
+#     # Apply location filter to the entire dataset first
+#     if location_filter != 'All':
+#         if isinstance(location_filter, list):
+#             df_copy = df_copy[df_copy['Location'].isin(location_filter)]
+#         else:
+#             df_copy = df_copy[df_copy['Location'] == location_filter]
+    
+#     # Convert dates if they're strings
+#     if start_date is not None and isinstance(start_date, str):
+#         start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+#     if end_date is not None and isinstance(end_date, str):
+#         end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    
+#     # Filter current period data
+#     filtered_df = df_copy.copy()
+#     if start_date is not None:
+#         filtered_df = filtered_df[filtered_df['Date'] >= start_date]
+#     if end_date is not None:
+#         filtered_df = filtered_df[filtered_df['Date'] <= end_date]
+    
+#     # If the dataframe is empty after filtering, return empty table
+#     if filtered_df.empty:
+#         return pd.DataFrame(columns=['Rank', 'Top_10_Items', 'T_Sales', 'T_Quantity', 
+#                                    'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])
+    
+#     # Your actual column names:
+#     item_column = 'Menu Item'
+#     quantity_column = 'Qty'
+#     sales_column = 'Net Price'
+    
+#     # Group by item and sum quantity and sales
+#     all_items = filtered_df.groupby(item_column).agg({
+#         quantity_column: 'sum',
+#         sales_column: 'sum'
+#     }).reset_index()
+    
+#     # Rename columns
+#     all_items.columns = ['Item', 'Quantity', 'Sales']
+    
+#     # Round values
+#     all_items['Sales'] = all_items['Sales'].round(2)
+#     all_items['Quantity'] = all_items['Quantity'].round(0).astype(int)
+    
+#     # Get top 10 items (highest sales)
+#     top_items = all_items.sort_values('Sales', ascending=False).head(10).reset_index(drop=True)
+    
+#     # Get bottom 10 items (lowest sales)
+#     bottom_items = all_items.sort_values('Sales', ascending=True).head(10).reset_index(drop=True)
+    
+#     # Create comparison table
+#     comparison_table = pd.DataFrame()
+#     comparison_table['Rank'] = range(1, 11)
+#     comparison_table['Top_10_Items'] = top_items['Item'].values
+#     comparison_table['T_Sales'] = top_items['Sales'].values
+#     comparison_table['T_Quantity'] = top_items['Quantity'].values
+#     comparison_table['Bottom_10_Items'] = bottom_items['Item'].values
+#     comparison_table['B_Sales'] = bottom_items['Sales'].values
+#     comparison_table['B_Quantity'] = bottom_items['Quantity'].values
+    
+#     # Calculate difference in sales (Top - Bottom)
+#     comparison_table['Difference_Sales'] = ((comparison_table['T_Sales'] - comparison_table['B_Sales']) / 100).round(2)
+    
+#     return comparison_table
+
+
+
 def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, end_date=None):
     """
     Create a comparison table of top 10 vs bottom 10 items by sales.
@@ -872,6 +955,14 @@ def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, 
     all_items['Sales'] = all_items['Sales'].round(2)
     all_items['Quantity'] = all_items['Quantity'].round(0).astype(int)
     
+    # Filter out items with zero sales
+    all_items = all_items[all_items['Sales'] > 0]
+    
+    # Check if we have enough items after filtering
+    if all_items.empty:
+        return pd.DataFrame(columns=['Rank', 'Top_10_Items', 'T_Sales', 'T_Quantity', 
+                                   'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])
+    
     # Get top 10 items (highest sales)
     top_items = all_items.sort_values('Sales', ascending=False).head(10).reset_index(drop=True)
     
@@ -879,20 +970,30 @@ def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, 
     bottom_items = all_items.sort_values('Sales', ascending=True).head(10).reset_index(drop=True)
     
     # Create comparison table
+    max_rows = max(len(top_items), len(bottom_items))
     comparison_table = pd.DataFrame()
-    comparison_table['Rank'] = range(1, 11)
-    comparison_table['Top_10_Items'] = top_items['Item'].values
-    comparison_table['T_Sales'] = top_items['Sales'].values
-    comparison_table['T_Quantity'] = top_items['Quantity'].values
-    comparison_table['Bottom_10_Items'] = bottom_items['Item'].values
-    comparison_table['B_Sales'] = bottom_items['Sales'].values
-    comparison_table['B_Quantity'] = bottom_items['Quantity'].values
+    comparison_table['Rank'] = range(1, max_rows + 1)
+    
+    # Pad shorter lists with empty values
+    top_items_padded = list(top_items['Item'].values) + [''] * (max_rows - len(top_items))
+    top_sales_padded = list(top_items['Sales'].values) + [0] * (max_rows - len(top_items))
+    top_qty_padded = list(top_items['Quantity'].values) + [0] * (max_rows - len(top_items))
+    
+    bottom_items_padded = list(bottom_items['Item'].values) + [''] * (max_rows - len(bottom_items))
+    bottom_sales_padded = list(bottom_items['Sales'].values) + [0] * (max_rows - len(bottom_items))
+    bottom_qty_padded = list(bottom_items['Quantity'].values) + [0] * (max_rows - len(bottom_items))
+    
+    comparison_table['Top_10_Items'] = top_items_padded
+    comparison_table['T_Sales'] = top_sales_padded
+    comparison_table['T_Quantity'] = top_qty_padded
+    comparison_table['Bottom_10_Items'] = bottom_items_padded
+    comparison_table['B_Sales'] = bottom_sales_padded
+    comparison_table['B_Quantity'] = bottom_qty_padded
     
     # Calculate difference in sales (Top - Bottom)
     comparison_table['Difference_Sales'] = ((comparison_table['T_Sales'] - comparison_table['B_Sales']) / 100).round(2)
     
     return comparison_table
-
 # Usage:
 # result = create_top_vs_bottom_comparison(df, location_filter='All', start_date='2025-04-21', end_date='2025-04-21')
 # print(result)
