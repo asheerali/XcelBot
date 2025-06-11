@@ -395,10 +395,10 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 "data": f"{request.dashboard} Dashboard is not yet implemented."
             }
                        
-            print (sales_split_dashboard, pmix_dashboard)
             if request.dashboard == "Sales Split and Product Mix":
+                print ("sales_split_dashboard, pmix_dashboard")
                 return [sales_split_dashboard, pmix_dashboard]
-            
+
             if request.dashboard == "Sales Split":
                 print("i am here in sales split result", sales_split_dashboard)
 
