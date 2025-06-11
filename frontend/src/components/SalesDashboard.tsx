@@ -1180,21 +1180,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
               gap: "16px",
             }}
           >
-            <StatCard
-              title="Unique Orders"
-              value={uniqueOrders}
-              change={uniqueOrdersChange}
-              color="#00bcd4"
-              formatValue={(v) => v.toLocaleString()}
-            />
-
-            <StatCard
-              title="Total Quantity"
-              value={totalQuantity}
-              change={totalQuantityChange}
-              color="#795548"
-              formatValue={(v) => v.toLocaleString()}
-            />
+            
           </div>
         </div>
 
