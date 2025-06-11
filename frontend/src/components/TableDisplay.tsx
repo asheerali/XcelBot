@@ -377,7 +377,7 @@ const TableDisplay: React.FC<TableDisplayProps> = ({
       // Prevent default behavior that might cause issues
       event.preventDefault();
       event.stopPropagation();
-
+ 
       // Update internal state
       setInternalTabValue(newValue);
 
