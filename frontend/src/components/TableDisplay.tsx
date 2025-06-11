@@ -1,5 +1,5 @@
-// Fixed TableDisplay.tsx - Prevents component restart when switching tabs
-import React, { useState, useCallback, useMemo } from 'react';
+// Enhanced TableDisplay.tsx - Color-coded percentage cells with proper formatting
+import React, { useState, useCallback, useMemo } from "react";
 import {
   Box,
   Paper,
@@ -15,49 +15,152 @@ import {
   Card,
   Divider,
   useTheme,
-  alpha
-} from '@mui/material';
-import { styled } from '@mui/material/styles';
+  alpha,
+} from "@mui/material";
+import { styled } from "@mui/material/styles";
 
 // Icons
-import TableChartIcon from '@mui/icons-material/TableChart';
-import PercentIcon from '@mui/icons-material/Percent';
-import HomeIcon from '@mui/icons-material/Home';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import CategoryIcon from '@mui/icons-material/Category';
+import TableChartIcon from "@mui/icons-material/TableChart";
+import PercentIcon from "@mui/icons-material/Percent";
+import HomeIcon from "@mui/icons-material/Home";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import CategoryIcon from "@mui/icons-material/Category";
 
 // Clean styled components
 const CleanTab = styled(Tab)(({ theme }) => ({
-  textTransform: 'none',
+  textTransform: "none",
   fontWeight: 500,
-  fontSize: '0.95rem',
+  fontSize: "0.95rem",
   minHeight: 48,
-  padding: '12px 16px',
-  margin: '0 2px',
-  color: '#6B7280',
-  transition: 'all 0.2s ease',
-  '&.Mui-selected': {
-    color: '#3B82F6',
+  padding: "12px 16px",
+  margin: "0 2px",
+  color: "#6B7280",
+  transition: "all 0.2s ease",
+  "&.Mui-selected": {
+    color: "#3B82F6",
     fontWeight: 600,
   },
-  '&:hover': {
-    color: '#3B82F6',
-    backgroundColor: alpha('#3B82F6', 0.04),
-  }
+  "&:hover": {
+    color: "#3B82F6",
+    backgroundColor: alpha("#3B82F6", 0.04),
+  },
 }));
 
 const CleanTabs = styled(Tabs)(({ theme }) => ({
-  '& .MuiTabs-indicator': {
-    backgroundColor: '#3B82F6',
+  "& .MuiTabs-indicator": {
+    backgroundColor: "#3B82F6",
     height: 2,
     borderRadius: 1,
   },
-  '& .MuiTabs-flexContainer': {
-    borderBottom: '1px solid #E5E7EB',
+  "& .MuiTabs-flexContainer": {
+    borderBottom: "1px solid #E5E7EB",
     gap: 4,
   },
   minHeight: 48,
 }));
+
+// Color-coded TableCell component
+const ColorCodedTableCell = styled(TableCell)<{
+  isPercentage?: boolean;
+  value?: number;
+  align?: "left" | "center" | "right";
+}>(({ theme, isPercentage, value, align }) => {
+  let backgroundColor = "transparent";
+  let color = theme.palette.text.primary;
+
+  if (isPercentage && typeof value === "number") {
+    if (value > 0) {
+      backgroundColor = "#d4edda"; // Light green background
+      color = "#155724"; // Dark green text
+    } else if (value < 0) {
+      backgroundColor = "#f8d7da"; // Light red background
+      color = "#721c24"; // Dark red text
+    }
+  }
+
+  return {
+    backgroundColor,
+    color,
+    fontWeight: isPercentage ? 600 : "normal",
+    textAlign: align || "center",
+    whiteSpace: "nowrap",
+    fontSize: "0.875rem",
+    padding: "8px 16px",
+    borderRadius: isPercentage ? "4px" : "none",
+    margin: isPercentage ? "2px" : "0",
+  };
+});
+
+// Utility functions for formatting
+const formatNumber = (value: any): string => {
+  if (value === null || value === undefined || value === "") return "N/A";
+
+  const numValue = typeof value === "number" ? value : parseFloat(value);
+
+  if (isNaN(numValue)) return String(value);
+
+  return numValue.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+
+const formatPercentage = (
+  value: any
+): { formatted: string; numValue: number | null } => {
+  if (value === null || value === undefined || value === "") {
+    return { formatted: "N/A", numValue: null };
+  }
+
+  let numValue: number;
+
+  if (typeof value === "string") {
+    // Remove percentage sign and any extra characters
+    const cleanValue = value.replace(/[%,\s]/g, "");
+    numValue = parseFloat(cleanValue);
+  } else {
+    numValue = parseFloat(value);
+  }
+
+  if (isNaN(numValue)) {
+    return { formatted: String(value), numValue: null };
+  }
+
+  const sign = numValue >= 0 ? "↑" : "↓";
+  const formatted = `${sign} ${Math.abs(numValue).toFixed(2)}%`;
+
+  return { formatted, numValue };
+};
+
+const isPercentageColumn = (header: string, value: any): boolean => {
+  // Check if header suggests percentage
+  const percentageHeaders = [
+    "percentage",
+    "percent",
+    "%",
+    "change",
+    "growth",
+    "wow",
+    "week over week",
+    "monthly",
+    "yearly",
+    "variance",
+    "delta",
+    "rate",
+  ];
+
+  const headerLower = header.toLowerCase();
+  const isPercentageHeader = percentageHeaders.some((keyword) =>
+    headerLower.includes(keyword)
+  );
+
+  // Check if value looks like a percentage
+  const isPercentageValue =
+    typeof value === "string" &&
+    (value.includes("%") || /^[+-]?\d+(\.\d+)?$/.test(value.trim()));
+
+  return isPercentageHeader || isPercentageValue;
+};
 
 // Tab Panel Component - Using forceRender approach
 interface TabPanelProps {
@@ -67,15 +170,15 @@ interface TabPanelProps {
   forceRender?: boolean;
 }
 
-const TabPanel: React.FC<TabPanelProps> = ({ 
-  children, 
-  value, 
-  index, 
+const TabPanel: React.FC<TabPanelProps> = ({
+  children,
+  value,
+  index,
   forceRender = true,
-  ...other 
+  ...other
 }) => {
   const isActive = value === index;
-  
+
   if (forceRender) {
     // Always render but hide inactive panels
     return (
@@ -83,16 +186,14 @@ const TabPanel: React.FC<TabPanelProps> = ({
         role="tabpanel"
         id={`table-tabpanel-${index}`}
         aria-labelledby={`table-tab-${index}`}
-        style={{ display: isActive ? 'block' : 'none' }}
+        style={{ display: isActive ? "block" : "none" }}
         {...other}
       >
-        <Box sx={{ pt: 2 }}>
-          {children}
-        </Box>
+        <Box sx={{ pt: 2 }}>{children}</Box>
       </div>
     );
   }
-  
+
   // Standard implementation (causes unmounting)
   return (
     <div
@@ -102,11 +203,7 @@ const TabPanel: React.FC<TabPanelProps> = ({
       aria-labelledby={`table-tab-${index}`}
       {...other}
     >
-      {isActive && (
-        <Box sx={{ pt: 2 }}>
-          {children}
-        </Box>
-      )}
+      {isActive && <Box sx={{ pt: 2 }}>{children}</Box>}
     </div>
   );
 };
@@ -115,11 +212,11 @@ const TabPanel: React.FC<TabPanelProps> = ({
 function a11yProps(index: number) {
   return {
     id: `table-tab-${index}`,
-    'aria-controls': `table-tabpanel-${index}`,
+    "aria-controls": `table-tabpanel-${index}`,
   };
 }
 
-// Table component for consistent styling
+// Enhanced Table component with color coding
 interface DataTableProps {
   title: string;
   data: any[];
@@ -128,10 +225,10 @@ interface DataTableProps {
 
 const DataTable: React.FC<DataTableProps> = ({ title, data, icon }) => {
   const theme = useTheme();
-  
+
   if (!data || data.length === 0) {
     return (
-      <Card sx={{ p: 3, textAlign: 'center' }}>
+      <Card sx={{ p: 3, textAlign: "center" }}>
         <Typography variant="h6" color="text.secondary" gutterBottom>
           {title}
         </Typography>
@@ -146,74 +243,90 @@ const DataTable: React.FC<DataTableProps> = ({ title, data, icon }) => {
   const headers = Object.keys(data[0]);
 
   return (
-    <Card elevation={2} sx={{ borderRadius: 2, overflow: 'hidden' }}>
+    <Card elevation={2} sx={{ borderRadius: 2, overflow: "hidden" }}>
       {/* Table Header */}
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          alignItems: 'center',
-          backgroundColor: '#f8f9fa',
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          backgroundColor: "#f8f9fa",
           px: 3,
           py: 2,
-          borderBottom: '1px solid #e0e0e0'
+          borderBottom: "1px solid #e0e0e0",
         }}
       >
-        {icon && (
-          <Box sx={{ mr: 2, color: 'primary.main' }}>
-            {icon}
-          </Box>
-        )}
+        {icon && <Box sx={{ mr: 2, color: "primary.main" }}>{icon}</Box>}
         <Typography variant="h6" fontWeight={600}>
           {title}
         </Typography>
       </Box>
-      
+
       {/* Table Content */}
       <TableContainer>
         <Table size="small">
-          <TableHead sx={{ backgroundColor: alpha('#f8f9fa', 0.5) }}>
+          <TableHead sx={{ backgroundColor: alpha("#f8f9fa", 0.5) }}>
             <TableRow>
               {headers.map((header, index) => (
-                <TableCell 
+                <TableCell
                   key={header}
-                  align={index === 0 ? 'left' : 'center'}
-                  sx={{ 
+                  align={index === 0 ? "left" : "center"}
+                  sx={{
                     fontWeight: 600,
-                    whiteSpace: 'nowrap',
-                    textTransform: 'capitalize',
-                    borderBottom: '2px solid #e0e0e0'
+                    whiteSpace: "nowrap",
+                    textTransform: "capitalize",
+                    borderBottom: "2px solid #e0e0e0",
+                    padding: "12px 16px",
                   }}
                 >
-                  {header.replace(/([A-Z])/g, ' $1').trim()}
+                  {header.replace(/([A-Z])/g, " $1").trim()}
                 </TableCell>
               ))}
             </TableRow>
           </TableHead>
           <TableBody>
             {data.map((row, rowIndex) => (
-              <TableRow 
+              <TableRow
                 key={rowIndex}
-                sx={{ 
-                  '&:nth-of-type(odd)': {
-                    backgroundColor: alpha('#f8f9fa', 0.25)
+                sx={{
+                  "&:nth-of-type(odd)": {
+                    backgroundColor: alpha("#f8f9fa", 0.25),
                   },
-                  '&:hover': {
-                    backgroundColor: alpha(theme.palette.primary.main, 0.04)
-                  }
+                  "&:hover": {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                  },
                 }}
               >
-                {headers.map((header, cellIndex) => (
-                  <TableCell 
-                    key={`${rowIndex}-${header}`}
-                    align={cellIndex === 0 ? 'left' : 'center'}
-                    sx={{ 
-                      whiteSpace: 'nowrap',
-                      fontSize: '0.875rem'
-                    }}
-                  >
-                    {row[header] !== undefined ? row[header] : 'N/A'}
-                  </TableCell>
-                ))}
+                {headers.map((header, cellIndex) => {
+                  const cellValue = row[header];
+                  const isFirstColumn = cellIndex === 0;
+                  const isPercentage =
+                    !isFirstColumn && isPercentageColumn(header, cellValue);
+
+                  let displayValue: string;
+                  let numericValue: number | null = null;
+
+                  if (isPercentage) {
+                    const { formatted, numValue } = formatPercentage(cellValue);
+                    displayValue = formatted;
+                    numericValue = numValue;
+                  } else if (typeof cellValue === "number") {
+                    displayValue = formatNumber(cellValue);
+                  } else {
+                    displayValue =
+                      cellValue !== undefined ? String(cellValue) : "N/A";
+                  }
+
+                  return (
+                    <ColorCodedTableCell
+                      key={`${rowIndex}-${header}`}
+                      align={isFirstColumn ? "left" : "center"}
+                      isPercentage={isPercentage}
+                      value={numericValue}
+                    >
+                      {displayValue}
+                    </ColorCodedTableCell>
+                  );
+                })}
               </TableRow>
             ))}
           </TableBody>
@@ -239,45 +352,52 @@ interface TableDisplayProps {
 
 const TableDisplay: React.FC<TableDisplayProps> = ({
   tableData,
-  viewMode = 'tabs',
+  viewMode = "tabs",
   activeTab,
-  onTabChange
+  onTabChange,
 }) => {
   // Internal tab state - isolated from parent state
   const [internalTabValue, setInternalTabValue] = useState(0);
-  
+
   // Use internal state to prevent external state changes from causing restarts
-  const currentTabValue = activeTab !== undefined ? activeTab : internalTabValue;
-  
+  const currentTabValue =
+    activeTab !== undefined ? activeTab : internalTabValue;
+
   // Memoize the tab change handler to prevent recreation on every render
-  const handleTabChange = useCallback((event: React.SyntheticEvent, newValue: number) => {
-    // Prevent default behavior that might cause issues
-    event.preventDefault();
-    event.stopPropagation();
-    
-    // Update internal state
-    setInternalTabValue(newValue);
-    
-    // Call parent handler if provided
-    if (onTabChange) {
-      onTabChange(event, newValue);
-    }
-  }, [onTabChange]);
+  const handleTabChange = useCallback(
+    (event: React.SyntheticEvent, newValue: number) => {
+      // Prevent default behavior that might cause issues
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Update internal state
+      setInternalTabValue(newValue);
+
+      // Call parent handler if provided
+      if (onTabChange) {
+        onTabChange(event, newValue);
+      }
+    },
+    [onTabChange]
+  );
 
   // Memoize table data to prevent unnecessary re-renders
-  const memoizedTableData = useMemo(() => ({
-    table1: tableData?.table1 || [],
-    table2: tableData?.table2 || [],
-    table3: tableData?.table3 || [],
-    table4: tableData?.table4 || [],
-    table5: tableData?.table5 || []
-  }), [tableData]);
+  const memoizedTableData = useMemo(
+    () => ({
+      table1: tableData?.table1 || [],
+      table2: tableData?.table2 || [],
+      table3: tableData?.table3 || [],
+      table4: tableData?.table4 || [],
+      table5: tableData?.table5 || [],
+    }),
+    [tableData]
+  );
 
   // If no data, show empty state
   if (!tableData || Object.keys(tableData).length === 0) {
     return (
-      <Card sx={{ p: 4, textAlign: 'center' }}>
-        <TableChartIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+      <Card sx={{ p: 4, textAlign: "center" }}>
+        <TableChartIcon sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
         <Typography variant="h6" color="text.secondary" gutterBottom>
           No Table Data Available
         </Typography>
@@ -289,9 +409,9 @@ const TableDisplay: React.FC<TableDisplayProps> = ({
   }
 
   return (
-    <Box sx={{ width: '100%' }}>
+    <Box sx={{ width: "100%" }}>
       {/* Tabs Navigation */}
-      <Paper sx={{ borderRadius: 2, overflow: 'hidden', mb: 2 }}>
+      <Paper sx={{ borderRadius: 2, overflow: "hidden", mb: 2 }}>
         <CleanTabs
           value={currentTabValue}
           onChange={handleTabChange}
@@ -299,26 +419,26 @@ const TableDisplay: React.FC<TableDisplayProps> = ({
           scrollButtons="auto"
           allowScrollButtonsMobile
         >
-          <CleanTab 
-            label="Percentage Table" 
+          <CleanTab
+            label="Percentage Table"
             icon={<PercentIcon />}
             iconPosition="start"
             {...a11yProps(0)}
           />
-          <CleanTab 
-            label="In-House Table" 
+          <CleanTab
+            label="In-House Table"
             icon={<HomeIcon />}
             iconPosition="start"
             {...a11yProps(1)}
           />
-          <CleanTab 
-            label="Week-over-Week (WOW)" 
+          <CleanTab
+            label="Week-over-Week (WOW)"
             icon={<TrendingUpIcon />}
             iconPosition="start"
             {...a11yProps(2)}
           />
-          <CleanTab 
-            label="Pivot" 
+          <CleanTab
+            label="Pivot"
             icon={<CategoryIcon />}
             iconPosition="start"
             {...a11yProps(3)}
