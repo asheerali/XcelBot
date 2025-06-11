@@ -1261,7 +1261,7 @@ export function ExcelImport() {
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                           <AnalyticsIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
                           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                            Sales Analytics {selectedLocation ? `for ${selectedLocation}` : ''}
+                            Sales Analytics 
                           </Typography>
                         </Box>
                         <Divider sx={{ mb: 3 }} />
