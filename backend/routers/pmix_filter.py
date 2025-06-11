@@ -76,6 +76,7 @@ async def upload_excel(request: SalesSplitPmixUploadRequest = Body(...)):
         total_quantity_change,
         sales_by_category_tables_df, 
         category_comparison_table_df, 
+        sales_by_category_by_day_table_df,
         top_vs_bottom_comparison_df
         ) = process_pmix_file(file_location, 
         location_filter=location_filter,
@@ -160,6 +161,7 @@ async def upload_excel(request: SalesSplitPmixUploadRequest = Body(...)):
             "table10": sales_by_category_tables_df.to_dict(orient='records'),
             "table11": category_comparison_table_df.to_dict(orient='records'),
             "table12": top_vs_bottom_comparison_df.to_dict(orient='records'),
+            "table13": sales_by_category_by_day_table_df.to_dict(orient='records'),
             "locations": locations,
             "servers": server,
             "categories": category,
