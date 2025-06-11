@@ -221,9 +221,15 @@ interface DataTableProps {
   title: string;
   data: any[];
   icon?: React.ReactNode;
+  excludePercentageFormatting?: boolean;
 }
 
-const DataTable: React.FC<DataTableProps> = ({ title, data, icon }) => {
+const DataTable: React.FC<DataTableProps> = ({
+  title,
+  data,
+  icon,
+  excludePercentageFormatting = false,
+}) => {
   const theme = useTheme();
 
   if (!data || data.length === 0) {
@@ -300,7 +306,9 @@ const DataTable: React.FC<DataTableProps> = ({ title, data, icon }) => {
                   const cellValue = row[header];
                   const isFirstColumn = cellIndex === 0;
                   const isPercentage =
-                    !isFirstColumn && isPercentageColumn(header, cellValue);
+                    !excludePercentageFormatting &&
+                    !isFirstColumn &&
+                    isPercentageColumn(header, cellValue);
 
                   let displayValue: string;
                   let numericValue: number | null = null;
@@ -481,6 +489,7 @@ const TableDisplay: React.FC<TableDisplayProps> = ({
             title="Category Summary"
             data={memoizedTableData.table1}
             icon={<CategoryIcon />}
+            excludePercentageFormatting={true}
           />
         </TabPanel>
       </Box>
