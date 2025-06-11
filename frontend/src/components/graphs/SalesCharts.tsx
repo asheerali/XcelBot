@@ -76,7 +76,7 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
         >
           <p style={{ margin: 0, fontWeight: "bold" }}>{`${label}`}</p>
           {/* Always show sales */}
-          <p style={{ margin: 0, color: "#4B79FF" }}>
+          <p style={{ margin: 0, color: "#8ffcff" }}>
             {`Sales: $${parseFloat(
               dataPoint?.Sales || payload[0]?.value || 0
             ).toLocaleString(undefined, {
@@ -86,7 +86,7 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
           </p>
           {/* Show moving average if available */}
           {dataPoint?.SalesMovingAvg !== undefined && (
-            <p style={{ margin: 0, color: "#FF8C00" }}>
+            <p style={{ margin: 0, color: "#ff0000" }}>
               {`Moving Avg: $${parseFloat(
                 dataPoint.SalesMovingAvg
               ).toLocaleString(undefined, {
@@ -159,20 +159,20 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend />
-          {/* Sales bars */}
+          {/* Sales bars - UPDATED COLOR */}
           <Bar
             dataKey="Sales"
-            fill="#4B79FF"
+            fill="#8ffcff"
             name="Sales"
             radius={[4, 4, 0, 0]}
           />
-          {/* Moving average line */}
+          {/* Moving average line - UPDATED COLOR */}
           <Line
             type="monotone"
             dataKey="SalesMovingAvg"
-            stroke="#FF8C00"
+            stroke="#ff0000"
             strokeWidth={3}
-            dot={{ fill: "#FF8C00", strokeWidth: 2, r: 4 }}
+            dot={{ fill: "#ff0000", strokeWidth: 2, r: 4 }}
             name="Moving Average"
           />
         </ComposedChart>

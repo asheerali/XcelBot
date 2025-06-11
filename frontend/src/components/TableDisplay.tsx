@@ -1,4 +1,4 @@
-// Enhanced TableDisplay.tsx - Color-coded percentage cells with proper formatting
+// Enhanced TableDisplay.tsx - Color-coded percentage cells with comprehensive comma formatting
 import React, { useState, useCallback, useMemo } from "react";
 import {
   Box,
@@ -91,20 +91,70 @@ const ColorCodedTableCell = styled(TableCell)<{
   };
 });
 
-// Utility functions for formatting
+// Enhanced utility function to detect if a value is a currency
+const isCurrencyValue = (value: any): boolean => {
+  if (typeof value === "string") {
+    // Check for dollar signs, currency symbols, or decimal patterns
+    return /^\$/.test(value.trim()) || /^\d+\.\d{2}$/.test(value.trim());
+  }
+  return false;
+};
+
+// Enhanced utility function to detect if a value is numeric
+const isNumericValue = (value: any): boolean => {
+  if (typeof value === "number") return true;
+  if (typeof value === "string") {
+    // Remove common formatting characters and check if it's a number
+    const cleanValue = value.replace(/[$,\s%]/g, "");
+    return !isNaN(parseFloat(cleanValue)) && isFinite(parseFloat(cleanValue));
+  }
+  return false;
+};
+
+// Enhanced number formatting with comprehensive comma support
 const formatNumber = (value: any): string => {
   if (value === null || value === undefined || value === "") return "N/A";
 
+  // Handle string values
+  if (typeof value === "string") {
+    const trimmedValue = value.trim();
+    
+    // If it's already formatted or non-numeric text, return as-is
+    if (!isNumericValue(trimmedValue)) {
+      return trimmedValue;
+    }
+
+    // Extract numeric value from string (remove $, commas, etc.)
+    const cleanValue = trimmedValue.replace(/[$,\s]/g, "");
+    const numValue = parseFloat(cleanValue);
+    
+    if (isNaN(numValue)) return trimmedValue;
+
+    // Check if it was a currency
+    const wasCurrency = trimmedValue.includes("$");
+    
+    // Format with commas
+    const formatted = numValue.toLocaleString("en-US", {
+      minimumFractionDigits: numValue % 1 === 0 ? 0 : 2,
+      maximumFractionDigits: 2,
+    });
+
+    return wasCurrency ? `$${formatted}` : formatted;
+  }
+
+  // Handle numeric values
   const numValue = typeof value === "number" ? value : parseFloat(value);
 
   if (isNaN(numValue)) return String(value);
 
+  // Format with commas
   return numValue.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
+    minimumFractionDigits: numValue % 1 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
   });
 };
 
+// Enhanced percentage formatting with comma support for large percentages
 const formatPercentage = (
   value: any
 ): { formatted: string; numValue: number | null } => {
@@ -115,7 +165,7 @@ const formatPercentage = (
   let numValue: number;
 
   if (typeof value === "string") {
-    // Remove percentage sign and any extra characters
+    // Remove percentage sign, commas, and any extra characters
     const cleanValue = value.replace(/[%,\s]/g, "");
     numValue = parseFloat(cleanValue);
   } else {
@@ -127,9 +177,54 @@ const formatPercentage = (
   }
 
   const sign = numValue >= 0 ? "↑" : "↓";
-  const formatted = `${sign} ${Math.abs(numValue).toFixed(2)}%`;
+  
+  // Format the percentage value with commas if it's large
+  const absValue = Math.abs(numValue);
+  const formattedNumber = absValue.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  
+  const formatted = `${sign} ${formattedNumber}%`;
 
   return { formatted, numValue };
+};
+
+// Enhanced function to detect currency columns
+const isCurrencyColumn = (header: string, values: any[]): boolean => {
+  const currencyHeaders = [
+    "sales",
+    "revenue",
+    "cost",
+    "price",
+    "amount",
+    "total",
+    "value",
+    "pay",
+    "salary",
+    "wage",
+    "budget",
+    "profit",
+    "loss",
+    "$",
+    "dollar",
+    "usd",
+    "money",
+    "fee",
+    "charge",
+  ];
+
+  const headerLower = header.toLowerCase();
+  const hasCurrencyHeader = currencyHeaders.some((keyword) =>
+    headerLower.includes(keyword)
+  );
+
+  // Check if most values in the column look like currency
+  const currencyValueCount = values
+    .slice(0, 5) // Check first 5 values for performance
+    .filter((val) => isCurrencyValue(val)).length;
+
+  return hasCurrencyHeader || currencyValueCount >= 2;
 };
 
 const isPercentageColumn = (header: string, value: any): boolean => {
@@ -216,7 +311,7 @@ function a11yProps(index: number) {
   };
 }
 
-// Enhanced Table component with color coding
+// Enhanced Table component with comprehensive formatting
 interface DataTableProps {
   title: string;
   data: any[];
@@ -248,6 +343,23 @@ const DataTable: React.FC<DataTableProps> = ({
   // Get table headers from the first row
   const headers = Object.keys(data[0]);
 
+  // Analyze columns to determine formatting types
+  const columnTypes = useMemo(() => {
+    const types: { [key: string]: { isPercentage: boolean; isCurrency: boolean; isNumeric: boolean } } = {};
+    
+    headers.forEach((header) => {
+      const values = data.map((row) => row[header]);
+      
+      types[header] = {
+        isPercentage: !excludePercentageFormatting && values.some((val) => isPercentageColumn(header, val)),
+        isCurrency: isCurrencyColumn(header, values),
+        isNumeric: values.some((val) => isNumericValue(val)),
+      };
+    });
+    
+    return types;
+  }, [data, headers, excludePercentageFormatting]);
+
   return (
     <Card elevation={2} sx={{ borderRadius: 2, overflow: "hidden" }}>
       {/* Table Header */}
@@ -264,6 +376,9 @@ const DataTable: React.FC<DataTableProps> = ({
         {icon && <Box sx={{ mr: 2, color: "primary.main" }}>{icon}</Box>}
         <Typography variant="h6" fontWeight={600}>
           {title}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+          ({data.length} rows)
         </Typography>
       </Box>
 
@@ -305,30 +420,33 @@ const DataTable: React.FC<DataTableProps> = ({
                 {headers.map((header, cellIndex) => {
                   const cellValue = row[header];
                   const isFirstColumn = cellIndex === 0;
-                  const isPercentage =
-                    !excludePercentageFormatting &&
-                    !isFirstColumn &&
-                    isPercentageColumn(header, cellValue);
+                  const columnType = columnTypes[header];
 
                   let displayValue: string;
                   let numericValue: number | null = null;
 
-                  if (isPercentage) {
+                  // Apply formatting based on column type and content
+                  if (columnType.isPercentage && !isFirstColumn) {
                     const { formatted, numValue } = formatPercentage(cellValue);
                     displayValue = formatted;
                     numericValue = numValue;
-                  } else if (typeof cellValue === "number") {
+                  } else if (columnType.isCurrency || columnType.isNumeric) {
+                    // Apply number formatting with commas
                     displayValue = formatNumber(cellValue);
                   } else {
-                    displayValue =
-                      cellValue !== undefined ? String(cellValue) : "N/A";
+                    // For non-numeric columns, still check if individual values are numeric
+                    if (isNumericValue(cellValue) && !isFirstColumn) {
+                      displayValue = formatNumber(cellValue);
+                    } else {
+                      displayValue = cellValue !== undefined ? String(cellValue) : "N/A";
+                    }
                   }
 
                   return (
                     <ColorCodedTableCell
                       key={`${rowIndex}-${header}`}
                       align={isFirstColumn ? "left" : "center"}
-                      isPercentage={isPercentage}
+                      isPercentage={columnType.isPercentage && !isFirstColumn}
                       value={numericValue}
                     >
                       {displayValue}
