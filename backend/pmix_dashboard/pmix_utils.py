@@ -764,6 +764,22 @@ def create_sales_by_category_tables(df, location_filter='All', start_date=None, 
     # Create category comparison table (current 4 weeks vs previous 4 weeks)
     category_comparison_table = pd.DataFrame()
     
+        # Sales by Category and Day of Week pivot table
+    sales_by_category_by_day_table = pd.pivot_table(
+        filtered_df,
+        values='Net Price',
+        index='Sales Category',
+        columns='Day_of_Week',
+        aggfunc='sum',
+        fill_value=0,
+        margins=True,
+        margins_name='Grand Total'
+    )
+
+    # Reset index and round values
+    sales_by_category_by_day_table = sales_by_category_by_day_table.round(2).fillna(0).reset_index()
+
+    
     if not filtered_df.empty:
         # Calculate sales for current period by category
         current_sales = filtered_df.groupby('Sales Category')['Net Price'].sum().reset_index()
@@ -802,9 +818,13 @@ def create_sales_by_category_tables(df, location_filter='All', start_date=None, 
         # Sort by current sales descending
         category_comparison_table = category_comparison_table.sort_values('This_4_Weeks_Sales', ascending=False).reset_index(drop=True)
 
+
+        
+        
     return {
         'sales_by_category_table': sales_by_category_table,
         'category_comparison_table': category_comparison_table,
+        'sales_by_category_by_day_table': sales_by_category_by_day_table
     }
     
 
