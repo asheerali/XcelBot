@@ -43,6 +43,108 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
     );
   }
 
+  // Add this helper function for weekly moving average
+  const calculateWeeklyMovingAverage = (
+    data: any[],
+    windowSize: number = 3
+  ) => {
+    return data.map((item, index) => {
+      if (index < windowSize - 1) {
+        // For the first few points, use available data
+        const availableData = data.slice(0, index + 1);
+        const sum = availableData.reduce(
+          (acc, curr) => acc + curr.salesDisplay,
+          0
+        );
+        return {
+          ...item,
+          movingAverage: Math.round(sum / availableData.length),
+        };
+      } else {
+        // Calculate moving average for the window
+        const windowData = data.slice(index - windowSize + 1, index + 1);
+        const sum = windowData.reduce(
+          (acc, curr) => acc + curr.salesDisplay,
+          0
+        );
+        return {
+          ...item,
+          movingAverage: Math.round(sum / windowSize),
+        };
+      }
+    });
+  };
+  // Add this helper function to calculate moving average
+  const calculateMovingAverage = (data: any[], windowSize: number = 3) => {
+    return data.map((item, index) => {
+      if (index < windowSize - 1) {
+        // For the first few points, use available data
+        const availableData = data.slice(0, index + 1);
+        const sum = availableData.reduce((acc, curr) => acc + curr.sales, 0);
+        return {
+          ...item,
+          movingAverage: Math.round(sum / availableData.length),
+        };
+      } else {
+        // Calculate moving average for the window
+        const windowData = data.slice(index - windowSize + 1, index + 1);
+        const sum = windowData.reduce((acc, curr) => acc + curr.sales, 0);
+        return {
+          ...item,
+          movingAverage: Math.round(sum / windowSize),
+        };
+      }
+    });
+  };
+
+  const getWeekDate = (dayOfWeek: string) => {
+    const today = new Date();
+    const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+
+    const dayMap: { [key: string]: number } = {
+      Sun: 0,
+      Mon: 1,
+      Tue: 2,
+      Wed: 3,
+      Thu: 4,
+      Fri: 5,
+      Sat: 6,
+    };
+
+    const targetDay = dayMap[dayOfWeek];
+    if (targetDay === undefined) return "Invalid Day";
+
+    // Get the start of current week (Monday)
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(
+      today.getDate() - currentDay + (currentDay === 0 ? -6 : 1)
+    );
+
+    // Calculate target date
+    const targetDate = new Date(startOfWeek);
+    targetDate.setDate(
+      startOfWeek.getDate() + (targetDay === 0 ? 6 : targetDay - 1)
+    );
+
+    const month = targetDate.toLocaleDateString("en-US", { month: "long" });
+    const day = targetDate.getDate();
+
+    const getOrdinalSuffix = (day: number) => {
+      if (day > 3 && day < 21) return "th";
+      switch (day % 10) {
+        case 1:
+          return "st";
+        case 2:
+          return "nd";
+        case 3:
+          return "rd";
+        default:
+          return "th";
+      }
+    };
+
+    return `${month} ${day}${getOrdinalSuffix(day)}`;
+  };
   // Dynamic helper functions to extract table structure
   const getTableColumns = (table: any[]) => {
     if (!table || table.length === 0) return [];
@@ -439,6 +541,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
         className="stat-card"
       >
         {/* Chart heading */}
+
         <div
           style={{
             fontSize: "24px",
@@ -455,65 +558,22 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
         {/* Chart container */}
         <div
           style={{
-            height: "300px", // reduce height slightly if needed
+            height: "300px",
             width: "100%",
-            marginBottom: "0px", // reduce or remove
+            marginBottom: "0px",
           }}
         >
-          {/* <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={dailySalesData}
-              margin={{
-                top: 10,
-                right: 10,
-                left: 0,
-                bottom: -15, // reduced from 60 to 20
-              }}
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                vertical={false}
-                stroke="rgba(0,0,0,0.1)"
-              />
-              <XAxis
-                dataKey="day"
-                axisLine={false}
-                tickLine={false}
-                textAnchor="end"
-                height={60}
-                interval={0}
-                tick={{ fontSize: 12 }}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 12 }}
-              />
-              <Tooltip
-                formatter={(value) => [`$${value}k`, "Sales"]}
-                labelFormatter={(label) => `Day: ${label}`}
-                contentStyle={{
-                  borderRadius: 8,
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-                  border: "none",
-                }}
-              />
-              <Bar
-                dataKey="sales"
-                fill="#4D8D8D"
-                barSize={60}
-                radius={[4, 4, 0, 0]}
-                animationDuration={1500}
-              />
-            </BarChart>
-          </ResponsiveContainer> */}
-
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
-              data={calculateTrendline(dailySalesData.map((item, index) => ({
-                ...item,
-                index
-              })))}
+              data={calculateMovingAverage(
+                calculateTrendline(
+                  dailySalesData.map((item, index) => ({
+                    ...item,
+                    index,
+                  }))
+                ),
+                3 // 3-day moving average, you can adjust this
+              )}
               margin={{
                 top: 10,
                 right: 10,
@@ -552,36 +612,49 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                           border: "2px solid #4D8D8D",
                           borderRadius: "8px",
                           boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-                          minWidth: "200px"
+                          minWidth: "200px",
                         }}
                       >
-                        <div style={{ fontWeight: "bold", marginBottom: "8px", color: "#333" }}>
+                        <div
+                          style={{
+                            fontWeight: "bold",
+                            marginBottom: "8px",
+                            color: "#333",
+                          }}
+                        >
                           Day: {label}
                         </div>
                         <div style={{ color: "#666", marginBottom: "4px" }}>
-                          May 30th (The date not the day)
+                          {getWeekDate(label)}
                         </div>
                         <div style={{ color: "#666", marginBottom: "4px" }}>
                           Sales = ${(data.sales * 1000).toLocaleString()}
                         </div>
                         <div style={{ color: "#666", marginBottom: "4px" }}>
+                          3-Day Avg = $
+                          {(data.movingAverage * 1000).toLocaleString()}
+                        </div>
+                        <div style={{ color: "#666", marginBottom: "4px" }}>
+                          Trend = ${(data.trendline * 1000).toLocaleString()}
+                        </div>
+                        <div style={{ color: "#666", marginBottom: "4px" }}>
                           Orders = 1,000
                         </div>
-                        <div style={{ color: "#666" }}>
-                          Avg. Ticket = $8.32
-                        </div>
+                        <div style={{ color: "#666" }}>Avg. Ticket = $8.32</div>
                       </div>
                     );
                   }
                   return null;
                 }}
               />
+              <Legend />
               <Bar
                 dataKey="sales"
                 fill="#4D8D8D"
                 barSize={60}
                 radius={[4, 4, 0, 0]}
                 animationDuration={1500}
+                name="Daily Sales"
               />
               <Line
                 type="monotone"
@@ -590,12 +663,21 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                 strokeWidth={3}
                 dot={{ r: 4, fill: "#0066FF", strokeWidth: 2 }}
                 activeDot={{ r: 6, fill: "#0066FF", strokeWidth: 2 }}
+                name="Linear Trend"
+              />
+              <Line
+                type="monotone"
+                dataKey="movingAverage"
+                stroke="#FF6B35"
+                strokeWidth={3}
+                strokeDasharray="8 4"
+                dot={{ r: 3, fill: "#FF6B35", strokeWidth: 2 }}
+                activeDot={{ r: 5, fill: "#FF6B35", strokeWidth: 2 }}
+                name="3-Day Moving Average"
               />
             </ComposedChart>
-          </ResponsiveContainer> 
-
+          </ResponsiveContainer>
         </div>
-
         {/* Large centered total value below the chart */}
         {/* <div
           style={{
@@ -738,6 +820,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
           className="stat-card"
         >
           {/* Chart heading */}
+
           <div
             style={{
               fontSize: "24px",
@@ -752,7 +835,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
           <div style={{ height: "350px" }}>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
-                data={weeklySalesWithTrend}
+                data={calculateMovingAverage(weeklySalesWithTrend, 3)} // 3-week moving average
                 margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
               >
                 <CartesianGrid
@@ -794,11 +877,14 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                               1
                             )}k`}
                           </p>
+                          <p style={{ margin: "0 0 4px 0", color: "#FF6B35" }}>
+                            {`3-Week Avg: $${data.movingAverage}k`}
+                          </p>
                           <p style={{ margin: "0 0 4px 0", color: "#666" }}>
                             {`Total Orders: ${data.totalOrders}`}
                           </p>
                           <p style={{ margin: "0", color: "#FF6B6B" }}>
-                            {`Trend: $${data.trendline}k`}
+                            {`Linear Trend: $${data.trendline}k`}
                           </p>
                         </div>
                       );
@@ -823,7 +909,17 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                   strokeDasharray="5 5"
                   dot={false}
                   activeDot={{ r: 4, strokeWidth: 2 }}
-                  name="Sales Trend"
+                  name="Linear Trend"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="movingAverage"
+                  stroke="#FF6B35"
+                  strokeWidth={3}
+                  strokeDasharray="8 4"
+                  dot={{ r: 3, fill: "#FF6B35", strokeWidth: 2 }}
+                  activeDot={{ r: 5, fill: "#FF6B35", strokeWidth: 2 }}
+                  name="3-Week Moving Average"
                 />
               </ComposedChart>
             </ResponsiveContainer>
