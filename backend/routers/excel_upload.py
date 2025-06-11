@@ -400,12 +400,12 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
                 return [sales_split_dashboard, pmix_dashboard]
             
             if request.dashboard == "Sales Split":
-                # print("i am here in sales split result", sales_split_dashboard)
+                print("i am here in sales split result", sales_split_dashboard)
 
                 return [sales_split_dashboard]
                 
             if request.dashboard == "Product Mix":
-                # print("i am here in product mix result", pmix_dashboard)
+                print("i am here in product mix result", pmix_dashboard)
                 return [pmix_dashboard]
             
             # return {
