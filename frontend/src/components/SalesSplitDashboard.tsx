@@ -572,7 +572,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                     index,
                   }))
                 ),
-                3 // 3-day moving average, you can adjust this
+                1 // 1-day moving average, you can adjust this
               )}
               margin={{
                 top: 10,
@@ -622,21 +622,12 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                             color: "#333",
                           }}
                         >
-                          Day: {label}
-                        </div>
-                        <div style={{ color: "#666", marginBottom: "4px" }}>
-                          {getWeekDate(label)}
+                          Day: {getWeekDate(label)}
                         </div>
                         <div style={{ color: "#666", marginBottom: "4px" }}>
                           Sales = ${(data.sales * 1000).toLocaleString()}
                         </div>
-                        <div style={{ color: "#666", marginBottom: "4px" }}>
-                          3-Day Avg = $
-                          {(data.movingAverage * 1000).toLocaleString()}
-                        </div>
-                        <div style={{ color: "#666", marginBottom: "4px" }}>
-                          Trend = ${(data.trendline * 1000).toLocaleString()}
-                        </div>
+
                         <div style={{ color: "#666", marginBottom: "4px" }}>
                           Orders = 1,000
                         </div>
@@ -656,15 +647,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                 animationDuration={1500}
                 name="Daily Sales"
               />
-              <Line
-                type="monotone"
-                dataKey="trendline"
-                stroke="#0066FF"
-                strokeWidth={3}
-                dot={{ r: 4, fill: "#0066FF", strokeWidth: 2 }}
-                activeDot={{ r: 6, fill: "#0066FF", strokeWidth: 2 }}
-                name="Linear Trend"
-              />
+
               <Line
                 type="monotone"
                 dataKey="movingAverage"
@@ -673,7 +656,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                 strokeDasharray="8 4"
                 dot={{ r: 3, fill: "#FF6B35", strokeWidth: 2 }}
                 activeDot={{ r: 5, fill: "#FF6B35", strokeWidth: 2 }}
-                name="3-Day Moving Average"
+                name="Moving Average"
               />
             </ComposedChart>
           </ResponsiveContainer>
@@ -835,7 +818,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
           <div style={{ height: "350px" }}>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
-                data={calculateMovingAverage(weeklySalesWithTrend, 3)} // 3-week moving average
+                data={calculateWeeklyMovingAverage(weeklySalesWithTrend, 1)} // 1-week moving average
                 margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
               >
                 <CartesianGrid
@@ -873,19 +856,23 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                             style={{ margin: "0 0 8px 0", fontWeight: "bold" }}
                           >{`Week: ${label}`}</p>
                           <p style={{ margin: "0 0 4px 0", color: "#4D8D8D" }}>
-                            {`Total Sales: $${(data.totalSales / 1000).toFixed(
-                              1
-                            )}k`}
+                            {`Total Sales: $${data.totalSales.toLocaleString(
+                              "en-US",
+                              {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              }
+                            )}`}
                           </p>
-                          <p style={{ margin: "0 0 4px 0", color: "#FF6B35" }}>
+                          {/* <p style={{ margin: "0 0 4px 0", color: "#FF6B35" }}>
                             {`3-Week Avg: $${data.movingAverage}k`}
-                          </p>
+                          </p> */}
                           <p style={{ margin: "0 0 4px 0", color: "#666" }}>
                             {`Total Orders: ${data.totalOrders}`}
                           </p>
-                          <p style={{ margin: "0", color: "#FF6B6B" }}>
+                          {/* <p style={{ margin: "0", color: "#FF6B6B" }}>
                             {`Linear Trend: $${data.trendline}k`}
-                          </p>
+                          </p> */}
                         </div>
                       );
                     }
@@ -901,16 +888,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                   animationDuration={1500}
                   name="Weekly Sales"
                 />
-                <Line
-                  type="monotone"
-                  dataKey="trendline"
-                  stroke="#FF6B6B"
-                  strokeWidth={3}
-                  strokeDasharray="5 5"
-                  dot={false}
-                  activeDot={{ r: 4, strokeWidth: 2 }}
-                  name="Linear Trend"
-                />
+
                 <Line
                   type="monotone"
                   dataKey="movingAverage"
@@ -919,7 +897,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                   strokeDasharray="8 4"
                   dot={{ r: 3, fill: "#FF6B35", strokeWidth: 2 }}
                   activeDot={{ r: 5, fill: "#FF6B35", strokeWidth: 2 }}
-                  name="3-Week Moving Average"
+                  name="Moving Average"
                 />
               </ComposedChart>
             </ResponsiveContainer>
