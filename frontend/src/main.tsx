@@ -43,7 +43,7 @@ const router = createBrowserRouter([
           {
             path: "",
             // Component: OverviewAnalyticsView,
-            Component: () => <Navigate to="/manage-reports" replace />,
+            Component: () => <Navigate to="/upload-excel" replace />,
           },
           {
             path: "manage-reports",
