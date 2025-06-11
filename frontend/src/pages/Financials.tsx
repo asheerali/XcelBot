@@ -116,7 +116,7 @@ const GradientCard = styled(Card)(({ theme }) => ({
 }));
 
 const MetricCard = styled(Card)(({ theme }) => ({
-  padding: theme.spacing(1),
+  padding: theme.spacing(2),
   textAlign: 'center',
   height: '100%',
   borderRadius: 12,
@@ -131,26 +131,12 @@ const MetricCard = styled(Card)(({ theme }) => ({
   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   position: 'relative',
   overflow: 'hidden',
-  '&::before': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-    opacity: 0,
-    transition: 'opacity 0.3s ease',
-  },
   '&:hover': {
     transform: 'translateY(-3px) scale(1.02)',
     boxShadow: `
       0 12px 32px ${alpha(theme.palette.common.black, 0.08)},
       0 4px 16px ${alpha(theme.palette.common.black, 0.04)}
     `,
-    '&::before': {
-      opacity: 1,
-    }
   }
 }));
 
@@ -200,6 +186,24 @@ const AnimatedTabs = styled(Tabs)(({ theme }) => ({
     ${alpha(theme.palette.background.default, 0.4)} 100%)`,
   backdropFilter: 'blur(10px)',
 }));
+
+// Color mapping for different metrics
+const getMetricColor = (label: string) => {
+  const colorMap: { [key: string]: string } = {
+    'Net Sales': '#3b82f6', // Blue
+    'Orders': '#10b981', // Green  
+    'Qty Sold': '#f59e0b', // Orange
+    'Avg Ticket': '#8b5cf6', // Purple
+    'Avg Order Value': '#8b5cf6', // Purple
+    'Average items per order': '#ef4444', // Red
+    'Food Cost %': '#ef4444', // Red
+    'Lbr %': '#ef4444', // Red
+    'SPMH': '#10b981', // Green
+    'LPMH': '#f59e0b', // Orange
+  };
+  
+  return colorMap[label] || '#6b7280'; // Default gray
+};
 
 // TabPanel Component
 interface TabPanelProps {
@@ -902,7 +906,7 @@ export function Financials() {
         const twLwChange = formatPercentageChange(metricData.twLwChange);
         
         let formattedValue = metricData.thisWeek;
-        let bottomLabel = '% Change';
+        let bottomLabel = '';
         
         if (metricName === 'Net Sales') {
           formattedValue = formatCurrency(metricData.thisWeek);
@@ -1226,8 +1230,6 @@ export function Financials() {
         </CardContent>
       </GradientCard>
 
-  
-
       {/* Enhanced Week-Over-Week Analysis Card */}
       <StyledCard 
         elevation={0}
@@ -1291,119 +1293,84 @@ export function Financials() {
             </Box>
           )}
           
-          {/* Enhanced Stats Grid */}
+          {/* Enhanced Stats Grid with colored borders and improved layout */}
           {!isLoading && !loading && (
             <>
               {statsData.length > 0 ? (
-                <Grid container spacing={1.5}>
+                <Grid container spacing={2}>
                   {/* First Row - 4 items */}
                   {statsData.slice(0, 4).map((stat, index) => (
                     <Grid item xs={6} sm={3} key={index}>
-                      <MetricCard elevation={0}>
+                      <MetricCard 
+                        elevation={0}
+                        sx={{
+                          '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: 4,
+                            background: getMetricColor(stat.label),
+                            borderRadius: '12px 12px 0 0',
+                          }
+                        }}
+                      >
+                        {/* Metric Value */}
                         <Typography 
-                          sx={{ 
-                            color: theme.palette.primary.main, 
-                            fontWeight: 600,
-                            fontSize: '0.8rem',
-                            mb: 0.5,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.02em'
-                          }}
-                        >
-                          {stat.label}
-                        </Typography>
-                        <Typography 
-                          variant="h6" 
+                          variant="h4" 
                           sx={{ 
                             fontWeight: 700,
-                            color: theme.palette.text.primary,
-                            mb: 0.5,
-                            fontSize: '1.2rem'
+                            color: getMetricColor(stat.label),
+                            mb: 1,
+                            fontSize: { xs: '1.5rem', sm: '1.75rem' }
                           }}
                         >
                           {stat.value}
                         </Typography>
+                        
+                        {/* Metric Label */}
+                        <Typography 
+                          sx={{ 
+                            color: theme.palette.text.primary, 
+                            fontWeight: 600,
+                            fontSize: '0.875rem',
+                            mb: 1,
+                            lineHeight: 1.2
+                          }}
+                        >
+                          {stat.label}
+                        </Typography>
+                        
+                        {/* vs. previous period change in single row */}
                         <Box sx={{ 
                           display: 'flex', 
                           alignItems: 'center', 
                           justifyContent: 'center',
-                          mb: 0.25,
-                          gap: 0.5
+                          gap: 1,
+                          flexWrap: 'wrap'
                         }}>
-                          {stat.changeDirection && (
-                            <span style={{ 
-                              color: stat.changeColor, 
-                              fontSize: '12px',
-                              fontWeight: 'bold'
-                            }}>
-                              {stat.changeDirection === 'up' ? '▲' : '▼'}
-                            </span>
-                          )}
                           <Typography 
+                            variant="body2" 
                             sx={{ 
-                              color: stat.changeColor || theme.palette.primary.main,
-                              fontSize: '0.8rem',
-                              fontWeight: 600
+                              color: alpha(theme.palette.text.secondary, 0.8),
+                              fontSize: '0.75rem',
+                              whiteSpace: 'nowrap'
                             }}
                           >
-                            {stat.bottomChange}
+                            vs. previous period
                           </Typography>
-                        </Box>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            color: alpha(theme.palette.text.secondary, 0.8),
-                            fontSize: '0.7rem',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.02em'
-                          }}
-                        >
-                          {stat.bottomLabel}
-                        </Typography>
-                      </MetricCard>
-                    </Grid>
-                  ))}
-                  
-                  {/* Second Row - 3 items centered */}
-                  <Grid item xs={12}>
-                    <Grid container spacing={1.5} justifyContent="center">
-                      {statsData.slice(4, 7).map((stat, index) => (
-                        <Grid item xs={6} sm={4} key={index + 4}>
-                          <MetricCard elevation={0}>
-                            <Typography 
-                              sx={{ 
-                                color: theme.palette.primary.main, 
-                                fontWeight: 600,
-                                fontSize: '0.8rem',
-                                mb: 0.5,
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.02em'
-                              }}
-                            >
-                              {stat.label}
-                            </Typography>
-                            <Typography 
-                              variant="h6" 
-                              sx={{ 
-                                fontWeight: 700,
-                                color: theme.palette.text.primary,
-                                mb: 0.5,
-                                fontSize: '1.2rem'
-                              }}
-                            >
-                              {stat.value}
-                            </Typography>
+                          
+                          {stat.bottomChange !== 'null' && stat.bottomChange !== '0%' ? (
                             <Box sx={{ 
                               display: 'flex', 
                               alignItems: 'center', 
-                              justifyContent: 'center',
-                              mb: 0.25,
                               gap: 0.5
                             }}>
                               {stat.changeDirection && (
                                 <span style={{ 
                                   color: stat.changeColor, 
-                                  fontSize: '12px',
+                                  fontSize: '10px',
                                   fontWeight: 'bold'
                                 }}>
                                   {stat.changeDirection === 'up' ? '▲' : '▼'}
@@ -1412,24 +1379,131 @@ export function Financials() {
                               <Typography 
                                 sx={{ 
                                   color: stat.changeColor || theme.palette.primary.main,
-                                  fontSize: '0.8rem',
+                                  fontSize: '0.75rem',
                                   fontWeight: 600
                                 }}
                               >
                                 {stat.bottomChange}
                               </Typography>
                             </Box>
+                          ) : (
                             <Typography 
-                              variant="body2" 
                               sx={{ 
-                                color: alpha(theme.palette.text.secondary, 0.8),
-                                fontSize: '0.7rem',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.02em'
+                                color: alpha(theme.palette.text.secondary, 0.6),
+                                fontSize: '0.75rem',
+                                fontStyle: 'italic'
                               }}
                             >
-                              {stat.bottomLabel}
+                              null
                             </Typography>
+                          )}
+                        </Box>
+                      </MetricCard>
+                    </Grid>
+                  ))}
+                  
+                  {/* Second Row - 3 items centered */}
+                  <Grid item xs={12}>
+                    <Grid container spacing={2} justifyContent="center">
+                      {statsData.slice(4, 7).map((stat, index) => (
+                        <Grid item xs={6} sm={4} key={index + 4}>
+                          <MetricCard 
+                            elevation={0}
+                            sx={{
+                              '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                height: 4,
+                                background: getMetricColor(stat.label),
+                                borderRadius: '12px 12px 0 0',
+                              }
+                            }}
+                          >
+                            {/* Metric Value */}
+                            <Typography 
+                              variant="h4" 
+                              sx={{ 
+                                fontWeight: 700,
+                                color: getMetricColor(stat.label),
+                                mb: 1,
+                                fontSize: { xs: '1.5rem', sm: '1.75rem' }
+                              }}
+                            >
+                              {stat.value}
+                            </Typography>
+                            
+                            {/* Metric Label */}
+                            <Typography 
+                              sx={{ 
+                                color: theme.palette.text.primary, 
+                                fontWeight: 600,
+                                fontSize: '0.875rem',
+                                mb: 1,
+                                lineHeight: 1.2
+                              }}
+                            >
+                              {stat.label}
+                            </Typography>
+                            
+                            {/* vs. previous period change in single row */}
+                            <Box sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              gap: 1,
+                              flexWrap: 'wrap'
+                            }}>
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  color: alpha(theme.palette.text.secondary, 0.8),
+                                  fontSize: '0.75rem',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                vs. previous period
+                              </Typography>
+                              
+                              {stat.bottomChange !== 'null' && stat.bottomChange !== '0%' ? (
+                                <Box sx={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: 0.5
+                                }}>
+                                  {stat.changeDirection && (
+                                    <span style={{ 
+                                      color: stat.changeColor, 
+                                      fontSize: '10px',
+                                      fontWeight: 'bold'
+                                    }}>
+                                      {stat.changeDirection === 'up' ? '▲' : '▼'}
+                                    </span>
+                                  )}
+                                  <Typography 
+                                    sx={{ 
+                                      color: stat.changeColor || theme.palette.primary.main,
+                                      fontSize: '0.75rem',
+                                      fontWeight: 600
+                                    }}
+                                  >
+                                    {stat.bottomChange}
+                                  </Typography>
+                                </Box>
+                              ) : (
+                                <Typography 
+                                  sx={{ 
+                                    color: alpha(theme.palette.text.secondary, 0.6),
+                                    fontSize: '0.75rem',
+                                    fontStyle: 'italic'
+                                  }}
+                                >
+                                  null
+                                </Typography>
+                              )}
+                            </Box>
                           </MetricCard>
                         </Grid>
                       ))}

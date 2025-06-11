@@ -45,13 +45,14 @@ const DebugDataDisplay = ({ table1Data }: { table1Data: any }) => {
   );
 };
 
-// Utility function to format change values with modern styling
+// Utility function to format change values with light colors
 const formatChange = (value: string) => {
   const numValue = parseFloat(value.replace('%', ''));
   const isPositive = numValue >= 0;
   return {
     value: value,
-    color: isPositive ? '#059669' : '#dc2626',
+    color: isPositive ? '#dcfce7' : '#fce8e6', // Very light green and light pink
+    textColor: isPositive ? '#166534' : '#dc2626', // Dark green and red text
     arrow: isPositive ? '▲' : '▼'
   };
 };
@@ -224,8 +225,10 @@ const ModernLineChart = ({ data, title, height = 300, dataKeys = ['This Week', '
   );
 };
 
-// Modern Bar Chart Component with real data and full width
-const ModernBarChart = ({ data, title, height = 300 }: any) => {
+// Modern Bar Chart Component with real data and hover functionality
+const ModernBarChart = ({ data, title, height = 300, dataKeys = ['This Week', 'Last Week', 'Last Year'] }: any) => {
+  const [hoveredBar, setHoveredBar] = React.useState<{index: number, keyIndex: number} | null>(null);
+  
   if (!data || data.length === 0) {
     return (
       <div style={{ 
@@ -245,7 +248,7 @@ const ModernBarChart = ({ data, title, height = 300 }: any) => {
     );
   }
 
-  const maxValue = Math.max(...data.map((d: any) => Math.max(d['This Week'] || 0, d['Last Week'] || 0, d['Last Year'] || 0)));
+  const maxValue = Math.max(...data.map((d: any) => Math.max(...dataKeys.map(key => d[key] || 0))));
   const barWidth = 20;
   const groupWidth = 80;
   
@@ -257,7 +260,13 @@ const ModernBarChart = ({ data, title, height = 300 }: any) => {
     return 100 + (index * groupWidth) + (barIndex * (barWidth + 4));
   };
 
-  const colors = ['#3b82f6', '#f59e0b', '#10b981'];
+  const colors = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444'];
+  const labels = ['This Week', 'Last Week', 'Last Year', 'L4wt', 'Budget'];
+
+  // Calculate total sum for all data points
+  const totalSum = data.reduce((sum: number, d: any) => {
+    return sum + dataKeys.reduce((daySum: number, key: string) => daySum + (d[key] || 0), 0);
+  }, 0);
 
   return (
     <div style={{ 
@@ -268,7 +277,8 @@ const ModernBarChart = ({ data, title, height = 300 }: any) => {
       border: '1px solid #e2e8f0',
       width: '100%',
       boxSizing: 'border-box',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      position: 'relative'
     }}>
       <h3 style={{ 
         margin: '0 0 28px 0', 
@@ -279,6 +289,49 @@ const ModernBarChart = ({ data, title, height = 300 }: any) => {
       }}>
         {title}
       </h3>
+      
+      {/* Hover tooltip */}
+      {hoveredBar && (
+        <div style={{
+          position: 'absolute',
+          top: '80px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(0,0,0,0.9)',
+          color: 'white',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          fontSize: '14px',
+          fontWeight: '600',
+          zIndex: 1000,
+          whiteSpace: 'nowrap',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+        }}>
+          <div style={{ marginBottom: '8px' }}>
+            {data[hoveredBar.index].Day || data[hoveredBar.index].day || data[hoveredBar.index].label}
+          </div>
+          <div style={{ marginBottom: '4px' }}>
+            Total Sum: {totalSum.toFixed(1)}
+          </div>
+          {dataKeys.map((key: string, idx: number) => (
+            <div key={key} style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
+              marginBottom: '2px'
+            }}>
+              <div style={{ 
+                width: '12px', 
+                height: '12px', 
+                backgroundColor: colors[idx] || '#64748b',
+                borderRadius: '2px' 
+              }}></div>
+              {labels[idx] || key}: {(data[hoveredBar.index][key] || 0).toFixed(1)}
+            </div>
+          ))}
+        </div>
+      )}
+
       <div style={{ overflow: 'auto', width: '100%' }}>
         <svg width="100%" height={height} viewBox="0 0 700 300" style={{ overflow: 'visible', minWidth: '600px' }}>
           {/* Grid lines */}
@@ -297,33 +350,27 @@ const ModernBarChart = ({ data, title, height = 300 }: any) => {
           {/* Bars */}
           {data.map((d: any, i: number) => (
             <g key={i}>
-              <rect
-                x={getX(i, 0)}
-                y={getY(d['This Week'] || 0)}
-                width={barWidth}
-                height={(d['This Week'] || 0) / maxValue * (height - 140)}
-                fill={colors[0]}
-                rx="6"
-                style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
-              />
-              <rect
-                x={getX(i, 1)}
-                y={getY(d['Last Week'] || 0)}
-                width={barWidth}
-                height={(d['Last Week'] || 0) / maxValue * (height - 140)}
-                fill={colors[1]}
-                rx="6"
-                style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
-              />
-              <rect
-                x={getX(i, 2)}
-                y={getY(d['Last Year'] || 0)}
-                width={barWidth}
-                height={(d['Last Year'] || 0) / maxValue * (height - 140)}
-                fill={colors[2]}
-                rx="6"
-                style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
-              />
+              {dataKeys.map((key: string, keyIndex: number) => {
+                if (keyIndex >= colors.length) return null;
+                
+                return (
+                  <rect
+                    key={key}
+                    x={getX(i, keyIndex)}
+                    y={getY(d[key] || 0)}
+                    width={barWidth}
+                    height={(d[key] || 0) / maxValue * (height - 140)}
+                    fill={colors[keyIndex]}
+                    rx="6"
+                    style={{ 
+                      filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={() => setHoveredBar({index: i, keyIndex})}
+                    onMouseLeave={() => setHoveredBar(null)}
+                  />
+                );
+              })}
             </g>
           ))}
           
@@ -339,7 +386,7 @@ const ModernBarChart = ({ data, title, height = 300 }: any) => {
               fontWeight="600"
               transform={`rotate(-45, ${getX(i, 1)}, ${height - 30})`}
             >
-              {d.Day}
+              {d.Day || d.day || d.label || i + 1}
             </text>
           ))}
           
@@ -362,17 +409,260 @@ const ModernBarChart = ({ data, title, height = 300 }: any) => {
       
       {/* Legend */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginTop: '20px', flexWrap: 'wrap' }}>
+        {dataKeys.map((key: string, index: number) => {
+          if (index >= colors.length) return null;
+          
+          return (
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ 
+                width: '20px', 
+                height: '20px', 
+                background: colors[index], 
+                borderRadius: '6px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}></div>
+              <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>
+                {labels[index] || key}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// Modern Single Bar Chart Component with hover breakdown and moving average
+const ModernSingleBarChart = ({ data, title, height = 300, dataKeys = ['This Week', 'Last Week', 'Last Year'] }: any) => {
+  const [hoveredBar, setHoveredBar] = React.useState<number | null>(null);
+  
+  if (!data || data.length === 0) {
+    return (
+      <div style={{ 
+        padding: '32px', 
+        background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', 
+        borderRadius: '24px', 
+        boxShadow: '0 20px 40px rgba(0,0,0,0.08), 0 8px 25px rgba(0,0,0,0.04)',
+        border: '1px solid #e2e8f0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: height,
+        width: '100%'
+      }}>
+        <span style={{ color: '#64748b', fontSize: '16px', fontWeight: '500' }}>No data available for {title}</span>
+      </div>
+    );
+  }
+
+  // Calculate total for each day
+  const processedData = data.map((d: any) => ({
+    ...d,
+    total: dataKeys.reduce((sum: number, key: string) => sum + (d[key] || 0), 0)
+  }));
+
+  // Calculate 1-day moving average (current day)
+  const movingAverageData = processedData.map((d: any, index: number) => ({
+    ...d,
+    movingAverage: d.total // 1-day moving average is just the current day value
+  }));
+
+  const maxValue = Math.max(...processedData.map((d: any) => d.total));
+  const barWidth = 40;
+  
+  const getY = (value: number) => {
+    return height - 80 - (value / maxValue) * (height - 140);
+  };
+  
+  const getX = (index: number) => {
+    return 100 + (index * 80) + (barWidth / 2);
+  };
+
+  const colors = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444'];
+  const labels = ['This Week', 'Last Week', 'Last Year', 'L4wt', 'Budget'];
+
+  return (
+    <div style={{ 
+      padding: '32px', 
+      background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', 
+      borderRadius: '24px', 
+      boxShadow: '0 20px 40px rgba(0,0,0,0.08), 0 8px 25px rgba(0,0,0,0.04)',
+      border: '1px solid #e2e8f0',
+      width: '100%',
+      boxSizing: 'border-box',
+      overflow: 'hidden',
+      position: 'relative'
+    }}>
+      <h3 style={{ 
+        margin: '0 0 28px 0', 
+        fontSize: '24px', 
+        fontWeight: '700', 
+        color: '#1e293b',
+        letterSpacing: '-0.01em'
+      }}>
+        {title}
+      </h3>
+      
+      {/* Hover tooltip */}
+      {hoveredBar !== null && (
+        <div style={{
+          position: 'absolute',
+          top: '80px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(0,0,0,0.9)',
+          color: 'white',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          fontSize: '14px',
+          fontWeight: '600',
+          zIndex: 1000,
+          whiteSpace: 'nowrap',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+        }}>
+          <div style={{ marginBottom: '8px' }}>
+            {data[hoveredBar].Day || data[hoveredBar].day || data[hoveredBar].label}
+          </div>
+          <div style={{ marginBottom: '4px' }}>
+            Total: {processedData[hoveredBar].total.toFixed(1)}
+          </div>
+          <div style={{ marginBottom: '4px' }}>
+            Moving Avg: {movingAverageData[hoveredBar].movingAverage.toFixed(1)}
+          </div>
+          {dataKeys.map((key: string, idx: number) => (
+            <div key={key} style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
+              marginBottom: '2px'
+            }}>
+              <div style={{ 
+                width: '12px', 
+                height: '12px', 
+                backgroundColor: colors[idx] || '#64748b',
+                borderRadius: '2px' 
+              }}></div>
+              {labels[idx] || key}: {(data[hoveredBar][key] || 0).toFixed(1)}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ overflow: 'auto', width: '100%' }}>
+        <svg width="100%" height={height} viewBox="0 0 700 300" style={{ overflow: 'visible', minWidth: '600px' }}>
+          {/* Grid lines */}
+          {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
+            <line
+              key={i}
+              x1="100"
+              y1={70 + ratio * (height - 140)}
+              x2="680"
+              y2={70 + ratio * (height - 140)}
+              stroke="#f1f5f9"
+              strokeWidth="1"
+            />
+          ))}
+          
+          {/* Single bars for totals */}
+          {processedData.map((d: any, i: number) => (
+            <rect
+              key={i}
+              x={getX(i) - barWidth / 2}
+              y={getY(d.total)}
+              width={barWidth}
+              height={(d.total / maxValue) * (height - 140)}
+              fill="#3b82f6"
+              rx="6"
+              style={{ 
+                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={() => setHoveredBar(i)}
+              onMouseLeave={() => setHoveredBar(null)}
+            />
+          ))}
+
+          {/* Moving average line */}
+          <polyline
+            fill="none"
+            stroke="#ef4444"
+            strokeWidth="3"
+            strokeDasharray="5,5"
+            points={movingAverageData.map((d: any, i: number) => `${getX(i)},${getY(d.movingAverage)}`).join(' ')}
+            style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
+          />
+
+          {/* Moving average points */}
+          {movingAverageData.map((d: any, i: number) => (
+            <circle 
+              key={`ma-${i}`}
+              cx={getX(i)} 
+              cy={getY(d.movingAverage)} 
+              r="4" 
+              fill="#ef4444" 
+              stroke="#ffffff"
+              strokeWidth="2"
+              style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' }}
+            />
+          ))}
+          
+          {/* X-axis labels */}
+          {processedData.map((d: any, i: number) => (
+            <text
+              key={i}
+              x={getX(i)}
+              y={height - 30}
+              textAnchor="middle"
+              fontSize="12"
+              fill="#64748b"
+              fontWeight="600"
+            >
+              {d.Day || d.day || d.label || i + 1}
+            </text>
+          ))}
+          
+          {/* Y-axis labels */}
+          {[0, maxValue / 2, maxValue].map((value, i) => (
+            <text
+              key={i}
+              x="90"
+              y={getY(value) + 4}
+              textAnchor="end"
+              fontSize="14"
+              fill="#64748b"
+              fontWeight="600"
+            >
+              {value.toFixed(0)}
+            </text>
+          ))}
+        </svg>
+      </div>
+      
+      {/* Legend showing that it's total with moving average */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginTop: '20px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '20px', height: '20px', background: colors[0], borderRadius: '6px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}></div>
-          <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>This Week</span>
+          <div style={{ 
+            width: '20px', 
+            height: '20px', 
+            background: '#3b82f6', 
+            borderRadius: '6px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+          }}></div>
+          <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>
+            Total (Hover for breakdown)
+          </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '20px', height: '20px', background: colors[1], borderRadius: '6px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}></div>
-          <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>Last Week</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '20px', height: '20px', background: colors[2], borderRadius: '6px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}></div>
-          <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>Last Year</span>
+          <div style={{ 
+            width: '20px', 
+            height: '4px', 
+            background: '#ef4444', 
+            borderRadius: '2px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+          }}></div>
+          <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '600' }}>
+            Moving Average
+          </span>
         </div>
       </div>
     </div>
@@ -519,20 +809,24 @@ const ResponsiveFinancialTable = ({ title, mainValue, data, columns, isCompact =
                   }}>
                     {row['Time Period']}
                   </td>
-                  <td style={{ padding: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ 
-                        color: formatChange(row['% Change'] || '0%').color, 
-                        fontSize: '14px',
-                        fontWeight: '700'
-                      }}>
+                  <td style={{ 
+                    padding: '16px',
+                    textAlign: 'center',
+                    backgroundColor: formatChange(row['% Change'] || '0%').color,
+                    color: formatChange(row['% Change'] || '0%').textColor,
+                    fontWeight: '700',
+                    fontSize: '14px'
+                  }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '4px',
+                      justifyContent: 'center'
+                    }}>
+                      <span style={{ fontSize: '12px' }}>
                         {formatChange(row['% Change'] || '0%').arrow}
                       </span>
-                      <span style={{ 
-                        color: formatChange(row['% Change'] || '0%').color, 
-                        fontWeight: '700',
-                        fontSize: '15px'
-                      }}>
+                      <span>
                         {row['% Change']}
                       </span>
                     </div>
@@ -662,19 +956,24 @@ const MetricCard = ({ title, value, data }: any) => {
                     }}>
                       {row['$ Change']}
                     </td>
-                    <td style={{ padding: '14px 12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ 
-                          color: formatChange(row['% Change'] || '0%').color, 
-                          fontSize: '12px',
-                          fontWeight: '700'
-                        }}>
+                    <td style={{ 
+                      padding: '14px 12px',
+                      textAlign: 'center',
+                      backgroundColor: formatChange(row['% Change'] || '0%').color,
+                      color: formatChange(row['% Change'] || '0%').textColor,
+                      fontWeight: '700',
+                      fontSize: '12px'
+                    }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '4px',
+                        justifyContent: 'center'
+                      }}>
+                        <span style={{ fontSize: '10px' }}>
                           {formatChange(row['% Change'] || '0%').arrow}
                         </span>
-                        <span style={{ 
-                          color: formatChange(row['% Change'] || '0%').color, 
-                          fontWeight: '700'
-                        }}>
+                        <span>
                           {row['% Change']}
                         </span>
                       </div>
@@ -719,7 +1018,7 @@ const ComprehensiveFinancialDashboard: React.FC<FinancialDashboardProps> = ({ fi
 
   const formatDollar = (value: number): string => {
     if (isNaN(value) || value === null || value === undefined) return '$0.00';
-    return `$${value.toFixed(2)}`;
+    return `${value.toFixed(2)}`;
   };
 
   // Extract real data from tables
@@ -943,12 +1242,12 @@ const ComprehensiveFinancialDashboard: React.FC<FinancialDashboardProps> = ({ fi
 
       {/* Charts Section - Weekly Sales and Average Ticket */}
       <div style={chartsGrid}>
-        <ModernLineChart 
+        <ModernSingleBarChart 
           data={weeklySalesData} 
           title="Weekly Sales Trends" 
           dataKeys={['This Week', 'Last Week', 'Last Year', 'L4wt', 'Bdg']}
         />
-        <ModernLineChart 
+        <ModernSingleBarChart 
           data={avgTicketByDayData} 
           title="Average Ticket by Day" 
           dataKeys={['This Week', 'Last Week', 'Last Year', 'L4wt', 'Bdg']}
