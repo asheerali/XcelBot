@@ -16,11 +16,12 @@ from fastapi_mail import MessageSchema, MessageType
 from starlette.background import BackgroundTasks
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 
-router = APIRouter(prefix="", tags=["Authentication"])
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 SECRET_KEY = os.getenv("SECRET_KEY", "secret")  # Replace in prod
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 
 # ---------------------- SCHEMAS ----------------------
@@ -90,11 +91,14 @@ class ResetPasswordInput(BaseModel):
 reset_tokens = {}
 
 
+from fastapi import Request
+
 @router.post("/forgot-password")
 async def forgot_password(
     request: ForgotPasswordRequest,
     db: Session = Depends(get_db),
-    background_tasks: BackgroundTasks = None
+    background_tasks: BackgroundTasks = None,
+    fastapi_request: Request = None  # gets the domain from the request
 ):
     user = db.query(User).filter(User.email == request.email).first()
     if not user:
@@ -103,7 +107,11 @@ async def forgot_password(
     token = secrets.token_urlsafe(32)
     reset_tokens[token] = user.email
 
-    reset_link = f"http://localhost:3000/reset-password?token={token}"  # Replace with your actual frontend link
+    origin = fastapi_request.headers.get("origin", "http://localhost:5173")
+    reset_link = f"{origin}/reset-password?token={token}"
+
+
+    # reset_link = f"http://localhost:3000/reset-password?token={token}"  # Replace with your actual frontend link
 
     message = MessageSchema(
         subject="Reset Your Password",

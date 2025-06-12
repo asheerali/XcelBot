@@ -1,21 +1,21 @@
-import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import * as React from "react";
 import {
-  TextField,
+  Box,
   Button,
   Container,
-  Paper,
+  TextField,
   Typography,
-  Box,
+  Paper,
   Alert,
 } from "@mui/material";
+import { Link, useNavigate } from "react-router-dom";
 import { API_URL_Local } from "../constants";
 import { useSession } from "../SessionContext";
 
-export default function SignInView() {
+const SignUpView: React.FC = () => {
+  const [error, setError] = React.useState<string | null>(null);
   const navigate = useNavigate();
   const { setSession } = useSession();
-  const [error, setError] = React.useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -24,24 +24,29 @@ export default function SignInView() {
     const payload = {
       email: formData.get("email"),
       password: formData.get("password"),
+      first_name: formData.get("first_name"),
+      last_name: formData.get("last_name"),
+      phone_number: formData.get("phone_number"),
+      role: "admin", // default role
     };
 
     try {
-      const res = await fetch(`${API_URL_Local}/auth/signin`, {
+      const res = await fetch(`${API_URL_Local}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || "Login failed");
+        const errData = await res.json();
+        throw new Error(errData.detail || "Sign up failed");
       }
 
       const { access_token } = await res.json();
+
       const session = {
         user: {
-          name: payload.email.split("@")[0],
+          name: `${payload.first_name} ${payload.last_name}`,
           email: payload.email,
         },
       };
@@ -49,17 +54,18 @@ export default function SignInView() {
       localStorage.setItem("token", access_token);
       localStorage.setItem("session", JSON.stringify(session));
       setSession(session);
-      navigate("/");
-    } catch (err: any) {
-      setError(err.message);
+
+      navigate("/"); // redirect to main dashboard
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error occurred");
     }
   };
 
   return (
     <Container maxWidth="sm">
-      <Paper sx={{ p: 4, mt: 8 }}>
+      <Paper elevation={3} sx={{ padding: 4, marginTop: 8 }}>
         <Typography variant="h4" align="center" gutterBottom>
-          Sign In
+          Sign Up
         </Typography>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -68,9 +74,30 @@ export default function SignInView() {
         )}
         <Box component="form" onSubmit={handleSubmit}>
           <TextField
+            label="First Name"
+            name="first_name"
+            fullWidth
+            required
+            margin="normal"
+          />
+          <TextField
+            label="Last Name"
+            name="last_name"
+            fullWidth
+            required
+            margin="normal"
+          />
+          <TextField
             label="Email"
             name="email"
             type="email"
+            fullWidth
+            required
+            margin="normal"
+          />
+          <TextField
+            label="Phone Number"
+            name="phone_number"
             fullWidth
             required
             margin="normal"
@@ -83,17 +110,22 @@ export default function SignInView() {
             required
             margin="normal"
           />
-          <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>
-            Sign In
+          <Button
+            variant="contained"
+            color="primary"
+            type="submit"
+            fullWidth
+            sx={{ mt: 2 }}
+          >
+            Sign Up
           </Button>
         </Box>
         <Typography variant="body2" align="center" sx={{ mt: 2 }}>
-          Don't have an account? <Link to="/sign-up">Sign Up</Link>
-        </Typography>
-        <Typography variant="body2" align="center" sx={{ mt: 1 }}>
-          Forgot your password? <Link to="/forgot-password">Reset here</Link>
+          Already have an account? <Link to="/sign-in">Sign In</Link>
         </Typography>
       </Paper>
     </Container>
   );
-}
+};
+
+export default SignUpView;

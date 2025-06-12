@@ -32,7 +32,217 @@ import DateRangeSelector from "./components/DateRangeSelector";
 import SalesSplitDashboard from "./components/SalesSplitDashboard";
 import ComprehensiveFinancialDashboard from "./components/ComprehensiveFinancialDashboard";
 import HomePage from "./pages/HomePage";
+import { SignInPage } from "./layouts/components/SignInPage";
+import SignInView from "./pages/SignInView";
+import SignUpView from "./pages/SignUpView";
+import ForgotPasswordView from "./pages/ForgotPasswordView";
+import ResetPasswordView from "./pages/ResetPasswordView";
+
+// const router = createBrowserRouter([
+//   {
+//     Component: App,
+//     children: [
+//       {
+//         path: "",
+//         Component: Layout,
+//         children: [
+//           {
+//             path: "",
+//             // Component: OverviewAnalyticsView,
+//             Component: () => <Navigate to="/manage-reports" replace />,
+//           },
+//           {
+//             path: "manage-reports",
+//             Component: ExcelImport,
+//           },
+//           {
+//             path: "Financials",
+//             Component: Financials,
+//           },
+//           {
+//             path: "Saleswide",
+//             Component: SalesDashboard,
+//           },
+//           {
+//             path: "Productmix",
+//             Component: ProductMixDashboard,
+//           },
+//           {
+//             path: "SalesSplitDashboard",
+//             Component: SalesSplitDashboard,
+//           },
+
+//           {
+//             path: "daterange",
+//             Component: DateRangeSelector,
+//           },
+//           {
+//             path: "ComprehensiveFinancialDashboard",
+//             Component: ComprehensiveFinancialDashboard,
+//           },
+
+//           {
+//             path: "upload-excel", // New route for the excel upload page
+//             Component: ExcelUploadPage,
+//           },
+//           {
+//             path: "HelpCenter",
+//             Component: HelpCenter,
+//           },
+//           {
+//             path: "faq",
+//             Component: Faq,
+//           },
+//           {
+//             path: "ContactUs",
+//             Component: ContactUs,
+//           },
+//           {
+//             path: "ContactTeam",
+//             Component: ContactTeam,
+//           },
+//           {
+//             path: "Payments",
+//             Component: PaymentPage,
+//           },
+//           {
+//             path: "UserPermissions",
+//             Component: UserPermissions,
+//           },
+//           {
+//             path: "ComingSoon",
+//             Component: ComingSoon,
+//           },
+//           {
+//             path: "sign-in",
+//             Component: SignInView,
+//           },
+//           {
+//             path: "*",
+//             Component: NotFoundView,
+//           },
+//         ],
+//       },
+//       {
+//         path: "HomePage",
+//         Component: HomePage,
+//       },
+
+//       {
+//         path: "*",
+//         Component: NotFoundView,
+//       },
+//     ],
+//   },
+// ]);
+
+// const router = createBrowserRouter([
+//   {
+//     path: "/sign-in",
+//     Component: SignInView,
+//   },
+//   {
+//     Component: App,
+//     children: [
+//       {
+//         path: "",
+//         Component: Layout,
+//         children: [
+//           {
+//             path: "",
+//             Component: () => <Navigate to="/manage-reports" replace />,
+//           },
+//           {
+//             path: "manage-reports",
+//             Component: ExcelImport,
+//           },
+//           {
+//             path: "Financials",
+//             Component: Financials,
+//           },
+//           {
+//             path: "Saleswide",
+//             Component: SalesDashboard,
+//           },
+//           {
+//             path: "Productmix",
+//             Component: ProductMixDashboard,
+//           },
+//           {
+//             path: "SalesSplitDashboard",
+//             Component: SalesSplitDashboard,
+//           },
+//           {
+//             path: "daterange",
+//             Component: DateRangeSelector,
+//           },
+//           {
+//             path: "ComprehensiveFinancialDashboard",
+//             Component: ComprehensiveFinancialDashboard,
+//           },
+//           {
+//             path: "upload-excel",
+//             Component: ExcelUploadPage,
+//           },
+//           {
+//             path: "HelpCenter",
+//             Component: HelpCenter,
+//           },
+//           {
+//             path: "faq",
+//             Component: Faq,
+//           },
+//           {
+//             path: "ContactUs",
+//             Component: ContactUs,
+//           },
+//           {
+//             path: "ContactTeam",
+//             Component: ContactTeam,
+//           },
+//           {
+//             path: "Payments",
+//             Component: PaymentPage,
+//           },
+//           {
+//             path: "UserPermissions",
+//             Component: UserPermissions,
+//           },
+//           {
+//             path: "ComingSoon",
+//             Component: ComingSoon,
+//           },
+//           {
+//             path: "*",
+//             Component: NotFoundView,
+//           },
+//         ],
+//       },
+//       {
+//         path: "HomePage",
+//         Component: HomePage,
+//       },
+//     ],
+//   },
+// ]);
+
 const router = createBrowserRouter([
+  {
+    path: "/sign-in",
+    Component: SignInView,
+  },
+  {
+    path: "/sign-up",
+    Component: SignUpView,
+  },
+  {
+    path: "/forgot-password",
+    Component: ForgotPasswordView,
+  },
+  {
+    path: "/reset-password",
+    Component: ResetPasswordView,
+  },
   {
     Component: App,
     children: [
@@ -42,7 +252,6 @@ const router = createBrowserRouter([
         children: [
           {
             path: "",
-            // Component: OverviewAnalyticsView,
             Component: () => <Navigate to="/manage-reports" replace />,
           },
           {
@@ -57,25 +266,24 @@ const router = createBrowserRouter([
             path: "Saleswide",
             Component: SalesDashboard,
           },
-           {
+          {
             path: "Productmix",
             Component: ProductMixDashboard,
           },
-           {
+          {
             path: "SalesSplitDashboard",
             Component: SalesSplitDashboard,
           },
-          
-           {
+          {
             path: "daterange",
             Component: DateRangeSelector,
-          },{
+          },
+          {
             path: "ComprehensiveFinancialDashboard",
             Component: ComprehensiveFinancialDashboard,
           },
-        
           {
-            path: "upload-excel", // New route for the excel upload page
+            path: "upload-excel",
             Component: ExcelUploadPage,
           },
           {
@@ -106,22 +314,15 @@ const router = createBrowserRouter([
             path: "ComingSoon",
             Component: ComingSoon,
           },
-
           {
             path: "*",
             Component: NotFoundView,
           },
         ],
       },
-       {
+      {
         path: "HomePage",
         Component: HomePage,
-         
-        },
-      
-      {
-        path: "*",
-        Component: NotFoundView,
       },
     ],
   },
@@ -130,11 +331,12 @@ const router = createBrowserRouter([
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Provider store={store}>
-            <PersistGate loading={null} persistor={persistor}> {/* NEW */}
-
-      <HelmetProvider>
-        <RouterProvider router={router} />
-      </HelmetProvider>
+      <PersistGate loading={null} persistor={persistor}>
+        {" "}
+        {/* NEW */}
+        <HelmetProvider>
+          <RouterProvider router={router} />
+        </HelmetProvider>
       </PersistGate>
     </Provider>
   </React.StrictMode>
