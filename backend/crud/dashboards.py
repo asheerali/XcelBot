@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models_db.dashboards import Dashboard
+from models.dashboards import Dashboard
 from schemas.dashboards import DashboardCreate
 
 def create_dashboard(db: Session, dashboard: DashboardCreate):

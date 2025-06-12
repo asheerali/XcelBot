@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from schemas.file_permissions import FilePermission, FilePermissionCreate
 from crud import file_permissions as perm_crud
-from database import get_db
+from app import get_db
 
 router = APIRouter(
     prefix="/permissions/files",

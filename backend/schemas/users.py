@@ -1,7 +1,11 @@
+# schemas/users.py
+
 from pydantic import BaseModel, EmailStr
 from enum import Enum
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
+
 
 class RoleEnum(str, Enum):
     superuser = "superuser"
@@ -17,6 +21,7 @@ class UserBase(BaseModel):
     phone_number: Optional[str] = None  
     theme: bool = False
     role: RoleEnum
+    company_id: UUID
 
 class UserCreate(UserBase):
     password: str  # Plain password for registration

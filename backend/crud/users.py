@@ -1,5 +1,7 @@
+# crud/users.py
+
 from sqlalchemy.orm import Session
-from models_db import users as user_model
+from models import users as user_model
 from schemas import users as user_schema
 from datetime import datetime
 from passlib.hash import bcrypt
@@ -25,8 +27,15 @@ def create_user(db: Session, user: user_schema.UserCreate):
     db.refresh(db_user)
     return db_user
 
-def get_users(db: Session):
-    return db.query(user_model.User).all()
+# def get_users(db: Session):
+#     return db.query(user_model.User).all()
+
+def get_users(db: Session, current_user: user_model.User):
+    query = db.query(user_model.User)
+    if current_user.role != "superuser":
+        query = query.filter(user_model.User.company_id == current_user.company_id)
+    return query.all()
+
 
 def get_user(db: Session, user_id: int):
     return db.query(user_model.User).filter(user_model.User.id == user_id).first()

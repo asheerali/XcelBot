@@ -1,14 +1,35 @@
-from fastapi import FastAPI, Body
+from typing import Annotated
+from fastapi import Depends, FastAPI, Body
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from datetime import datetime, timedelta
 
+from requests import Session
+from database import engine, SessionLocal
 from routers import excel_upload, sales_split_filter, health, companywide_filter, pmix_filter, financials_filter
 # Import from local modules
-
-
+from models import users, payments, subscriptions, stores, dashboards, user_dashboard_permissions, uploaded_files, file_permissions, companies
 # Initialize FastAPI app
 app = FastAPI()
+users.Base.metadata.create_all(bind=engine)
+user_dashboard_permissions.Base.metadata.create_all(bind=engine)
+uploaded_files.Base.metadata.create_all(bind=engine)
+subscriptions.Base.metadata.create_all(bind=engine)
+stores.Base.metadata.create_all(bind=engine)
+payments.Base.metadata.create_all(bind=engine)
+file_permissions.Base.metadata.create_all(bind=engine)
+companies.Base.metadata.create_all(bind=engine)
+
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+        
+db_dependency = Annotated[Session, Depends(get_db)]
 
 # Enable CORS for React frontend
 app.add_middleware(
@@ -58,6 +79,21 @@ app.include_router(dashboards.router)
 app.include_router(user_dashboard_permissions.router)
 app.include_router(uploaded_files.router)
 app.include_router(file_permissions.router)
+
+from dependencies.init_superuser import create_default_superusers
+
+@app.on_event("startup")
+def startup_event():
+    db = SessionLocal()
+    try:
+        create_default_superusers(db)
+    finally:
+        db.close()
+
+
+from routers import auth
+app.include_router(auth.router)
+
 
 
 if __name__ == "__main__":
