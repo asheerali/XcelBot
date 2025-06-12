@@ -1,7 +1,11 @@
+# model/users.py
+
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Enum as SQLAEnum
 from datetime import datetime
 from database import Base
 import enum
+from sqlalchemy.dialects.postgresql import UUID
+
 
 class RoleEnum(str, enum.Enum):
     superuser = "superuser"
@@ -23,5 +27,7 @@ class User(Base):
     role = Column(SQLAEnum(RoleEnum), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=True)
+
     # store_id = Column(Integer, ForeignKey("stores.id"))
 

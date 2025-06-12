@@ -10,13 +10,15 @@ def create_default_superusers(db: Session):
             "password": "admin",
             "first_name": "asheer",
             "last_name": "ali",
-            "phone_number": "+491742555647"
+            "phone_number": "+491742555647",
+            "role": RoleEnum.superuser
         },
         {
             "email": "musawar.soomro25@gmail.com",
             "password": "admin",
             "first_name": "musawar",
-            "last_name": "soomro"
+            "last_name": "soomro",
+            "role": RoleEnum.manager
         }
     ]
 
@@ -28,11 +30,12 @@ def create_default_superusers(db: Session):
                 password_hash=bcrypt.hash(user_data["password"]),
                 first_name=user_data["first_name"],
                 last_name=user_data["last_name"],
-                role=RoleEnum.superuser,
+                phone_number=user_data.get("phone_number"),
+                role=user_data["role"],
             )
             db.add(user)
-            print(f"✅ Superuser {user_data['email']} created.")
+            print(f"✅ {user_data['role']} {user_data['email']} created.")
         else:
-            print(f"ℹ️ Superuser {user_data['email']} already exists.")
+            print(f"ℹ️ User {user_data['email']} already exists.")
 
     db.commit()
