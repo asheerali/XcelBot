@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models_db.file_permissions import FilePermission
+from models.file_permissions import FilePermission
 from schemas.file_permissions import FilePermissionCreate
 
 def assign_file_permission(db: Session, perm: FilePermissionCreate):

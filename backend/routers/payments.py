@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from crud import payments as payment_crud
 from schemas import payments as payment_schema
-from database import get_db
+from app import get_db
 
 router = APIRouter(
     prefix="/payments",

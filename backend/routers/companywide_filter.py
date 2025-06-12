@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 import traceback
 # Import from local modules
-from models import FinancialCompanyWideUploadRequest, ExcelUploadResponse , DashboardResponse
+from models_pydantic import FinancialCompanyWideUploadRequest, ExcelUploadResponse , DashboardResponse
 from companywide_dashboard.companywide_processor import process_companywide_file
 
 router = APIRouter(

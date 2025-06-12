@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models_db.stores import Store
+from models.stores import Store
 from schemas.stores import StoreCreate
 
 def create_store(db: Session, store: StoreCreate):

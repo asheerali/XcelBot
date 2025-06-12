@@ -11,7 +11,7 @@ from dateutil.relativedelta import relativedelta
 from fastapi import Request
 
 # Import from local modules
-from models import ExcelUploadRequest, ExcelFilterRequest, ExcelUploadResponse, SalesAnalyticsResponse, DualDashboardResponse, DashboardResponse
+from models_pydantic import ExcelUploadRequest, ExcelFilterRequest, ExcelUploadResponse, SalesAnalyticsResponse, DualDashboardResponse, DashboardResponse
 from excel_processor import process_excel_file
 from utils import find_file_in_directory
 from sales_analytics import generate_sales_analytics

@@ -1,14 +1,34 @@
-from fastapi import FastAPI, Body
+from typing import Annotated
+from fastapi import Depends, FastAPI, Body
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from datetime import datetime, timedelta
 
+from requests import Session
+from database import engine, SessionLocal
 from routers import excel_upload, sales_split_filter, health, companywide_filter, pmix_filter, financials_filter
 # Import from local modules
-
-
+from models import users, payments, subscriptions, stores, dashboards, user_dashboard_permissions, uploaded_files, file_permissions
 # Initialize FastAPI app
 app = FastAPI()
+users.Base.metadata.create_all(bind=engine)
+user_dashboard_permissions.Base.metadata.create_all(bind=engine)
+uploaded_files.Base.metadata.create_all(bind=engine)
+subscriptions.Base.metadata.create_all(bind=engine)
+stores.Base.metadata.create_all(bind=engine)
+payments.Base.metadata.create_all(bind=engine)
+file_permissions.Base.metadata.create_all(bind=engine)
+
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+        
+db_dependency = Annotated[Session, Depends(get_db)]
 
 # Enable CORS for React frontend
 app.add_middleware(
