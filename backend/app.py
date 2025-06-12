@@ -48,7 +48,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to the Excel Processing API!"}
+    return {"message": "Welcome to the Excel Processing API! with cidc"}
     
 # Filter endpoint
 # NEW ENDPOINT: Analytics endpoint
