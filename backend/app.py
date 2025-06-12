@@ -79,6 +79,21 @@ app.include_router(user_dashboard_permissions.router)
 app.include_router(uploaded_files.router)
 app.include_router(file_permissions.router)
 
+from dependencies.init_superuser import create_default_superusers
+
+@app.on_event("startup")
+def startup_event():
+    db = SessionLocal()
+    try:
+        create_default_superusers(db)
+    finally:
+        db.close()
+
+
+from routers import auth
+app.include_router(auth.router)
+
+
 
 if __name__ == "__main__":
     import uvicorn

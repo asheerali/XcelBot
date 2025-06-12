@@ -19,9 +19,9 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     phone_number = Column(String(20), nullable=True)
-    theme = Column(Boolean, default=False)
+    # theme = Column(Boolean, default=False)
     role = Column(SQLAEnum(RoleEnum), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    store_id = Column(Integer, ForeignKey("stores.id"))
+    # store_id = Column(Integer, ForeignKey("stores.id"))
 
