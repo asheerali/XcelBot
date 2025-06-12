@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from schemas.stores import Store, StoreCreate
 from crud import stores as store_crud
-from app import get_db
+from database import get_db
 
 router = APIRouter(
     prefix="/stores",

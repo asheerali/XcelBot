@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from schemas.uploaded_files import UploadedFile, UploadedFileCreate
 from crud import uploaded_files as file_crud
-from app import get_db
+from database import get_db
 
 router = APIRouter(
     prefix="/files",

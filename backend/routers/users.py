@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from crud import users as user_crud
 from schemas import users as user_schema
-from app import get_db
+from database import get_db
 from dependencies.permissions import can_update
 from dependencies.auth import get_current_user  # ✅ import your auth logic
 

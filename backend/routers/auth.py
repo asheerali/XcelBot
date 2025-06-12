@@ -4,7 +4,7 @@ from passlib.hash import bcrypt
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 
-from app import get_db
+from database import get_db
 from models.users import User
 from schemas.users import UserCreate
 import os

@@ -9,6 +9,7 @@ from database import engine, SessionLocal
 from routers import excel_upload, sales_split_filter, health, companywide_filter, pmix_filter, financials_filter
 # Import from local modules
 from models import users, payments, subscriptions, stores, dashboards, user_dashboard_permissions, uploaded_files, file_permissions, companies
+from database import get_db
 # Initialize FastAPI app
 app = FastAPI()
 users.Base.metadata.create_all(bind=engine)
@@ -22,12 +23,12 @@ companies.Base.metadata.create_all(bind=engine)
 
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# def get_db():
+#     db = SessionLocal()
+#     try:
+#         yield db
+#     finally:
+#         db.close()
         
 db_dependency = Annotated[Session, Depends(get_db)]
 

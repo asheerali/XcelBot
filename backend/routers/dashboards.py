@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from schemas.dashboards import Dashboard, DashboardCreate
 from crud import dashboards as dash_crud
-from app import get_db
+from database import get_db
 
 router = APIRouter(
     prefix="/dashboards",

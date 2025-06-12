@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from crud import subscriptions as sub_crud
 from schemas import subscriptions as sub_schema
-from app import get_db
+from database import get_db
 
 router = APIRouter(
     prefix="/subscriptions",
