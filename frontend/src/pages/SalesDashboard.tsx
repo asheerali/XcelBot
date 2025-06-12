@@ -588,30 +588,31 @@ const getChartTheme = () => {
     axis: {
       ticks: {
         text: {
-          fontSize: 8
+          fontSize: 14, // Increased from 8 to 14 for better readability
+          fontWeight: 'bold' // Made ticks bold
         }
       },
       legend: {
         text: {
-          fontSize: 8,
+          fontSize: 14, // Increased from 8 to 14
           fontWeight: 'bold'
         }
       }
     },
     labels: {
       text: {
-        fontSize: 8,
+        fontSize: 12, // Increased from 8 to 12
         fontWeight: 'bold'
       }
     },
     legends: {
       text: {
-        fontSize: 12
+        fontSize: 14 // Increased from 12 to 14
       }
     },
     tooltip: {
       container: {
-        fontSize: 12
+        fontSize: 14 // Increased from 12 to 14
       }
     }
   };
@@ -923,8 +924,8 @@ export default function SalesDashboard() {
     const chartHeight = '100%';
     const barPadding = 0.25; // More space between bars
     
-    // Get appropriate rotation angle based on number of items
-    const tickRotation = data.length > 4 ? -45 : 0;
+    // FIXED: Remove rotation and make text bold
+    const tickRotation = 0; // No rotation
     
     return (
       <Box sx={{ height: chartHeight, width: '100%', overflow: 'visible' }}>
@@ -941,7 +942,7 @@ export default function SalesDashboard() {
           axisBottom={{
             tickSize: 5,
             tickPadding: 5,
-            tickRotation: tickRotation,
+            tickRotation: tickRotation, // FIXED: No rotation
             legendPosition: 'middle',
             legendOffset: 42, // Move labels further down
             truncateTickAt: 0  // Don't truncate labels
@@ -1051,7 +1052,7 @@ export default function SalesDashboard() {
       )}
 
       {/* Data Info Display */}
-      {currentSalesWideData && (
+      {/* {currentSalesWideData && (
         <Alert severity="success" sx={{ mb: 3 }}>
           <Typography variant="body2">
             <strong>Data loaded:</strong> {currentSalesWideData.fileName || 'Sales Wide Data'} | 
@@ -1064,7 +1065,7 @@ export default function SalesDashboard() {
             )}
           </Typography>
         </Alert>
-      )}
+      )} */}
 
       {/* Filters Section */}
       <Card elevation={3} sx={{ mb: 3, borderRadius: 2, overflow: 'hidden' }}>
@@ -1268,9 +1269,9 @@ export default function SalesDashboard() {
                 
                 {/* All Charts Panel */}
                 <TabPanel value={chartTab} index={0}>
-                  <Grid container spacing={2}>
-                    {/* Sales Chart */}
-                    <Grid item xs={12} md={6}>
+                  <Grid container spacing={3}>
+                    {/* Sales Chart - Full width */}
+                    <Grid item xs={12}>
                       <BaseChart title="Sales">
                         {createNivoBarChart(
                           salesData,
@@ -1281,8 +1282,8 @@ export default function SalesDashboard() {
                       </BaseChart>
                     </Grid>
                     
-                    {/* Orders Chart */}
-                    <Grid item xs={12} md={6}>
+                    {/* Orders Chart - Full width */}
+                    <Grid item xs={12}>
                       <BaseChart title="Orders">
                         {createNivoBarChart(
                           ordersData,
@@ -1295,7 +1296,7 @@ export default function SalesDashboard() {
                       </BaseChart>
                     </Grid>
                     
-                    {/* Average Ticket Chart */}
+                    {/* Average Ticket Chart - Full width */}
                     <Grid item xs={12}>
                       <BaseChart title="Avg Ticket">
                         {createNivoBarChart(
@@ -1309,8 +1310,8 @@ export default function SalesDashboard() {
                       </BaseChart>
                     </Grid>
                     
-                    {/* Labor Hours Chart */}
-                    <Grid item xs={12} md={6}>
+                    {/* Labor Hours Chart - Full width */}
+                    <Grid item xs={12}>
                       <BaseChart title="Labor Hrs">
                         {createNivoBarChart(
                           laborHrsData,
@@ -1324,8 +1325,8 @@ export default function SalesDashboard() {
                       </BaseChart>
                     </Grid>
                     
-                    {/* SPMH Chart */}
-                    <Grid item xs={12} md={6}>
+                    {/* SPMH Chart - Full width */}
+                    <Grid item xs={12}>
                       <BaseChart title="SPMH">
                         {createNivoBarChart(
                           spmhData,
@@ -1339,7 +1340,7 @@ export default function SalesDashboard() {
                       </BaseChart>
                     </Grid>
                     
-                    {/* Labor Cost Chart */}
+                    {/* Labor Cost Chart - Full width */}
                     <Grid item xs={12}>
                       <BaseChart title="Labor $ Spent">
                         {createNivoBarChart(
@@ -1354,7 +1355,7 @@ export default function SalesDashboard() {
                       </BaseChart>
                     </Grid>
                     
-                    {/* Labor Percentage Chart */}
+                    {/* Labor Percentage Chart - Full width */}
                     <Grid item xs={12}>
                       <BaseChart title="Labor %">
                         {createNivoBarChart(
@@ -1369,8 +1370,8 @@ export default function SalesDashboard() {
                       </BaseChart>
                     </Grid>
                     
-                    {/* COGS Chart */}
-                    <Grid item xs={12} md={6}>
+                    {/* COGS Chart - Full width */}
+                    <Grid item xs={12}>
                       <BaseChart title="COGS $">
                         {createNivoBarChart(
                           cogsData,
@@ -1384,8 +1385,8 @@ export default function SalesDashboard() {
                       </BaseChart>
                     </Grid>
                     
-                    {/* COGS Percentage Chart */}
-                    <Grid item xs={12} md={6}>
+                    {/* COGS Percentage Chart - Full width */}
+                    <Grid item xs={12}>
                       <BaseChart title="COGS %">
                         {createNivoBarChart(
                           cogsPercentageData,
@@ -1457,8 +1458,8 @@ export default function SalesDashboard() {
                 
                 {/* Labor Panel */}
                 <TabPanel value={chartTab} index={4}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
+                  <Grid container spacing={3}>
+                    <Grid item xs={12}>
                       <BaseChart title="Labor Hrs">
                         {createNivoBarChart(
                           laborHrsData,
@@ -1472,7 +1473,7 @@ export default function SalesDashboard() {
                       </BaseChart>
                     </Grid>
                     
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12}>
                       <BaseChart title="SPMH">
                         {createNivoBarChart(
                           spmhData,
@@ -1518,8 +1519,8 @@ export default function SalesDashboard() {
                 
                 {/* COGS Panel */}
                 <TabPanel value={chartTab} index={5}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
+                  <Grid container spacing={3}>
+                    <Grid item xs={12}>
                       <BaseChart title="COGS $">
                         {createNivoBarChart(
                           cogsData,
@@ -1533,7 +1534,7 @@ export default function SalesDashboard() {
                       </BaseChart>
                     </Grid>
                     
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12}>
                       <BaseChart title="COGS %">
                         {createNivoBarChart(
                           cogsPercentageData,

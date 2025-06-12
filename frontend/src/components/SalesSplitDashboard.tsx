@@ -586,7 +586,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                 strokeWidth={3}
                 dot={{ r: 4, fill: "#ff0000", strokeWidth: 2 }}
                 activeDot={{ r: 6, fill: "#ff0000", strokeWidth: 2 }}
-                name="Day Moving Average"
+                name="Moving Average"
               />
             </ComposedChart>
           </ResponsiveContainer> 
@@ -814,7 +814,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                   strokeWidth={3}
                   dot={{ r: 4, fill: "#ff0000", strokeWidth: 2 }}
                   activeDot={{ r: 6, fill: "#ff0000", strokeWidth: 2 }}
-                  name="Week Moving Average"
+                  name="Moving Average"
                 />
                 
                

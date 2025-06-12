@@ -1,4 +1,4 @@
-// Updated FinancialTablesComponent.tsx with smaller tabs and centered values
+// Updated FinancialTablesComponent.tsx with $ signs for Orders and Labor Hours
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -139,13 +139,25 @@ const FinancialTablesComponent: React.FC<FinancialTablesComponentProps> = ({ fin
     return `${value.toFixed(2)}%`;
   };
 
-  // Format number with commas
+  // UPDATED: Format number with $ sign for Orders table
+  const formatNumberWithDollar = (value: number): string => {
+    if (value === 0 || value === null || value === undefined) return '$0';
+    return '$' + new Intl.NumberFormat('en-US').format(Math.round(value));
+  };
+
+  // Format number with commas (for non-currency numbers)
   const formatNumber = (value: number): string => {
     if (value === 0 || value === null || value === undefined) return '0';
     return new Intl.NumberFormat('en-US').format(Math.round(value));
   };
 
-  // Format hours
+  // UPDATED: Format hours with $ sign for Labor Hours table
+  const formatHoursWithDollar = (value: number): string => {
+    if (value === 0 || value === null || value === undefined) return '$0.00';
+    return '$' + value.toFixed(2);
+  };
+
+  // Format hours (for non-currency hours)
   const formatHours = (value: number): string => {
     if (value === 0 || value === null || value === undefined) return '0.00';
     return value.toFixed(2);
@@ -193,9 +205,9 @@ const FinancialTablesComponent: React.FC<FinancialTablesComponentProps> = ({ fin
         data: financialTables.table2 || [],
         columns: [
           { key: 'Store', label: 'Store Location', align: 'left' as const },
-          { key: 'Tw Orders', label: 'This Week', align: 'center' as const, format: 'number' },
-          { key: 'Lw Orders', label: 'Last Week', align: 'center' as const, format: 'number' },
-          { key: 'Ly Orders', label: 'Last Year', align: 'center' as const, format: 'number' },
+          { key: 'Tw Orders', label: 'This Week', align: 'center' as const, format: 'numberWithDollar' }, // UPDATED
+          { key: 'Lw Orders', label: 'Last Week', align: 'center' as const, format: 'numberWithDollar' }, // UPDATED
+          { key: 'Ly Orders', label: 'Last Year', align: 'center' as const, format: 'numberWithDollar' }, // UPDATED
           { key: 'Tw vs. Lw', label: 'TW vs LW', align: 'center' as const, format: 'percentage' },
           { key: 'Tw vs. Ly', label: 'TW vs LY', align: 'center' as const, format: 'percentage' }
         ]
@@ -249,8 +261,8 @@ const FinancialTablesComponent: React.FC<FinancialTablesComponentProps> = ({ fin
         data: financialTables.table6 || [],
         columns: [
           { key: 'Store', label: 'Store Location', align: 'left' as const },
-          { key: 'Tw Lb Hrs', label: 'This Week', align: 'center' as const, format: 'hours' },
-          { key: 'Lw Lb Hrs', label: 'Last Week', align: 'center' as const, format: 'hours' },
+          { key: 'Tw Lb Hrs', label: 'This Week', align: 'center' as const, format: 'hoursWithDollar' }, // UPDATED
+          { key: 'Lw Lb Hrs', label: 'Last Week', align: 'center' as const, format: 'hoursWithDollar' }, // UPDATED
           { key: 'Tw vs. Lw', label: 'Change', align: 'center' as const, format: 'percentage' }
         ]
       },
@@ -271,7 +283,7 @@ const FinancialTablesComponent: React.FC<FinancialTablesComponentProps> = ({ fin
     return tables.filter(table => table.data.length > 0);
   };
 
-  // Format cell value based on type
+  // UPDATED: Format cell value based on type - added new formats
   const formatCellValue = (value: any, format: string) => {
     if (value === null || value === undefined) return '-';
     
@@ -282,8 +294,12 @@ const FinancialTablesComponent: React.FC<FinancialTablesComponentProps> = ({ fin
         return formatPercentage(value);
       case 'number':
         return formatNumber(value);
+      case 'numberWithDollar': // NEW FORMAT
+        return formatNumberWithDollar(value);
       case 'hours':
         return formatHours(value);
+      case 'hoursWithDollar': // NEW FORMAT
+        return formatHoursWithDollar(value);
       default:
         return value.toString();
     }

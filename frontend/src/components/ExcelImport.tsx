@@ -1378,7 +1378,7 @@ export function ExcelImport() {
       )}
 
       {renderTutorial()}
-      {renderSuccessNotification()}
+      {/* {renderSuccessNotification()} */}
       {renderLocationDialog()}
     </>
   );

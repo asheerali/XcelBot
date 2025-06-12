@@ -384,7 +384,7 @@ const ModernBarChart = ({ data, title, height = 300, dataKeys = ['This Week', 'L
               fontSize="12"
               fill="#64748b"
               fontWeight="600"
-              transform={`rotate(-45, ${getX(i, 1)}, ${height - 30})`}
+              transform={`${getX(i, 1)}, ${height - 30})`}
             >
               {d.Day || d.day || d.label || i + 1}
             </text>

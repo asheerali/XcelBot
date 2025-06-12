@@ -36,6 +36,7 @@ import SignInView from "./pages/SignInView";
 import SignUpView from "./pages/SignUpView";
 import ForgotPasswordView from "./pages/ForgotPasswordView";
 import ResetPasswordView from "./pages/ResetPasswordView";
+import CompanyLocationManager from "./pages/CompanyLocationManager";
 const router = createBrowserRouter([
   {
     path: "/sign-in",
@@ -112,6 +113,10 @@ const router = createBrowserRouter([
           {
             path: "ContactTeam",
             Component: ContactTeam,
+          },
+           {
+            path: "CompanyLocationManager",
+            Component: CompanyLocationManager,
           },
           {
             path: "Payments",
