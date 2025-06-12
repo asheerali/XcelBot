@@ -4,7 +4,7 @@ from schemas.user_dashboard_permissions import (
     UserDashboardPermission, UserDashboardPermissionCreate
 )
 from crud import user_dashboard_permissions as perm_crud
-from database import get_db
+from app import get_db
 
 router = APIRouter(
     prefix="/permissions/dashboards",

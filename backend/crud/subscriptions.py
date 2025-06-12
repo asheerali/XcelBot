@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models_db import subscriptions as sub_model
+from models import subscriptions as sub_model
 from schemas import subscriptions as sub_schema
 from datetime import datetime
 

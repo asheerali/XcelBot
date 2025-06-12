@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models_db.uploaded_files import UploadedFile
+from models.uploaded_files import UploadedFile
 from schemas.uploaded_files import UploadedFileCreate
 
 def upload_file_record(db: Session, file_data: UploadedFileCreate):

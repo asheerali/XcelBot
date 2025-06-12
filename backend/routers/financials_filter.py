@@ -4,7 +4,7 @@ import os
 import traceback
 
 # Import from local modules
-from models import FinancialCompanyWideUploadRequest, DashboardResponse
+from models_pydantic import FinancialCompanyWideUploadRequest, DashboardResponse
 from financials_dashboard.financials_processor import process_financials_file
 from constants import *
 

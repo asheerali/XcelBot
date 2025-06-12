@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models_db.user_dashboard_permissions import UserDashboardPermission
+from models.user_dashboard_permissions import UserDashboardPermission
 from schemas.user_dashboard_permissions import UserDashboardPermissionCreate
 
 def assign_dashboard_permission(db: Session, perm: UserDashboardPermissionCreate):
