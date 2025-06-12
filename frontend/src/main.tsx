@@ -32,6 +32,7 @@ import DateRangeSelector from "./components/DateRangeSelector";
 import SalesSplitDashboard from "./components/SalesSplitDashboard";
 import ComprehensiveFinancialDashboard from "./components/ComprehensiveFinancialDashboard";
 import HomePage from "./pages/HomePage";
+import CompanyLocationManager from "./pages/CompanyLocationManager";
 const router = createBrowserRouter([
   {
     Component: App,
@@ -64,6 +65,10 @@ const router = createBrowserRouter([
            {
             path: "SalesSplitDashboard",
             Component: SalesSplitDashboard,
+          },
+          {
+            path: "CompanyLocationManager",
+            Component: CompanyLocationManager,
           },
           
            {

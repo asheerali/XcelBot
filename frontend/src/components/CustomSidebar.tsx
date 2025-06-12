@@ -47,6 +47,8 @@ const CustomSidebar = ({ logo, title = 'INSIGHTiQ', onSignOut }) => {
     { title: 'User Permissions', path: '/UserPermissions', icon: <AdminPanelSettingsIcon /> },
     { title: 'Payments', path: '/Payments', icon: <PaymentIcon /> },
     { title: 'Help Center', path: '/HelpCenter', icon: <HelpIcon /> },
+    { title: 'Company', path: '/CompanyLocationManager', icon: <NewspaperIcon /> },
+
   ];
 
   const handleDrawerToggle = () => {
