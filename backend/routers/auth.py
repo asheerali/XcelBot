@@ -47,6 +47,8 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 
 @router.post("/signup", response_model=Token)
 def signup(user_data: UserCreate, db: Session = Depends(get_db)):
+    print("Received data:", user_data)
+    
     existing = db.query(User).filter(User.email == user_data.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")

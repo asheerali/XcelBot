@@ -21,7 +21,7 @@ class UserBase(BaseModel):
     phone_number: Optional[str] = None  
     theme: bool = False
     role: RoleEnum
-    company_id: UUID
+    company_id: Optional[UUID] = None  # Now optional
 
 class UserCreate(UserBase):
     password: str  # Plain password for registration

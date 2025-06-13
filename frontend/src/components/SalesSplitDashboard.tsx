@@ -460,7 +460,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
           variant="h5"
           sx={{ mb: 2, color: "#333", fontWeight: "bold" }}
         >
-          Sales Analysis for {selectedLocation}
+          Sales Analysis
         </Typography>
       )}
 
@@ -553,7 +553,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                           Sales: ${(data.sales * 1000).toLocaleString()}
                         </div>
                         <div style={{ color: "#ff0000", marginBottom: "4px" }}>
-                          Day Moving Avg: ${(data.movingAverage * 1000).toLocaleString()}
+                          Moving Avg: ${(data.movingAverage * 1000).toLocaleString()}
                         </div>
                         <div style={{ color: "#666", marginBottom: "4px" }}>
                           Orders: 1,000
@@ -772,7 +772,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                         >
                           <p
                             style={{ margin: "0 0 8px 0", fontWeight: "bold", fontSize: "14px" }}
-                          >{`Week: ${label}`}</p>
+                          >{`${label}`}</p>
                           <p style={{ margin: "0 0 4px 0", color: "#4D8D8D", fontSize: "13px" }}>
                             {`Total Sales: $${(data.totalSales / 1000).toFixed(1)}k`}
                           </p>
@@ -780,11 +780,11 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                             {`Total Orders: ${data.totalOrders}`}
                           </p>
                           <p style={{ margin: "0 0 4px 0", color: "#ff0000", fontSize: "13px" }}>
-                            {`3-Week Moving Avg: ${data.movingAverage3Week}k`}
+                            {`Moving Avg: ${data.movingAverage3Week}k`}
                           </p>
-                          <p style={{ margin: "0", color: "#FF9800", fontSize: "13px" }}>
+                          {/* <p style={{ margin: "0", color: "#FF9800", fontSize: "13px" }}>
                             {`5-Week Moving Avg: $${data.movingAverage5Week}k`}
-                          </p>
+                          </p> */}
                         </div>
                       );
                     }

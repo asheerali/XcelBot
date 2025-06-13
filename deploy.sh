@@ -7,7 +7,7 @@ SERVER_IP="3.149.94.190"
 SERVER_DOMAIN="ec2-3-149-94-190.us-east-2.compute.amazonaws.com"
 # REMOTE_BUILD_DIR="/home/admin/builds"
 REMOTE_BUILD_DIR="/home/admin/dist"
-NGINX_HTML_DIR="/var/www/xcelbot_fe/"
+NGINX_HTML_DIR="/var/www/html/"
 CONSTANTS_FILE="frontend/src/constants.tsx"
 
 # 1. Update constants.txt to point to server API
@@ -15,13 +15,13 @@ echo "Updating API URL in constants.txt..."
 sed -i 's|^export const API_URL_Local = "http://localhost:8000";|// export const API_URL_Local = "http://localhost:8000";|' $CONSTANTS_FILE
 sed -i 's|^// export const API_URL_Local = "http://3.149.94.190:8000";|export const API_URL_Local = "http://3.149.94.190:8000";|' $CONSTANTS_FILE
 
-# echo "Removing old dist folder if it exists..."
-# rm -rf frontend/dist
+echo "Removing old dist folder if it exists..."
+rm -rf frontend/dist
 
-# # 2. Build the frontend
-# echo "Building frontend..."
+# 2. Build the frontend
+echo "Building frontend..."
 cd frontend
-# npm run build || { echo "Build failed"; exit 1; }
+npm run build || { echo "Build failed"; exit 1; }
 
 
 # 3. Copy build to server

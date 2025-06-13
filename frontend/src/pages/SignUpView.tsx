@@ -30,6 +30,8 @@ const SignUpView: React.FC = () => {
       role: "admin", // default role
     };
 
+    console.log("Sign Up Payload:", payload);
+
     try {
       const res = await fetch(`${API_URL_Local}/auth/signup`, {
         method: "POST",
@@ -39,7 +41,14 @@ const SignUpView: React.FC = () => {
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.detail || "Sign up failed");
+
+        if (typeof errData.detail === "string") {
+          throw new Error(errData.detail);
+        } else if (Array.isArray(errData.detail)) {
+          throw new Error(errData.detail.map((d: any) => d.msg).join(" | "));
+        } else {
+          throw new Error("Sign up failed");
+        }
       }
 
       const { access_token } = await res.json();

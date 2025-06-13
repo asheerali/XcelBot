@@ -195,7 +195,7 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
 
   // Dynamic chart title based on date range
   const getChartTitle = () => {
-    if (!dateRangeType) return "Sales by Week with Moving Average";
+    if (!dateRangeType) return "Sales by Week";
 
     if (dateRangeType.includes("30 Days"))
       return "Sales - Last 30 Days with Moving Average";
@@ -209,7 +209,7 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
 
   // Title for day of week chart based on date range
   const getDayOfWeekTitle = () => {
-    if (!dateRangeType) return "Sales by Day of Week with Moving Average";
+    if (!dateRangeType) return "Sales by Day of Week";
 
     if (dateRangeType.includes("30 Days"))
       return "Average Sales by Day of Week - Last 30 Days with Moving Average";
