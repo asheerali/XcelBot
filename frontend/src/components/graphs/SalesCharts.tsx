@@ -330,7 +330,7 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
             <Card sx={chartCardStyle}>
               <Box sx={chartHeaderStyle}>
                 <Typography variant="h6" fontWeight={600} color="#333">
-                  Sales by Time Range with Moving Average
+                  Sales by Time Range
                 </Typography>
               </Box>
               <CardContent sx={chartContentStyle}>

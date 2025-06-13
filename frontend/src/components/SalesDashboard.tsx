@@ -850,7 +850,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
               marginBottom: "12px",
             }}
           >
-            Daily Sales Overview (Hover for Category Breakdown)
+            Daily Sales Overview
           </div>
 
           {/* Enhanced Bar Chart using table13 data */}
