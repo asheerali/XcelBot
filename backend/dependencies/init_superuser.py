@@ -12,7 +12,14 @@ def create_default_superusers(db: Session):
             "last_name": "ali",
             "phone_number": "+491742555647",
             "role": RoleEnum.superuser
-        },
+        },{
+            "email":  "afshin@allfacetsconsulting.com", 
+            "password": "admin",
+            "first_name": "afshin",
+            "last_name": "shirazi",
+            "phone_number": "+17186449039",
+            "role": RoleEnum.superuser
+            },
         {
             "email": "musawar.soomro25@gmail.com",
             "password": "admin",

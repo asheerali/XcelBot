@@ -13,6 +13,9 @@ load_dotenv()  # Load from .env
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# Extra connect args needed for SQLite (only for SQLite)
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+
 
 Base = declarative_base()
 engine = create_engine(DATABASE_URL, echo=True)

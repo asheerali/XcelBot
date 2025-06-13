@@ -60,42 +60,47 @@ echo "All done."
 
 
 
-cd frontend
-# Variables
-PEM_PATH="../../SecretiQ.pem"
-SERVER_USER="admin"
-SERVER_DOMAIN="ec2-3-149-94-190.us-east-2.compute.amazonaws.com"
-BACKEND_DIR="XcelBot/backend"
-DOCKER_IMAGE_NAME="xcelbol_be"
-DOCKER_TAG="v1"
-PORT="8000"
+# cd frontend
+# # Variables
+# PEM_PATH="../../SecretiQ.pem"
+# SERVER_USER="admin"
+# SERVER_DOMAIN="ec2-3-149-94-190.us-east-2.compute.amazonaws.com"
+# BACKEND_DIR="XcelBot/backend"
+# DOCKER_IMAGE_NAME="xcelbol_be"
+# DOCKER_TAG="v1"
+# PORT="8000"
+# BRANCH_NAME="integrations_v18"
 
-echo "Deploying backend to AWS server..."
 
-ssh -i "$PEM_PATH" "$SERVER_USER@$SERVER_DOMAIN" << EOF
-  echo "Navigating to backend directory..."
-  cd $BACKEND_DIR
+# echo "Deploying backend to AWS server..."
 
-  echo i am lsing
-  ls ~/
-  echo "Pulling latest changes from Git..."
-  git pull
+# ssh -i "$PEM_PATH" "$SERVER_USER@$SERVER_DOMAIN" << EOF
+#   echo "Navigating to backend directory..."
+#   cd $BACKEND_DIR
 
-  echo "Getting running Docker container..."
-  CONTAINER_ID=\$(sudo docker ps -q --filter "ancestor=$DOCKER_IMAGE_NAME:$DOCKER_TAG")
+#   echo i am lsing
+#   ls ~/
+#   echo "Pulling latest changes from Git..."
+#   echo "Checking out branch $BRANCH_NAME..."
+#   git fetch origin
+#   git checkout $BRANCH_NAME
+#   git pull origin $BRANCH_NAME
 
-  if [ ! -z "\$CONTAINER_ID" ]; then
-    echo "Stopping existing container: \$CONTAINER_ID"
-    sudo docker stop \$CONTAINER_ID
-  else
-    echo "No running container found for $DOCKER_IMAGE_NAME:$DOCKER_TAG"
-  fi
+#   echo "Getting running Docker container..."
+#   CONTAINER_ID=\$(sudo docker ps -q --filter "ancestor=$DOCKER_IMAGE_NAME:$DOCKER_TAG")
 
-  echo "Building new Docker image..."
-  sudo docker build -t $DOCKER_IMAGE_NAME:$DOCKER_TAG .
+#   if [ ! -z "\$CONTAINER_ID" ]; then
+#     echo "Stopping existing container: \$CONTAINER_ID"
+#     sudo docker stop \$CONTAINER_ID
+#   else
+#     echo "No running container found for $DOCKER_IMAGE_NAME:$DOCKER_TAG"
+#   fi
 
-  echo "Running new Docker container..."
-  sudo docker run -d -p $PORT:$PORT $DOCKER_IMAGE_NAME:$DOCKER_TAG
+#   echo "Building new Docker image..."
+#   sudo docker build -t $DOCKER_IMAGE_NAME:$DOCKER_TAG .
 
-  echo "Backend deployment complete."
-EOF
+#   echo "Running new Docker container..."
+#   sudo docker run -d -p $PORT:$PORT $DOCKER_IMAGE_NAME:$DOCKER_TAG
+
+#   echo "Backend deployment complete."
+# EOF
