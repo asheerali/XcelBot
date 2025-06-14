@@ -208,17 +208,6 @@ const INDUSTRIES = [
 const CompanyLocationManager: React.FC = () => {
   const theme = useTheme();
 
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  useEffect(() => {
-    fetch("/users")
-      .then((res) => res.json())
-      .then((data) => setAllUsers(data))
-      .catch((err) => console.error("Error fetching users:", err));
-  }, []);
-  const totalUsers = allUsers.length;
-  const activeUsers = allUsers.filter((user) => user.isActive).length;
-  const inactiveUsers = totalUsers - activeUsers;
-
   // State for companies and locations
   const [companies, setCompanies] = useState<Company[]>([]);
   const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
@@ -1300,8 +1289,17 @@ const CompanyLocationManager: React.FC = () => {
               border: "1px solid rgba(255, 255, 255, 0.18)",
             }}
           >
-            {/* <CardContent sx={{ color: 'white', position: 'relative', overflow: 'hidden' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+            <CardContent
+              sx={{ color: "white", position: "relative", overflow: "hidden" }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  mb: 1,
+                }}
+              >
                 <Box>
                   <Typography variant="h3" fontWeight="bold" sx={{ mb: 0.5 }}>
                     {stats.totalUsers}
@@ -1309,43 +1307,23 @@ const CompanyLocationManager: React.FC = () => {
                   <Typography variant="body2" sx={{ opacity: 0.9 }}>
                     Total Users
                   </Typography>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={(stats.activeUsers / stats.totalUsers) * 100} 
-                    sx={{ 
-                      mt: 1, 
-                      backgroundColor: 'rgba(255,255,255,0.3)',
-                      '& .MuiLinearProgress-bar': {
-                        backgroundColor: 'rgba(255,255,255,0.8)'
-                      }
+                  <LinearProgress
+                    variant="determinate"
+                    value={(stats.activeUsers / stats.totalUsers) * 100}
+                    sx={{
+                      mt: 1,
+                      backgroundColor: "rgba(255,255,255,0.3)",
+                      "& .MuiLinearProgress-bar": {
+                        backgroundColor: "rgba(255,255,255,0.8)",
+                      },
                     }}
                   />
                 </Box>
                 <GroupIcon sx={{ fontSize: 50, opacity: 0.8 }} />
               </Box>
               <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                {stats.activeUsers} Active • {stats.totalUsers - stats.activeUsers} Inactive
-              </Typography>
-            </CardContent> */}
-            <CardContent sx={{ color: "white" }}>
-              <Box
-                sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}
-              >
-                <Box>
-                  <Typography variant="h3" fontWeight="bold">
-                    {totalUsers}
-                  </Typography>
-                  <Typography variant="body2">Total Users</Typography>
-                  <LinearProgress
-                    variant="determinate"
-                    value={totalUsers ? (activeUsers / totalUsers) * 100 : 0}
-                    sx={{ mt: 1 }}
-                  />
-                </Box>
-                <GroupIcon sx={{ fontSize: 50, opacity: 0.8 }} />
-              </Box>
-              <Typography variant="caption">
-                {activeUsers} Active • {inactiveUsers} Inactive
+                {stats.activeUsers} Active •{" "}
+                {stats.totalUsers - stats.activeUsers} Inactive
               </Typography>
             </CardContent>
           </Card>
