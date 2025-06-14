@@ -92,6 +92,7 @@ import {
   addProductMixData,
 } from "../store/excelSlice";
 import { API_URL_Local } from "../constants";
+import apiClient from "../api/axiosConfig";
 
 // API URL for Excel upload
 const API_URL = API_URL_Local + "/api/excel/upload";
@@ -582,11 +583,19 @@ const ExcelUploadPage: React.FC = () => {
         }
       }, 300);
 
-      const response = await axios.post(API_URL, {
-        fileName: fileInfo.file.name,
-        fileContent: base64Content,
-        dashboard: fileInfo.dashboard,
-      });
+      // const response = await axios.post(API_URL, {
+      //   fileName: fileInfo.file.name,
+      //   fileContent: base64Content,
+      //   dashboard: fileInfo.dashboard,
+      // });
+
+
+  // In your uploadFile function:
+  const response = await apiClient.post('/api/excel/upload', {
+    fileName: fileInfo.file.name,
+    fileContent: base64Content,
+    dashboard: fileInfo.dashboard,
+  });
 
       clearInterval(progressInterval);
 
