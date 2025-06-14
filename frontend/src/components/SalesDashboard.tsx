@@ -648,7 +648,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
               strokeWidth={3}
               dot={{ fill: "#ff6b35", strokeWidth: 2, r: 4 }}
               activeDot={{ r: 6, stroke: "#ff6b35", strokeWidth: 2, fill: "white" }}
-              name="3-Day Moving Average"
+              name="Moving Average"
               connectNulls={false}
             />
           </ComposedChart>
@@ -850,7 +850,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
               marginBottom: "12px",
             }}
           >
-            Daily Sales Overview (Hover for Category Breakdown)
+            Daily Sales Overview 
           </div>
 
           {/* Enhanced Bar Chart using table13 data */}

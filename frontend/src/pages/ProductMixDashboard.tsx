@@ -732,7 +732,12 @@ export default function ProductMixDashboard() {
   }, []);
 
   return (
-    <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+    <Box sx={{ 
+      p: { xs: 1, sm: 2, md: 3 },
+      width: '100%',
+      maxWidth: '100vw',
+      boxSizing: 'border-box'
+    }}>
       {/* Dashboard Header */}
       <Box
         sx={{
@@ -809,15 +814,7 @@ export default function ProductMixDashboard() {
         </Alert>
       )}
 
-      {/* Info Alert for Initial State */}
-      {selectedLocations.length > 0 && !dataUpdated && !filterError && !error && (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            <strong>Ready to Filter:</strong> All available locations ({selectedLocations.length}) are initially selected. 
-            Optionally modify any filters, then click "Apply Filters" to analyze your data.
-          </Typography>
-        </Alert>
-      )}
+    
 
       {/* Filters Section */}
       <Card elevation={3} sx={{ mb: 3, borderRadius: 2, overflow: "hidden" }}>
@@ -1071,15 +1068,7 @@ export default function ProductMixDashboard() {
             )}
           </Box>
 
-          {/* Helper text for Clear All behavior */}
-          {(selectedLocations.length > 0 || localStartDate || localEndDate) && (
-            <Box sx={{ mt: 1 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                💡 Tip: "Clear All Filters" will reset everything to empty. To re-select all locations, use the location filter's "Select All" option.
-                Date range is optional - filters will apply to all available data if no date range is selected.
-              </Typography>
-            </Box>
-          )}
+         
 
           {/* Validation message for required fields */}
           {selectedLocations.length === 0 && (
@@ -1128,27 +1117,49 @@ export default function ProductMixDashboard() {
 
             {/* Server Performance Tab */}
             <TabPanel value={tabValue} index={0}>
-              <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+              <Box sx={{ 
+                p: { xs: 1, sm: 2, md: 3 },
+                width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
+                overflow: 'hidden'
+              }}>
                 {isLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                     <CircularProgress size={40} />
                     <Typography sx={{ ml: 2 }}>Updating dashboard data...</Typography>
                   </Box>
                 ) : (
-                  <Box>
-                    {/* Sales Dashboard Component */}
-                    <MenuAnalysisDashboard 
-                      key={`performance-${currentProductMixLocation}-${currentProductMixData?.filterTimestamp || 'original'}`}
-                      productMixData={currentProductMixData} 
-                    />
+                  <Box sx={{ 
+                    width: '100%',
+                    maxWidth: '100%',
+                    overflow: 'hidden'
+                  }}>
+                    {/* Sales Dashboard Component - FIXED: Added proper sizing constraints */}
+                    <Box sx={{ 
+                      width: '100%',
+                      maxWidth: '100%',
+                      mb: 4,
+                      overflow: 'hidden'
+                    }}>
+                      <MenuAnalysisDashboard 
+                        key={`performance-${currentProductMixLocation}-${currentProductMixData?.filterTimestamp || 'original'}`}
+                        productMixData={currentProductMixData} 
+                      />
+                    </Box>
                     
                     {/* Divider */}
                     <Box sx={{ my: 4 }}>
                       <Divider sx={{ borderColor: '#e0e0e0', borderWidth: 1 }} />
                     </Box>
                     
-                    {/* Menu Items Table Component */}
-                    <Box sx={{ mt: 4 }}>
+                    {/* Menu Items Table Component - FIXED: Added width constraints and prevent stretching */}
+                    <Box sx={{ 
+                      mt: 4,
+                      width: '100%',
+                      maxWidth: '100%',
+                      overflow: 'hidden'
+                    }}>
                       <Typography 
                         variant="h5" 
                         sx={{ 
@@ -1158,12 +1169,28 @@ export default function ProductMixDashboard() {
                           textAlign: 'center'
                         }}
                       >
-                      
+                        {/* Menu Items Performance Analysis */}
                       </Typography>
-                      <MenuItemsTable 
-                        key={`menu-items-${currentProductMixLocation}-${currentProductMixData?.filterTimestamp || 'original'}`}
-                        table12={currentProductMixData?.table12 || []} 
-                      />
+                      
+                      {/* FIXED: Constrained container to prevent stretching */}
+                      <Box sx={{
+                        width: '100%',
+                        maxWidth: '100%',
+                        overflow: 'auto',
+                        '& .MuiTableContainer-root': {
+                          maxWidth: '100%',
+                          overflow: 'auto'
+                        },
+                        '& .MuiTable-root': {
+                          minWidth: 'fit-content',
+                          width: 'auto'
+                        }
+                      }}>
+                        <MenuItemsTable 
+                          key={`menu-items-${currentProductMixLocation}-${currentProductMixData?.filterTimestamp || 'original'}`}
+                          table12={currentProductMixData?.table12 || []} 
+                        />
+                      </Box>
                     </Box>
                   </Box>
                 )}
@@ -1172,17 +1199,38 @@ export default function ProductMixDashboard() {
 
             {/* Menu Analysis Tab */}
             <TabPanel value={tabValue} index={1}>
-              <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+              <Box sx={{ 
+                p: { xs: 1, sm: 2, md: 3 },
+                width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
+                overflow: 'hidden'
+              }}>
                 {isLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                     <CircularProgress size={40} />
                     <Typography sx={{ ml: 2 }}>Updating dashboard data...</Typography>
                   </Box>
                 ) : (
-                  <MenuAnalysisDashboardtwo
-                    key={`menu-analysis-${currentProductMixLocation}-${currentProductMixData?.filterTimestamp || 'original'}`}
-                    productMixData={currentProductMixData}
-                  />
+                  <Box sx={{ 
+                    width: '100%',
+                    maxWidth: '100%',
+                    overflow: 'hidden',
+                    // Override the hardcoded styles from MenuAnalysisDashboardtwo
+                    '& > div': {
+                      padding: '0 !important',
+                      backgroundColor: 'transparent !important',
+                      minHeight: 'auto !important',
+                      maxWidth: '100vw !important',
+                      overflow: 'hidden !important',
+                      fontFamily: 'inherit !important'
+                    }
+                  }}>
+                    <MenuAnalysisDashboardtwo
+                      key={`menu-analysis-${currentProductMixLocation}-${currentProductMixData?.filterTimestamp || 'original'}`}
+                      productMixData={currentProductMixData}
+                    />
+                  </Box>
                 )}
               </Box>
             </TabPanel>
