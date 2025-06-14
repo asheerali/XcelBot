@@ -17,9 +17,16 @@ router = APIRouter(
 def create_user(user: user_schema.UserCreate, db: Session = Depends(get_db)):
     return user_crud.create_user(db, user)
 
+# @router.get("/", response_model=list[user_schema.User])
+# def get_users(db: Session = Depends(get_db)):
+#     return user_crud.get_users(db)
+
 @router.get("/", response_model=list[user_schema.User])
-def get_users(db: Session = Depends(get_db)):
-    return user_crud.get_users(db)
+def get_users(
+    db: Session = Depends(get_db),
+    current_user: user_schema.User = Depends(get_current_user)  # Add this
+):
+    return user_crud.get_users(db, current_user)  # Pass current_user
 
 @router.get("/{user_id}", response_model=user_schema.User)
 def get_user(user_id: int, db: Session = Depends(get_db)):

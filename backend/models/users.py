@@ -5,6 +5,8 @@ from datetime import datetime
 from database import Base
 import enum
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+
 
 
 class RoleEnum(str, enum.Enum):
@@ -30,4 +32,5 @@ class User(Base):
     company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=True)
 
     # store_id = Column(Integer, ForeignKey("stores.id"))
+    uploaded_files = relationship("UploadedFile", back_populates="uploader", cascade="all, delete-orphan")
 

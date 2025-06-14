@@ -9,6 +9,7 @@ import traceback
 from datetime import date
 from dateutil.relativedelta import relativedelta
 from fastapi import Request
+from sqlalchemy.orm import Session
 
 # Import from local modules
 from models_pydantic import ExcelUploadRequest, ExcelFilterRequest, ExcelUploadResponse, SalesAnalyticsResponse, DualDashboardResponse, DashboardResponse
@@ -22,6 +23,13 @@ from sales_split_dashboard.sales_split_prcoessor import process_sales_split_file
 from constants import *
 
 
+from crud.uploaded_files import upload_file_record
+from schemas.uploaded_files import UploadedFileCreate
+from dependencies.auth import get_current_active_user
+from models.users import User
+from fastapi import Depends
+from database import get_db
+
 router = APIRouter(
     prefix="/api",
     tags=["excel_upload"],
@@ -34,7 +42,12 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # Upload endpoint
 @router.post("/excel/upload", response_model=DualDashboardResponse)
 # @router.post("/excel/upload")
-async def upload_excel(request: ExcelUploadRequest = Body(...)):
+# async def upload_excel(request: ExcelUploadRequest = Body(...)):
+async def upload_excel(
+    request: ExcelUploadRequest = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
 # async def upload_excel(request: Request):
     """
     Endpoint to upload and process an Excel file.
@@ -67,6 +80,15 @@ async def upload_excel(request: ExcelUploadRequest = Body(...)):
             
         file_name =  f"{timestamp}_{request.fileName}"
         file_path = os.path.join(UPLOAD_DIR,file_name)
+
+        # Add this after file is saved to disk
+        file_record = UploadedFileCreate(
+            file_name=file_name,
+            dashboard_name=request.dashboard,
+            uploader_id=current_user.id  # Make sure current_user is injected via Depends
+        )
+
+        upload_file_record(db, file_record)
         
         print("i am here in excel upload printing the file path and file name",file_name, file_path)
         

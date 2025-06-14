@@ -1,17 +1,20 @@
+# schemas/uploaded_files.py
+
 from pydantic import BaseModel
+from typing import Optional
 from datetime import datetime
 
-class UploadedFileBase(BaseModel):
+class UploadedFileCreate(BaseModel):
     file_name: str
-    uploader_id: int
-    store_id: int
+    dashboard_name: str
+    uploader_id: int  # Get this from the current logged-in user
 
-class UploadedFileCreate(UploadedFileBase):
-    pass
-
-class UploadedFile(UploadedFileBase):
+class UploadedFileResponse(BaseModel):
     id: int
+    file_name: str
+    dashboard_name: str
+    uploader_id: int
     uploaded_at: datetime
 
     class Config:
-        from_attributes = True
+        orm_mode = True
