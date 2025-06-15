@@ -420,7 +420,7 @@ def create_sales_pivot_tables(df, location_filter='All', start_date=None, end_da
         'category_summary_table': formatted_category_summary.reset_index()
     }
 
-def sales_analysis_tables(df, location_filter='All', start_date=None, end_date=None):
+def sales_analysis_tables(df, location_filter='All', start_date=None, end_date=None, categories_filter='All'):
     """
     Create sales analysis tables by week, day, and time with optional filters.
     
@@ -450,6 +450,11 @@ def sales_analysis_tables(df, location_filter='All', start_date=None, end_date=N
         else:
             filtered_df = filtered_df[filtered_df['Location'] == location_filter]
     
+    if categories_filter != 'All':
+        if isinstance(categories_filter, list):
+            filtered_df = filtered_df[filtered_df['Category'].isin(categories_filter)]
+        else:
+            filtered_df = filtered_df[filtered_df['Category'] == categories_filter]
     # Apply date range filter - convert string dates to datetime.date objects
     if start_date is not None:
         if isinstance(start_date, str):

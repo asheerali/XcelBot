@@ -46,6 +46,7 @@ async def filter_excel_data(request: SalesSplitPmixUploadRequest = Body(...)):
         end_date = request.endDate if request.endDate else None
         server_filter = request.server if request.server else 'All'
         category_filter = request.category if request.category else 'All'
+        print("i am  here in sales_split_filter.py checking the category_filter", category_filter, "and the request ,", request)
         
         # fileName = "20250514_200147_midtown_east_dashboard2_template1.xlsx"
         file_location = os.path.join(UPLOAD_DIR, fileName)
@@ -54,6 +55,7 @@ async def filter_excel_data(request: SalesSplitPmixUploadRequest = Body(...)):
                 location=location_filter,
                 start_date=start_date,
                 end_date=end_date,
+                category_filter=category_filter
             )
             
             # response accepted from the FE

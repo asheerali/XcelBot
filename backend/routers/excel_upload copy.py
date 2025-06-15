@@ -139,12 +139,12 @@ async def upload_excel(
             
             financials_result = {
             "table1": [{"financials_sales": 45000, 
-                        "financials_labor_cost": 33 , 
-                        "financials_avg_ticket": 13.4,
-                        "financials_prime_cost": 12.4,
-                        "financials_food_cost": 11.4,
-                        "financials_spmh": 10.4,
-                        "financials_lmph": 9.4,
+                        "financials_labor_cost": 33.00 , 
+                        "financials_avg_ticket": 13.41,
+                        "financials_prime_cost": 12.40,
+                        "financials_food_cost": 11.40,
+                        "financials_spmh": 10.14,
+                        "financials_lmph": 9.14,
                         }],
             "table2": financials_sales_table.to_dict(orient='records'),
             "table3": financials_orders_table.to_dict(orient='records'),
@@ -349,7 +349,6 @@ async def upload_excel(
             "servers": server,
             "categories": category,
             "dateRanges": [],
-            "fileLocation": ['fileLocation', 'fileLocationa'],
             "fileName": file_name,
             "dashboardName": "Product Mix ",
             "data":  "Dashboard is not yet implemented."

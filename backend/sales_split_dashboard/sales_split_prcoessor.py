@@ -6,7 +6,7 @@ import pandas as pd
 from sales_split_dashboard.sales_split_utils import create_sales_pivot_tables, sales_analysis_tables, create_sales_overview_tables
 import numpy as np
 
-def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', start_date=None, end_date=None):
+def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', start_date=None, end_date=None, category_filter='All'):
     """
     Process the uploaded Excel file and transform the data.
     Returns data tables for the frontend including the 1P column.
@@ -159,7 +159,7 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
     
     sales_overview_analysis = create_sales_overview_tables(df, location_filter='All', start_date=start_date_str, end_date=end_date_str)
 
-    analysis = sales_analysis_tables(df, location_filter=location, start_date=start_date, end_date=end_date)
+    analysis = sales_analysis_tables(df, location_filter=location, start_date=start_date, end_date=end_date, categories_filter=category_filter )
     
     #    # Return all tables and metrics in a dictionary
     # return {

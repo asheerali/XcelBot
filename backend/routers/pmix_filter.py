@@ -117,7 +117,6 @@ async def upload_excel(request: SalesSplitPmixUploadRequest = Body(...)):
         #     # "servers": server,
         #     # "categories": category,
         #     "dateRanges": [],
-        #     "fileLocation": ['fileLocation', 'fileLocationa'],
         #     "fileName": request.fileName,
         #     "dashboardName": "Product Mix ",
         #     "data":  "Dashboard is not yet implemented."
@@ -162,7 +161,6 @@ async def upload_excel(request: SalesSplitPmixUploadRequest = Body(...)):
             "servers": server,
             "categories": category,
             "dateRanges": [],
-            "fileLocation": ['fileLocation', 'fileLocationa'],
             "fileName": request.fileName,
             "dashboardName": "Product Mix ",
             "data":  "Dashboard is not yet implemented."

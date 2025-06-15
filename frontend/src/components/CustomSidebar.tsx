@@ -76,7 +76,7 @@ const CustomSidebar = ({ onSignOut }) => {
     { title: 'Product Mix', path: '/Productmix', icon: <NewspaperIcon /> },
     { title: 'Financials', path: '/Financials', icon: <NewspaperIcon /> },
     { title: 'Companywide Sales', path: '/Saleswide', icon: <NewspaperIcon /> },
-    { title: 'User Permissions', path: '/UserPermissions', icon: <AdminPanelSettingsIcon /> },
+    // { title: 'User Permissions', path: '/UserPermissions', icon: <AdminPanelSettingsIcon /> },
     { title: 'Payments', path: '/Payments', icon: <PaymentIcon /> },
     { title: 'Help Center', path: '/HelpCenter', icon: <HelpIcon /> },
     { title: 'Company', path: '/CompanyLocationManager', icon: <NewspaperIcon /> },

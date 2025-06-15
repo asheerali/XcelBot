@@ -1081,11 +1081,11 @@ export function ExcelImport() {
   Sales Split Dashboard
       </h1>
     </div>
-          <Typography variant="subtitle1" color="text.secondary">
+          {/* <Typography variant="subtitle1" color="text.secondary">
             {files.length > 0
               ? `Analyzing data from ${files.length} location${files.length > 1 ? 's' : ''}`
               : 'Upload Excel files to analyze sales data across different categories'}
-          </Typography>
+          </Typography> */}
         </Box>
 
         {/* Status Card */}

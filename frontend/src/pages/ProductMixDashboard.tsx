@@ -836,7 +836,7 @@ export default function ProductMixDashboard() {
         </Alert>
       )}
 
-      {/* Info Alert for Initial State */}
+      {/* Info Alert for Initial State
       {selectedLocations.length > 0 && !dataUpdated && !filterError && !error && (
         <Alert severity="info" sx={{ mb: 3 }}>
           <Typography variant="body2">
@@ -844,7 +844,7 @@ export default function ProductMixDashboard() {
             Optionally modify any filters, then click "Apply Filters" to analyze your data.
           </Typography>
         </Alert>
-      )}
+      )} */}
 
       {/* Filters Section */}
       <Card elevation={3} sx={{ mb: 3, borderRadius: 2, overflow: "hidden" }}>
@@ -856,9 +856,9 @@ export default function ProductMixDashboard() {
               <Typography variant="h6" sx={{ fontWeight: 500 }}>
                 Filters
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+              {/* <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
                 (All locations initially selected)
-              </Typography>
+              </Typography> */}
             </Box>
           </Box>
 
