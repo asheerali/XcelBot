@@ -5,10 +5,12 @@ import os
 from datetime import datetime, timedelta
 
 from requests import Session
+from models import locations
+from routers import locations
 from database import engine, SessionLocal
 from routers import excel_upload, sales_split_filter, health, companywide_filter, pmix_filter, financials_filter
 # Import from local modules
-from models import users, payments, subscriptions, stores, dashboards, user_dashboard_permissions, uploaded_files, file_permissions, companies
+from models import users,locations,company_locations, permissions, user_company, payments, subscriptions, dashboards, user_dashboard_permissions, uploaded_files, file_permissions, companies
 from database import get_db
 # Initialize FastAPI app
 app = FastAPI()
@@ -16,10 +18,13 @@ users.Base.metadata.create_all(bind=engine)
 user_dashboard_permissions.Base.metadata.create_all(bind=engine)
 uploaded_files.Base.metadata.create_all(bind=engine)
 subscriptions.Base.metadata.create_all(bind=engine)
-stores.Base.metadata.create_all(bind=engine)
+locations.Base.metadata.create_all(bind=engine)
 payments.Base.metadata.create_all(bind=engine)
 file_permissions.Base.metadata.create_all(bind=engine)
 companies.Base.metadata.create_all(bind=engine)
+user_company.Base.metadata.create_all(bind=engine)
+permissions.Base.metadata.create_all(bind=engine)
+company_locations.Base.metadata.create_all(bind=engine)
 
 
 
@@ -64,22 +69,33 @@ app.include_router(health.router)
 
 # for the databases
 from routers import (users, 
+                     company_locations,
+                    companies,
+                    locations,
                      payments, 
                      subscriptions, 
-                     stores,
                      dashboards, 
                      user_dashboard_permissions,
-                     uploaded_files,    
+                     uploaded_files, 
+                     permissions,
+                     user_company,   
                      file_permissions)
 
 app.include_router(users.router)
+app.include_router(companies.router)
 app.include_router(payments.router)
+app.include_router(locations.router)
 app.include_router(subscriptions.router)
-app.include_router(stores.router)
+app.include_router(locations.router)
 app.include_router(dashboards.router)
 app.include_router(user_dashboard_permissions.router)
 app.include_router(uploaded_files.router)
 app.include_router(file_permissions.router)
+app.include_router(user_company.router)
+app.include_router(permissions.router)
+app.include_router(company_locations.router)
+
+
 
 from dependencies.init_superuser import create_default_superusers
 

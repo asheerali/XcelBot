@@ -88,7 +88,6 @@ def signup(user_data: UserCreate, db: Session = Depends(get_db)):
 
 
 
-
 @router.post("/signin", response_model=Token)
 def signin(credentials: SignInInput, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == credentials.email).first()
@@ -98,29 +97,36 @@ def signin(credentials: SignInInput, db: Session = Depends(get_db)):
     # Generate token
     token = create_access_token(data={"sub": user.email})
 
-    # Determine accessible file
+    # Determine accessible file based on user role
     file_record = None
+    
     if user.role == "superuser":
+        # Superuser can access the most recent file from ANY user
         file_record = db.query(UploadedFile).order_by(UploadedFile.id.desc()).first()
     else:
-        # Get most recent file uploaded by the user
-        file_record = (
+        # For non-superusers (manager and lower roles)
+        # First, check if they have uploaded any files themselves
+        user_uploaded_file = (
             db.query(UploadedFile)
             .filter(UploadedFile.uploader_id == user.id)
             .order_by(UploadedFile.id.desc())
             .first()
         )
-        if not file_record:
-            # Check file permissions
-            permitted_files = (
+        
+        if user_uploaded_file:
+            file_record = user_uploaded_file
+        else:
+            # If no files uploaded by user, check for files they have permission to access
+            permitted_file = (
                 db.query(UploadedFile)
                 .join(FilePermission, FilePermission.file_id == UploadedFile.id)
                 .filter(FilePermission.user_id == user.id)
                 .order_by(UploadedFile.id.desc())
                 .first()
             )
-            file_record = permitted_files
+            file_record = permitted_file
 
+    # If no accessible file found, return token with null dashboard_data
     if file_record is None:
         return {
             "access_token": token,
@@ -137,24 +143,26 @@ def signin(credentials: SignInInput, db: Session = Depends(get_db)):
             "dashboard_data": None
         }
 
-    with open(file_path, "rb") as f:
-        file_content = f.read()
-
-    # Build minimal request structure for processing
-    dummy_request = ExcelUploadRequest(
-        fileName=file_record.file_name,
-        fileContent=base64.b64encode(file_content).decode("utf-8"),
-        dashboard=file_record.dashboard_name,
-        location="All",  # or set default/fallback filters
-        startDate=None,
-        endDate=None,
-        category=None,
-        server=None,
-    )
-
     try:
+        with open(file_path, "rb") as f:
+            file_content = f.read()
+
+        # Build minimal request structure for processing
+        dummy_request = ExcelUploadRequest(
+            fileName=file_record.file_name,
+            fileContent=base64.b64encode(file_content).decode("utf-8"),
+            dashboard=file_record.dashboard_name,
+            location="All",  # or set default/fallback filters
+            startDate=None,
+            endDate=None,
+            category=None,
+            server=None,
+        )
+
         dashboard_data = process_dashboard_data(dummy_request, file_content, file_record.file_name)
-    except Exception:
+        
+    except Exception as e:
+        print(f"Error processing dashboard data: {str(e)}")
         dashboard_data = None
 
     return {
