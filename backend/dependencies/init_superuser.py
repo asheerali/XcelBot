@@ -22,7 +22,37 @@ def create_default_superusers(db: Session):
             db.add(default_company)
             db.commit()
             db.refresh(default_company)
-            print(f"✅ Default company '{default_company.name}' created.")
+            print(f"Default company '{default_company.name}' created.")
+
+        # Step 1.1: Create another company if not exists
+        second_company = db.query(Company).filter_by(name="Second Company").first()
+        if not second_company:
+            second_company = Company(
+                name="Second Company",
+                state="CA",
+                postcode="90001",
+                phone_number="123-456-7890",
+                email="info@secondcompany.com",
+                website="https://secondcompany.com"
+            )
+            db.add(second_company)
+            db.commit()
+            db.refresh(second_company)
+            print(f"Second company '{second_company.name}' created.")
+
+            # Add a location for the second company
+            location = Store(
+                name="Second Company Store",
+                city="Los Angeles",
+                state="CA",
+                postcode="90001",
+                phone="323-1112222",
+                email="store@secondcompany.com",
+                company_id=second_company.id
+            )
+            db.add(location)
+            db.commit()
+            print("Location for second company added.")
 
         # Step 2: Define default users
         default_superusers = [
@@ -57,7 +87,7 @@ def create_default_superusers(db: Session):
         for user_data in default_superusers:
             existing_user = db.query(User).filter_by(email=user_data["email"]).first()
             if existing_user:
-                print(f"ℹ️ User '{user_data['email']}' already exists.")
+                print(f"User '{user_data['email']}' already exists.")
 
                 # Ensure user_company mapping for non-superusers
                 if existing_user.role != RoleEnum.superuser:
@@ -67,7 +97,7 @@ def create_default_superusers(db: Session):
                     ).first()
                     if not exists:
                         db.add(UserCompany(user_id=existing_user.id, company_id=existing_user.company_id))
-                        print(f"✅ UserCompany mapping created for '{existing_user.email}'")
+                        print(f"UserCompany mapping created for '{existing_user.email}'")
                 continue
 
             # Create new user
@@ -81,7 +111,7 @@ def create_default_superusers(db: Session):
                 company_id=user_data.get("company_id", default_company.id if user_data["role"] != RoleEnum.superuser else None)
             )
             db.add(user)
-            db.flush()  # assign user.id
+            db.flush()
 
             # Step 4: Create user_company + dummy locations for non-superusers
             if user.role != RoleEnum.superuser:
@@ -106,13 +136,13 @@ def create_default_superusers(db: Session):
                     company_id=user.company_id
                 )
                 db.add_all([location1, location2])
-                print("🏬 Added dummy locations for manager.")
+                print("Added dummy locations for manager.")
 
-            print(f"✅ User '{user.email}' with role '{user.role.name}' created.")
+            print(f"User '{user.email}' with role '{user.role.name}' created.")
 
         db.commit()
-        print("✅ All default users processed.")
+        print("All default users processed.")
 
     except Exception as e:
         db.rollback()
-        print(f"❌ Error while creating default superusers: {e}")
+        print(f"Error while creating default superusers: {e}")

@@ -94,6 +94,10 @@ def signin(credentials: SignInInput, db: Session = Depends(get_db)):
     if not user or not bcrypt.verify(credentials.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
+
+    # Print user role when they sign in
+    print(f"User {user.email} signed in with role: {user.role}")
+
     # Generate token
     token = create_access_token(data={"sub": user.email})
 
@@ -103,6 +107,10 @@ def signin(credentials: SignInInput, db: Session = Depends(get_db)):
     if user.role == "superuser":
         # Superuser can access the most recent file from ANY user
         file_record = db.query(UploadedFile).order_by(UploadedFile.id.desc()).first()
+        print(f"User {user.email} signed in with role: {user.role}", "accessing file:", file_record.file_name)
+        
+        
+        
     else:
         # For non-superusers (manager and lower roles)
         # First, check if they have uploaded any files themselves
