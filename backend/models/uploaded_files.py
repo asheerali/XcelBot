@@ -1,4 +1,7 @@
+# models/uploaded_file.py
+
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -10,7 +13,9 @@ class UploadedFile(Base):
     file_name = Column(String(255), nullable=False)
     dashboard_name = Column(String(100), nullable=False)
     uploader_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=True)
     uploaded_at = Column(DateTime, default=datetime.utcnow)
 
     uploader = relationship("User", back_populates="uploaded_files")
     permissions = relationship("FilePermission", back_populates="uploaded_file", cascade="all, delete-orphan")
+    company = relationship("Company")

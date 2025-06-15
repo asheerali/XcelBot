@@ -6,12 +6,41 @@ from schemas import users as user_schema
 from datetime import datetime
 from passlib.hash import bcrypt
 
+# def create_user(db: Session, user: user_schema.UserCreate):
+#     # Check if email exists
+#     existing_user = db.query(user_model.User).filter(user_model.User.email == user.email).first()
+#     if existing_user:
+#         raise ValueError("Email already registered.")
+    
+#     hashed_password = bcrypt.hash(user.password)
+#     db_user = user_model.User(
+#         first_name=user.first_name,
+#         last_name=user.last_name,
+#         email=user.email,
+#         password_hash=hashed_password,
+#         phone_number=user.phone_number,
+#         theme=user.theme,
+#         role=user.role,
+#     )
+#     db.add(db_user)
+#     db.commit()
+#     db.refresh(db_user)
+#     return db_user
+
+
+
+from fastapi import HTTPException
+
 def create_user(db: Session, user: user_schema.UserCreate):
     # Check if email exists
     existing_user = db.query(user_model.User).filter(user_model.User.email == user.email).first()
     if existing_user:
         raise ValueError("Email already registered.")
     
+    # Enforce company_id check for non-superusers
+    if user.role != user_schema.RoleEnum.superuser and not user.company_id:
+        raise HTTPException(status_code=400, detail="Non-superuser accounts must be associated with a company.")
+
     hashed_password = bcrypt.hash(user.password)
     db_user = user_model.User(
         first_name=user.first_name,
@@ -21,6 +50,7 @@ def create_user(db: Session, user: user_schema.UserCreate):
         phone_number=user.phone_number,
         theme=user.theme,
         role=user.role,
+        company_id=user.company_id  # Make sure to store it
     )
     db.add(db_user)
     db.commit()
