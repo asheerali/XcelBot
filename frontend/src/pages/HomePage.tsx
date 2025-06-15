@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -16,16 +16,25 @@ import {
   Paper,
   Avatar,
   IconButton,
+  Slide,
+  Zoom,
+  Chip,
+  LinearProgress,
+  Rating,
+  Stack,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Tooltip,
+  Divider,
+  TextField,
   Dialog,
   DialogContent,
-  TextField,
-  InputAdornment,
-  Divider,
+  DialogTitle,
+  DialogActions,
+  Snackbar,
   Alert,
-  CircularProgress,
-  Backdrop,
-  Slide,
-  Zoom
+  Badge,
 } from '@mui/material';
 import { styled, alpha, keyframes } from '@mui/material/styles';
 
@@ -40,90 +49,284 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import SecurityIcon from '@mui/icons-material/Security';
 import SpeedIcon from '@mui/icons-material/Speed';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
-import EmailIcon from '@mui/icons-material/Email';
-import LockIcon from '@mui/icons-material/Lock';
-import PersonIcon from '@mui/icons-material/Person';
-import GoogleIcon from '@mui/icons-material/Google';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import BusinessIcon from '@mui/icons-material/Business';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import TwitterIcon from '@mui/icons-material/Twitter';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import InstagramIcon from '@mui/icons-material/Instagram';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import StarIcon from '@mui/icons-material/Star';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import GroupIcon from '@mui/icons-material/Group';
+import ThumbUpIcon from '@mui/icons-material/ThumbUp';
+import InsightsIcon from '@mui/icons-material/Insights';
+import DataUsageIcon from '@mui/icons-material/DataUsage';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import DiamondIcon from '@mui/icons-material/Diamond';
+import ChatIcon from '@mui/icons-material/Chat';
+import EmailIcon from '@mui/icons-material/Email';
+import SendIcon from '@mui/icons-material/Send';
+import CloseIcon from '@mui/icons-material/Close';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import CodeIcon from '@mui/icons-material/Code';
+import StorageIcon from '@mui/icons-material/Storage';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import DevicesIcon from '@mui/icons-material/Devices';
+import WorkspacesIcon from '@mui/icons-material/Workspaces';
+import PieChartIcon from '@mui/icons-material/PieChart';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import InventoryIcon from '@mui/icons-material/Inventory';
+import WorkflowIcon from '@mui/icons-material/AccountTree';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import SupervisedUserCircleIcon from '@mui/icons-material/SupervisedUserCircle';
+import PersonIcon from '@mui/icons-material/Person';
 
-// Enhanced Animations
-const float = keyframes`
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-10px) rotate(2deg); }
+// Advanced Animations
+const morphing = keyframes`
+  0%, 100% { 
+    clip-path: polygon(40% 40%, 20% 40%, 40% 20%, 60% 20%, 60% 40%, 80% 40%, 80% 60%, 60% 60%, 60% 80%, 40% 80%);
+  }
+  50% { 
+    clip-path: polygon(20% 60%, 20% 20%, 60% 20%, 60% 40%, 80% 40%, 80% 80%, 40% 80%, 40% 60%, 20% 60%, 20% 60%);
+  }
 `;
 
-const slideInUp = keyframes`
+const parallaxFloat = keyframes`
+  0%, 100% { transform: translateY(0px) translateX(0px) rotate(0deg); }
+  25% { transform: translateY(-20px) translateX(10px) rotate(5deg); }
+  50% { transform: translateY(-10px) translateX(-5px) rotate(-3deg); }
+  75% { transform: translateY(-30px) translateX(15px) rotate(7deg); }
+`;
+
+const liquidMove = keyframes`
+  0%, 100% { transform: translateY(0px) scale(1) rotate(0deg); }
+  33% { transform: translateY(-15px) scale(1.1) rotate(120deg); }
+  66% { transform: translateY(-25px) scale(0.9) rotate(240deg); }
+`;
+
+const textGlow = keyframes`
+  0%, 100% { text-shadow: 0 0 20px rgba(66, 133, 244, 0.5); }
+  50% { text-shadow: 0 0 40px rgba(66, 133, 244, 0.8), 0 0 60px rgba(66, 133, 244, 0.4); }
+`;
+
+const slideUpStagger = keyframes`
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(60px) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 `;
 
-const gradientShift = keyframes`
+const rippleEffect = keyframes`
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+`;
+
+const gradientMove = keyframes`
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
 `;
 
-const pulse = keyframes`
-  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(66, 133, 244, 0.4); }
-  70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(66, 133, 244, 0); }
-  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(66, 133, 244, 0); }
+const holographic = keyframes`
+  0%, 100% { 
+    filter: hue-rotate(0deg) saturate(1); 
+    box-shadow: 0 0 50px rgba(66, 133, 244, 0.3);
+  }
+  25% { 
+    filter: hue-rotate(90deg) saturate(1.2); 
+    box-shadow: 0 0 50px rgba(138, 43, 226, 0.3);
+  }
+  50% { 
+    filter: hue-rotate(180deg) saturate(1.4); 
+    box-shadow: 0 0 50px rgba(255, 20, 147, 0.3);
+  }
+  75% { 
+    filter: hue-rotate(270deg) saturate(1.2); 
+    box-shadow: 0 0 50px rgba(0, 191, 255, 0.3);
+  }
 `;
 
-const shimmer = keyframes`
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+const scrollFadeIn = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 `;
 
-const bounce = keyframes`
-  0%, 20%, 53%, 80%, 100% { transform: translateY(0); }
-  40%, 43% { transform: translateY(-10px); }
-  70% { transform: translateY(-5px); }
+const scrollSlideLeft = keyframes`
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+`;
+
+const scrollSlideRight = keyframes`
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+`;
+
+const scrollZoomIn = keyframes`
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+`;
+
+const scrollRotateIn = keyframes`
+  from {
+    opacity: 0;
+    transform: rotate(-10deg) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+`;
+
+const scrollBounceIn = keyframes`
+  0% {
+    opacity: 0;
+    transform: translateY(60px) scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1.05);
+  }
+  70% {
+    transform: translateY(5px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+`;
+
+const interactiveHover = keyframes`
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-5px) scale(1.02);
+  }
+`;
+
+const graphPulse = keyframes`
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(66, 133, 244, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(66, 133, 244, 0.6), 0 0 60px rgba(66, 133, 244, 0.3);
+  }
+`;
+
+const modernGraphGlow = keyframes`
+  0%, 100% {
+    border-color: rgba(66, 133, 244, 0.3);
+    box-shadow: 0 8px 25px rgba(66, 133, 244, 0.2);
+  }
+  50% {
+    border-color: rgba(66, 133, 244, 0.8);
+    box-shadow: 0 12px 35px rgba(66, 133, 244, 0.4);
+  }
+`;
+
+const floatingCircle = keyframes`
+  0%, 100% { 
+    transform: translate(0, 0) scale(1);
+    opacity: 0.7;
+  }
+  25% { 
+    transform: translate(20px, -30px) scale(1.1);
+    opacity: 0.9;
+  }
+  50% { 
+    transform: translate(-15px, -20px) scale(0.9);
+    opacity: 0.8;
+  }
+  75% { 
+    transform: translate(25px, -40px) scale(1.05);
+    opacity: 0.85;
+  }
 `;
 
 // Styled Components
-const HeroSection = styled(Box)(({ theme }) => ({
-  background: `linear-gradient(135deg, 
-    ${theme.palette.primary.main}15 0%, 
-    ${theme.palette.secondary.main}10 50%, 
-    ${theme.palette.primary.light}05 100%)`,
+const HeroContainer = styled(Box)(({ theme }) => ({
   minHeight: '100vh',
-  display: 'flex',
-  alignItems: 'center',
+  background: `
+    radial-gradient(circle at 20% 50%, ${alpha(theme.palette.primary.main, 0.15)} 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, ${alpha(theme.palette.secondary.main, 0.15)} 0%, transparent 50%),
+    radial-gradient(circle at 40% 80%, ${alpha(theme.palette.error.main, 0.1)} 0%, transparent 50%),
+    linear-gradient(135deg, ${alpha(theme.palette.background.default, 0.9)} 0%, ${alpha(theme.palette.background.paper, 0.9)} 100%)
+  `,
   position: 'relative',
   overflow: 'hidden',
+  display: 'flex',
+  alignItems: 'center',
+  paddingTop: '80px',
   '&::before': {
     content: '""',
     position: 'absolute',
     top: 0,
     left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'url("data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><defs><pattern id=\'grain\' width=\'100\' height=\'100\' patternUnits=\'userSpaceOnUse\'><circle cx=\'25\' cy=\'25\' r=\'1\' fill=\'%23ffffff\' opacity=\'0.05\'/><circle cx=\'75\' cy=\'75\' r=\'1\' fill=\'%23ffffff\' opacity=\'0.05\'/><circle cx=\'75\' cy=\'25\' r=\'1\' fill=\'%23ffffff\' opacity=\'0.05\'/><circle cx=\'25\' cy=\'75\' r=\'1\' fill=\'%23ffffff\' opacity=\'0.05\'/></pattern></defs><rect width=\'100\' height=\'100\' fill=\'url(%23grain)\'/></svg>")',
+    width: '100%',
+    height: '100%',
+    background: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23${theme.palette.primary.main.slice(1)}' fill-opacity='0.03'%3E%3Ccircle cx='7' cy='7' r='3'/%3E%3Ccircle cx='53' cy='53' r='3'/%3E%3Ccircle cx='53' cy='7' r='3'/%3E%3Ccircle cx='7' cy='53' r='3'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
     pointerEvents: 'none',
   }
 }));
 
-const FeatureCard = styled(Card)(({ theme }) => ({
-  height: '100%',
-  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-  cursor: 'pointer',
-  background: alpha(theme.palette.background.paper, 0.9),
+const FloatingCircle = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  borderRadius: '50%',
+  background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.8)}, ${alpha(theme.palette.secondary.main, 0.8)})`,
+  animation: `${floatingCircle} 8s ease-in-out infinite`,
+  boxShadow: `0 10px 30px ${alpha(theme.palette.primary.main, 0.3)}`,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: 'white',
+  fontSize: '2rem',
+  zIndex: 1,
   backdropFilter: 'blur(10px)',
-  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+}));
+
+const GlassCard = styled(Card)(({ theme }) => ({
+  background: alpha(theme.palette.background.paper, 0.1),
+  backdropFilter: 'blur(20px)',
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+  borderRadius: 24,
+  transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
   position: 'relative',
   overflow: 'hidden',
   '&::before': {
@@ -134,81 +337,110 @@ const FeatureCard = styled(Card)(({ theme }) => ({
     width: '100%',
     height: '100%',
     background: `linear-gradient(90deg, transparent, ${alpha(theme.palette.primary.main, 0.1)}, transparent)`,
-    transition: 'left 0.5s ease',
+    transition: 'left 0.6s ease',
   },
   '&:hover': {
-    transform: 'translateY(-8px) scale(1.02)',
-    boxShadow: `0 20px 60px ${alpha(theme.palette.primary.main, 0.25)}`,
-    border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+    transform: 'translateY(-15px) scale(1.02)',
+    boxShadow: `0 30px 80px ${alpha(theme.palette.primary.main, 0.3)}`,
+    border: `1px solid ${alpha(theme.palette.primary.main, 0.4)}`,
     '&::before': {
       left: '100%',
     }
   }
 }));
 
-const FloatingIcon = styled(Box)(({ theme }) => ({
-  animation: `${float} 6s ease-in-out infinite`,
-  borderRadius: '50%',
-  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-  width: 80,
-  height: 80,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginBottom: theme.spacing(2),
-  boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.3)}`,
-  transition: 'all 0.3s ease',
-  '&:hover': {
-    animation: `${pulse} 2s infinite`,
-  }
-}));
-
-const GradientText = styled(Typography)(({ theme }) => ({
-  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-  backgroundClip: 'text',
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
-  fontWeight: 'bold',
-}));
-
-const AnimatedButton = styled(Button)(({ theme }) => ({
-  borderRadius: theme.spacing(3),
-  padding: theme.spacing(1.5, 4),
-  fontWeight: 600,
-  fontSize: '1rem',
+const HolographicButton = styled(Button)(({ theme }) => ({
+  background: `linear-gradient(45deg, 
+    ${theme.palette.primary.main} 0%, 
+    ${theme.palette.secondary.main} 25%, 
+    ${theme.palette.primary.main} 50%, 
+    ${theme.palette.secondary.main} 75%, 
+    ${theme.palette.primary.main} 100%)`,
+  backgroundSize: '400% 400%',
+  animation: `${gradientMove} 3s ease infinite`,
+  borderRadius: 50,
+  padding: '16px 40px',
+  color: 'white',
+  fontWeight: 700,
+  fontSize: '1.2rem',
   textTransform: 'none',
+  boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.4)}`,
   position: 'relative',
   overflow: 'hidden',
-  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-  transition: 'all 0.3s ease',
+  border: 'none',
   '&::before': {
     content: '""',
     position: 'absolute',
-    top: 0,
-    left: '-100%',
-    width: '100%',
-    height: '100%',
-    background: `linear-gradient(90deg, transparent, ${alpha('#ffffff', 0.2)}, transparent)`,
-    transition: 'left 0.5s ease',
+    top: '50%',
+    left: '50%',
+    width: '0',
+    height: '0',
+    borderRadius: '50%',
+    background: alpha('#ffffff', 0.3),
+    transition: 'all 0.6s ease',
+    transform: 'translate(-50%, -50%)',
   },
   '&:hover': {
-    transform: 'translateY(-3px)',
-    boxShadow: `0 15px 35px ${alpha(theme.palette.primary.main, 0.4)}`,
+    transform: 'translateY(-4px) scale(1.05)',
+    boxShadow: `0 15px 50px ${alpha(theme.palette.primary.main, 0.5)}`,
+    animation: `${gradientMove} 1.5s ease infinite, ${holographic} 2s ease infinite`,
     '&::before': {
-      left: '100%',
+      width: '300px',
+      height: '300px',
+      animation: `${rippleEffect} 0.6s ease`,
     }
   }
 }));
 
-// UPDATED: Modern Footer with proper styling and animations
-const ModernFooter = styled(Box)(({ theme }) => ({
+const ChatButton = styled(IconButton)(({ theme }) => ({
+  position: 'fixed',
+  bottom: 30,
+  right: 30,
+  width: 60,
+  height: 60,
+  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+  color: 'white',
+  boxShadow: `0 8px 25px ${alpha(theme.palette.primary.main, 0.4)}`,
+  zIndex: 1000,
+  transition: 'all 0.3s ease',
+  animation: `${liquidMove} 6s ease-in-out infinite`,
+  '&:hover': {
+    transform: 'scale(1.1)',
+    boxShadow: `0 12px 35px ${alpha(theme.palette.primary.main, 0.5)}`,
+    animation: 'none',
+  }
+}));
+
+const ScrollToTopButton = styled(IconButton)(({ theme }) => ({
+  position: 'fixed',
+  bottom: 110,
+  right: 30,
+  width: 50,
+  height: 50,
+  background: alpha(theme.palette.background.paper, 0.9),
+  backdropFilter: 'blur(10px)',
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+  color: theme.palette.primary.main,
+  transition: 'all 0.3s ease',
+  zIndex: 999,
+  '&:hover': {
+    background: theme.palette.primary.main,
+    color: 'white',
+    transform: 'translateY(-3px)',
+  }
+}));
+
+const DashboardCard = styled(Card)(({ theme }) => ({
   background: `linear-gradient(135deg, 
-    #0f1419 0%, 
-    #1a1f2e 50%, 
-    #0f1419 100%)`,
-  color: '#ffffff',
+    ${alpha(theme.palette.background.paper, 0.95)} 0%, 
+    ${alpha(theme.palette.primary.main, 0.02)} 100%)`,
+  backdropFilter: 'blur(30px)',
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+  borderRadius: 20,
+  transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
   position: 'relative',
-  overflow: 'hidden',
+  height: '100%',
+  cursor: 'pointer',
   '&::before': {
     content: '""',
     position: 'absolute',
@@ -216,160 +448,115 @@ const ModernFooter = styled(Box)(({ theme }) => ({
     left: 0,
     right: 0,
     bottom: 0,
-    background: `radial-gradient(circle at 20% 50%, ${alpha(theme.palette.primary.main, 0.1)} 0%, transparent 50%),
-                  radial-gradient(circle at 80% 50%, ${alpha(theme.palette.secondary.main, 0.1)} 0%, transparent 50%)`,
-    pointerEvents: 'none',
-  }
-}));
-
-const FooterLink = styled(Typography)(({ theme }) => ({
-  color: alpha('#ffffff', 0.7),
-  cursor: 'pointer',
-  transition: 'all 0.3s ease',
-  position: 'relative',
-  display: 'inline-block',
-  '&::after': {
-    content: '""',
-    position: 'absolute',
-    bottom: -2,
-    left: 0,
-    width: 0,
-    height: 2,
-    background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-    transition: 'width 0.3s ease',
+    borderRadius: 20,
+    padding: 1,
+    background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.5)}, ${alpha(theme.palette.secondary.main, 0.5)})`,
+    mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+    maskComposite: 'xor',
+    opacity: 0,
+    transition: 'opacity 0.3s ease',
   },
   '&:hover': {
-    color: '#ffffff',
-    transform: 'translateX(5px)',
-    '&::after': {
-      width: '100%',
+    transform: 'translateY(-10px) scale(1.02)',
+    boxShadow: `0 25px 70px ${alpha(theme.palette.primary.main, 0.25)}`,
+    '&::before': {
+      opacity: 1,
     }
   }
 }));
 
-const SocialIconButton = styled(IconButton)(({ theme }) => ({
-  background: alpha('#ffffff', 0.1),
-  backdropFilter: 'blur(10px)',
-  border: `1px solid ${alpha('#ffffff', 0.2)}`,
-  color: '#ffffff',
-  transition: 'all 0.3s ease',
-  '&:hover': {
-    background: alpha(theme.palette.primary.main, 0.8),
-    transform: 'translateY(-3px) scale(1.1)',
-    boxShadow: `0 10px 25px ${alpha(theme.palette.primary.main, 0.3)}`,
-  }
-}));
+const AnimatedSection = styled(Box)(({ theme, animationType = 'fadeIn', delay = 0 }) => {
+  const getAnimation = () => {
+    switch (animationType) {
+      case 'slideLeft':
+        return scrollSlideLeft;
+      case 'slideRight':
+        return scrollSlideRight;
+      case 'zoomIn':
+        return scrollZoomIn;
+      case 'rotateIn':
+        return scrollRotateIn;
+      case 'bounceIn':
+        return scrollBounceIn;
+      default:
+        return scrollFadeIn;
+    }
+  };
 
-const ScrollToTopButton = styled(IconButton)(({ theme }) => ({
-  position: 'fixed',
-  bottom: 30,
-  right: 30,
-  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-  color: '#ffffff',
-  width: 56,
-  height: 56,
-  boxShadow: `0 8px 25px ${alpha(theme.palette.primary.main, 0.3)}`,
-  transition: 'all 0.3s ease',
-  zIndex: 1000,
-  '&:hover': {
-    transform: 'translateY(-5px) scale(1.1)',
-    boxShadow: `0 15px 35px ${alpha(theme.palette.primary.main, 0.4)}`,
-    animation: `${bounce} 1s ease`,
-  }
-}));
+  return {
+    opacity: 0,
+    transform: 'translateY(30px)',
+    animation: `${getAnimation()} 0.8s ease forwards`,
+    animationDelay: `${delay}ms`,
+  };
+});
 
-const LoginDialog = styled(Dialog)(({ theme }) => ({
-  '& .MuiDialog-paper': {
-    borderRadius: 20,
-    background: `linear-gradient(135deg, 
-      ${alpha(theme.palette.background.paper, 0.95)} 0%, 
-      ${alpha(theme.palette.primary.main, 0.02)} 100%)`,
-    backdropFilter: 'blur(20px)',
-    border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-    boxShadow: `0 20px 60px ${alpha(theme.palette.common.black, 0.3)}`,
-    overflow: 'visible',
-  }
-}));
-
-const AuthCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(4),
-  borderRadius: 20,
+const InteractiveGraphCard = styled(Card)(({ theme }) => ({
   background: `linear-gradient(135deg, 
-    ${alpha(theme.palette.background.paper, 0.98)} 0%, 
+    ${alpha(theme.palette.background.paper, 0.95)} 0%, 
     ${alpha(theme.palette.primary.main, 0.02)} 100%)`,
-  backdropFilter: 'blur(20px)',
-  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-  boxShadow: `0 20px 60px ${alpha(theme.palette.common.black, 0.1)}`,
-}));
-
-const GoogleButton = styled(Button)(({ theme }) => ({
-  borderRadius: 12,
-  padding: theme.spacing(1.5, 3),
-  background: '#ffffff',
-  color: '#757575',
-  border: '2px solid #e0e0e0',
-  fontWeight: 500,
-  textTransform: 'none',
-  fontSize: '1rem',
-  transition: 'all 0.3s ease',
+  backdropFilter: 'blur(30px)',
+  border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+  borderRadius: 20,
+  transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+  position: 'relative',
+  cursor: 'pointer',
+  overflow: 'hidden',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    background: `linear-gradient(45deg, transparent, ${alpha(theme.palette.primary.main, 0.1)}, transparent)`,
+    transform: 'translateX(-100%)',
+    transition: 'transform 0.6s ease',
+  },
   '&:hover': {
-    background: '#f5f5f5',
-    borderColor: '#4285f4',
-    transform: 'translateY(-2px)',
-    boxShadow: '0 8px 20px rgba(66, 133, 244, 0.2)',
-  }
-}));
-
-const StyledTextField = styled(TextField)(({ theme }) => ({
-  '& .MuiOutlinedInput-root': {
-    borderRadius: 12,
-    background: alpha(theme.palette.background.paper, 0.8),
-    transition: 'all 0.3s ease',
-    '&:hover': {
-      background: alpha(theme.palette.background.paper, 0.9),
-    },
-    '&.Mui-focused': {
-      background: alpha(theme.palette.background.paper, 1),
-      boxShadow: `0 0 0 2px ${alpha(theme.palette.primary.main, 0.2)}`,
+    transform: 'translateY(-10px) scale(1.02)',
+    boxShadow: `0 25px 70px ${alpha(theme.palette.primary.main, 0.25)}`,
+    animation: `${modernGraphGlow} 2s ease infinite`,
+    '&::before': {
+      transform: 'translateX(100%)',
     }
   }
-}));
-
-const SuccessIcon = styled(CheckCircleIcon)(({ theme }) => ({
-  color: theme.palette.success.main,
-  fontSize: 60,
-  marginBottom: theme.spacing(2),
 }));
 
 // Main Component
 const ModernHomepage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  
-  // State management
-  const [loginOpen, setLoginOpen] = useState(false);
-  const [registerOpen, setRegisterOpen] = useState(false);
-  const [isLogin, setIsLogin] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
   const [showScrollToTop, setShowScrollToTop] = useState(false);
-  
-  // Form data
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    firstName: '',
-    lastName: '',
-    company: ''
-  });
+  const [chatOpen, setChatOpen] = useState(false);
+  const [emailData, setEmailData] = useState({ name: '', email: '', message: '' });
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [visibleElements, setVisibleElements] = useState({});
 
-  // Scroll to top functionality
+  const heroRef = useRef();
+  const dashboardsRef = useRef();
+  const featuresRef = useRef();
+  const testimonialsRef = useRef();
+
+  // Scroll animations
   useEffect(() => {
     const handleScroll = () => {
-      setShowScrollToTop(window.scrollY > 400);
+      setShowScrollToTop(window.scrollY > 500);
+      
+      const refs = [
+        { ref: dashboardsRef, key: 'dashboards' },
+        { ref: featuresRef, key: 'features' },
+        { ref: testimonialsRef, key: 'testimonials' }
+      ];
+
+      refs.forEach(({ ref, key }) => {
+        if (ref.current) {
+          const rect = ref.current.getBoundingClientRect();
+          if (rect.top < window.innerHeight * 0.8) {
+            setVisibleElements(prev => ({ ...prev, [key]: true }));
+          }
+        }
+      });
     };
 
     window.addEventListener('scroll', handleScroll);
@@ -377,393 +564,196 @@ const ModernHomepage = () => {
   }, []);
 
   const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Sample data
+  const handleChatSubmit = () => {
+    if (emailData.name && emailData.email && emailData.message) {
+      console.log('Email data:', emailData);
+      setSnackbar({ open: true, message: 'Message sent successfully!', severity: 'success' });
+      setChatOpen(false);
+      setEmailData({ name: '', email: '', message: '' });
+    } else {
+      setSnackbar({ open: true, message: 'Please fill all fields', severity: 'error' });
+    }
+  };
+
+  // 7 Dashboards data
+  const dashboards = [
+    {
+      id: 'sales-split',
+      title: 'Sales Split',
+      description: 'Advanced revenue breakdown analysis by categories, locations, and time periods with AI-powered insights',
+      icon: <PieChartIcon fontSize="large" />,
+      color: '#4285f4',
+      gradient: 'linear-gradient(135deg, #4285f4, #34a853)',
+      features: ['Category Analysis', 'Location Breakdown', 'Time-based Insights', 'Interactive Charts']
+    },
+    {
+      id: 'product-mix',
+      title: 'Product Mix',
+      description: 'Comprehensive menu performance analysis and product optimization with interactive visualizations',
+      icon: <RestaurantIcon fontSize="large" />,
+      color: '#34a853',
+      gradient: 'linear-gradient(135deg, #34a853, #fbbc04)',
+      features: ['Menu Performance', 'Product Rankings', 'Profitability Analysis', 'Trend Graphs']
+    },
+    {
+      id: 'financial',
+      title: 'Financial',
+      description: 'Complete financial metrics dashboard with real-time tracking and predictive analytics',
+      icon: <AttachMoneyIcon fontSize="large" />,
+      color: '#fbbc04',
+      gradient: 'linear-gradient(135deg, #fbbc04, #ea4335)',
+      features: ['Revenue Analysis', 'Cost Management', 'Profit Margins', 'Financial Forecasting']
+    },
+    {
+      id: 'company-wide',
+      title: 'Company Wide',
+      description: 'Enterprise-wide insights and cross-location analytics with modern interactive graphs',
+      icon: <BusinessIcon fontSize="large" />,
+      color: '#ea4335',
+      gradient: 'linear-gradient(135deg, #ea4335, #9c27b0)',
+      features: ['Multi-location View', 'Comparative Analysis', 'Trend Identification', 'Executive Dashboard']
+    },
+    {
+      id: 'order',
+      title: 'Order',
+      description: 'Advanced order analytics with customer behavior insights and interactive data visualization',
+      icon: <AssessmentIcon fontSize="large" />,
+      color: '#9c27b0',
+      gradient: 'linear-gradient(135deg, #9c27b0, #4285f4)',
+      features: ['Order Patterns', 'Customer Insights', 'Service Metrics', 'Real-time Charts']
+    },
+    {
+      id: 'inventory',
+      title: 'Inventory',
+      description: 'Smart inventory management with waste reduction analytics and supply chain optimization',
+      icon: <InventoryIcon fontSize="large" />,
+      color: '#00bcd4',
+      gradient: 'linear-gradient(135deg, #00bcd4, #4285f4)',
+      features: ['Stock Levels', 'Waste Analysis', 'Supply Chain', 'Automated Alerts']
+    },
+    {
+      id: 'orderflow',
+      title: 'Orderflow',
+      description: 'Real-time order processing workflow with operational efficiency tracking and modern graphs',
+      icon: <WorkflowIcon fontSize="large" />,
+      color: '#ff5722',
+      gradient: 'linear-gradient(135deg, #ff5722, #34a853)',
+      features: ['Real-time Tracking', 'Process Optimization', 'Efficiency Metrics', 'Flow Visualization']
+    }
+  ];
+
+  // User roles data
+  const userRoles = [
+    {
+      role: 'Employee',
+      icon: <PersonIcon fontSize="large" />,
+      color: '#4285f4',
+      permissions: [
+        'View assigned dashboards',
+        'Access interactive graphs',
+        'Basic reporting tools',
+        'Data visualization',
+        'Export basic reports'
+      ],
+      description: 'Standard access for day-to-day operations with interactive graph viewing'
+    },
+    {
+      role: 'Admin',
+      icon: <AdminPanelSettingsIcon fontSize="large" />,
+      color: '#34a853',
+      permissions: [
+        'Full dashboard access',
+        'Advanced interactive graphs',
+        'User management',
+        'Advanced analytics',
+        'Custom report generation',
+        'System configuration'
+      ],
+      description: 'Management level access with enhanced capabilities and full graph interaction'
+    },
+    {
+      role: 'Super Admin',
+      icon: <SupervisedUserCircleIcon fontSize="large" />,
+      color: '#ea4335',
+      permissions: [
+        'Complete system control',
+        'All dashboard permissions',
+        'Advanced graph customization',
+        'Security settings management',
+        'AI model configuration',
+        'Enterprise-level controls'
+      ],
+      description: 'Complete system control with full access to all interactive features'
+    }
+  ];
+
   const features = [
     {
-      icon: <AnalyticsIcon fontSize="large" />,
-      title: "Sales Analytics",
-      description: "Deep insights into your sales performance with interactive dashboards and real-time metrics.",
-      color: "#4285f4"
+      icon: <SmartToyIcon fontSize="large" />,
+      title: "AI-Enhanced Analytics",
+      description: "Advanced AI algorithms that automatically detect patterns, predict trends, and provide intelligent recommendations with modern interactive graphs and real-time data visualization.",
+      color: "#4285f4",
+      gradient: "linear-gradient(135deg, #4285f4, #34a853)"
     },
     {
-      icon: <RestaurantIcon fontSize="large" />,
-      title: "Product Mix Analysis",
-      description: "Understand your menu performance and optimize product offerings for maximum profitability.",
-      color: "#34a853"
-    },
-    {
-      icon: <AttachMoneyIcon fontSize="large" />,
-      title: "Financial Reporting",
-      description: "Comprehensive financial dashboards with budget tracking and performance indicators.",
-      color: "#ea4335"
-    },
-    {
-      icon: <TrendingUpIcon fontSize="large" />,
-      title: "Trend Forecasting",
-      description: "Predictive analytics to help you stay ahead of market trends and customer preferences.",
-      color: "#fbbc04"
-    },
-    {
-      icon: <CloudUploadIcon fontSize="large" />,
-      title: "Easy Data Import",
-      description: "Simply upload your Excel files and get instant insights without complex setup.",
-      color: "#9c27b0"
+      icon: <ShowChartIcon fontSize="large" />,
+      title: "Modern Interactive Graphs",
+      description: "Cutting-edge responsive charts and graphs with real-time updates, drill-down capabilities, customizable visualization options, and seamless user interaction across all devices.",
+      color: "#34a853",
+      gradient: "linear-gradient(135deg, #34a853, #fbbc04)"
     },
     {
       icon: <SecurityIcon fontSize="large" />,
-      title: "Secure & Reliable",
-      description: "Enterprise-grade security with cloud backup and 99.9% uptime guarantee.",
-      color: "#ff5722"
+      title: "Role-Based Permissions",
+      description: "Sophisticated permission system with granular control over data access for Employees, Admins, and Super Admins, ensuring security while enabling seamless collaboration.",
+      color: "#ea4335",
+      gradient: "linear-gradient(135deg, #ea4335, #9c27b0)"
+    },
+    {
+      icon: <SpeedIcon fontSize="large" />,
+      title: "Real-Time Interactive Processing",
+      description: "Lightning-fast data processing with live interactive updates and modern graph animations, ensuring you always have the most current information with beautiful visualizations.",
+      color: "#fbbc04",
+      gradient: "linear-gradient(135deg, #fbbc04, #ff5722)"
     }
   ];
 
-  const benefits = [
+  const testimonials = [
     {
-      icon: <SpeedIcon />,
-      title: "10x Faster Analysis",
-      description: "Transform hours of manual work into minutes of automated insights."
+      name: "Sarah Chen",
+      role: "CEO",
+      company: "TechStart Inc.",
+      rating: 5,
+      content: "The AI-enhanced analytics have transformed our decision-making process. We've seen 40% revenue growth since implementation.",
+      avatar: "SC"
     },
     {
-      icon: <AutoGraphIcon />,
-      title: "Real-time Dashboards",
-      description: "Live data visualization that updates as your business grows."
+      name: "Michael Rodriguez",
+      role: "Operations Director", 
+      company: "RetailPro",
+      rating: 5,
+      content: "Having 7 specialized dashboards gives us incredible visibility into every aspect of our business operations.",
+      avatar: "MR"
     },
     {
-      icon: <BusinessIcon />,
-      title: "Multi-location Support",
-      description: "Manage and compare performance across all your business locations."
+      name: "Emily Watson",
+      role: "Data Analyst",
+      company: "DataFlow Solutions", 
+      rating: 5,
+      content: "The role-based permissions and interactive graphs make collaboration seamless while maintaining data security.",
+      avatar: "EW"
     }
   ];
 
-  // Event handlers (keeping existing handlers)
-  const handleInputChange = (field) => (event) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: event.target.value
-    }));
-    setError('');
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    // Validation
-    if (!formData.email || !formData.password) {
-      setError('Email and password are required');
-      setLoading(false);
-      return;
-    }
-
-    if (!isLogin) {
-      if (formData.password !== formData.confirmPassword) {
-        setError('Passwords do not match');
-        setLoading(false);
-        return;
-      }
-      if (!formData.firstName || !formData.lastName) {
-        setError('First name and last name are required');
-        setLoading(false);
-        return;
-      }
-    }
-
-    // Simulate API call
-    try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setSuccess(true);
-      setTimeout(() => {
-        setSuccess(false);
-        setLoginOpen(false);
-        setRegisterOpen(false);
-        setLoading(false);
-        // Redirect to dashboard
-        window.location.href = '/manage-reports';
-      }, 2000);
-      
-    } catch (err) {
-      setError('Authentication failed. Please try again.');
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    // Simulate Google OAuth
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setSuccess(true);
-      setTimeout(() => {
-        setSuccess(false);
-        setLoginOpen(false);
-        setRegisterOpen(false);
-        setLoading(false);
-        window.location.href = '/manage-reports';
-      }, 2000);
-    } catch (err) {
-      setError('Google authentication failed. Please try again.');
-      setLoading(false);
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      email: '',
-      password: '',
-      confirmPassword: '',
-      firstName: '',
-      lastName: '',
-      company: ''
-    });
-    setError('');
-    setShowPassword(false);
-  };
-
-  const openLogin = () => {
-    resetForm();
-    setIsLogin(true);
-    setLoginOpen(true);
-  };
-
-  const openRegister = () => {
-    resetForm();
-    setIsLogin(false);
-    setRegisterOpen(true);
-  };
-
-  const switchMode = () => {
-    resetForm();
-    setIsLogin(!isLogin);
-    if (isLogin) {
-      setLoginOpen(false);
-      setRegisterOpen(true);
-    } else {
-      setRegisterOpen(false);
-      setLoginOpen(true);
-    }
-  };
-
-  // Auth Dialog Content (keeping existing)
-  const AuthDialogContent = () => (
-    <Box sx={{ width: 400, maxWidth: '90vw' }}>
-      {loading && (
-        <Backdrop open sx={{ position: 'absolute', zIndex: 10, borderRadius: 5 }}>
-          <CircularProgress color="primary" />
-        </Backdrop>
-      )}
-      
-      {success ? (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
-          <SuccessIcon />
-          <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
-            {isLogin ? 'Welcome Back!' : 'Account Created!'}
-          </Typography>
-          <Typography color="text.secondary">
-            {isLogin ? 'Redirecting to your dashboard...' : 'Welcome to INSIGHTiQ! Redirecting...'}
-          </Typography>
-        </Box>
-      ) : (
-        <>
-          {/* Header */}
-          <Box sx={{ textAlign: 'center', mb: 3 }}>
-            <Avatar
-              sx={{
-                width: 60,
-                height: 60,
-                bgcolor: 'primary.main',
-                mx: 'auto',
-                mb: 2
-              }}
-            >
-              <DashboardIcon fontSize="large" />
-            </Avatar>
-            <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-              {isLogin ? 'Welcome Back' : 'Create Account'}
-            </Typography>
-            <Typography color="text.secondary">
-              {isLogin 
-                ? 'Sign in to access your analytics dashboard' 
-                : 'Join thousands of businesses using INSIGHTiQ'
-              }
-            </Typography>
-          </Box>
-
-          {/* Error Alert */}
-          {error && (
-            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
-              {error}
-            </Alert>
-          )}
-
-          {/* Google Button */}
-          <GoogleButton
-            fullWidth
-            onClick={handleGoogleLogin}
-            startIcon={<GoogleIcon />}
-            sx={{ mb: 2 }}
-          >
-            Continue with Google
-          </GoogleButton>
-
-          <Divider sx={{ my: 2 }}>
-            <Typography variant="body2" color="text.secondary">
-              or continue with email
-            </Typography>
-          </Divider>
-
-          {/* Form */}
-          <Box component="form" onSubmit={handleSubmit}>
-            {!isLogin && (
-              <Grid container spacing={2} sx={{ mb: 2 }}>
-                <Grid item xs={6}>
-                  <StyledTextField
-                    fullWidth
-                    label="First Name"
-                    value={formData.firstName}
-                    onChange={handleInputChange('firstName')}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <PersonIcon color="action" />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <StyledTextField
-                    fullWidth
-                    label="Last Name"
-                    value={formData.lastName}
-                    onChange={handleInputChange('lastName')}
-                  />
-                </Grid>
-              </Grid>
-            )}
-
-            {!isLogin && (
-              <StyledTextField
-                fullWidth
-                label="Company (Optional)"
-                value={formData.company}
-                onChange={handleInputChange('company')}
-                sx={{ mb: 2 }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <BusinessIcon color="action" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            )}
-
-            <StyledTextField
-              fullWidth
-              label="Email Address"
-              type="email"
-              value={formData.email}
-              onChange={handleInputChange('email')}
-              sx={{ mb: 2 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <EmailIcon color="action" />
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            <StyledTextField
-              fullWidth
-              label="Password"
-              type={showPassword ? 'text' : 'password'}
-              value={formData.password}
-              onChange={handleInputChange('password')}
-              sx={{ mb: !isLogin ? 2 : 3 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <LockIcon color="action" />
-                  </InputAdornment>
-                ),
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            {!isLogin && (
-              <StyledTextField
-                fullWidth
-                label="Confirm Password"
-                type={showPassword ? 'text' : 'password'}
-                value={formData.confirmPassword}
-                onChange={handleInputChange('confirmPassword')}
-                sx={{ mb: 3 }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <LockIcon color="action" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            )}
-
-            <AnimatedButton
-              type="submit"
-              fullWidth
-              variant="contained"
-              size="large"
-              disabled={loading}
-              sx={{
-                py: 1.5,
-                fontSize: '1.1rem',
-                fontWeight: 600,
-                textTransform: 'none',
-              }}
-            >
-              {isLogin ? 'Sign In' : 'Create Account'}
-            </AnimatedButton>
-          </Box>
-
-          {/* Switch Mode */}
-          <Box sx={{ textAlign: 'center', mt: 3 }}>
-            <Typography variant="body2" color="text.secondary">
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
-              <Button
-                variant="text"
-                onClick={switchMode}
-                sx={{ 
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  color: 'primary.main'
-                }}
-              >
-                {isLogin ? 'Sign Up' : 'Sign In'}
-              </Button>
-            </Typography>
-          </Box>
-        </>
-      )}
-    </Box>
-  );
+  const stats = [
+    { number: "7", label: "Specialized Dashboards", icon: <DashboardIcon />, color: "#4285f4" },
+    { number: "3", label: "User Role Types", icon: <GroupIcon />, color: "#34a853" },
+    { number: "99.99%", label: "Uptime", icon: <SecurityIcon />, color: "#ea4335" },
+    { number: "24/7", label: "AI Enhancement", icon: <SmartToyIcon />, color: "#fbbc04" }
+  ];
 
   return (
     <Box>
@@ -772,133 +762,251 @@ const ModernHomepage = () => {
         position="fixed" 
         elevation={0}
         sx={{ 
-          background: alpha(theme.palette.background.paper, 0.9),
+          background: alpha(theme.palette.background.paper, 0.8),
           backdropFilter: 'blur(20px)',
           borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`
         }}
       >
-        <Toolbar>
+        <Toolbar sx={{ py: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
             <Avatar
               sx={{
                 bgcolor: 'primary.main',
                 mr: 2,
-                width: 40,
-                height: 40
+                width: 45,
+                height: 45,
+                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.3)}`
               }}
             >
               <DashboardIcon />
             </Avatar>
-            <GradientText variant="h5" sx={{ fontWeight: 700 }}>
+            <Typography 
+              variant="h5" 
+              sx={{ 
+                fontWeight: 800,
+                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                animation: `${textGlow} 3s ease-in-out infinite`
+              }}
+            >
               INSIGHTiQ
-            </GradientText>
+            </Typography>
           </Box>
           
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             <Button
               variant="outlined"
-              onClick={openLogin}
               sx={{
-                borderRadius: 3,
+                borderRadius: 25,
                 px: 3,
+                py: 1,
                 textTransform: 'none',
-                fontWeight: 500
+                fontWeight: 600,
+                borderWidth: 2,
+                '&:hover': {
+                  borderWidth: 2,
+                  transform: 'translateY(-2px)',
+                }
               }}
             >
               Sign In
             </Button>
-            <AnimatedButton
-              variant="contained"
-              onClick={openRegister}
-              sx={{
-                px: 3,
-                textTransform: 'none',
-                fontWeight: 600,
-              }}
-            >
+            <HolographicButton startIcon={<RocketLaunchIcon />}>
               Get Started
-            </AnimatedButton>
+            </HolographicButton>
           </Box>
         </Toolbar>
       </AppBar>
 
-      {/* Hero Section */}
-      <HeroSection>
+      {/* Hero Section with Fixed Floating Circles */}
+      <HeroContainer ref={heroRef}>
+        {/* Properly positioned floating circles */}
+        <FloatingCircle 
+          sx={{ 
+            width: 80, 
+            height: 80, 
+            top: '15%', 
+            left: '8%',
+            animationDelay: '0s',
+          }}
+        >
+          📊
+        </FloatingCircle>
+        <FloatingCircle 
+          sx={{ 
+            width: 60, 
+            height: 60, 
+            top: '70%', 
+            left: '85%',
+            animationDelay: '2s',
+          }}
+        >
+          💡
+        </FloatingCircle>
+        <FloatingCircle 
+          sx={{ 
+            width: 70, 
+            height: 70, 
+            top: '35%', 
+            right: '12%',
+            animationDelay: '4s',
+          }}
+        >
+          🚀
+        </FloatingCircle>
+        <FloatingCircle 
+          sx={{ 
+            width: 50, 
+            height: 50, 
+            top: '80%', 
+            left: '20%',
+            animationDelay: '6s',
+          }}
+        >
+          ⚡
+        </FloatingCircle>
+        <FloatingCircle 
+          sx={{ 
+            width: 65, 
+            height: 65, 
+            top: '25%', 
+            left: '50%',
+            animationDelay: '3s',
+          }}
+        >
+          🎯
+        </FloatingCircle>
+
         <Container maxWidth="lg">
-          <Grid container spacing={6} alignItems="center">
+          <Grid container spacing={8} alignItems="center">
             <Grid item xs={12} md={6}>
               <Fade in timeout={1000}>
                 <Box>
+                  <Chip 
+                    label="🔥 7 Specialized Dashboards" 
+                    sx={{
+                      mb: 4,
+                      background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.1)})`,
+                      border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                      fontWeight: 600,
+                      fontSize: '1rem',
+                      py: 2,
+                      px: 3,
+                      animation: `${slideUpStagger} 1s ease 0.2s both`
+                    }}
+                  />
+                  
                   <Typography
                     variant="h1"
                     sx={{
-                      fontSize: { xs: '2.5rem', md: '4rem' },
-                      fontWeight: 800,
+                      fontSize: { xs: '3rem', md: '5rem' },
+                      fontWeight: 900,
                       mb: 2,
-                      background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                      lineHeight: 1,
+                      background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main}, ${theme.palette.primary.dark})`,
                       backgroundClip: 'text',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
-                      lineHeight: 1.1
+                      animation: `${slideUpStagger} 1s ease 0.4s both, ${textGlow} 4s ease-in-out infinite`
                     }}
                   >
-                    Transform Your Business Data
+                    Analytics That
                   </Typography>
+                  
                   <Typography
-                    variant="h4"
+                    variant="h1"
                     sx={{
-                      fontSize: { xs: '1.5rem', md: '2rem' },
-                      fontWeight: 400,
+                      fontSize: { xs: '3rem', md: '5rem' },
+                      fontWeight: 900,
                       mb: 3,
-                      color: 'text.secondary',
-                      lineHeight: 1.4
+                      lineHeight: 1,
+                      color: 'text.primary',
+                      animation: `${slideUpStagger} 1s ease 0.6s both`
                     }}
                   >
-                    Into Powerful Insights
+                    Drives Success ✨
                   </Typography>
+                  
                   <Typography
-                    variant="h6"
+                    variant="h5"
                     sx={{
-                      mb: 4,
+                      mb: 5,
                       color: 'text.secondary',
-                      maxWidth: 500,
-                      lineHeight: 1.6
+                      maxWidth: 550,
+                      lineHeight: 1.6,
+                      fontSize: { xs: '1.3rem', md: '1.5rem' },
+                      animation: `${slideUpStagger} 1s ease 0.8s both`
                     }}
                   >
-                    Upload your Excel files and get instant analytics dashboards. 
-                    Track sales, analyze trends, and make data-driven decisions with ease.
+                    Transform your business with AI-enhanced analytics across 7 specialized dashboards. 
+                    From sales split to inventory management - all with role-based access and real-time insights.
                   </Typography>
-                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                    <AnimatedButton
-                      variant="contained"
+                  
+                  <Stack 
+                    direction="row" 
+                    spacing={2} 
+                    sx={{ 
+                      mb: 4,
+                      animation: `${slideUpStagger} 1s ease 1s both`,
+                      flexWrap: 'wrap'
+                    }}
+                  >
+                    {['🤖 AI-Enhanced', '📊 Interactive Graphs', '👥 Role-Based', '⚡ Real-time'].map((item, index) => (
+                      <Chip 
+                        key={index}
+                        label={item} 
+                        variant="outlined"
+                        sx={{
+                          fontWeight: 600,
+                          borderColor: 'primary.main',
+                          mb: 1,
+                          '&:hover': {
+                            background: alpha(theme.palette.primary.main, 0.1),
+                            transform: 'scale(1.05)'
+                          }
+                        }}
+                      />
+                    ))}
+                  </Stack>
+                  
+                  <Box 
+                    sx={{ 
+                      display: 'flex', 
+                      gap: 3, 
+                      flexWrap: 'wrap',
+                      animation: `${slideUpStagger} 1s ease 1.2s both`
+                    }}
+                  >
+                    <HolographicButton
                       size="large"
-                      onClick={openRegister}
-                      sx={{
-                        px: 4,
-                        py: 2,
-                        fontSize: '1.2rem',
-                        fontWeight: 600,
-                        textTransform: 'none',
-                      }}
+                      startIcon={<AutoFixHighIcon />}
+                      sx={{ fontSize: '1.3rem', px: 5, py: 2.5 }}
                     >
-                      Start Free Trial
-                    </AnimatedButton>
+                      Start Free Today
+                    </HolographicButton>
                     <Button
                       variant="outlined"
                       size="large"
+                      startIcon={<PlayArrowIcon />}
                       sx={{
-                        borderRadius: 4,
-                        px: 4,
-                        py: 2,
-                        fontSize: '1.2rem',
-                        fontWeight: 500,
+                        borderRadius: 25,
+                        px: 5,
+                        py: 2.5,
+                        fontSize: '1.3rem',
+                        fontWeight: 600,
                         textTransform: 'none',
                         borderColor: 'primary.main',
                         color: 'primary.main',
-                        transition: 'all 0.3s ease',
+                        borderWidth: 2,
+                        transition: 'all 0.4s ease',
                         '&:hover': {
-                          transform: 'translateY(-3px)',
-                          boxShadow: `0 8px 25px ${alpha(theme.palette.primary.main, 0.2)}`,
+                          borderWidth: 2,
+                          transform: 'translateY(-3px) scale(1.05)',
+                          boxShadow: `0 15px 40px ${alpha(theme.palette.primary.main, 0.3)}`,
+                          background: alpha(theme.palette.primary.main, 0.05)
                         }
                       }}
                     >
@@ -912,610 +1020,864 @@ const ModernHomepage = () => {
             <Grid item xs={12} md={6}>
               <Grow in timeout={1500}>
                 <Box sx={{ position: 'relative', textAlign: 'center' }}>
-                  <Card
-                    elevation={20}
+                  <GlassCard
+                    elevation={0}
                     sx={{
-                      borderRadius: 4,
-                      overflow: 'hidden',
-                      background: `linear-gradient(135deg, 
-                        ${alpha(theme.palette.background.paper, 0.9)} 0%, 
-                        ${alpha(theme.palette.primary.main, 0.05)} 100%)`,
-                      backdropFilter: 'blur(20px)',
-                      border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                      transform: 'perspective(1000px) rotateY(-5deg) rotateX(5deg)',
-                      transition: 'transform 0.6s ease',
+                      p: 5,
+                      transform: 'perspective(1000px) rotateY(-10deg) rotateX(5deg)',
+                      animation: `${slideUpStagger} 1.5s ease 0.5s both`,
                       '&:hover': {
-                        transform: 'perspective(1000px) rotateY(0deg) rotateX(0deg)',
+                        transform: 'perspective(1000px) rotateY(0deg) rotateX(0deg) scale(1.05)',
                       }
                     }}
                   >
-                    <CardContent sx={{ p: 4 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-around', mb: 3 }}>
-                        <FloatingIcon sx={{ animationDelay: '0s' }}>
-                          <AnalyticsIcon sx={{ color: 'white', fontSize: 30 }} />
-                        </FloatingIcon>
-                        <FloatingIcon sx={{ animationDelay: '2s' }}>
-                          <TrendingUpIcon sx={{ color: 'white', fontSize: 30 }} />
-                        </FloatingIcon>
-                        <FloatingIcon sx={{ animationDelay: '4s' }}>
-                          <ShowChartIcon sx={{ color: 'white', fontSize: 30 }} />
-                        </FloatingIcon>
-                      </Box>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                        Real-time Analytics Dashboard
+                    <Box sx={{ mb: 4 }}>
+                      <Typography variant="h4" sx={{ fontWeight: 800, mb: 3, color: 'primary.main' }}>
+                        🎯 Live Analytics Dashboard
                       </Typography>
-                      <Typography color="text.secondary">
-                        See your business performance at a glance
+                      
+                      <Grid container spacing={3} sx={{ mb: 4 }}>
+                        <Grid item xs={4}>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="h3" sx={{ fontWeight: 900, color: 'success.main', mb: 1 }}>
+                              +67%
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Revenue
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={4}>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="h3" sx={{ fontWeight: 900, color: 'primary.main', mb: 1 }}>
+                              7
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Dashboards
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={4}>
+                          <Box sx={{ textAlign: 'center' }}>
+                            <Typography variant="h3" sx={{ fontWeight: 900, color: 'secondary.main', mb: 1 }}>
+                              99.2%
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Accuracy
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      </Grid>
+                      
+                      <LinearProgress 
+                        variant="determinate" 
+                        value={85} 
+                        sx={{ 
+                          height: 12, 
+                          borderRadius: 6,
+                          mb: 2,
+                          '& .MuiLinearProgress-bar': {
+                            background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`
+                          }
+                        }} 
+                      />
+                      
+                      <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                        🚀 AI-enhanced performance increased by 85% this month
                       </Typography>
-                    </CardContent>
-                  </Card>
+                    </Box>
+                  </GlassCard>
                 </Box>
               </Grow>
             </Grid>
           </Grid>
         </Container>
-      </HeroSection>
+      </HeroContainer>
 
-      {/* Features Section */}
-      <Container maxWidth="lg" sx={{ py: 10 }}>
-        <Box sx={{ textAlign: 'center', mb: 8 }}>
+      {/* Interactive Stats */}
+      <Box sx={{ py: 8, bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
+        <Container maxWidth="lg">
+          <Grid container spacing={4}>
+            {stats.map((stat, index) => (
+              <Grid item xs={6} md={3} key={index}>
+                <AnimatedSection delay={index * 100}>
+                  <Paper 
+                    elevation={0}
+                    sx={{
+                      background: `linear-gradient(135deg, 
+                        ${alpha(theme.palette.background.paper, 0.95)} 0%, 
+                        ${alpha(theme.palette.primary.main, 0.05)} 100%)`,
+                      backdropFilter: 'blur(20px)',
+                      borderRadius: 20,
+                      padding: 4,
+                      textAlign: 'center',
+                      transition: 'all 0.4s ease',
+                      cursor: 'pointer',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      boxShadow: `0 8px 25px ${alpha(theme.palette.primary.main, 0.1)}`,
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '4px',
+                        background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                        transform: 'scaleX(0)',
+                        transformOrigin: 'left',
+                        transition: 'transform 0.3s ease',
+                      },
+                      '&:hover': {
+                        transform: 'translateY(-8px) scale(1.05)',
+                        boxShadow: `0 20px 60px ${alpha(theme.palette.primary.main, 0.3)}`,
+                        '&::before': {
+                          transform: 'scaleX(1)',
+                        }
+                      }
+                    }}
+                  >
+                    <Avatar
+                      sx={{
+                        width: 60,
+                        height: 60,
+                        mx: 'auto',
+                        mb: 2,
+                        bgcolor: stat.color,
+                        boxShadow: `0 8px 25px ${alpha(stat.color, 0.3)}`
+                      }}
+                    >
+                      {stat.icon}
+                    </Avatar>
+                    <Typography variant="h3" sx={{ fontWeight: 900, mb: 1, color: stat.color }}>
+                      {stat.number}
+                    </Typography>
+                    <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 600 }}>
+                      {stat.label}
+                    </Typography>
+                  </Paper>
+                </AnimatedSection>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* 7 Specialized Dashboards */}
+      <Container maxWidth="lg" sx={{ py: 12 }} ref={dashboardsRef}>
+        <Box sx={{ textAlign: 'center', mb: 10 }}>
+          <Chip 
+            label="📊 Specialized Dashboards" 
+            sx={{
+              mb: 4,
+              background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.1)})`,
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+              fontWeight: 600,
+              fontSize: '1rem',
+              py: 2,
+              px: 3
+            }}
+          />
           <Typography
             variant="h2"
             sx={{
-              fontSize: { xs: '2rem', md: '3rem' },
-              fontWeight: 700,
-              mb: 2
+              fontSize: { xs: '2.5rem', md: '4rem' },
+              fontWeight: 900,
+              mb: 3,
+              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
             }}
           >
-            Everything You Need to
-            <GradientText component="span" sx={{ ml: 1 }}>
-              Succeed
-            </GradientText>
+            7 Powerful Dashboards
           </Typography>
           <Typography
-            variant="h6"
+            variant="h5"
             color="text.secondary"
-            sx={{ maxWidth: 600, mx: 'auto' }}
+            sx={{ maxWidth: 700, mx: 'auto', fontSize: '1.3rem', lineHeight: 1.6 }}
           >
-            Powerful features designed to transform your data into actionable insights
+            Complete business intelligence across every aspect of your operations
           </Typography>
         </Box>
 
         <Grid container spacing={4}>
-          {features.map((feature, index) => (
-            <Grid item xs={12} sm={6} md={4} key={index}>
-              <Grow in timeout={800 + index * 200}>
-                <FeatureCard elevation={2}>
-                  <CardContent sx={{ p: 4, textAlign: 'center' }}>
+          {dashboards.map((dashboard, index) => (
+            <Grid item xs={12} md={6} lg={4} key={dashboard.id}>
+              <AnimatedSection animationType={index % 2 === 0 ? 'slideLeft' : 'slideRight'} delay={index * 150}>
+                <InteractiveGraphCard 
+                  elevation={0}
+                  sx={{
+                    height: '100%',
+                    opacity: visibleElements.dashboards ? 1 : 0,
+                    transform: visibleElements.dashboards ? 'translateY(0)' : 'translateY(30px)',
+                    transition: `all 0.6s ease ${index * 0.1}s`
+                  }}
+                >
+                  <CardContent sx={{ p: 4, height: '100%', display: 'flex', flexDirection: 'column' }}>
                     <Avatar
                       sx={{
-                        width: 70,
-                        height: 70,
-                        bgcolor: feature.color,
-                        mx: 'auto',
+                        width: 80,
+                        height: 80,
                         mb: 3,
-                        boxShadow: `0 8px 25px ${alpha(feature.color, 0.3)}`
+                        background: dashboard.gradient,
+                        boxShadow: `0 10px 30px ${alpha(dashboard.color, 0.3)}`,
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'scale(1.1) rotate(10deg)',
+                          animation: `${holographic} 2s ease infinite, ${interactiveHover} 1.5s ease infinite`
+                        }
+                      }}
+                    >
+                      {dashboard.icon}
+                    </Avatar>
+                    <Typography
+                      variant="h5"
+                      sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}
+                    >
+                      {dashboard.title}
+                    </Typography>
+                    <Typography
+                      color="text.secondary"
+                      sx={{ lineHeight: 1.7, mb: 3, fontSize: '1.1rem' }}
+                    >
+                      {dashboard.description}
+                    </Typography>
+                    <Box sx={{ mt: 'auto' }}>
+                      {dashboard.features.map((feature, featureIndex) => (
+                        <Chip
+                          key={featureIndex}
+                          label={feature}
+                          size="small"
+                          sx={{
+                            mr: 1,
+                            mb: 1,
+                            bgcolor: alpha(dashboard.color, 0.1),
+                            color: dashboard.color,
+                            fontWeight: 600,
+                            border: `1px solid ${alpha(dashboard.color, 0.3)}`,
+                            transition: 'all 0.3s ease',
+                            '&:hover': {
+                              bgcolor: alpha(dashboard.color, 0.2),
+                              transform: 'scale(1.05)',
+                              animation: `${graphPulse} 1s ease infinite`
+                            }
+                          }}
+                        />
+                      ))}
+                    </Box>
+                    
+                    {/* Interactive Graph Preview */}
+                    <Box
+                      sx={{
+                        mt: 3,
+                        p: 2,
+                        bgcolor: alpha(dashboard.color, 0.05),
+                        borderRadius: 2,
+                        border: `1px dashed ${alpha(dashboard.color, 0.3)}`,
+                        textAlign: 'center',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          bgcolor: alpha(dashboard.color, 0.1),
+                          animation: `${modernGraphGlow} 2s ease infinite`
+                        }
+                      }}
+                    >
+                      <ShowChartIcon sx={{ color: dashboard.color, fontSize: 32, mb: 1 }} />
+                      <Typography variant="caption" sx={{ color: dashboard.color, fontWeight: 600 }}>
+                        Interactive Graphs Available
+                      </Typography>
+                    </Box>
+                  </CardContent>
+                </InteractiveGraphCard>
+              </AnimatedSection>
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+
+      {/* User Roles & Permissions */}
+      <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.02), py: 12 }}>
+        <Container maxWidth="lg">
+          <Box sx={{ textAlign: 'center', mb: 8 }}>
+            <Chip 
+              label="👥 User Management" 
+              sx={{
+                mb: 4,
+                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.1)})`,
+                border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                fontWeight: 600,
+                fontSize: '1rem',
+                py: 2,
+                px: 3
+              }}
+            />
+            <Typography
+              variant="h2"
+              sx={{
+                fontSize: { xs: '2.5rem', md: '4rem' },
+                fontWeight: 900,
+                mb: 3,
+                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}
+            >
+              Role-Based Access Control
+            </Typography>
+            <Typography
+              variant="h5"
+              color="text.secondary"
+              sx={{ maxWidth: 700, mx: 'auto', fontSize: '1.3rem', lineHeight: 1.6 }}
+            >
+              Secure, granular permissions system for teams of any size
+            </Typography>
+          </Box>
+
+          <Grid container spacing={5}>
+            {userRoles.map((role, index) => (
+              <Grid item xs={12} md={4} key={role.role}>
+                <AnimatedSection animationType="bounceIn" delay={index * 200}>
+                  <InteractiveGraphCard elevation={0}>
+                    <CardContent sx={{ p: 4, textAlign: 'center' }}>
+                      <Avatar
+                        sx={{
+                          width: 80,
+                          height: 80,
+                          mx: 'auto',
+                          mb: 3,
+                          bgcolor: role.color,
+                          boxShadow: `0 10px 30px ${alpha(role.color, 0.3)}`,
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            animation: `${interactiveHover} 1.5s ease infinite`
+                          }
+                        }}
+                      >
+                        {role.icon}
+                      </Avatar>
+                      <Typography variant="h4" sx={{ fontWeight: 700, mb: 2, color: role.color }}>
+                        {role.role}
+                      </Typography>
+                      <Typography
+                        color="text.secondary"
+                        sx={{ lineHeight: 1.7, mb: 3, fontSize: '1.1rem' }}
+                      >
+                        {role.description}
+                      </Typography>
+                      <Box>
+                        {role.permissions.map((permission, permIndex) => (
+                          <Box
+                            key={permIndex}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              mb: 1.5,
+                              justifyContent: 'flex-start',
+                              transition: 'all 0.3s ease',
+                              '&:hover': {
+                                transform: 'translateX(10px)',
+                                color: role.color
+                              }
+                            }}
+                          >
+                            <CheckCircleIcon
+                              sx={{
+                                color: role.color,
+                                mr: 2,
+                                fontSize: '1.2rem'
+                              }}
+                            />
+                            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                              {permission}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Box>
+                      
+                      {/* Interactive Graph Access Indicator */}
+                      <Box
+                        sx={{
+                          mt: 3,
+                          p: 2,
+                          bgcolor: alpha(role.color, 0.05),
+                          borderRadius: 2,
+                          border: `1px dashed ${alpha(role.color, 0.3)}`,
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            bgcolor: alpha(role.color, 0.1),
+                            animation: `${modernGraphGlow} 2s ease infinite`
+                          }
+                        }}
+                      >
+                        <AutoGraphIcon sx={{ color: role.color, fontSize: 28, mb: 1 }} />
+                        <Typography variant="caption" sx={{ color: role.color, fontWeight: 600 }}>
+                          {role.role === 'Super Admin' ? 'Full Graph Control' : 
+                           role.role === 'Admin' ? 'Advanced Graph Access' : 
+                           'Basic Graph Viewing'}
+                        </Typography>
+                      </Box>
+                    </CardContent>
+                  </InteractiveGraphCard>
+                </AnimatedSection>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* Features Section */}
+      <Container maxWidth="lg" sx={{ py: 12 }} ref={featuresRef}>
+        <Box sx={{ textAlign: 'center', mb: 10 }}>
+          <Chip 
+            label="🚀 Advanced Features" 
+            sx={{
+              mb: 4,
+              background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.1)})`,
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+              fontWeight: 600,
+              fontSize: '1rem',
+              py: 2,
+              px: 3
+            }}
+          />
+          <Typography
+            variant="h2"
+            sx={{
+              fontSize: { xs: '2.5rem', md: '4rem' },
+              fontWeight: 900,
+              mb: 3,
+              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}
+          >
+            AI-Powered Intelligence
+          </Typography>
+          <Typography
+            variant="h5"
+            color="text.secondary"
+            sx={{ maxWidth: 700, mx: 'auto', fontSize: '1.3rem', lineHeight: 1.6 }}
+          >
+            Cutting-edge technology that transforms data into actionable insights
+          </Typography>
+        </Box>
+
+        <Grid container spacing={5}>
+          {features.map((feature, index) => (
+            <Grid item xs={12} md={6} key={index}>
+              <AnimatedSection animationType={index % 2 === 0 ? 'rotateIn' : 'zoomIn'} delay={index * 150}>
+                <InteractiveGraphCard 
+                  elevation={0}
+                  sx={{
+                    height: '100%',
+                    opacity: visibleElements.features ? 1 : 0,
+                    transform: visibleElements.features ? 'translateY(0)' : 'translateY(30px)',
+                    transition: `all 0.6s ease ${index * 0.1}s`
+                  }}
+                >
+                  <CardContent sx={{ p: 4, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <Avatar
+                      sx={{
+                        width: 80,
+                        height: 80,
+                        mb: 3,
+                        background: feature.gradient,
+                        boxShadow: `0 10px 30px ${alpha(feature.color, 0.3)}`,
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'scale(1.1) rotate(10deg)',
+                          animation: `${holographic} 2s ease infinite, ${interactiveHover} 1.5s ease infinite`
+                        }
                       }}
                     >
                       {feature.icon}
                     </Avatar>
                     <Typography
                       variant="h5"
-                      sx={{ fontWeight: 600, mb: 2 }}
+                      sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}
                     >
                       {feature.title}
                     </Typography>
                     <Typography
                       color="text.secondary"
-                      sx={{ lineHeight: 1.6 }}
+                      sx={{ lineHeight: 1.7, flex: 1, fontSize: '1.1rem', mb: 3 }}
                     >
                       {feature.description}
                     </Typography>
+                    
+                    {/* Interactive Demo Preview */}
+                    <Box
+                      sx={{
+                        p: 3,
+                        bgcolor: alpha(feature.color, 0.05),
+                        borderRadius: 3,
+                        border: `2px solid ${alpha(feature.color, 0.2)}`,
+                        textAlign: 'center',
+                        transition: 'all 0.3s ease',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          bgcolor: alpha(feature.color, 0.1),
+                          animation: `${modernGraphGlow} 2s ease infinite`,
+                          transform: 'scale(1.02)'
+                        }
+                      }}
+                    >
+                      <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ mb: 2 }}>
+                        <AutoGraphIcon sx={{ color: feature.color, fontSize: 24 }} />
+                        <VisibilityIcon sx={{ color: feature.color, fontSize: 20 }} />
+                        <ShowChartIcon sx={{ color: feature.color, fontSize: 24 }} />
+                      </Stack>
+                      <Typography variant="body2" sx={{ color: feature.color, fontWeight: 700, mb: 1 }}>
+                        Interactive Demo Available
+                      </Typography>
+                      <LinearProgress 
+                        variant="determinate" 
+                        value={75 + (index * 5)} 
+                        sx={{ 
+                          height: 6, 
+                          borderRadius: 3,
+                          bgcolor: alpha(feature.color, 0.2),
+                          '& .MuiLinearProgress-bar': {
+                            bgcolor: feature.color,
+                            borderRadius: 3
+                          }
+                        }} 
+                      />
+                      <Typography variant="caption" sx={{ color: 'text.secondary', mt: 1, display: 'block' }}>
+                        {75 + (index * 5)}% Performance Boost
+                      </Typography>
+                    </Box>
                   </CardContent>
-                </FeatureCard>
-              </Grow>
+                </InteractiveGraphCard>
+              </AnimatedSection>
             </Grid>
           ))}
         </Grid>
       </Container>
 
-      {/* Benefits Section */}
-      <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.02), py: 10 }}>
-        <Container maxWidth="lg">
-          <Grid container spacing={6} alignItems="center">
-            <Grid item xs={12} md={6}>
-              <Typography
-                variant="h2"
-                sx={{
-                  fontSize: { xs: '2rem', md: '3rem' },
-                  fontWeight: 700,
-                  mb: 3
-                }}
-              >
-                Why Choose
-                <GradientText component="span" sx={{ ml: 1 }}>
-                  INSIGHTiQ?
-                </GradientText>
-              </Typography>
-              
-              {benefits.map((benefit, index) => (
-                <Fade in timeout={1000 + index * 300} key={index}>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 4 }}>
-                    <Avatar
-                      sx={{
-                        bgcolor: 'primary.main',
-                        mr: 3,
-                        mt: 0.5,
-                        width: 50,
-                        height: 50
-                      }}
-                    >
-                      {benefit.icon}
-                    </Avatar>
-                    <Box>
+      {/* Testimonials */}
+      <Box sx={{ bgcolor: alpha(theme.palette.primary.main, 0.02), py: 12 }}>
+        <Container maxWidth="lg" ref={testimonialsRef}>
+          <Box sx={{ textAlign: 'center', mb: 8 }}>
+            <Chip 
+              label="💬 Success Stories" 
+              sx={{
+                mb: 4,
+                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.1)})`,
+                border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                fontWeight: 600,
+                fontSize: '1rem',
+                py: 2,
+                px: 3
+              }}
+            />
+            <Typography
+              variant="h2"
+              sx={{
+                fontSize: { xs: '2.5rem', md: '4rem' },
+                fontWeight: 900,
+                mb: 3,
+                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}
+            >
+              Trusted by Industry Leaders
+            </Typography>
+          </Box>
+
+          <Grid container spacing={5}>
+            {testimonials.map((testimonial, index) => (
+              <Grid item xs={12} md={4} key={index}>
+                <AnimatedSection animationType="slideLeft" delay={index * 200}>
+                  <InteractiveGraphCard
+                    elevation={0}
+                    sx={{
+                      padding: 4,
+                      transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                      position: 'relative',
+                      height: '100%',
+                      boxShadow: `0 10px 40px ${alpha(theme.palette.primary.main, 0.1)}`,
+                      opacity: visibleElements.testimonials ? 1 : 0,
+                      transform: visibleElements.testimonials ? 'translateY(0)' : 'translateY(30px)',
+                      transitionDelay: `${index * 0.1}s`,
+                      '&:hover': {
+                        transform: 'translateY(-10px) scale(1.02)',
+                        boxShadow: `0 25px 70px ${alpha(theme.palette.primary.main, 0.25)}`,
+                      }
+                    }}
+                  >
+                    <Box sx={{ mb: 3 }}>
+                      <Rating value={testimonial.rating} readOnly sx={{ mb: 2 }} />
                       <Typography
                         variant="h6"
-                        sx={{ fontWeight: 600, mb: 1 }}
+                        sx={{ 
+                          lineHeight: 1.7, 
+                          fontStyle: 'italic',
+                          fontSize: '1.2rem',
+                          fontWeight: 500
+                        }}
                       >
-                        {benefit.title}
-                      </Typography>
-                      <Typography
-                        color="text.secondary"
-                        sx={{ lineHeight: 1.6 }}
-                      >
-                        {benefit.description}
+                        "{testimonial.content}"
                       </Typography>
                     </Box>
-                  </Box>
-                </Fade>
-              ))}
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <Box sx={{ position: 'relative' }}>
-                <Card
-                  elevation={10}
-                  sx={{
-                    borderRadius: 3,
-                    overflow: 'hidden',
-                    background: `linear-gradient(135deg, 
-                      ${theme.palette.background.paper} 0%, 
-                      ${alpha(theme.palette.primary.main, 0.05)} 100%)`,
-                    border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
-                  }}
-                >
-                  <CardContent sx={{ p: 4 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-                      📊 Sales Performance Dashboard
-                    </Typography>
                     
-                    <Box sx={{ mb: 3 }}>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        This Week vs Last Week
-                      </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Typography variant="h4" sx={{ fontWeight: 700, color: 'success.main' }}>
-                          +24.5%
-                        </Typography>
-                        <TrendingUpIcon color="success" />
-                      </Box>
-                    </Box>
-                    
-                    <Box sx={{ mb: 3 }}>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        Revenue Growth
-                      </Typography>
-                      <Box sx={{ 
-                        width: '100%', 
-                        height: 8, 
-                        bgcolor: alpha(theme.palette.primary.main, 0.1),
-                        borderRadius: 4,
-                        overflow: 'hidden'
-                      }}>
-                        <Box sx={{
-                          width: '78%',
-                          height: '100%',
+                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 'auto', mb: 3 }}>
+                      <Avatar
+                        sx={{
                           bgcolor: 'primary.main',
-                          borderRadius: 4,
-                          background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`
-                        }} />
-                      </Box>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        78% of monthly target reached
-                      </Typography>
-                    </Box>
-                    
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
-                      <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                          1,247
+                          mr: 3,
+                          width: 60,
+                          height: 60,
+                          fontWeight: 700,
+                          fontSize: '1.5rem',
+                          background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`
+                        }}
+                      >
+                        {testimonial.avatar}
+                      </Avatar>
+                      <Box>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+                          {testimonial.name}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Orders
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                          {testimonial.role}
                         </Typography>
-                      </Box>
-                      <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                          $45.2K
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Revenue
-                        </Typography>
-                      </Box>
-                      <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                          $36.3
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Avg Ticket
+                        <Typography variant="body2" color="primary.main" sx={{ fontWeight: 600 }}>
+                          {testimonial.company}
                         </Typography>
                       </Box>
                     </Box>
-                  </CardContent>
-                </Card>
-              </Box>
-            </Grid>
+
+                    {/* Interactive Graph Usage Badge */}
+                    <Box
+                      sx={{
+                        p: 2,
+                        bgcolor: alpha(theme.palette.primary.main, 0.05),
+                        borderRadius: 2,
+                        border: `1px dashed ${alpha(theme.palette.primary.main, 0.3)}`,
+                        textAlign: 'center',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          bgcolor: alpha(theme.palette.primary.main, 0.1),
+                          animation: `${modernGraphGlow} 2s ease infinite`
+                        }
+                      }}
+                    >
+                      <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                        <ShowChartIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+                        <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 600 }}>
+                          Uses Interactive Dashboards Daily
+                        </Typography>
+                      </Stack>
+                    </Box>
+                  </InteractiveGraphCard>
+                </AnimatedSection>
+              </Grid>
+            ))}
           </Grid>
         </Container>
       </Box>
 
       {/* CTA Section */}
-      <Container maxWidth="md" sx={{ py: 10, textAlign: 'center' }}>
-        <Card
-          elevation={10}
+      <Container maxWidth="md" sx={{ py: 12, textAlign: 'center' }}>
+        <GlassCard
+          elevation={0}
           sx={{
+            p: 8,
             background: `linear-gradient(135deg, 
-              ${theme.palette.primary.main} 0%, 
-              ${theme.palette.primary.dark} 50%,
-              ${theme.palette.secondary.main} 100%)`,
-            borderRadius: 4,
-            color: 'white',
-            position: 'relative',
-            overflow: 'hidden',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'url("data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><defs><pattern id=\'stars\' width=\'20\' height=\'20\' patternUnits=\'userSpaceOnUse\'><circle cx=\'10\' cy=\'10\' r=\'1\' fill=\'%23ffffff\' opacity=\'0.1\'/></pattern></defs><rect width=\'100\' height=\'100\' fill=\'url(%23stars)\'/></svg>")',
-              pointerEvents: 'none',
-            }
+              ${theme.palette.primary.main}15 0%, 
+              ${theme.palette.secondary.main}10 50%,
+              ${theme.palette.primary.main}15 100%)`,
+            border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`
           }}
         >
-          <CardContent sx={{ p: 6, position: 'relative', zIndex: 1 }}>
-            <Typography
-              variant="h3"
+          <DiamondIcon sx={{ fontSize: 80, mb: 3, color: 'primary.main' }} />
+          <Typography
+            variant="h2"
+            sx={{
+              fontSize: { xs: '2.5rem', md: '3.5rem' },
+              fontWeight: 900,
+              mb: 3,
+              lineHeight: 1.2,
+              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}
+          >
+            Ready to Transform Your Analytics?
+          </Typography>
+          <Typography
+            variant="h5"
+            sx={{ mb: 5, color: 'text.secondary', maxWidth: 600, mx: 'auto', lineHeight: 1.6 }}
+          >
+            Join thousands of businesses using our 7 specialized dashboards with AI-enhanced insights and role-based access control
+          </Typography>
+          
+          <Box sx={{ display: 'flex', gap: 3, justifyContent: 'center', flexWrap: 'wrap', mb: 4 }}>
+            <HolographicButton
+              size="large"
+              startIcon={<RocketLaunchIcon />}
+              sx={{ fontSize: '1.4rem', px: 6, py: 3 }}
+            >
+              Start Your Journey
+            </HolographicButton>
+            <Button
+              variant="outlined"
+              size="large"
+              startIcon={<BusinessIcon />}
               sx={{
-                fontSize: { xs: '2rem', md: '2.5rem' },
-                fontWeight: 700,
-                mb: 2
+                borderRadius: 25,
+                px: 6,
+                py: 3,
+                fontSize: '1.4rem',
+                fontWeight: 600,
+                textTransform: 'none',
+                borderColor: 'primary.main',
+                color: 'primary.main',
+                borderWidth: 2,
+                '&:hover': {
+                  borderWidth: 2,
+                  transform: 'translateY(-3px)',
+                  boxShadow: `0 15px 40px ${alpha(theme.palette.primary.main, 0.3)}`
+                }
               }}
             >
-              Ready to Transform Your Business?
-            </Typography>
-            <Typography
-              variant="h6"
-              sx={{ mb: 4, opacity: 0.9, maxWidth: 500, mx: 'auto' }}
-            >
-              Join thousands of businesses already using INSIGHTiQ to make better decisions
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Button
-                variant="contained"
-                size="large"
-                onClick={openRegister}
-                sx={{
-                  borderRadius: 3,
-                  px: 4,
-                  py: 2,
-                  fontSize: '1.1rem',
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  bgcolor: 'white',
-                  color: 'primary.main',
-                  '&:hover': {
-                    bgcolor: alpha('#ffffff', 0.9),
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 8px 25px rgba(0,0,0,0.2)',
-                  }
-                }}
-              >
-                Start Your Free Trial
-              </Button>
-              <Button
-                variant="outlined"
-                size="large"
-                sx={{
-                  borderRadius: 3,
-                  px: 4,
-                  py: 2,
-                  fontSize: '1.1rem',
-                  fontWeight: 500,
-                  textTransform: 'none',
-                  borderColor: 'white',
-                  color: 'white',
-                  '&:hover': {
-                    borderColor: 'white',
-                    bgcolor: alpha('#ffffff', 0.1),
-                    transform: 'translateY(-2px)',
-                  }
-                }}
-              >
-                Contact Sales
-              </Button>
-            </Box>
-            <Typography
-              variant="body2"
-              sx={{ mt: 3, opacity: 0.8 }}
-            >
-              No credit card required • 14-day free trial • Cancel anytime
-            </Typography>
-          </CardContent>
-        </Card>
+              Enterprise Demo
+            </Button>
+          </Box>
+          
+          <Stack direction="row" spacing={4} justifyContent="center" flexWrap="wrap">
+            {['⚡ Instant Setup', '🔒 100% Secure', '📞 24/7 Support'].map((item, index) => (
+              <Box key={index} sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                  {item}
+                </Typography>
+              </Box>
+            ))}
+          </Stack>
+        </GlassCard>
       </Container>
 
-      {/* UPDATED: Modern Footer with enhanced styling and animations */}
-      <ModernFooter sx={{ py: 8, position: 'relative', zIndex: 1 }}>
+      {/* Footer */}
+      <Box 
+        sx={{ 
+          background: `linear-gradient(135deg, #0a0e1a 0%, #1a1f2e 50%, #0f1419 100%)`,
+          color: 'white',
+          py: 8,
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
         <Container maxWidth="lg">
           <Grid container spacing={6}>
-            {/* Company Info */}
             <Grid item xs={12} md={4}>
-              <Fade in timeout={1000}>
-                <Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                    <Avatar
-                      sx={{
-                        bgcolor: 'primary.main',
-                        mr: 2,
-                        width: 50,
-                        height: 50,
-                        boxShadow: `0 8px 25px ${alpha(theme.palette.primary.main, 0.3)}`,
-                      }}
-                    >
-                      <DashboardIcon fontSize="large" />
-                    </Avatar>
-                    <Typography 
-                      variant="h4" 
-                      sx={{ 
-                        fontWeight: 700, 
-                        color: '#ffffff',
-                        background: `linear-gradient(135deg, #ffffff, ${alpha('#ffffff', 0.8)})`,
-                        backgroundClip: 'text',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                      }}
-                    >
-                      INSIGHTiQ
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <Avatar
+                  sx={{
+                    bgcolor: 'primary.main',
+                    mr: 2,
+                    width: 50,
+                    height: 50,
+                    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`
+                  }}
+                >
+                  <DashboardIcon />
+                </Avatar>
+                <Typography variant="h4" sx={{ fontWeight: 800, color: 'white' }}>
+                  INSIGHTiQ
+                </Typography>
+              </Box>
+              <Typography sx={{ mb: 3, color: alpha('#ffffff', 0.8), lineHeight: 1.7 }}>
+                Revolutionizing business intelligence with 7 specialized dashboards, AI-enhanced analytics, and role-based access control.
+              </Typography>
+              <Stack direction="row" spacing={2}>
+                {[LinkedInIcon, TwitterIcon, FacebookIcon, InstagramIcon].map((Icon, index) => (
+                  <IconButton
+                    key={index}
+                    sx={{
+                      background: alpha('#ffffff', 0.1),
+                      color: 'white',
+                      '&:hover': {
+                        background: 'primary.main',
+                        transform: 'translateY(-3px)'
+                      }
+                    }}
+                  >
+                    <Icon />
+                  </IconButton>
+                ))}
+              </Stack>
+            </Grid>
+            
+            <Grid item xs={12} md={8}>
+              <Grid container spacing={4}>
+                {[
+                  { 
+                    title: 'Dashboards', 
+                    links: ['Sales Split', 'Product Mix', 'Financial', 'Company Wide', 'Order', 'Inventory', 'Orderflow'] 
+                  },
+                  { 
+                    title: 'Features', 
+                    links: ['AI Enhancement', 'Interactive Graphs', 'Role Management', 'Real-time Analytics'] 
+                  },
+                  { 
+                    title: 'Support', 
+                    links: ['Documentation', 'Help Center', 'Community', 'Contact Us'] 
+                  },
+                  { 
+                    title: 'Company', 
+                    links: ['About', 'Careers', 'Privacy', 'Terms'] 
+                  }
+                ].map((section, index) => (
+                  <Grid item xs={6} md={3} key={index}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: 'white' }}>
+                      {section.title}
                     </Typography>
-                  </Box>
-                  <Typography 
-                    sx={{ 
-                      mb: 3, 
-                      color: alpha('#ffffff', 0.8),
-                      lineHeight: 1.6,
-                      fontSize: '1rem'
-                    }}
-                  >
-                    Transform your business data into powerful insights with our advanced analytics platform.
-                  </Typography>
-                  
-                  {/* Social Media Icons */}
-                  <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-                    <SocialIconButton size="small">
-                      <LinkedInIcon />
-                    </SocialIconButton>
-                    <SocialIconButton size="small">
-                      <TwitterIcon />
-                    </SocialIconButton>
-                    <SocialIconButton size="small">
-                      <FacebookIcon />
-                    </SocialIconButton>
-                    <SocialIconButton size="small">
-                      <InstagramIcon />
-                    </SocialIconButton>
-                  </Box>
-                  
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      color: alpha('#ffffff', 0.6),
-                      fontSize: '0.875rem'
-                    }}
-                  >
-                    © 2025 INSIGHTiQ. All rights reserved.
-                  </Typography>
-                </Box>
-              </Fade>
-            </Grid>
-            
-            {/* Product Links */}
-            <Grid item xs={12} sm={6} md={2}>
-              <Slide direction="up" in timeout={1200}>
-                <Box>
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      fontWeight: 600, 
-                      mb: 3, 
-                      color: '#ffffff',
-                      position: 'relative',
-                      '&::after': {
-                        content: '""',
-                        position: 'absolute',
-                        bottom: -8,
-                        left: 0,
-                        width: 30,
-                        height: 2,
-                        background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                        borderRadius: 1,
-                      }
-                    }}
-                  >
-                    Product
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <FooterLink variant="body2">Features</FooterLink>
-                    <FooterLink variant="body2">Pricing</FooterLink>
-                    <FooterLink variant="body2">Security</FooterLink>
-                    <FooterLink variant="body2">Integrations</FooterLink>
-                    <FooterLink variant="body2">API</FooterLink>
-                  </Box>
-                </Box>
-              </Slide>
-            </Grid>
-            
-            {/* Company Links */}
-            <Grid item xs={12} sm={6} md={2}>
-              <Slide direction="up" in timeout={1400}>
-                <Box>
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      fontWeight: 600, 
-                      mb: 3, 
-                      color: '#ffffff',
-                      position: 'relative',
-                      '&::after': {
-                        content: '""',
-                        position: 'absolute',
-                        bottom: -8,
-                        left: 0,
-                        width: 30,
-                        height: 2,
-                        background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                        borderRadius: 1,
-                      }
-                    }}
-                  >
-                    Company
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <FooterLink variant="body2">About Us</FooterLink>
-                    <FooterLink variant="body2">Blog</FooterLink>
-                    <FooterLink variant="body2">Careers</FooterLink>
-                    <FooterLink variant="body2">Contact</FooterLink>
-                    <FooterLink variant="body2">News</FooterLink>
-                  </Box>
-                </Box>
-              </Slide>
-            </Grid>
-            
-            {/* Resources Links */}
-            <Grid item xs={12} sm={6} md={2}>
-              <Slide direction="up" in timeout={1600}>
-                <Box>
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      fontWeight: 600, 
-                      mb: 3, 
-                      color: '#ffffff',
-                      position: 'relative',
-                      '&::after': {
-                        content: '""',
-                        position: 'absolute',
-                        bottom: -8,
-                        left: 0,
-                        width: 30,
-                        height: 2,
-                        background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                        borderRadius: 1,
-                      }
-                    }}
-                  >
-                    Resources
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <FooterLink variant="body2">Documentation</FooterLink>
-                    <FooterLink variant="body2">Help Center</FooterLink>
-                    <FooterLink variant="body2">Community</FooterLink>
-                    <FooterLink variant="body2">Status</FooterLink>
-                    <FooterLink variant="body2">Tutorials</FooterLink>
-                  </Box>
-                </Box>
-              </Slide>
-            </Grid>
-            
-            {/* Legal Links */}
-            <Grid item xs={12} sm={6} md={2}>
-              <Slide direction="up" in timeout={1800}>
-                <Box>
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      fontWeight: 600, 
-                      mb: 3, 
-                      color: '#ffffff',
-                      position: 'relative',
-                      '&::after': {
-                        content: '""',
-                        position: 'absolute',
-                        bottom: -8,
-                        left: 0,
-                        width: 30,
-                        height: 2,
-                        background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                        borderRadius: 1,
-                      }
-                    }}
-                  >
-                    Legal
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <FooterLink variant="body2">Privacy Policy</FooterLink>
-                    <FooterLink variant="body2">Terms of Service</FooterLink>
-                    <FooterLink variant="body2">Cookie Policy</FooterLink>
-                    <FooterLink variant="body2">GDPR</FooterLink>
-                    <FooterLink variant="body2">Compliance</FooterLink>
-                  </Box>
-                </Box>
-              </Slide>
+                    {section.links.map((link, linkIndex) => (
+                      <Typography
+                        key={linkIndex}
+                        sx={{
+                          mb: 1,
+                          color: alpha('#ffffff', 0.7),
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            color: 'white',
+                            transform: 'translateX(5px)'
+                          }
+                        }}
+                      >
+                        {link}
+                      </Typography>
+                    ))}
+                  </Grid>
+                ))}
+              </Grid>
             </Grid>
           </Grid>
           
-          {/* Bottom Section */}
-          <Divider 
-            sx={{ 
-              my: 6, 
-              borderColor: alpha('#ffffff', 0.2),
-              '&::before, &::after': {
-                borderColor: alpha('#ffffff', 0.2),
-              }
-            }} 
-          />
+          <Divider sx={{ my: 4, borderColor: alpha('#ffffff', 0.2) }} />
           
-          <Fade in timeout={2000}>
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: 2
-            }}>
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: alpha('#ffffff', 0.7),
-                  fontSize: '0.875rem'
-                }}
-              >
-                Built with ❤️ for data-driven businesses worldwide
-              </Typography>
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: alpha('#ffffff', 0.7),
-                  fontSize: '0.875rem'
-                }}
-              >
-                Version 2.0.1 • Last updated: January 2025
-              </Typography>
-            </Box>
-          </Fade>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="body2" sx={{ color: alpha('#ffffff', 0.6) }}>
+              © 2025 INSIGHTiQ. All rights reserved. Built with ❤️ for data-driven success.
+            </Typography>
+          </Box>
         </Container>
-      </ModernFooter>
+      </Box>
+
+      {/* Fixed Chat Button */}
+      <Tooltip title="Need help? Send us an email!" placement="left">
+        <ChatButton onClick={() => setChatOpen(true)}>
+          <ChatIcon />
+        </ChatButton>
+      </Tooltip>
 
       {/* Scroll to Top Button */}
       <Zoom in={showScrollToTop}>
@@ -1524,33 +1886,122 @@ const ModernHomepage = () => {
         </ScrollToTopButton>
       </Zoom>
 
-      {/* Login Dialog */}
-      <LoginDialog
-        open={loginOpen}
-        onClose={() => setLoginOpen(false)}
+      {/* Email Contact Dialog */}
+      <Dialog
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 4,
+            background: alpha(theme.palette.background.paper, 0.95),
+            backdropFilter: 'blur(20px)'
+          }
+        }}
       >
-        <DialogContent sx={{ p: 0 }}>
-          <AuthCard elevation={0}>
-            <AuthDialogContent />
-          </AuthCard>
+        <DialogTitle sx={{ pb: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center' }}>
+              <EmailIcon sx={{ mr: 1, color: 'primary.main' }} />
+              Contact Our Team
+            </Typography>
+            <IconButton onClick={() => setChatOpen(false)} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Have questions about our dashboards or need a demo? We're here to help!
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Box component="form" sx={{ mt: 2 }}>
+            <TextField
+              fullWidth
+              label="Your Name"
+              value={emailData.name}
+              onChange={(e) => setEmailData({ ...emailData, name: e.target.value })}
+              sx={{ 
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2
+                }
+              }}
+            />
+            <TextField
+              fullWidth
+              label="Email Address"
+              type="email"
+              value={emailData.email}
+              onChange={(e) => setEmailData({ ...emailData, email: e.target.value })}
+              sx={{ 
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2
+                }
+              }}
+            />
+            <TextField
+              fullWidth
+              label="Message"
+              multiline
+              rows={4}
+              value={emailData.message}
+              onChange={(e) => setEmailData({ ...emailData, message: e.target.value })}
+              placeholder="Tell us about your analytics needs, which dashboards interest you, or ask about our AI features..."
+              sx={{ 
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2
+                }
+              }}
+            />
+          </Box>
         </DialogContent>
-      </LoginDialog>
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button 
+            onClick={() => setChatOpen(false)} 
+            sx={{ 
+              mr: 1,
+              borderRadius: 2,
+              textTransform: 'none'
+            }}
+          >
+            Cancel
+          </Button>
+          <HolographicButton
+            onClick={handleChatSubmit}
+            startIcon={<SendIcon />}
+            sx={{ 
+              borderRadius: 2,
+              px: 3,
+              py: 1.5
+            }}
+          >
+            Send Message
+          </HolographicButton>
+        </DialogActions>
+      </Dialog>
 
-      {/* Register Dialog */}
-      <LoginDialog
-        open={registerOpen}
-        onClose={() => setRegisterOpen(false)}
-        maxWidth="sm"
-        fullWidth
+      {/* Success/Error Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
       >
-        <DialogContent sx={{ p: 0 }}>
-          <AuthCard elevation={0}>
-            <AuthDialogContent />
-          </AuthCard>
-        </DialogContent>
-      </LoginDialog>
+        <Alert 
+          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          severity={snackbar.severity}
+          sx={{ 
+            width: '100%',
+            borderRadius: 2,
+            fontWeight: 600
+          }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

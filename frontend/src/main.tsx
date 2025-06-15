@@ -54,6 +54,10 @@ const router = createBrowserRouter([
     path: "/reset-password",
     Component: ResetPasswordView,
   },
+  { 
+    path: "HomePage",
+    Component: HomePage,
+  },
   {
     Component: App,
     children: [
@@ -136,10 +140,7 @@ const router = createBrowserRouter([
           },
         ],
       },
-      {
-        path: "HomePage",
-        Component: HomePage,
-      },
+      
     ],
   },
 ]);
