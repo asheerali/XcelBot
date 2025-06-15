@@ -1,10 +1,11 @@
-// src/components/graphs/OrdersChart.tsx - Updated with real financial data
+// src/components/graphs/OrdersChart.tsx - Updated with moving average functionality
 
 import React from "react";
 import {
   ResponsiveContainer,
-  BarChart,
+  ComposedChart,
   Bar,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -12,18 +13,45 @@ import {
   Legend,
   Cell,
 } from "recharts";
-import { Box, Typography, Paper, useTheme } from "@mui/material";
+import { Box, Typography, Paper, useTheme, Switch, FormControlLabel } from "@mui/material";
 
 interface OrdersChartProps {
   data: any[]; // Real table3 data from financial backend (Day of week ORDERS data)
   height?: number;
+  showMovingAverage?: boolean;
+  movingAveragePeriod?: number;
 }
 
 const OrdersChart: React.FC<OrdersChartProps> = ({
   data = [],
   height = 400,
+  showMovingAverage = true,
+  movingAveragePeriod = 3,
 }) => {
   const theme = useTheme();
+  const [displayMovingAverage, setDisplayMovingAverage] = React.useState(showMovingAverage);
+
+  // Calculate moving average
+  const calculateMovingAverage = (data: any[], period: number = movingAveragePeriod) => {
+    const result = [...data];
+    
+    for (let i = 0; i < result.length; i++) {
+      let sum = 0;
+      let count = 0;
+      
+      // Calculate average for the current window
+      for (let j = Math.max(0, i - Math.floor(period / 2)); 
+           j <= Math.min(result.length - 1, i + Math.floor(period / 2)); 
+           j++) {
+        sum += result[j]["This Week"] || 0;
+        count++;
+      }
+      
+      result[i].movingAverage = count > 0 ? Math.round(sum / count) : 0;
+    }
+    
+    return result;
+  };
 
   // Transform real financial data to chart format
   const transformDataForChart = () => {
@@ -35,7 +63,7 @@ const OrdersChart: React.FC<OrdersChartProps> = ({
     console.log("OrdersChart: Raw data received:", data);
 
     // Filter out Grand Total row and transform the data
-    const chartData = data
+    let chartData = data
       .filter((item) => {
         const dayOfWeek =
           item["Day of The Week"] ||
@@ -84,7 +112,12 @@ const OrdersChart: React.FC<OrdersChartProps> = ({
         };
       });
 
-    console.log("OrdersChart: Transformed data:", chartData);
+    // Add moving average if enabled
+    if (displayMovingAverage && chartData.length > 0) {
+      chartData = calculateMovingAverage(chartData, movingAveragePeriod);
+    }
+
+    console.log("OrdersChart: Transformed data with moving average:", chartData);
     return chartData;
   };
 
@@ -122,12 +155,13 @@ const OrdersChart: React.FC<OrdersChartProps> = ({
                   width: 10,
                   height: 10,
                   backgroundColor: entry.color,
-                  borderRadius: "50%",
+                  borderRadius: entry.dataKey === 'movingAverage' ? "0%" : "50%",
                   mr: 1,
                   display: "inline-block",
                 }}
               />
-              {entry.name}: {entry.value.toLocaleString()} orders
+              {entry.name}: {entry.value.toLocaleString()} 
+              {entry.dataKey === 'movingAverage' ? ' (avg)' : ' orders'}
             </Typography>
           ))}
 
@@ -180,51 +214,36 @@ const OrdersChart: React.FC<OrdersChartProps> = ({
 
   return (
     <Paper sx={{ p: 2, height }}>
-      <Typography
-        variant="h6"
-        sx={{
-          mb: 2,
-          textAlign: "center",
-          fontWeight: 600,
-          color: theme.palette.text.primary,
-        }}
-      >
-        Daily Orders Analysis
-      </Typography>
-      {/* Summary statistics
-      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap' }}>
-        {chartData.length > 0 && (
-          <>
-            <Box sx={{ textAlign: 'center', minWidth: 100 }}>
-              <Typography variant="body2" color="text.secondary">
-                Total This Week
-              </Typography>
-              <Typography variant="h6" color="primary.main">
-                {chartData.reduce((sum, item) => sum + item['This Week'], 0).toLocaleString()}
-              </Typography>
-            </Box>
-            <Box sx={{ textAlign: 'center', minWidth: 100 }}>
-              <Typography variant="body2" color="text.secondary">
-                Total Last Week
-              </Typography>
-              <Typography variant="h6" color="secondary.main">
-                {chartData.reduce((sum, item) => sum + item['Last Week'], 0).toLocaleString()}
-              </Typography>
-            </Box>
-            <Box sx={{ textAlign: 'center', minWidth: 100 }}>
-              <Typography variant="body2" color="text.secondary">
-                Total Last Year
-              </Typography>
-              <Typography variant="h6" color="warning.main">
-                {chartData.reduce((sum, item) => sum + item['Last Year'], 0).toLocaleString()}
-              </Typography>
-            </Box>
-          </>
-        )}
-      </Box> */}
-      <Box sx={{ width: "100%", height: height - 80 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography
+          variant="h6"
+          sx={{
+            fontWeight: 600,
+            color: theme.palette.text.primary,
+          }}
+        >
+          Daily Orders Analysis
+        </Typography>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={displayMovingAverage}
+              onChange={(e) => setDisplayMovingAverage(e.target.checked)}
+              size="small"
+              color="primary"
+            />
+          }
+          label={
+            <Typography variant="caption" color="text.secondary">
+              {movingAveragePeriod}-Day Moving Average
+            </Typography>
+          }
+        />
+      </Box>
+
+      <Box sx={{ width: "100%", height: height - 120 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart
+          <ComposedChart
             data={chartData}
             margin={{
               top: 20,
@@ -272,7 +291,28 @@ const OrdersChart: React.FC<OrdersChartProps> = ({
               fill={theme.palette.warning.main}
               radius={[2, 2, 0, 0]}
             />
-          </BarChart>
+            
+            {/* Moving Average Line */}
+            {displayMovingAverage && (
+              <Line
+                type="monotone"
+                dataKey="movingAverage"
+                name={`${movingAveragePeriod}-Day Moving Average`}
+                stroke={theme.palette.success.main}
+                strokeWidth={3}
+                dot={{ 
+                  fill: theme.palette.success.main, 
+                  strokeWidth: 2, 
+                  r: 4 
+                }}
+                activeDot={{ 
+                  r: 6, 
+                  stroke: theme.palette.success.main, 
+                  strokeWidth: 2 
+                }}
+              />
+            )}
+          </ComposedChart>
         </ResponsiveContainer>
       </Box>
     </Paper>

@@ -287,26 +287,30 @@ const ModernBarChart = ({
   const [hoverTimeout, setHoverTimeout] = React.useState<NodeJS.Timeout | null>(
     null
   );
-  const processedData = data.map((d: any) => ({
-    ...d,
-    total: dataKeys.reduce(
+  
+  // Calculate processed data with simple moving average
+  const processedData = data.map((d: any, index: number) => {
+    const total = dataKeys.reduce(
       (sum: number, key: string) => sum + (d[key] || 0),
       0
-    ),
-  }));
+    );
+    
+    return {
+      ...d,
+      total,
+      movingAverage: total, // Simple moving average = total for each day
+    };
+  });
 
-  const movingAverageData = processedData.map((d: any) => ({
-    movingAverage: d.total,
-  }));
   if (!data || data.length === 0) {
     return (
       <div
         style={{
-          padding: "32px",
+          padding: "16px", // Reduced padding
           background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
-          borderRadius: "24px",
+          borderRadius: "16px", // Reduced border radius
           boxShadow:
-            "0 20px 40px rgba(0,0,0,0.08), 0 8px 25px rgba(0,0,0,0.04)",
+            "0 8px 20px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.03)", // Reduced shadow
           border: "1px solid #e2e8f0",
           display: "flex",
           alignItems: "center",
@@ -353,21 +357,21 @@ const ModernBarChart = ({
   return (
     <div
       style={{
-        padding: "32px",
+        padding: "16px", // Reduced padding from 32px
         background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
-        borderRadius: "24px",
-        boxShadow: "0 20px 40px rgba(0,0,0,0.08), 0 8px 25px rgba(0,0,0,0.04)",
+        borderRadius: "16px", // Reduced from 24px
+        boxShadow: "0 8px 20px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.03)", // Reduced shadow
         border: "1px solid #e2e8f0",
         width: "100%",
         boxSizing: "border-box",
-        overflow: "hidden",
+        overflow: "hidden", // Prevent scrolling
         position: "relative",
       }}
     >
       <h3
         style={{
-          margin: "0 0 28px 0",
-          fontSize: "24px",
+          margin: "0 0 16px 0", // Reduced margin from 28px
+          fontSize: "20px", // Reduced from 24px
           fontWeight: "700",
           color: "#1e293b",
           letterSpacing: "-0.01em",
@@ -381,28 +385,31 @@ const ModernBarChart = ({
         <div
           style={{
             position: "absolute",
-            top: "60px",
-            left: `${100 + hoveredBar.index * 80 + 20}px`, // Position based on hovered bar
+            top: "50px", // Adjusted for smaller header
+            left: `${100 + hoveredBar.index * 80 + 20}px`,
             transform: "translateX(-50%)",
             background: "rgba(0,0,0,0.9)",
             color: "white",
-            padding: "12px 16px",
+            padding: "8px 12px", // Reduced padding
             borderRadius: "8px",
-            fontSize: "14px",
+            fontSize: "12px", // Reduced font size
             fontWeight: "600",
             zIndex: 1000,
             whiteSpace: "nowrap",
             boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
-            pointerEvents: "none", // Prevent tooltip from interfering with mouse events
+            pointerEvents: "none",
           }}
         >
-          <div style={{ marginBottom: "8px" }}>
+          <div style={{ marginBottom: "4px" }}>
             {data[hoveredBar.index].Day ||
               data[hoveredBar.index].day ||
               data[hoveredBar.index].label}
           </div>
           <div style={{ marginBottom: "4px" }}>
-            Total Sum: {totalSum.toFixed(1)}
+            Total: {processedData[hoveredBar.index].total.toFixed(1)}
+          </div>
+          <div style={{ marginBottom: "4px" }}>
+            Moving Avg: {processedData[hoveredBar.index].movingAverage.toFixed(1)}
           </div>
           {dataKeys.map((key: string, idx: number) => (
             <div
@@ -410,14 +417,14 @@ const ModernBarChart = ({
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "8px",
+                gap: "6px", // Reduced gap
                 marginBottom: "2px",
               }}
             >
               <div
                 style={{
-                  width: "12px",
-                  height: "12px",
+                  width: "10px", // Reduced size
+                  height: "10px",
                   backgroundColor: colors[idx] || "#64748b",
                   borderRadius: "2px",
                 }}
@@ -429,12 +436,12 @@ const ModernBarChart = ({
         </div>
       )}
 
-      <div style={{ overflow: "auto", width: "100%" }}>
+      <div style={{ overflow: "hidden", width: "100%" }}> {/* Changed from "auto" to "hidden" */}
         <svg
           width="100%"
           height={height}
-          viewBox="0 0 1500 300"
-          style={{ overflow: "visible", minWidth: "1000px" }}
+          viewBox="0 0 1200 300" // Reduced viewBox width
+          style={{ overflow: "visible" }} // Removed minWidth
         >
           {/* Grid lines */}
           {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
@@ -442,7 +449,7 @@ const ModernBarChart = ({
               key={i}
               x1="100"
               y1={70 + ratio * (height - 140)}
-              x2="680"
+              x2="1000" // Reduced grid width
               y2={70 + ratio * (height - 140)}
               stroke="#f1f5f9"
               strokeWidth="1"
@@ -456,61 +463,70 @@ const ModernBarChart = ({
                 if (keyIndex >= colors.length) return null;
 
                 return (
-                  <>
-                    <rect
-                      key={key}
-                      x={getX(i, keyIndex)}
-                      y={getY(d[key] || 0)}
-                      width={barWidth}
-                      height={((d[key] || 0) / maxValue) * (height - 140)}
-                      fill={colors[keyIndex]}
-                      rx="6"
-                      style={{
-                        filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.1))",
-                        cursor: "pointer",
-                      }}
-                      onMouseEnter={() => setHoveredBar({ index: i, keyIndex })}
-                      onMouseLeave={() => setHoveredBar(null)}
-                    />
-                  </>
+                  <rect
+                    key={key}
+                    x={getX(i, keyIndex)}
+                    y={getY(d[key] || 0)}
+                    width={barWidth}
+                    height={((d[key] || 0) / maxValue) * (height - 140)}
+                    fill={colors[keyIndex]}
+                    rx="6"
+                    style={{
+                      filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.1))",
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={() => setHoveredBar({ index: i, keyIndex })}
+                    onMouseLeave={() => setHoveredBar(null)}
+                  />
                 );
               })}
             </g>
           ))}
-          {/* Moving average polyline (after all bars are rendered) */}
+          
+          {/* Moving average smooth line */}
           <polyline
             fill="none"
-            stroke="#ef4444"
-            strokeWidth="3"
-            strokeDasharray="5,5"
+            stroke="#ff6b35"
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
             points={processedData
               .map((d: any, i: number) => {
-                const total = dataKeys.reduce(
-                  (sum: number, key: string) => sum + (d[key] || 0),
-                  0
-                );
-                return `${getX(i, 1) + barWidth / 2},${getY(total)}`;
+                return `${getX(i, 1) + barWidth / 2},${getY(d.movingAverage)}`;
               })
               .join(" ")}
             style={{
-              filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.1))",
+              filter: "drop-shadow(0 3px 6px rgba(255,107,53,0.4))",
+              opacity: 0.95
             }}
           />
-          {/* Moving average points */}
-          {movingAverageData.map((d: any, i: number) => (
-            <circle
-              key={`ma-${i}`}
-              cx={getX(i, 1) + barWidth / 2}
-              cy={getY(d.movingAverage)}
-              r="4"
-              fill="#ef4444"
-              stroke="#ffffff"
-              strokeWidth="2"
-              style={{
-                filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.15))",
-              }}
-            />
+          
+          {/* Moving average points with glow effect */}
+          {processedData.map((d: any, i: number) => (
+            <g key={`ma-${i}`}>
+              {/* Glow effect */}
+              <circle
+                cx={getX(i, 1) + barWidth / 2}
+                cy={getY(d.movingAverage)}
+                r="8"
+                fill="#ff6b35"
+                opacity="0.2"
+              />
+              {/* Main point */}
+              <circle
+                cx={getX(i, 1) + barWidth / 2}
+                cy={getY(d.movingAverage)}
+                r="5"
+                fill="#ff6b35"
+                stroke="#ffffff"
+                strokeWidth="3"
+                style={{
+                  filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.2))",
+                }}
+              />
+            </g>
           ))}
+          
           {/* X-axis labels */}
           {data.map((d: any, i: number) => (
             <text
@@ -518,10 +534,9 @@ const ModernBarChart = ({
               x={getX(i, 1)}
               y={height - 30}
               textAnchor="middle"
-              fontSize="12"
+              fontSize="11" // Reduced font size
               fill="#64748b"
               fontWeight="600"
-              transform={`${getX(i, 1)}, ${height - 30})`}
             >
               {d.Day || d.day || d.label || i + 1}
             </text>
@@ -534,7 +549,7 @@ const ModernBarChart = ({
               x="90"
               y={getY(value) + 4}
               textAnchor="end"
-              fontSize="14"
+              fontSize="12" // Reduced font size
               fill="#64748b"
               fontWeight="600"
             >
@@ -549,8 +564,8 @@ const ModernBarChart = ({
         style={{
           display: "flex",
           justifyContent: "center",
-          gap: "24px",
-          marginTop: "20px",
+          gap: "16px", // Reduced gap
+          marginTop: "12px", // Reduced margin
           flexWrap: "wrap",
         }}
       >
@@ -560,20 +575,20 @@ const ModernBarChart = ({
           return (
             <div
               key={key}
-              style={{ display: "flex", alignItems: "center", gap: "10px" }}
+              style={{ display: "flex", alignItems: "center", gap: "6px" }} // Reduced gap
             >
               <div
                 style={{
-                  width: "20px",
-                  height: "20px",
+                  width: "16px", // Reduced size
+                  height: "16px",
                   background: colors[index],
-                  borderRadius: "6px",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                  borderRadius: "4px", // Reduced radius
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.1)", // Reduced shadow
                 }}
               ></div>
               <span
                 style={{
-                  fontSize: "14px",
+                  fontSize: "12px", // Reduced font size
                   color: "#64748b",
                   fontWeight: "600",
                 }}
@@ -584,18 +599,18 @@ const ModernBarChart = ({
           );
         })}
         {/* Moving Average Legend */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <div
             style={{
-              width: "20px",
+              width: "16px",
               height: "4px",
-              background: "#ef4444",
+              background: "#ff6b35",
               borderRadius: "2px",
-              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
             }}
           ></div>
           <span
-            style={{ fontSize: "14px", color: "#64748b", fontWeight: "600" }}
+            style={{ fontSize: "12px", color: "#64748b", fontWeight: "600" }}
           >
             Moving Average
           </span>
@@ -604,7 +619,6 @@ const ModernBarChart = ({
     </div>
   );
 };
-
 // Modern Single Bar Chart Component with hover breakdown and moving average
 const ModernSingleBarChart = ({
   data,
