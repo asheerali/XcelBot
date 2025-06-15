@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from datetime import datetime
+from sqlalchemy import Column, DateTime, Integer, String, ForeignKey
 from database import Base
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -13,3 +14,6 @@ class Store(Base):
     phone = Column(String(20), nullable=False)
     email = Column(String(255), nullable=False)
     company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

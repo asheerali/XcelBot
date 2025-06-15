@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from uuid import UUID
 
 class UserCompanyBase(BaseModel):
-    location_id: int
+    user_id: int
     company_id: UUID
 
 class UserCompanyCreate(UserCompanyBase):

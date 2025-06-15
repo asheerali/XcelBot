@@ -2,8 +2,8 @@ from sqlalchemy.orm import Session
 from models.user_company import UserCompany
 from schemas.user_company import UserCompanyCreate
 
-def create_user_company(db: Session, record: UserCompanyCreate):
-    entry = UserCompany(**record.model_dump())
+def create_user_company(db: Session, data: UserCompanyCreate):
+    entry = UserCompany(**data.model_dump())
     db.add(entry)
     db.commit()
     db.refresh(entry)

@@ -79,7 +79,8 @@ from routers import (users,
                      uploaded_files, 
                      permissions,
                      user_company,   
-                     file_permissions)
+                     file_permissions,
+                     company_overview)
 
 app.include_router(users.router)
 app.include_router(companies.router)
@@ -94,6 +95,7 @@ app.include_router(file_permissions.router)
 app.include_router(user_company.router)
 app.include_router(permissions.router)
 app.include_router(company_locations.router)
+app.include_router(company_overview.router)
 
 
 

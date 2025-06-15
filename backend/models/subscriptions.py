@@ -16,7 +16,7 @@ class Subscription(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    company_id = Column(Integer, ForeignKey("stores.id"))
+    company_id = Column(Integer, ForeignKey("companies.id"))
     plan_name = Column(String(100))
     payment_provider = Column(String(100))
     provider_subscription_id = Column(String(255))

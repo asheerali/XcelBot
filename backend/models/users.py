@@ -31,6 +31,5 @@ class User(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=True)
 
-    # store_id = Column(Integer, ForeignKey("stores.id"))
     uploaded_files = relationship("UploadedFile", back_populates="uploader", cascade="all, delete-orphan")
 
