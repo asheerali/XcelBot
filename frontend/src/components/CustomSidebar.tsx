@@ -27,16 +27,48 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import LogoutIcon from '@mui/icons-material/Logout';
+// NEW IMPORT: Add this for the new logo
+import DashboardIcon from '@mui/icons-material/Dashboard';
 
 const drawerWidth = 260;
 const gradientBackground = 'linear-gradient(180deg, #050b1b 0%, #150949 100%)';
 
-const CustomSidebar = ({ logo, title = 'INSIGHTiQ', onSignOut }) => {
+// NEW COMPONENT: Custom Logo Component - Exact same design as homepage
+const CustomLogo = ({ size = 32 }) => (
+  <Box
+    sx={{
+      width: size,
+      height: size,
+      borderRadius: '50%', // Perfect circle like homepage
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', // Exact same gradient
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      boxShadow: `0 4px 20px ${alpha('#667eea', 0.3)}`, // Same shadow as homepage
+      position: 'relative',
+      overflow: 'hidden'
+    }}
+  >
+    <DashboardIcon 
+      sx={{ 
+        color: '#ffffff', 
+        fontSize: size * 0.5, // Slightly smaller icon to match homepage proportions
+        fontWeight: 'bold'
+      }} 
+    />
+  </Box>
+);
+
+// UPDATED: Remove logo and title props, use internal app name
+const CustomSidebar = ({ onSignOut }) => {
   const theme = useTheme();
   const location = useLocation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [open, setOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // NEW: Define your app name here - CHANGE THIS TO YOUR DESIRED NAME
+  const appName = 'INSIGHTiQ';
 
   const navItems = [
     { title: 'Upload Excel', path: '/upload-excel', icon: <UploadFileIcon /> },
@@ -48,7 +80,6 @@ const CustomSidebar = ({ logo, title = 'INSIGHTiQ', onSignOut }) => {
     { title: 'Payments', path: '/Payments', icon: <PaymentIcon /> },
     { title: 'Help Center', path: '/HelpCenter', icon: <HelpIcon /> },
     { title: 'Company', path: '/CompanyLocationManager', icon: <NewspaperIcon /> },
-
   ];
 
   const handleDrawerToggle = () => {
@@ -158,8 +189,8 @@ const CustomSidebar = ({ logo, title = 'INSIGHTiQ', onSignOut }) => {
           top: 0,
           zIndex: 1,
           minHeight: 64,
-          mx: 1, // Match the margin of navigation items
-          mt: 1  // Add top margin to match nav items spacing
+          mx: 1,
+          mt: 1
         }}
       >
         <ListItemButton
@@ -168,9 +199,9 @@ const CustomSidebar = ({ logo, title = 'INSIGHTiQ', onSignOut }) => {
             justifyContent: open ? 'initial' : 'center',
             px: 2.5,
             borderRadius: '10px',
-            cursor: 'default', // No pointer cursor for the header
+            cursor: 'default',
             '&:hover': {
-              backgroundColor: 'transparent' // No hover effect for header
+              backgroundColor: 'transparent'
             }
           }}
         >
@@ -182,10 +213,11 @@ const CustomSidebar = ({ logo, title = 'INSIGHTiQ', onSignOut }) => {
               color: '#ffffff'
             }}
           >
-            {logo}
+            {/* CHANGED: Use new CustomLogo component instead of {logo} */}
+            <CustomLogo size={32} />
           </ListItemIcon>
           <ListItemText
-            primary={title}
+            primary={appName} // CHANGED: Use appName variable instead of {title}
             sx={{
               transition: 'opacity 0.3s ease',
               opacity: open ? 1 : 0,

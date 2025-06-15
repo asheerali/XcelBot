@@ -744,28 +744,55 @@ export default function ProductMixDashboard() {
           gap: 2,
         }}
       >
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{
-            fontWeight: 600,
-            color: "rgb(9, 43, 117)",
-            fontSize: { xs: "1.5rem", sm: "2rem", md: "2.5rem" },
-          }}
-        >
-          Product Mix Dashboard
-        </Typography>
-
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <Tooltip title="Help">
-            <IconButton
-              color="info"
-              sx={{ backgroundColor: "white", boxShadow: 1 }}
+    <div style={{ 
+      textAlign: 'center', 
+      marginBottom: '2rem',
+      display: 'flex',
+      justifyContent: 'center',
+      width: '100%'
+    }}>
+            <h1 
+              style={{ 
+                fontWeight: 800,
+                background: 'linear-gradient(135deg, #1976d2 0%, #9c27b0 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontSize: 'clamp(1.75rem, 5vw, 3rem)',
+                marginBottom: '8px',
+                letterSpacing: '-0.02em',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '16px',
+                margin: '0',
+                textAlign: 'center'
+              }}
             >
-              <HelpOutlineIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
+              <span style={{ 
+                color: '#1976d2',
+                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+                fontSize: 'inherit',
+                display: 'inline-flex',
+                alignItems: 'center'
+              }}>
+                <svg 
+                  width="1em" 
+                  height="1em" 
+                  viewBox="0 0 100 100" 
+                  fill="currentColor"
+                  style={{ fontSize: 'inherit' }}
+                >
+                  {/* 4-square logo matching your design */}
+                  <rect x="10" y="10" width="35" height="35" rx="4" fill="#5A8DEE"/>
+                  <rect x="55" y="10" width="35" height="35" rx="4" fill="#4285F4"/>
+                  <rect x="10" y="55" width="35" height="35" rx="4" fill="#1976D2"/>
+                  <rect x="55" y="55" width="35" height="35" rx="4" fill="#3F51B5"/>
+                </svg>
+              </span>
+            Product Mix Dashboard
+            </h1>
+          </div>
       </Box>
 
       {/* Alert message when no data is available */}

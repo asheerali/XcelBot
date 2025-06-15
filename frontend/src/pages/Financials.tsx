@@ -116,7 +116,7 @@ const GradientCard = styled(Card)(({ theme }) => ({
 }));
 
 const MetricCard = styled(Card)(({ theme }) => ({
-  padding: theme.spacing(2),
+  padding: theme.spacing(1),
   textAlign: 'center',
   height: '100%',
   borderRadius: 12,
@@ -131,12 +131,26 @@ const MetricCard = styled(Card)(({ theme }) => ({
   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   position: 'relative',
   overflow: 'hidden',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+    opacity: 0,
+    transition: 'opacity 0.3s ease',
+  },
   '&:hover': {
     transform: 'translateY(-3px) scale(1.02)',
     boxShadow: `
       0 12px 32px ${alpha(theme.palette.common.black, 0.08)},
       0 4px 16px ${alpha(theme.palette.common.black, 0.04)}
     `,
+    '&::before': {
+      opacity: 1,
+    }
   }
 }));
 
@@ -186,24 +200,6 @@ const AnimatedTabs = styled(Tabs)(({ theme }) => ({
     ${alpha(theme.palette.background.default, 0.4)} 100%)`,
   backdropFilter: 'blur(10px)',
 }));
-
-// Color mapping for different metrics
-const getMetricColor = (label: string) => {
-  const colorMap: { [key: string]: string } = {
-    'Net Sales': '#3b82f6', // Blue
-    'Orders': '#10b981', // Green  
-    'Qty Sold': '#f59e0b', // Orange
-    'Avg Ticket': '#8b5cf6', // Purple
-    'Avg Order Value': '#8b5cf6', // Purple
-    'Average items per order': '#ef4444', // Red
-    'Food Cost %': '#ef4444', // Red
-    'Lbr %': '#ef4444', // Red
-    'SPMH': '#10b981', // Green
-    'LPMH': '#f59e0b', // Orange
-  };
-  
-  return colorMap[label] || '#6b7280'; // Default gray
-};
 
 // TabPanel Component
 interface TabPanelProps {
@@ -906,7 +902,7 @@ export function Financials() {
         const twLwChange = formatPercentageChange(metricData.twLwChange);
         
         let formattedValue = metricData.thisWeek;
-        let bottomLabel = '';
+        let bottomLabel = '% Change';
         
         if (metricName === 'Net Sales') {
           formattedValue = formatCurrency(metricData.thisWeek);
@@ -972,28 +968,56 @@ export function Financials() {
         mb: 4,
         position: 'relative'
       }}>
-        <Typography 
-          variant="h3" 
-          component="h1" 
-          sx={{ 
-            fontWeight: 800,
-            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            fontSize: { xs: '1.75rem', sm: '2.5rem', md: '3rem' },
-            mb: 1,
-            letterSpacing: '-0.02em'
-          }}
-        >
-          <DashboardIcon sx={{ 
-            fontSize: 'inherit', 
-            mr: 2, 
-            color: theme.palette.primary.main,
-            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
-          }} />
-          Financial Dashboard
-        </Typography>
+          <div style={{ 
+            textAlign: 'center', 
+            marginBottom: '2rem',
+            display: 'flex',
+            justifyContent: 'center',
+            width: '100%'
+          }}>
+            <h1 
+              style={{ 
+                fontWeight: 800,
+                background: 'linear-gradient(135deg, #1976d2 0%, #9c27b0 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontSize: 'clamp(1.75rem, 5vw, 3rem)',
+                marginBottom: '8px',
+                letterSpacing: '-0.02em',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '16px',
+                margin: '0',
+                textAlign: 'center'
+              }}
+            >
+              <span style={{ 
+                color: '#1976d2',
+                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+                fontSize: 'inherit',
+                display: 'inline-flex',
+                alignItems: 'center'
+              }}>
+                <svg 
+                  width="1em" 
+                  height="1em" 
+                  viewBox="0 0 100 100" 
+                  fill="currentColor"
+                  style={{ fontSize: 'inherit' }}
+                >
+                  {/* 4-square logo matching your design */}
+                  <rect x="10" y="10" width="35" height="35" rx="4" fill="#5A8DEE"/>
+                  <rect x="55" y="10" width="35" height="35" rx="4" fill="#4285F4"/>
+                  <rect x="10" y="55" width="35" height="35" rx="4" fill="#1976D2"/>
+                  <rect x="55" y="55" width="35" height="35" rx="4" fill="#3F51B5"/>
+                </svg>
+              </span>
+              Financial Dashboard
+            </h1>
+          </div>
+  
         <Typography 
           variant="h6" 
           sx={{ 
@@ -1002,24 +1026,11 @@ export function Financials() {
             letterSpacing: '0.02em'
           }}
         >
-          Comprehensive Financial Analytics & Performance Insights
+          {/* Comprehensive Financial Analytics & Performance Insights */}
         </Typography>
       </Box>
 
-      {/* Alert for no data */}
-      {financialFiles.length === 0 && (
-        <Alert 
-          severity="info" 
-          sx={{ 
-            mb: 3,
-            borderRadius: 3,
-            border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
-            boxShadow: `0 4px 20px ${alpha(theme.palette.info.main, 0.1)}`
-          }}
-        >
-          No financial data available. Please upload financial files with dashboard type "Financials" first.
-        </Alert>
-      )}
+     
 
       {/* Error Alert */}
       {(filterError || error) && (
@@ -1230,6 +1241,8 @@ export function Financials() {
         </CardContent>
       </GradientCard>
 
+  
+
       {/* Enhanced Week-Over-Week Analysis Card */}
       <StyledCard 
         elevation={0}
@@ -1293,84 +1306,119 @@ export function Financials() {
             </Box>
           )}
           
-          {/* Enhanced Stats Grid with colored borders and improved layout */}
+          {/* Enhanced Stats Grid */}
           {!isLoading && !loading && (
             <>
               {statsData.length > 0 ? (
-                <Grid container spacing={2}>
+                <Grid container spacing={1.5}>
                   {/* First Row - 4 items */}
                   {statsData.slice(0, 4).map((stat, index) => (
                     <Grid item xs={6} sm={3} key={index}>
-                      <MetricCard 
-                        elevation={0}
-                        sx={{
-                          '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            height: 4,
-                            background: getMetricColor(stat.label),
-                            borderRadius: '12px 12px 0 0',
-                          }
-                        }}
-                      >
-                        {/* Metric Value */}
-                        <Typography 
-                          variant="h4" 
-                          sx={{ 
-                            fontWeight: 700,
-                            color: getMetricColor(stat.label),
-                            mb: 1,
-                            fontSize: { xs: '1.5rem', sm: '1.75rem' }
-                          }}
-                        >
-                          {stat.value}
-                        </Typography>
-                        
-                        {/* Metric Label */}
+                      <MetricCard elevation={0}>
                         <Typography 
                           sx={{ 
-                            color: theme.palette.text.primary, 
+                            color: theme.palette.primary.main, 
                             fontWeight: 600,
-                            fontSize: '0.875rem',
-                            mb: 1,
-                            lineHeight: 1.2
+                            fontSize: '0.8rem',
+                            mb: 0.5,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.02em'
                           }}
                         >
                           {stat.label}
                         </Typography>
-                        
-                        {/* vs. previous period change in single row */}
+                        <Typography 
+                          variant="h6" 
+                          sx={{ 
+                            fontWeight: 700,
+                            color: theme.palette.text.primary,
+                            mb: 0.5,
+                            fontSize: '1.2rem'
+                          }}
+                        >
+                          {stat.value}
+                        </Typography>
                         <Box sx={{ 
                           display: 'flex', 
                           alignItems: 'center', 
                           justifyContent: 'center',
-                          gap: 1,
-                          flexWrap: 'wrap'
+                          mb: 0.25,
+                          gap: 0.5
                         }}>
+                          {stat.changeDirection && (
+                            <span style={{ 
+                              color: stat.changeColor, 
+                              fontSize: '12px',
+                              fontWeight: 'bold'
+                            }}>
+                              {stat.changeDirection === 'up' ? '▲' : '▼'}
+                            </span>
+                          )}
                           <Typography 
-                            variant="body2" 
                             sx={{ 
-                              color: alpha(theme.palette.text.secondary, 0.8),
-                              fontSize: '0.75rem',
-                              whiteSpace: 'nowrap'
+                              color: stat.changeColor || theme.palette.primary.main,
+                              fontSize: '0.8rem',
+                              fontWeight: 600
                             }}
                           >
-                            vs. previous period
+                            {stat.bottomChange}
                           </Typography>
-                          
-                          {stat.bottomChange !== 'null' && stat.bottomChange !== '0%' ? (
+                        </Box>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: alpha(theme.palette.text.secondary, 0.8),
+                            fontSize: '0.7rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.02em'
+                          }}
+                        >
+                          {stat.bottomLabel}
+                        </Typography>
+                      </MetricCard>
+                    </Grid>
+                  ))}
+                  
+                  {/* Second Row - 3 items centered */}
+                  <Grid item xs={12}>
+                    <Grid container spacing={1.5} justifyContent="center">
+                      {statsData.slice(4, 7).map((stat, index) => (
+                        <Grid item xs={6} sm={4} key={index + 4}>
+                          <MetricCard elevation={0}>
+                            <Typography 
+                              sx={{ 
+                                color: theme.palette.primary.main, 
+                                fontWeight: 600,
+                                fontSize: '0.8rem',
+                                mb: 0.5,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.02em'
+                              }}
+                            >
+                              {stat.label}
+                            </Typography>
+                            <Typography 
+                              variant="h6" 
+                              sx={{ 
+                                fontWeight: 700,
+                                color: theme.palette.text.primary,
+                                mb: 0.5,
+                                fontSize: '1.2rem'
+                              }}
+                            >
+                              {stat.value}
+                            </Typography>
                             <Box sx={{ 
                               display: 'flex', 
                               alignItems: 'center', 
+                              justifyContent: 'center',
+                              mb: 0.25,
                               gap: 0.5
                             }}>
                               {stat.changeDirection && (
                                 <span style={{ 
                                   color: stat.changeColor, 
-                                  fontSize: '10px',
+                                  fontSize: '12px',
                                   fontWeight: 'bold'
                                 }}>
                                   {stat.changeDirection === 'up' ? '▲' : '▼'}
@@ -1379,131 +1427,24 @@ export function Financials() {
                               <Typography 
                                 sx={{ 
                                   color: stat.changeColor || theme.palette.primary.main,
-                                  fontSize: '0.75rem',
+                                  fontSize: '0.8rem',
                                   fontWeight: 600
                                 }}
                               >
                                 {stat.bottomChange}
                               </Typography>
                             </Box>
-                          ) : (
                             <Typography 
+                              variant="body2" 
                               sx={{ 
-                                color: alpha(theme.palette.text.secondary, 0.6),
-                                fontSize: '0.75rem',
-                                fontStyle: 'italic'
+                                color: alpha(theme.palette.text.secondary, 0.8),
+                                fontSize: '0.7rem',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.02em'
                               }}
                             >
-                              null
+                              {stat.bottomLabel}
                             </Typography>
-                          )}
-                        </Box>
-                      </MetricCard>
-                    </Grid>
-                  ))}
-                  
-                  {/* Second Row - 3 items centered */}
-                  <Grid item xs={12}>
-                    <Grid container spacing={2} justifyContent="center">
-                      {statsData.slice(4, 7).map((stat, index) => (
-                        <Grid item xs={6} sm={4} key={index + 4}>
-                          <MetricCard 
-                            elevation={0}
-                            sx={{
-                              '&::before': {
-                                content: '""',
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                height: 4,
-                                background: getMetricColor(stat.label),
-                                borderRadius: '12px 12px 0 0',
-                              }
-                            }}
-                          >
-                            {/* Metric Value */}
-                            <Typography 
-                              variant="h4" 
-                              sx={{ 
-                                fontWeight: 700,
-                                color: getMetricColor(stat.label),
-                                mb: 1,
-                                fontSize: { xs: '1.5rem', sm: '1.75rem' }
-                              }}
-                            >
-                              {stat.value}
-                            </Typography>
-                            
-                            {/* Metric Label */}
-                            <Typography 
-                              sx={{ 
-                                color: theme.palette.text.primary, 
-                                fontWeight: 600,
-                                fontSize: '0.875rem',
-                                mb: 1,
-                                lineHeight: 1.2
-                              }}
-                            >
-                              {stat.label}
-                            </Typography>
-                            
-                            {/* vs. previous period change in single row */}
-                            <Box sx={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              justifyContent: 'center',
-                              gap: 1,
-                              flexWrap: 'wrap'
-                            }}>
-                              <Typography 
-                                variant="body2" 
-                                sx={{ 
-                                  color: alpha(theme.palette.text.secondary, 0.8),
-                                  fontSize: '0.75rem',
-                                  whiteSpace: 'nowrap'
-                                }}
-                              >
-                                vs. previous period
-                              </Typography>
-                              
-                              {stat.bottomChange !== 'null' && stat.bottomChange !== '0%' ? (
-                                <Box sx={{ 
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  gap: 0.5
-                                }}>
-                                  {stat.changeDirection && (
-                                    <span style={{ 
-                                      color: stat.changeColor, 
-                                      fontSize: '10px',
-                                      fontWeight: 'bold'
-                                    }}>
-                                      {stat.changeDirection === 'up' ? '▲' : '▼'}
-                                    </span>
-                                  )}
-                                  <Typography 
-                                    sx={{ 
-                                      color: stat.changeColor || theme.palette.primary.main,
-                                      fontSize: '0.75rem',
-                                      fontWeight: 600
-                                    }}
-                                  >
-                                    {stat.bottomChange}
-                                  </Typography>
-                                </Box>
-                              ) : (
-                                <Typography 
-                                  sx={{ 
-                                    color: alpha(theme.palette.text.secondary, 0.6),
-                                    fontSize: '0.75rem',
-                                    fontStyle: 'italic'
-                                  }}
-                                >
-                                  null
-                                </Typography>
-                              )}
-                            </Box>
                           </MetricCard>
                         </Grid>
                       ))}
