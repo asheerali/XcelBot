@@ -134,7 +134,6 @@
 #             "servers": server,
 #             "categories": category,
 #             "dateRanges": [],
-#             "fileLocation": ['fileLocation', 'fileLocationa'],
 #             "fileName": file_name,
 #             "dashboardName": "Product Mix",
 #             "data": "Dashboard is not yet implemented."

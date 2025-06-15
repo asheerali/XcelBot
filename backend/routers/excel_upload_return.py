@@ -220,7 +220,6 @@ def process_sales_split_and_product_mix(request, file_content, file_name):
         "servers": server,
         "categories": category,
         "dateRanges": [],
-        "fileLocation": ['fileLocation', 'fileLocationa'],
         "fileName": file_name,
         "dashboardName": "Product Mix",
         "data": "Dashboard is not yet implemented."
