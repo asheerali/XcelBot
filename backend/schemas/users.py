@@ -10,8 +10,8 @@ from uuid import UUID
 class RoleEnum(str, Enum):
     superuser = "superuser"
     admin = "admin"
-    auditor = "auditor"
     manager = "manager"
+    user = "user"
     trial = "trial"
 
 class UserBase(BaseModel):

@@ -12,6 +12,11 @@ def upload_file_record(db: Session, file_data: UploadedFileCreate):
 
 # def get_files_uploaded_by_user(db: Session, user_id: int):
     # return db.query(UploadedFile).filter(UploadedFile.uploader_id == user_id).all()
+    
+    
+def get_files_uploaded_by_user(db: Session, user_id: int):
+    return db.query(UploadedFile).filter(UploadedFile.uploader_id == user_id).all()
+
 def get_uploaded_files(db: Session, current_user: User):
     query = db.query(UploadedFile)
     if current_user.role != "superuser":
