@@ -112,7 +112,7 @@ def process_financials_file(file_data: Union[io.BytesIO, str], year="All", week_
     df_budget["Date"] = df_budget["Date"].dt.date
 
     financials_weeks, financials_years, financials_stores = financials_filters(df)
-    
+    print("i am here checking the startdate and end date 3", start_date, end_date)
     financials_sales_table, financials_orders_table, financials_avg_ticket_table = day_of_the_week_tables(df, store=location, start_date=start_date, end_date=end_date) 
     
     financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df,df_budget, store=location, year=year, week_range=week_range, start_date=start_date, end_date=end_date)
