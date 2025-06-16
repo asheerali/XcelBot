@@ -95,8 +95,9 @@ function TabPanel(props: TabPanelProps) {
       id={`product-mix-tabpanel-${index}`}
       aria-labelledby={`product-mix-tab-${index}`}
       {...other}
+      style={{ width: "100%" }} // Add explicit width
     >
-      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
+      {value === index && <Box sx={{ pt: 3, width: "100%" }}>{children}</Box>}
     </div>
   );
 }
@@ -550,154 +551,192 @@ export default function ProductMixDashboard() {
   };
 
   // UPDATED: Handle Apply Filters with validation - only location validation needed
-  const handleApplyFilters = async () => {
-    // Validate required filters (only locations are required)
-    if (selectedLocations.length === 0) {
-      setFilterError("Please select at least one location");
-      return;
+ // UPDATED: Handle Apply Filters with validation - FIXED to send multiple locations
+const handleApplyFilters = async () => {
+  // Validate required filters (only locations are required)
+  if (selectedLocations.length === 0) {
+    setFilterError("Please select at least one location");
+    return;
+  }
+
+  setIsLoading(true);
+  setFilterError("");
+  setDataUpdated(false);
+
+  try {
+    // Check if we have any files loaded
+    if (!currentProductMixFile) {
+      throw new Error("No Product Mix data found for selected location");
     }
 
-    setIsLoading(true);
-    setFilterError("");
-    setDataUpdated(false);
+    console.log("🔄 Starting Product Mix filter process...");
 
-    try {
-      // Check if we have any files loaded
-      if (!currentProductMixFile) {
-        throw new Error("No Product Mix data found for selected location");
+    // Format dates correctly for API (convert MM/dd/yyyy to yyyy-MM-dd)
+    let formattedStartDate: string | null = null;
+    let formattedEndDate: string | null = null;
+    
+    if (localStartDate) {
+      const dateParts = localStartDate.split('/');
+      if (dateParts.length === 3) {
+        formattedStartDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
       }
+    }
+    
+    if (localEndDate) {
+      const dateParts = localEndDate.split('/');
+      if (dateParts.length === 3) {
+        formattedEndDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
+      }
+    }
 
-      console.log("🔄 Starting Product Mix filter process...");
+    // FIXED: Prepare the request payload to handle multiple locations
+    const payload = {
+      fileName: currentProductMixFile.fileName,
+      // FIXED: Send all selected locations instead of just the first one
+      locations: selectedLocations, // Send as array
+      location: selectedLocations.length === 1 ? selectedLocations[0] : null, // Keep single location for backward compatibility
+      startDate: formattedStartDate,
+      endDate: formattedEndDate,
+      servers: selectedServers,
+      categories: selectedCategories,
+      menuItems: selectedMenuItems,
+      dashboard: "Product Mix",
+    };
 
-      // Format dates correctly for API (convert MM/dd/yyyy to yyyy-MM-dd)
-      let formattedStartDate: string | null = null;
-      let formattedEndDate: string | null = null;
-      
-      if (localStartDate) {
-        const dateParts = localStartDate.split('/');
-        if (dateParts.length === 3) {
-          formattedStartDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
+    console.log("🚀 Sending Product Mix filter request with multiple locations:", payload);
+
+    // Make API call to Product Mix filter endpoint
+    const response = await axios.post(PRODUCT_MIX_FILTER_API_URL, payload);
+
+    console.log("📥 Received Product Mix filter response:", response.data);
+
+    if (response.data) {
+      // Extract categories from the filtered data
+      const extractedCategories = response.data.categories || selectedCategories;
+
+      // Create enhanced data with filter metadata
+      const enhancedData = {
+        ...response.data,
+        categories: extractedCategories,
+        filterApplied: true,
+        filterTimestamp: new Date().toISOString(),
+        appliedFilters: {
+          // FIXED: Store all selected locations
+          locations: selectedLocations, // Array of all selected locations
+          location: selectedLocations.length === 1 ? selectedLocations[0] : `${selectedLocations.length} locations`, // Display string
+          startDate: localStartDate,
+          endDate: localEndDate,
+          servers: selectedServers,
+          categories: selectedCategories,
+          menuItems: selectedMenuItems,
         }
-      }
-      
-      if (localEndDate) {
-        const dateParts = localEndDate.split('/');
-        if (dateParts.length === 3) {
-          formattedEndDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
-        }
-      }
-
-      // Prepare the request payload
-      const payload = {
-        fileName: currentProductMixFile.fileName,
-
-        location: selectedLocations[0] || currentProductMixLocation,
-        startDate: formattedStartDate,
-        endDate: formattedEndDate,
-        servers: selectedServers,
-        categories: selectedCategories,
-        menuItems: selectedMenuItems,
-        dashboard: "Product Mix",
       };
 
-      console.log("🚀 Sending Product Mix filter request:", payload);
+      console.log("📊 Enhanced data with filters:", enhancedData);
 
-      // Make API call to Product Mix filter endpoint
-      const response = await axios.post(PRODUCT_MIX_FILTER_API_URL, payload);
+      // Update general table data (for compatibility)
+      dispatch(setTableData(enhancedData));
 
-      console.log("📥 Received Product Mix filter response:", response.data);
+      // IMPORTANT: Update Product Mix data for ALL selected locations
+      selectedLocations.forEach(location => {
+        dispatch(addProductMixData({
+          location: location,
+          data: enhancedData,
+          fileName: currentProductMixFile.fileName,
+          fileContent: currentProductMixFile.fileContent || ""
+        }));
+      });
 
-      if (response.data) {
-        // Extract categories from the filtered data
-        const extractedCategories = response.data.categories || selectedCategories;
+      // Update Redux filters with all selected locations
+      dispatch(updateProductMixFilters({
+        locations: selectedLocations, // Store array
+        location: selectedLocations.length === 1 ? selectedLocations[0] : selectedLocations.join(","), // Join for display
+        startDate: localStartDate,
+        endDate: localEndDate,
+        servers: selectedServers.join(","),
+        categories: selectedCategories.join(","),
+        menuItems: selectedMenuItems.join(","),
+        selectedCategories: selectedCategories,
+        dateRangeType: (localStartDate && localEndDate) ? "Custom Date Range" : ""
+      }));
 
-        // Create enhanced data with filter metadata
-        const enhancedData = {
-          ...response.data,
-          categories: extractedCategories,
-          filterApplied: true,
-          filterTimestamp: new Date().toISOString(),
-          appliedFilters: {
-            location: selectedLocations[0] || currentProductMixLocation,
-            startDate: localStartDate,
-            endDate: localEndDate,
-            servers: selectedServers,
-            categories: selectedCategories,
-            menuItems: selectedMenuItems,
-          }
-        };
+      setDataUpdated(true);
+      console.log("✅ Product Mix filters applied successfully for locations:", selectedLocations);
 
-        console.log("📊 Enhanced data with filters:", enhancedData);
-
-        // Update general table data (for compatibility)
-        dispatch(setTableData(enhancedData));
-
-        // IMPORTANT: Update the specific Product Mix data in Redux store
-        dispatch(
-          addProductMixData({
-            fileName: currentProductMixFile.fileName,
-            fileContent: currentProductMixFile.fileContent,
-            location: selectedLocations[0] || currentProductMixLocation,
-            data: enhancedData,
-            categories: extractedCategories,
-          })
-        );
-
-        // Update Redux filters to reflect what was applied
-        dispatch(
-          updateProductMixFilters({
-            location: selectedLocations[0],
-            startDate: localStartDate,
-            endDate: localEndDate,
-            server: selectedServers.join(","),
-            category: selectedCategories.join(","),
-            selectedCategories: selectedCategories,
-            dateRangeType: 'Custom Date Range'
-          })
-        );
-
-        // Update current location if changed
-        if (selectedLocations[0] !== currentProductMixLocation) {
-          dispatch(selectProductMixLocation(selectedLocations[0]));
-        }
-
-        // Set success state
-        setDataUpdated(true);
-        
-        console.log("✅ Product Mix data updated successfully in Redux store");
-        console.log("🔍 Updated product mix data:", enhancedData);
-
-        // Auto-hide success message after 5 seconds
-        setTimeout(() => {
-          setDataUpdated(false);
-        }, 5000);
-
-      } else {
-        throw new Error("No data received from server");
-      }
-    } catch (err: any) {
-      console.error("❌ Product Mix filter error:", err);
-
-      let errorMessage = "Error applying filters";
-
-      if (axios.isAxiosError(err)) {
-        if (err.response) {
-          const detail = err.response.data?.detail;
-          errorMessage = detail || `Server error: ${err.response.status}`;
-        } else if (err.request) {
-          errorMessage =
-            "No response from server. Please check if the backend is running.";
-        }
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-
-      setFilterError(errorMessage);
-      dispatch(setError(errorMessage));
-    } finally {
-      setIsLoading(false);
+      // Show success message
+      setFilterError("");
+      
+    } else {
+      throw new Error("Invalid response data from Product Mix filter API");
     }
-  };
+
+  } catch (error) {
+    console.error("❌ Product Mix filter error:", error);
+    
+    let errorMessage = "Error applying Product Mix filters";
+    if (axios.isAxiosError(error)) {
+      if (error.response) {
+        const detail = error.response.data?.detail;
+        errorMessage = `Server error: ${detail || error.response.status}`;
+        
+        if (detail && typeof detail === 'string' && detail.includes('isinf')) {
+          errorMessage = 'Backend error: Please update the backend code to use numpy.isinf instead of pandas.isinf';
+        } else if (error.response.status === 404) {
+          errorMessage = 'Product Mix filter API endpoint not found. Is the server running?';
+        } else if (error.response.status === 500) {
+          errorMessage = 'Internal server error. Please check the server logs.';
+        }
+      } else if (error.request) {
+        errorMessage = 'Cannot connect to server. Please check your connection and server status.';
+      }
+    } else if (error instanceof Error) {
+      errorMessage = `Product Mix filter error: ${error.message}`;
+    }
+    
+    setFilterError(errorMessage);
+    setDataUpdated(false);
+    
+    // Clear loading state
+    dispatch(setLoading(false));
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+// OPTIONAL: Helper function to handle single location backward compatibility
+const handleSingleLocationFilter = async (location: string) => {
+  // Set selectedLocations to single location and apply filters
+  setSelectedLocations([location]);
+  
+  // Wait for state update and then apply filters
+  setTimeout(() => {
+    handleApplyFilters();
+  }, 100);
+};
+
+// UPDATED: Enhanced filter display to show multiple locations properly
+const formatSelectedLocationsDisplay = (locations: string[]) => {
+  if (locations.length === 0) return "No locations selected";
+  if (locations.length === 1) return locations[0];
+  if (locations.length <= 3) return locations.join(", ");
+  return `${locations.slice(0, 2).join(", ")} and ${locations.length - 2} more`;
+};
+
+// You can also update the active filters display section:
+// Replace the existing location chip with this enhanced version:
+{selectedLocations.length > 0 && (
+  <Chip
+    label={
+      selectedLocations.length === 1
+        ? `Location: ${selectedLocations[0]}`
+        : `Locations: ${formatSelectedLocationsDisplay(selectedLocations)}`
+    }
+    onDelete={() => setSelectedLocations([])}
+    color="primary"
+    variant="outlined"
+    size="small"
+  />
+)}
 
   // Calculate grid sizing based on mobile/tablet status
   const getGridSizes = () => {
@@ -732,7 +771,12 @@ export default function ProductMixDashboard() {
   }, []);
 
   return (
-    <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+    <Box sx={{ 
+      p: { xs: 1, sm: 2, md: 3 },
+      width: "100%",  // Ensure full width
+      maxWidth: "none",  // Remove any max-width constraints
+      boxSizing: "border-box"  // Include padding in width calculation
+    }}>
       {/* Dashboard Header */}
       <Box
         sx={{
@@ -742,62 +786,63 @@ export default function ProductMixDashboard() {
           mb: 3,
           flexWrap: "wrap",
           gap: 2,
+          width: "100%"  // Add explicit width
         }}
       >
-    <div style={{ 
-      textAlign: 'center', 
-      marginBottom: '2rem',
-      display: 'flex',
-      justifyContent: 'center',
-      width: '100%'
-    }}>
-            <h1 
-              style={{ 
-                fontWeight: 800,
-                background: 'linear-gradient(135deg, #1976d2 0%, #9c27b0 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                fontSize: 'clamp(1.75rem, 5vw, 3rem)',
-                marginBottom: '8px',
-                letterSpacing: '-0.02em',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '16px',
-                margin: '0',
-                textAlign: 'center'
-              }}
-            >
-              <span style={{ 
-                color: '#1976d2',
-                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
-                fontSize: 'inherit',
-                display: 'inline-flex',
-                alignItems: 'center'
-              }}>
-                <svg 
-                  width="1em" 
-                  height="1em" 
-                  viewBox="0 0 100 100" 
-                  fill="currentColor"
-                  style={{ fontSize: 'inherit' }}
-                >
-                  {/* 4-square logo matching your design */}
-                  <rect x="10" y="10" width="35" height="35" rx="4" fill="#5A8DEE"/>
-                  <rect x="55" y="10" width="35" height="35" rx="4" fill="#4285F4"/>
-                  <rect x="10" y="55" width="35" height="35" rx="4" fill="#1976D2"/>
-                  <rect x="55" y="55" width="35" height="35" rx="4" fill="#3F51B5"/>
-                </svg>
-              </span>
+        <div style={{ 
+          textAlign: 'center', 
+          marginBottom: '2rem',
+          display: 'flex',
+          justifyContent: 'center',
+          width: '100%'
+        }}>
+          <h1 
+            style={{ 
+              fontWeight: 800,
+              background: 'linear-gradient(135deg, #1976d2 0%, #9c27b0 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              fontSize: 'clamp(1.75rem, 5vw, 3rem)',
+              marginBottom: '8px',
+              letterSpacing: '-0.02em',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '16px',
+              margin: '0',
+              textAlign: 'center'
+            }}
+          >
+            <span style={{ 
+              color: '#1976d2',
+              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+              fontSize: 'inherit',
+              display: 'inline-flex',
+              alignItems: 'center'
+            }}>
+              <svg 
+                width="1em" 
+                height="1em" 
+                viewBox="0 0 100 100" 
+                fill="currentColor"
+                style={{ fontSize: 'inherit' }}
+              >
+                {/* 4-square logo matching your design */}
+                <rect x="10" y="10" width="35" height="35" rx="4" fill="#5A8DEE"/>
+                <rect x="55" y="10" width="35" height="35" rx="4" fill="#4285F4"/>
+                <rect x="10" y="55" width="35" height="35" rx="4" fill="#1976D2"/>
+                <rect x="55" y="55" width="35" height="35" rx="4" fill="#3F51B5"/>
+              </svg>
+            </span>
             Product Mix Dashboard
-            </h1>
-          </div>
+          </h1>
+        </div>
       </Box>
 
       {/* Alert message when no data is available */}
       {!currentProductMixData && (
-        <Alert severity="info" sx={{ mb: 3 }}>
+        <Alert severity="info" sx={{ mb: 3, width: "100%" }}>
           No Product Mix data available. Please upload files with "Product Mix"
           dashboard type from the Excel Upload page.
         </Alert>
@@ -807,7 +852,7 @@ export default function ProductMixDashboard() {
       {(filterError || error) && (
         <Alert
           severity="error"
-          sx={{ mb: 3 }}
+          sx={{ mb: 3, width: "100%" }}
           onClose={() => {
             setFilterError("");
             dispatch(setError(null));
@@ -821,7 +866,7 @@ export default function ProductMixDashboard() {
       {dataUpdated && (
         <Alert 
           severity="success" 
-          sx={{ mb: 3 }}
+          sx={{ mb: 3, width: "100%" }}
           onClose={() => setDataUpdated(false)}
         >
           <Typography variant="body2">
@@ -836,33 +881,26 @@ export default function ProductMixDashboard() {
         </Alert>
       )}
 
-      {/* Info Alert for Initial State
-      {selectedLocations.length > 0 && !dataUpdated && !filterError && !error && (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            <strong>Ready to Filter:</strong> All available locations ({selectedLocations.length}) are initially selected. 
-            Optionally modify any filters, then click "Apply Filters" to analyze your data.
-          </Typography>
-        </Alert>
-      )} */}
-
       {/* Filters Section */}
-      <Card elevation={3} sx={{ mb: 3, borderRadius: 2, overflow: "hidden" }}>
-        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+      <Card elevation={3} sx={{ 
+        mb: 3, 
+        borderRadius: 2, 
+        overflow: "hidden",
+        width: "100%",  // Add explicit width
+        maxWidth: "none"  // Remove any max-width constraints
+      }}>
+        <CardContent sx={{ p: { xs: 2, md: 3 }, width: "100%" }}>
           {/* Filter Header */}
-          <Box sx={{ mb: 2 }}>
+          <Box sx={{ mb: 2, width: "100%" }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <FilterListIcon color="primary" />
               <Typography variant="h6" sx={{ fontWeight: 500 }}>
                 Filters
               </Typography>
-              {/* <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                (All locations initially selected)
-              </Typography> */}
             </Box>
           </Box>
 
-          <Grid container spacing={2}>
+          <Grid container spacing={2} sx={{ width: "100%" }}>
             {/* Location filter */}
             <Grid item {...gridSizes}>
               <MultiSelect
@@ -958,7 +996,7 @@ export default function ProductMixDashboard() {
             selectedServers.length > 0 ||
             selectedMenuItems.length > 0 ||
             selectedCategories.length > 0) && (
-            <Box sx={{ mt: 2 }}>
+            <Box sx={{ mt: 2, width: "100%" }}>
               <Typography
                 variant="body2"
                 color="text.secondary"
@@ -1045,7 +1083,7 @@ export default function ProductMixDashboard() {
           )}
 
           {/* UPDATED: Apply Filters Button with validation feedback */}
-          <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-start", gap: 2 }}>
+          <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-start", gap: 2, width: "100%" }}>
             <Button
               variant="contained"
               color="primary"
@@ -1100,7 +1138,7 @@ export default function ProductMixDashboard() {
 
           {/* Helper text for Clear All behavior */}
           {(selectedLocations.length > 0 || localStartDate || localEndDate) && (
-            <Box sx={{ mt: 1 }}>
+            <Box sx={{ mt: 1, width: "100%" }}>
               <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                 💡 Tip: "Clear All Filters" will reset everything to empty. To re-select all locations, use the location filter's "Select All" option.
                 Date range is optional - filters will apply to all available data if no date range is selected.
@@ -1110,14 +1148,12 @@ export default function ProductMixDashboard() {
 
           {/* Validation message for required fields */}
           {selectedLocations.length === 0 && (
-            <Alert severity="warning" sx={{ mt: 2 }}>
+            <Alert severity="warning" sx={{ mt: 2, width: "100%" }}>
               <Typography variant="body2">
                 <strong>Required:</strong> Please select at least one location to apply filters.
               </Typography>
             </Alert>
           )}
-
-         
         </CardContent>
       </Card>
 
@@ -1126,7 +1162,13 @@ export default function ProductMixDashboard() {
         <>
           {/* Tabs */}
           <Card
-            sx={{ borderRadius: 2, mb: 3, overflow: "hidden" }}
+            sx={{ 
+              borderRadius: 2, 
+              mb: 3, 
+              overflow: "hidden",
+              width: "100%",  // Add explicit width
+              maxWidth: "none"  // Remove any max-width constraints
+            }}
             elevation={3}
           >
             <Tabs
@@ -1134,6 +1176,7 @@ export default function ProductMixDashboard() {
               onChange={handleTabChange}
               variant="fullWidth"
               sx={{
+                width: "100%",  // Ensure tabs take full width
                 "& .MuiTab-root": {
                   fontWeight: 500,
                   textTransform: "none",
@@ -1155,14 +1198,18 @@ export default function ProductMixDashboard() {
 
             {/* Server Performance Tab */}
             <TabPanel value={tabValue} index={0}>
-              <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+              <Box sx={{ 
+                p: { xs: 1, sm: 2, md: 3 },
+                width: "100%",  // Add explicit width
+                boxSizing: "border-box"  // Ensure padding doesn't affect width
+              }}>
                 {isLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                     <CircularProgress size={40} />
                     <Typography sx={{ ml: 2 }}>Updating dashboard data...</Typography>
                   </Box>
                 ) : (
-                  <Box>
+                  <Box sx={{ width: "100%" }}>  {/* Add explicit width */}
                     {/* Sales Dashboard Component */}
                     <MenuAnalysisDashboard 
                       key={`performance-${currentProductMixLocation}-${currentProductMixData?.filterTimestamp || 'original'}`}
@@ -1170,12 +1217,16 @@ export default function ProductMixDashboard() {
                     />
                     
                     {/* Divider */}
-                    <Box sx={{ my: 4 }}>
+                    <Box sx={{ my: 4, width: "100%" }}>  {/* Add explicit width */}
                       <Divider sx={{ borderColor: '#e0e0e0', borderWidth: 1 }} />
                     </Box>
                     
                     {/* Menu Items Table Component */}
-                    <Box sx={{ mt: 4 }}>
+                    <Box sx={{ 
+                      mt: 4, 
+                      width: "100%",  // Add explicit width
+                      overflow: "hidden"  // Prevent any overflow issues
+                    }}>
                       <Typography 
                         variant="h5" 
                         sx={{ 
@@ -1199,7 +1250,11 @@ export default function ProductMixDashboard() {
 
             {/* Menu Analysis Tab */}
             <TabPanel value={tabValue} index={1}>
-              <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+              <Box sx={{ 
+                p: { xs: 1, sm: 2, md: 3 },
+                width: "100%",  // Add explicit width
+                boxSizing: "border-box"
+              }}>
                 {isLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                     <CircularProgress size={40} />
@@ -1219,7 +1274,7 @@ export default function ProductMixDashboard() {
 
       {/* Show message if no data available */}
       {!currentProductMixData && productMixFiles.length === 0 && (
-        <Card sx={{ borderRadius: 2, mb: 3, p: 3 }}>
+        <Card sx={{ borderRadius: 2, mb: 3, p: 3, width: "100%" }}>
           <Button
             variant="contained"
             color="primary"
