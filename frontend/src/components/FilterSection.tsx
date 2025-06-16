@@ -1,6 +1,6 @@
 // FilterSection.tsx - Updated with no default value but initially all selected
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Grid,
@@ -23,34 +23,34 @@ import {
   IconButton,
   MenuList,
   Divider,
-  OutlinedInput
-} from '@mui/material';
-import { format } from 'date-fns';
+  OutlinedInput,
+} from "@mui/material";
+import { format } from "date-fns";
 
 // Import icons
-import FilterListIcon from '@mui/icons-material/FilterList';
-import PlaceIcon from '@mui/icons-material/Place';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import CategoryIcon from '@mui/icons-material/Category';
-import CloseIcon from '@mui/icons-material/Close';
-import SearchIcon from '@mui/icons-material/Search';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
-import CheckBoxIcon from '@mui/icons-material/CheckBox';
+import FilterListIcon from "@mui/icons-material/FilterList";
+import PlaceIcon from "@mui/icons-material/Place";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import CategoryIcon from "@mui/icons-material/Category";
+import CloseIcon from "@mui/icons-material/Close";
+import SearchIcon from "@mui/icons-material/Search";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
+import CheckBoxIcon from "@mui/icons-material/CheckBox";
 
 // Import DateRangeSelector component
-import DateRangeSelector from './DateRangeSelector';
+import DateRangeSelector from "./DateRangeSelector";
 
 // Redux imports
-import { useAppDispatch, useAppSelector } from '../typedHooks';
-import { 
-  selectSalesCategories, 
+import { useAppDispatch, useAppSelector } from "../typedHooks";
+import {
+  selectSalesCategories,
   selectAllCategories,
   selectFinancialCategories,
   selectSalesWideCategories,
   selectProductMixCategories,
-  updateSalesFilters
-} from '../store/excelSlice';
+  updateSalesFilters,
+} from "../store/excelSlice";
 
 // Custom MultiSelect component with search functionality (exact copy from ProductMixDashboard)
 interface MultiSelectProps {
@@ -81,12 +81,27 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
 
   // FIXED: Initialize with all options selected if initiallySelectAll is true
   useEffect(() => {
-    if (initiallySelectAll && options.length > 0 && !hasInitialized && value.length === 0) {
-      console.log(`🎯 FilterSection: Initializing ${label} with all options selected:`, options);
+    if (
+      initiallySelectAll &&
+      options.length > 0 &&
+      !hasInitialized &&
+      value.length === 0
+    ) {
+      console.log(
+        `🎯 FilterSection: Initializing ${label} with all options selected:`,
+        options
+      );
       onChange([...options]);
       setHasInitialized(true);
     }
-  }, [initiallySelectAll, options, hasInitialized, value.length, onChange, label]);
+  }, [
+    initiallySelectAll,
+    options,
+    hasInitialized,
+    value.length,
+    onChange,
+    label,
+  ]);
 
   const filteredOptions = options.filter((option) =>
     option.toLowerCase().includes(searchText.toLowerCase())
@@ -339,9 +354,14 @@ interface FilterSectionProps {
   onLocationChange: (event: SelectChangeEvent) => void;
   onApplyFilters: () => void;
   // NEW: Add a callback that accepts explicit values including selected locations
-  onApplyFiltersWithDates?: (startDate: string, endDate: string, categories: string[], selectedLocations: string[]) => void;
+  onApplyFiltersWithDates?: (
+    startDate: string,
+    endDate: string,
+    categories: string[],
+    selectedLocations: string[]
+  ) => void;
   categoriesOverride?: string[];
-  dashboardType?: 'Sales Split' | 'Financials' | 'Sales Wide' | 'Product Mix';
+  dashboardType?: "Sales Split" | "Financials" | "Sales Wide" | "Product Mix";
   initiallySelectAll?: boolean;
 }
 
@@ -360,73 +380,96 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   onApplyFilters,
   onApplyFiltersWithDates, // NEW prop
   categoriesOverride,
-  dashboardType = 'Sales Split',
+  dashboardType = "Sales Split",
   initiallySelectAll = false,
 }) => {
   const dispatch = useAppDispatch();
-  
+
   // Get categories from Redux state based on dashboard type
   const salesCategories = useAppSelector(selectSalesCategories);
   const allCategories = useAppSelector(selectAllCategories);
   const financialCategories = useAppSelector(selectFinancialCategories);
   const salesWideCategories = useAppSelector(selectSalesWideCategories);
   const productMixCategories = useAppSelector(selectProductMixCategories);
-  const salesFilters = useAppSelector(state => state.excel.salesFilters);
-  
+  const salesFilters = useAppSelector((state) => state.excel.salesFilters);
+
   // Loading state
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Determine which categories to use
   const availableCategories = React.useMemo(() => {
     if (categoriesOverride) {
       return categoriesOverride;
     }
-    
+
     switch (dashboardType) {
-      case 'Sales Split':
+      case "Sales Split":
         return salesCategories.length > 0 ? salesCategories : [];
-      case 'Financials':
+      case "Financials":
         return financialCategories.length > 0 ? financialCategories : [];
-      case 'Sales Wide':
+      case "Sales Wide":
         return salesWideCategories.length > 0 ? salesWideCategories : [];
-      case 'Product Mix':
+      case "Product Mix":
         return productMixCategories.length > 0 ? productMixCategories : [];
       default:
         return allCategories;
     }
-  }, [categoriesOverride, dashboardType, salesCategories, financialCategories, salesWideCategories, productMixCategories, allCategories]);
-  
+  }, [
+    categoriesOverride,
+    dashboardType,
+    salesCategories,
+    financialCategories,
+    salesWideCategories,
+    productMixCategories,
+    allCategories,
+  ]);
+
   // Filter out common non-category fields and system fields
   const filterCategories = React.useCallback((categories: string[]) => {
     const excludeFields = [
-      'dashboardName', 'fileLocation', 'data', 'uploadDate', 'fileName', 
-      'location', 'locations', 'dateRanges', 'Week', 'week', 'Grand Total',
-      'store', 'Store', 'id', 'ID', 'index', 'key'
+      "dashboardName",
+      "fileLocation",
+      "data",
+      "uploadDate",
+      "fileName",
+      "location",
+      "locations",
+      "dateRanges",
+      "Week",
+      "week",
+      "Grand Total",
+      "store",
+      "Store",
+      "id",
+      "ID",
+      "index",
+      "key",
     ];
-    
-    return categories.filter(category => 
-      category && 
-      typeof category === 'string' && 
-      category.trim() !== '' &&
-      !excludeFields.includes(category) &&
-      !category.toLowerCase().includes('total') &&
-      !category.toLowerCase().includes('grand')
+
+    return categories.filter(
+      (category) =>
+        category &&
+        typeof category === "string" &&
+        category.trim() !== "" &&
+        !excludeFields.includes(category) &&
+        !category.toLowerCase().includes("total") &&
+        !category.toLowerCase().includes("grand")
     );
   }, []);
 
-  const filteredCategories = React.useMemo(() => 
-    filterCategories(availableCategories), 
+  const filteredCategories = React.useMemo(
+    () => filterCategories(availableCategories),
     [availableCategories, filterCategories]
   );
-  
+
   // FIXED: State for multi-select arrays - NO DEFAULT VALUES, but will be populated by initiallySelectAll
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  
+
   // State for date range - LOCAL state that we manage directly
-  const [localStartDate, setLocalStartDate] = useState<string>(startDate || '');
-  const [localEndDate, setLocalEndDate] = useState<string>(endDate || '');
-  
+  const [localStartDate, setLocalStartDate] = useState<string>(startDate || "");
+  const [localEndDate, setLocalEndDate] = useState<string>(endDate || "");
+
   // State for date range dialog
   const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
   const [selectedRange, setSelectedRange] = useState({
@@ -436,8 +479,8 @@ const FilterSection: React.FC<FilterSectionProps> = ({
 
   // Update local date state when props change
   useEffect(() => {
-    setLocalStartDate(startDate || '');
-    setLocalEndDate(endDate || '');
+    setLocalStartDate(startDate || "");
+    setLocalEndDate(endDate || "");
   }, [startDate, endDate]);
 
   // REMOVED: Auto-selection based on selectedLocation prop
@@ -445,14 +488,17 @@ const FilterSection: React.FC<FilterSectionProps> = ({
 
   // Update local state when Redux filters change
   useEffect(() => {
-    if (salesFilters.selectedCategories && salesFilters.selectedCategories.length > 0) {
+    if (
+      salesFilters.selectedCategories &&
+      salesFilters.selectedCategories.length > 0
+    ) {
       setSelectedCategories(salesFilters.selectedCategories);
     }
   }, [salesFilters.selectedCategories]);
 
   // Handle location change (multi-select) - UPDATED to not trigger parent onChange immediately
   const handleLocationChange = (newValue: string[]) => {
-    console.log('📍 FilterSection: Location selection changed to:', newValue);
+    console.log("📍 FilterSection: Location selection changed to:", newValue);
     setSelectedLocations(newValue);
     // Don't trigger parent onChange - wait for Apply Filters
   };
@@ -475,34 +521,36 @@ const FilterSection: React.FC<FilterSectionProps> = ({
 
   // Apply date range - sets the date range locally
   const applyDateRange = () => {
-    const formattedStartDate = format(selectedRange.startDate, 'MM/dd/yyyy');
-    const formattedEndDate = format(selectedRange.endDate, 'MM/dd/yyyy');
-    
-    console.log('📅 FilterSection: Setting date range locally:', {
+    const formattedStartDate = format(selectedRange.startDate, "MM/dd/yyyy");
+    const formattedEndDate = format(selectedRange.endDate, "MM/dd/yyyy");
+
+    console.log("📅 FilterSection: Setting date range locally:", {
       startDate: formattedStartDate,
-      endDate: formattedEndDate
+      endDate: formattedEndDate,
     });
-    
+
     // Update local state
     setLocalStartDate(formattedStartDate);
     setLocalEndDate(formattedEndDate);
-    
+
     // Update Redux state for persistence
-    dispatch(updateSalesFilters({ 
-      startDate: formattedStartDate,
-      endDate: formattedEndDate,
-      dateRangeType: 'Custom Date Range'
-    }));
-    
+    dispatch(
+      updateSalesFilters({
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+        dateRangeType: "Custom Date Range",
+      })
+    );
+
     setIsDateRangeOpen(false);
   };
 
   // Format display date
   const formatDisplayDate = (dateStr: string) => {
-    if (!dateStr) return '';
+    if (!dateStr) return "";
     try {
       const date = new Date(dateStr);
-      return format(date, 'MMM dd, yyyy');
+      return format(date, "MMM dd, yyyy");
     } catch (e) {
       return dateStr;
     }
@@ -510,59 +558,68 @@ const FilterSection: React.FC<FilterSectionProps> = ({
 
   // Enhanced apply filters - use callback with explicit values including selected locations
   const handleApplyFilters = () => {
-    console.log('🎯 FilterSection: Applying filters with explicit values:', {
+    console.log("🎯 FilterSection: Applying filters with explicit values:", {
       startDate: localStartDate,
       endDate: localEndDate,
       selectedCategories,
       selectedLocations,
-      useNewCallback: !!onApplyFiltersWithDates
+      useNewCallback: !!onApplyFiltersWithDates,
     });
 
     // Check if at least one location is selected
     if (selectedLocations.length === 0) {
-      console.warn('⚠️ No locations selected');
+      console.warn("⚠️ No locations selected");
       return;
     }
 
     // Update Redux state
-    dispatch(updateSalesFilters({ 
-      selectedCategories: selectedCategories,
-      location: selectedLocations[0] || '', // Use first selected location for backward compatibility
-      dateRangeType: 'Custom Date Range',
-      startDate: localStartDate,
-      endDate: localEndDate
-    }));
-    
+    dispatch(
+      updateSalesFilters({
+        selectedCategories: selectedCategories,
+        location: selectedLocations[0] || "", // Use first selected location for backward compatibility
+        dateRangeType: "Custom Date Range",
+        startDate: localStartDate,
+        endDate: localEndDate,
+      })
+    );
+
     // Use the new callback if available to pass explicit values including locations
     if (onApplyFiltersWithDates) {
-      console.log('🚀 Using new callback with explicit values including selected locations');
-      onApplyFiltersWithDates(localStartDate, localEndDate, selectedCategories, selectedLocations);
+      console.log(
+        "🚀 Using new callback with explicit values including selected locations"
+      );
+      onApplyFiltersWithDates(
+        localStartDate,
+        localEndDate,
+        selectedCategories,
+        selectedLocations
+      );
     } else {
-      console.log('⚠️ Using legacy callback - may have timing issues');
-      
+      console.log("⚠️ Using legacy callback - may have timing issues");
+
       // Legacy approach - update parent state first, then call API
       const locationEvent = {
-        target: { value: selectedLocations[0] || '' }
+        target: { value: selectedLocations[0] || "" },
       } as SelectChangeEvent;
-      
+
       const startEvent = {
-        target: { value: localStartDate }
+        target: { value: localStartDate },
       } as React.ChangeEvent<HTMLInputElement>;
-      
+
       const endEvent = {
-        target: { value: localEndDate }
+        target: { value: localEndDate },
       } as React.ChangeEvent<HTMLInputElement>;
-      
+
       const dateRangeEvent = {
-        target: { value: 'Custom Date Range' }
+        target: { value: "Custom Date Range" },
       } as SelectChangeEvent;
-      
+
       // Update parent component state
       onLocationChange(locationEvent);
       onStartDateChange(startEvent);
       onEndDateChange(endEvent);
       onDateRangeChange(dateRangeEvent);
-      
+
       // Add a small delay to allow state to update
       setTimeout(() => {
         onApplyFilters();
@@ -573,7 +630,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
       {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
         <FilterListIcon color="primary" />
         <Typography variant="h6" sx={{ fontWeight: 500 }}>
           Filters
@@ -602,23 +659,24 @@ const FilterSection: React.FC<FilterSectionProps> = ({
             onClick={openDateRangePicker}
             startIcon={<CalendarTodayIcon />}
             fullWidth
-            sx={{ 
-              height: 40, 
-              justifyContent: 'flex-start',
-              textTransform: 'none',
-              borderColor: 'rgba(0, 0, 0, 0.23)',
-              color: 'text.primary',
-              '&:hover': {
-                borderColor: 'primary.main',
-              }
+            sx={{
+              height: 40,
+              justifyContent: "flex-start",
+              textTransform: "none",
+              borderColor: "rgba(0, 0, 0, 0.23)",
+              color: "text.primary",
+              "&:hover": {
+                borderColor: "primary.main",
+              },
             }}
           >
-            <Box sx={{ textAlign: 'left' }}>
+            <Box sx={{ textAlign: "left" }}>
               <Typography variant="body2" component="div">
-                {localStartDate && localEndDate 
-                  ? `${formatDisplayDate(localStartDate)} - ${formatDisplayDate(localEndDate)}`
-                  : 'Select Date Range'
-                }
+                {localStartDate && localEndDate
+                  ? `${formatDisplayDate(localStartDate)} - ${formatDisplayDate(
+                      localEndDate
+                    )}`
+                  : "Select Date Range"}
               </Typography>
             </Box>
           </Button>
@@ -628,64 +686,68 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         <Grid item xs={12} sm={6} md={4}>
           <MultiSelect
             id="dining-options-select"
-            label="Dining Options"
+            label="categories"
             options={filteredCategories}
             value={selectedCategories}
             onChange={handleCategoryChange}
             icon={<CategoryIcon />}
-            placeholder="Select dining options"
+            placeholder="Select categories options"
             initiallySelectAll={initiallySelectAll}
           />
         </Grid>
       </Grid>
 
       {/* Active filters display */}
-      {(selectedLocations.length > 0 || selectedCategories.length > 0 || (localStartDate && localEndDate)) && (
+      {(selectedLocations.length > 0 ||
+        selectedCategories.length > 0 ||
+        (localStartDate && localEndDate)) && (
         <Box sx={{ mt: 2 }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             Active Filters:
           </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
             {selectedLocations.length > 0 && (
-              <Chip 
+              <Chip
                 label={
                   selectedLocations.length === 1
                     ? `Location: ${selectedLocations[0]}`
                     : `Locations: ${selectedLocations.length} selected`
-                } 
-                color="primary" 
-                variant="outlined" 
-                size="small" 
-                icon={<PlaceIcon />} 
+                }
+                color="primary"
+                variant="outlined"
+                size="small"
+                icon={<PlaceIcon />}
                 onDelete={() => setSelectedLocations([])}
               />
             )}
-            
+
             {localStartDate && localEndDate && (
-              <Chip 
-                label={`Date Range: ${formatDisplayDate(localStartDate)} - ${formatDisplayDate(localEndDate)}`} 
-                color="secondary" 
-                variant="outlined" 
-                size="small" 
-                icon={<CalendarTodayIcon />} 
+              <Chip
+                label={`Date Range: ${formatDisplayDate(
+                  localStartDate
+                )} - ${formatDisplayDate(localEndDate)}`}
+                color="secondary"
+                variant="outlined"
+                size="small"
+                icon={<CalendarTodayIcon />}
                 onDelete={() => {
-                  setLocalStartDate('');
-                  setLocalEndDate('');
+                  setLocalStartDate("");
+                  setLocalEndDate("");
                 }}
               />
             )}
-            
+
             {selectedCategories.length > 0 && (
-              <Chip 
+              <Chip
                 label={
-                  selectedCategories.length === 1 
-                    ? `Dining: ${selectedCategories[0]}` 
+                  selectedCategories.length === 1
+                    ? `Dining: ${selectedCategories[0]}`
                     : `Dining: ${selectedCategories.length} selected`
-                } 
-                color="error" 
-                variant="outlined" 
-                size="small" 
-                icon={<CategoryIcon />} 
+                }
+                color="error"
+                variant="outlined"
+                size="small"
+                icon={<CategoryIcon />}
                 onDelete={() => setSelectedCategories([])}
               />
             )}
@@ -695,14 +757,14 @@ const FilterSection: React.FC<FilterSectionProps> = ({
 
       {/* Apply Filters Button */}
       <Box sx={{ mt: 3 }}>
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           color="primary"
           onClick={handleApplyFilters}
           disabled={selectedLocations.length === 0}
           sx={{ px: 3 }}
         >
-          Apply Filters 
+          Apply Filters
         </Button>
         {selectedLocations.length === 0 && locations.length > 0 && (
           <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
@@ -723,10 +785,12 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           <DateRangeSelector
             initialState={[
               {
-                startDate: localStartDate ? new Date(localStartDate) : new Date(),
+                startDate: localStartDate
+                  ? new Date(localStartDate)
+                  : new Date(),
                 endDate: localEndDate ? new Date(localEndDate) : new Date(),
-                key: 'selection'
-              }
+                key: "selection",
+              },
             ]}
             onSelect={handleDateRangeSelect}
           />
