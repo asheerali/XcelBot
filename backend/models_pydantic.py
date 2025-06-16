@@ -23,6 +23,7 @@ class SalesSplitPmixUploadRequest(BaseModel):
     location: Optional[Union[str, List[str]]] = None
     locations: Optional[List[str]] = None
     servers: Optional[Union[str, List[str]]] = None
+    server: Optional[Union[str, List[str]]] = None
     categories: Optional[Union[str, List[str]]] = None
 
 class FinancialCompanyWideUploadRequest(BaseModel):

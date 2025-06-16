@@ -68,15 +68,18 @@ def process_financials_and_sales_wide(request, file_content, file_name):
         location="All" 
     )
     
+    # Ensure the 'Metric' column is set as index
+    tw_lw_bdg_df = financials_tw_lw_bdg_table.set_index("Metric")
     financials_result = {
-       "table1": [{"financials_sales": 45000, 
-                        "financials_labor_cost": 33.01 , 
-                        "financials_avg_ticket": 13.41,
-                        "financials_prime_cost": 12.42,
-                        "financials_food_cost": 11.42,
-                        "financials_spmh": 10.14,
-                        "financials_lmph": 9.14,
-                        }],
+       "table1": [{
+        "financials_sales": float(tw_lw_bdg_df.loc["Net Sales", "This Week"]),
+        "financials_labor_cost": float(tw_lw_bdg_df.loc["Lbr Pay", "This Week"]),
+        "financials_avg_ticket": float(tw_lw_bdg_df.loc["Avg Ticket", "This Week"]),
+        "financials_prime_cost": float(tw_lw_bdg_df.loc["Prime Cost %", "This Week"]),
+        "financials_food_cost": float(tw_lw_bdg_df.loc["Food Cost %", "This Week"]),
+        "financials_spmh": float(tw_lw_bdg_df.loc["SPMH", "This Week"]),
+        "financials_lmph": float(tw_lw_bdg_df.loc["LPMH", "This Week"]),
+   }],
         "table2": financials_sales_table.to_dict(orient='records'),
         "table3": financials_orders_table.to_dict(orient='records'),
         "table4": financials_avg_ticket_table.to_dict(orient='records'),
