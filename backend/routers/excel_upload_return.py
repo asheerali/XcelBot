@@ -71,15 +71,15 @@ def process_financials_and_sales_wide(request, file_content, file_name):
     # Ensure the 'Metric' column is set as index
     tw_lw_bdg_df = financials_tw_lw_bdg_table.set_index("Metric")
     financials_result = {
-       "table1": [{
-        "financials_sales": float(tw_lw_bdg_df.loc["Net Sales", "This Week"]),
-        "financials_labor_cost": float(tw_lw_bdg_df.loc["Lbr Pay", "This Week"]),
-        "financials_avg_ticket": float(tw_lw_bdg_df.loc["Avg Ticket", "This Week"]),
-        "financials_prime_cost": float(tw_lw_bdg_df.loc["Prime Cost %", "This Week"]),
-        "financials_food_cost": float(tw_lw_bdg_df.loc["Food Cost %", "This Week"]),
-        "financials_spmh": float(tw_lw_bdg_df.loc["SPMH", "This Week"]),
-        "financials_lmph": float(tw_lw_bdg_df.loc["LPMH", "This Week"]),
-   }],
+        "table1": [{
+    "financials_sales": round(float(tw_lw_bdg_df.loc["Net Sales", "This Week"]), 2),
+    "financials_labor_cost": round(float(tw_lw_bdg_df.loc["Lbr Pay", "This Week"]), 2),
+    "financials_avg_ticket": round(float(tw_lw_bdg_df.loc["Avg Ticket", "This Week"]), 2),
+    "financials_prime_cost": round(float(tw_lw_bdg_df.loc["Prime Cost %", "This Week"]), 2),
+    "financials_food_cost": round(float(tw_lw_bdg_df.loc["Food Cost %", "This Week"]), 2),
+    "financials_spmh": round(float(tw_lw_bdg_df.loc["SPMH", "This Week"]), 2),
+    "financials_lmph": round(float(tw_lw_bdg_df.loc["LPMH", "This Week"]), 2),
+}],
         "table2": financials_sales_table.to_dict(orient='records'),
         "table3": financials_orders_table.to_dict(orient='records'),
         "table4": financials_avg_ticket_table.to_dict(orient='records'),
@@ -102,7 +102,7 @@ def process_financials_and_sales_wide(request, file_content, file_name):
         "dashboardName": "Financials",
         "data": "Financial Dashboard is not yet implemented."
     }
-
+    print("Result for the financials:", financials_result)
     # Process companywide/sales wide data
     excel_data_copy2 = io.BytesIO(file_content)
     (sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, 
