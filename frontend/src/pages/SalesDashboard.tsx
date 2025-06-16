@@ -1,4 +1,144 @@
-// Updated SalesDashboard.tsx with proper data formatting for FinancialTablesComponent
+// Custom theme for Nivo charts to fix label cutoff
+const getChartTheme = () => {
+  return {
+    axis: {
+      ticks: {
+        text: {
+          fontSize: 14,
+          fontWeight: 'bold'
+        }
+      },
+      legend: {
+        text: {
+          fontSize: 14,
+          fontWeight: 'bold'
+        }
+      }
+    },
+    labels: {
+      text: {
+        fontSize: 12,
+        fontWeight: 'bold'
+      }
+    },
+    legends: {
+      text: {
+        fontSize: 14
+      }
+    },
+    tooltip: {
+      container: {
+        fontSize: 14
+      }
+    }
+  };
+};
+
+// Function to get tailored chart margins based on chart type
+const getChartMargins = (chartType: string) => {
+  const margins = { top: 50, right: 50, bottom: 80, left: 60 };
+  
+  switch(chartType) {
+    case 'laborHrs':
+    case 'laborCost':
+    case 'cogs':
+      return { top: 50, right: 50, bottom: 80, left: 80 };
+    case 'salesPercentage':
+    case 'avgTicket':
+      return { top: 50, right: 50, bottom: 100, left: 60 };
+    default:
+      return margins;
+  }
+};
+
+// NIVO Chart function for Labor charts
+const createNivoChart = (
+  data: any[], 
+  keys: string[], 
+  colors: string[], 
+  chartType: string,
+  labelFormat: (value: number) => string,
+  isStacked: boolean = false
+) => {
+  if (!data || data.length === 0) {
+    return (
+      <Box sx={{ 
+        height: '100%', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        color: 'text.secondary'
+      }}>
+        <Typography>No data available</Typography>
+      </Box>
+    );
+  }
+
+  const margins = getChartMargins(chartType);
+  
+  return (
+    <Box sx={{ height: '100%', width: '100%', overflow: 'visible' }}>
+      <ResponsiveBar
+        data={data}
+        keys={keys}
+        indexBy="store"
+        margin={margins}
+        padding={0.25}
+        groupMode={isStacked ? 'stacked' : 'grouped'}
+        valueScale={{ type: 'linear' }}
+        indexScale={{ type: 'band', round: true }}
+        colors={colors}
+        theme={getChartTheme()}
+        axisBottom={{
+          tickSize: 5,
+          tickPadding: 5,
+          tickRotation: 0,
+          legendPosition: 'middle',
+          legendOffset: 42,
+          truncateTickAt: 0
+        }}
+        axisLeft={{
+          tickSize: 5,
+          tickPadding: 5,
+          tickRotation: 0,
+          legendPosition: 'middle',
+          legendOffset: -50,
+          format: (value) => {
+            if (chartType === 'laborHrs' || chartType === 'laborCost' || chartType === 'cogs') {
+              return `${(value / 1000).toFixed(0)}k`;
+            }
+            if (chartType.includes('Percentage')) {
+              return `${value}%`;
+            }
+            return `${value}`;
+          }
+        }}
+        labelSkipWidth={16}
+        labelSkipHeight={16}
+        labelTextColor="#ffffff"
+        legends={[
+          {
+            dataFrom: 'keys',
+            anchor: 'top',
+            direction: 'row',
+            justify: false,
+            translateX: 0,
+            translateY: -35,
+            itemsSpacing: 8,
+            itemWidth: 100,
+            itemHeight: 20,
+            itemDirection: 'left-to-right',
+            itemOpacity: 0.85,
+            symbolSize: 18
+          }
+        ]}
+        valueFormat={labelFormat}
+        enableGridY={true}
+        animate={true}
+      />
+    </Box>
+  );
+};// Updated SalesDashboard.tsx with proper data formatting for FinancialTablesComponent
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -31,7 +171,8 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 
-// For charts
+// For charts - UPDATED TO USE BOTH RECHARTS AND NIVO
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ResponsiveBar } from '@nivo/bar';
 
 // Icons
@@ -582,40 +723,79 @@ const BaseChart: React.FC<BaseChartProps> = ({ title, children, height = 450 }) 
   );
 };
 
-// Custom theme for Nivo charts to fix label cutoff
-const getChartTheme = () => {
-  return {
-    axis: {
-      ticks: {
-        text: {
-          fontSize: 14, // Increased from 8 to 14 for better readability
-          fontWeight: 'bold' // Made ticks bold
-        }
-      },
-      legend: {
-        text: {
-          fontSize: 14, // Increased from 8 to 14
-          fontWeight: 'bold'
-        }
-      }
-    },
-    labels: {
-      text: {
-        fontSize: 12, // Increased from 8 to 12
-        fontWeight: 'bold'
-      }
-    },
-    legends: {
-      text: {
-        fontSize: 14 // Increased from 12 to 14
-      }
-    },
-    tooltip: {
-      container: {
-        fontSize: 14 // Increased from 12 to 14
-      }
-    }
-  };
+// UPDATED: Custom Tooltip Component for Recharts
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <Box sx={{
+        backgroundColor: 'white',
+        border: '1px solid #ccc',
+        borderRadius: 1,
+        padding: 1.5,
+        boxShadow: 2
+      }}>
+        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+          {label}
+        </Typography>
+        {payload.map((entry: any, index: number) => (
+          <Typography
+            key={index}
+            variant="body2"
+            sx={{ color: entry.color, display: 'flex', alignItems: 'center', gap: 1 }}
+          >
+            <Box
+              sx={{
+                width: 12,
+                height: 12,
+                backgroundColor: entry.color,
+                borderRadius: 0.5
+              }}
+            />
+            {entry.dataKey}: {entry.value.toFixed(2)}%
+          </Typography>
+        ))}
+        
+        {/* For single bar charts, show both Tw vs. Lw and Tw vs. Ly values */}
+        {payload.length === 1 && payload[0].payload && (
+          <>
+            {payload[0].payload['Tw vs. Lw'] !== undefined && (
+              <Typography
+                variant="body2"
+                sx={{ color: '#4285f4', display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}
+              >
+                <Box
+                  sx={{
+                    width: 12,
+                    height: 12,
+                    backgroundColor: '#4285f4',
+                    borderRadius: 0.5
+                  }}
+                />
+                Tw vs. Lw: {payload[0].payload['Tw vs. Lw'].toFixed(2)}%
+              </Typography>
+            )}
+            {payload[0].payload['Tw vs. Ly'] !== undefined && payload[0].dataKey !== 'Tw vs. Ly' && (
+              <Typography
+                variant="body2"
+                sx={{ color: '#ea4335', display: 'flex', alignItems: 'center', gap: 1 }}
+              >
+                <Box
+                  sx={{
+                    width: 12,
+                    height: 12,
+                    backgroundColor: '#ea4335',
+                    borderRadius: 0.5
+                  }}
+                />
+                Tw vs. Ly: {payload[0].payload['Tw vs. Ly'].toFixed(2)}%
+              </Typography>
+            )}
+          </>
+        )}
+      </Box>
+    );
+  }
+  return null;
 };
 
 // Main Component
@@ -852,7 +1032,7 @@ export default function SalesDashboard() {
   // UPDATED: Create properly formatted financial tables data for FinancialTablesComponent
   const financialTablesData = React.useMemo(() => {
     console.log('🔄 Creating financial tables data from currentTableData:', currentTableData);
-    
+    console.log('salesData:-----', salesData);
     // Return the data in the exact format expected by FinancialTablesComponent
     const formattedData = {
       table1: currentTableData.table1 || [], // Sales Performance
@@ -887,28 +1067,7 @@ export default function SalesDashboard() {
     })}`;
   };
 
-  // Function to get tailored chart margins based on chart type and container size
-  const getChartMargins = (chartType: string) => {
-    // Base margins
-    const margins = { top: 50, right: 50, bottom: 80, left: 60 };
-    
-    // Adjust based on chart type
-    switch(chartType) {
-      case 'laborHrs':
-      case 'laborCost':
-      case 'cogs':
-        // These charts need more left margin for currency values
-        return { top: 50, right: 50, bottom: 80, left: 80 };
-      case 'salesPercentage':
-      case 'avgTicket':
-        // These need more bottom margin for rotated store names
-        return { top: 50, right: 50, bottom: 100, left: 60 };
-      default:
-        return margins;
-    }
-  };
-
-  // Function to create a common Nivo bar chart with text overflow fixed
+  // UPDATED: Function to create charts (Recharts for some, Nivo for others)
   const createNivoBarChart = (
     data: any[], 
     keys: string[], 
@@ -918,79 +1077,72 @@ export default function SalesDashboard() {
     enableLabels: boolean = false,
     customLabelFormat?: (d: any) => string
   ) => {
-    const margins = getChartMargins(chartType);
+    console.log('🎯 createNivoBarChart called with:', chartType);
     
-    // Set appropriate dimensions based on chart type
-    const chartHeight = '100%';
-    const barPadding = 0.25; // More space between bars
+    if (!data || data.length === 0) {
+      return (
+        <Box sx={{ 
+          height: '100%', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          color: 'text.secondary'
+        }}>
+          <Typography>No data available</Typography>
+        </Box>
+      );
+    }
+
+    // Sales/Orders/Avg Ticket: Use Recharts with single bars
+    const isSingleBarChart = chartType === 'salesPercentage' || chartType === 'ordersPercentage' || chartType === 'avgTicket';
     
-    // FIXED: Remove rotation and make text bold
-    const tickRotation = 0; // No rotation
+    if (isSingleBarChart) {
+      const primaryKey = keys[1] || keys[0]; // Use "Tw vs. Ly" as primary
+      
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={data}
+            margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
+            barCategoryGap="25%"
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis 
+              dataKey="store" 
+              tick={{ fontSize: 12, fontWeight: 'bold' }}
+              height={60}
+              interval={0}
+            />
+            <YAxis 
+              tick={{ fontSize: 12, fontWeight: 'bold' }}
+              tickFormatter={labelFormat}
+            />
+            <RechartsTooltip content={<CustomTooltip />} />
+            <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '14px', fontWeight: 'bold' }} />
+            
+            <Bar
+              dataKey={primaryKey}
+              fill={colors[1] || colors[0] || '#ea4335'}
+              name={`${chartType === 'salesPercentage' ? 'Sales' : chartType === 'ordersPercentage' ? 'Orders' : 'Avg Ticket'} Performance`}
+              radius={[2, 2, 0, 0]}
+              maxBarSize={80}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    // Labor $ Spent, Labor %, Labor Hrs, SPMH, COGS $, COGS %: Use Nivo with STACKED bars
+    const isStackedChart = chartType === 'laborCost' || chartType === 'laborPercentage' || 
+                          chartType === 'laborHrs' || chartType === 'spmh' || 
+                          chartType === 'cogs' || chartType === 'cogsPercentage';
     
-    return (
-      <Box sx={{ height: chartHeight, width: '100%', overflow: 'visible' }}>
-        <ResponsiveBar
-          data={data}
-          keys={keys}
-          indexBy="store"
-          margin={margins}
-          padding={barPadding}
-          valueScale={{ type: 'linear' }}
-          indexScale={{ type: 'band', round: true }}
-          colors={colors}
-          theme={getChartTheme()}
-          axisBottom={{
-            tickSize: 5,
-            tickPadding: 5,
-            tickRotation: tickRotation, // FIXED: No rotation
-            legendPosition: 'middle',
-            legendOffset: 42, // Move labels further down
-            truncateTickAt: 0  // Don't truncate labels
-          }}
-          axisLeft={{
-            tickSize: 5,
-            tickPadding: 5,
-            tickRotation: 0,
-            legendPosition: 'middle',
-            legendOffset: -50, // Move legend further left
-            format: (value) => {
-              // Different formatting based on chart type
-              if (chartType === 'laborHrs' || chartType === 'laborCost' || chartType === 'cogs') {
-                return `${(value / 1000).toFixed(0)}k`;
-              }
-              if (chartType.includes('Percentage')) {
-                return `${value}%`;
-              }
-              return `${value}`;
-            }
-          }}
-          labelSkipWidth={16} // Skip labels on narrow bars
-          labelSkipHeight={16} // Skip labels on short bars
-          labelTextColor="#ffffff"
-          legends={[
-            {
-              dataFrom: 'keys',
-              anchor: 'top',
-              direction: 'row',
-              justify: false,
-              translateX: 0,
-              translateY: -35,
-              itemsSpacing: 8, // More space between legend items
-              itemWidth: 100,
-              itemHeight: 20,
-              itemDirection: 'left-to-right',
-              itemOpacity: 0.85,
-              symbolSize: 18
-            }
-          ]}
-          valueFormat={labelFormat}
-          enableGridY={true}
-          enableLabel={enableLabels}
-          label={customLabelFormat}
-          animate={true}
-        />
-      </Box>
-    );
+    if (isStackedChart) {
+      return createNivoChart(data, keys, colors, chartType, labelFormat, true); // true = stacked
+    }
+
+    // Any remaining charts: Use Nivo with GROUPED bars (fallback)
+    return createNivoChart(data, keys, colors, chartType, labelFormat, false); // false = grouped
   };
 
   return (
@@ -1089,22 +1241,6 @@ export default function SalesDashboard() {
           {filterError || error}
         </Alert>
       )}
-
-      {/* Data Info Display */}
-      {/* {currentSalesWideData && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            <strong>Data loaded:</strong> {currentSalesWideData.fileName || 'Sales Wide Data'} | 
-            <strong> Location:</strong> {selectedLocations[0]}
-            {selectedDateRange && (
-              <>
-                {' | '}
-                <strong> Date Range:</strong> {selectedDateRange.startDate.toLocaleDateString()} - {selectedDateRange.endDate.toLocaleDateString()}
-              </>
-            )}
-          </Typography>
-        </Alert>
-      )} */}
 
       {/* Filters Section */}
       <Card elevation={3} sx={{ mb: 3, borderRadius: 2, overflow: 'hidden' }}>
@@ -1441,7 +1577,7 @@ export default function SalesDashboard() {
                   </Grid>
                 </TabPanel>
                 
-                {/* Sales Panel */}
+               {/* Sales Panel */}
                 <TabPanel value={chartTab} index={1}>
                   <Grid container spacing={2}>
                     <Grid item xs={12}>
