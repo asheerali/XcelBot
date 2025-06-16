@@ -963,12 +963,12 @@ const formatSelectedLocationsDisplay = (locations: string[]) => {
             <Grid item {...gridSizes}>
               <MultiSelect
                 id="category-select"
-                label="Category"
+                label="Dining Options"
                 options={categories}
                 value={selectedCategories}
                 onChange={handleCategoryChange}
                 icon={<FastfoodIcon />}
-                placeholder="Select categories (optional)"
+                placeholder="Select dining options"
               />
             </Grid>
             

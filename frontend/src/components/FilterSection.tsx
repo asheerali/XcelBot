@@ -628,12 +628,12 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         <Grid item xs={12} sm={6} md={4}>
           <MultiSelect
             id="dining-options-select"
-            label="categories"
+            label="Dining Options"
             options={filteredCategories}
             value={selectedCategories}
             onChange={handleCategoryChange}
             icon={<CategoryIcon />}
-            placeholder="Select categories options"
+            placeholder="Select dining options"
             initiallySelectAll={initiallySelectAll}
           />
         </Grid>

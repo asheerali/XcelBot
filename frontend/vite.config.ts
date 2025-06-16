@@ -13,6 +13,7 @@ export default defineConfig({
       'xcelbot-latest-r3m7.onrender.com', // Render's domain
       'localhost',
       "http://3.149.94.190",
+      "http://kpi360.ai",
       "http://3.149.94.190:8000"
 
 
