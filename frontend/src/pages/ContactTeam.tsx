@@ -217,7 +217,7 @@ export function ContactTeam() {
       email: "musawar.soomro@kpi360.ai",
       phone: "+49 (1521) 713-6471",
       description:
-        "Creative developer focused on building intuitive and performant user experiences.",
+        "Lead Software Engineer with over 5 years of experience building scalable systems and cloud-based solutions, focused on performance, reliability, and seamless user experiences.",
       linkedin: "https://linkedin.com/in/musawar-soomro",
       twitter: "https://twitter.com/musawar_soomro",
     },

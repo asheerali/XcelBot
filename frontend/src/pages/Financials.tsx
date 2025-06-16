@@ -674,7 +674,7 @@ const extractFinancialMetrics = (table5Data: any[]) => {
 const formatPercentageChange = (value: string | number): { value: string, isPositive: boolean } => {
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
   const isPositive = numValue >= 0;
-  const formattedValue = isPositive ? `+${Math.abs(numValue) }%` : `${numValue }%`;
+  const formattedValue = isPositive ? `+${Math.abs(numValue)}%` : `${numValue}%`;
   
   return { value: formattedValue, isPositive };
 };
@@ -736,6 +736,10 @@ export function Financials() {
     table15: [],
     table16: []
   });
+
+  // FIX: Add state variables for forcing UI updates
+  const [lastUpdated, setLastUpdated] = useState(Date.now());
+  const [filtersApplied, setFiltersApplied] = useState(false);
   
   // Extract data arrays from current financial data
   const locations = currentFinancialData?.data?.locations || financialLocations || ['Midtown East', 'Downtown West', 'Uptown North'];
@@ -774,6 +778,20 @@ export function Financials() {
       });
     }
   }, [locations, currentFinancialData]);
+
+  // FIX: Add useEffect to watch for state changes and force UI updates
+  useEffect(() => {
+    // This will run whenever currentTableData changes
+    console.log('✅ Filter data updated, refreshing UI components', currentTableData);
+    setLastUpdated(Date.now());
+    
+    // FIX: Force an additional re-render to ensure all components update
+    const timer = setTimeout(() => {
+      setLastUpdated(Date.now());
+    }, 50);
+    
+    return () => clearTimeout(timer);
+  }, [currentTableData, currentTableData.table1, currentTableData.table5]); // Watch specific tables too
 
   // Handle filter changes
   const handleLocationChange = (newLocations: string[]) => {
@@ -814,9 +832,9 @@ export function Financials() {
       console.log('📥 Received financial filter response:', response.data);
 
       if (response.data) {
-        // UPDATED: Update local table data state with all tables INCLUDING TABLE1
-        setCurrentTableData({
-          table1: response.data.table1 || [], // ADDED: Include table1 from response
+        // FIX: Create completely new state object to force re-render
+        const newTableData = {
+          table1: response.data.table1 || [],
           table2: response.data.table2 || [],
           table3: response.data.table3 || [],
           table4: response.data.table4 || [],
@@ -832,7 +850,15 @@ export function Financials() {
           table14: response.data.table14 || [],
           table15: response.data.table15 || [],
           table16: response.data.table16 || []
-        });
+        };
+
+        // FIX: Force immediate state update by using functional update and triggering multiple re-renders
+        setCurrentTableData(() => ({ ...newTableData }));
+        
+        // FIX: Force a second update to ensure UI catches the change
+        setTimeout(() => {
+          setCurrentTableData(() => ({ ...newTableData }));
+        }, 0);
 
         // Also update Redux state if needed
         dispatch(setTableData(response.data));
@@ -847,6 +873,19 @@ export function Financials() {
         if (selectedLocations[0] !== currentFinancialLocation) {
           dispatch(selectFinancialLocation(selectedLocations[0]));
         }
+
+        // FIX: Force UI update immediately after successful response
+        setFilterError(''); // Clear any previous errors
+        setFiltersApplied(true); // Mark filters as applied
+        setLastUpdated(Date.now()); // Force re-render of UI components
+
+        // FIX: Additional force re-render after small delay
+        setTimeout(() => {
+          setLastUpdated(Date.now());
+          console.log('✅ Filters applied successfully - UI should be updated');
+        }, 100);
+
+        console.log('✅ Filters applied successfully - UI should be updated');
       }
 
     } catch (err: any) {
@@ -869,12 +908,20 @@ export function Financials() {
       dispatch(setError(errorMessage));
       
     } finally {
+      // FIX: Ensure loading state is reset to trigger UI update
       setIsLoading(false);
+      
+      // FIX: Small delay to ensure all state updates have propagated
+      setTimeout(() => {
+        console.log('✅ Filter operation completed - all states updated');
+      }, 0);
     }
   };
 
   // Update stats when data changes
   useEffect(() => {
+    console.log('📊 Updating stats data from table5Data:', table5Data.length);
+    
     if (table5Data.length > 0) {
       const metricsMap = extractFinancialMetrics(table5Data);
       
@@ -912,7 +959,7 @@ export function Financials() {
         } else if (metricName === 'Avg Ticket' || metricName === 'SPMH' || metricName === 'LPMH') {
           formattedValue = formatCurrency(metricData.thisWeek);
         } else if (metricName.includes('%')) {
-          formattedValue = `${parseFloat(metricData.thisWeek) }%`;
+          formattedValue = `${parseFloat(metricData.thisWeek)}%`;
         } else {
           formattedValue = parseInt(metricData.thisWeek).toLocaleString();
         }
@@ -927,11 +974,14 @@ export function Financials() {
         };
       });
       
-      setStatsData(newStatsData);
+      // FIX: Force stats update with new array reference
+      setStatsData([...newStatsData]);
+      console.log('📊 Stats data updated:', newStatsData.length, 'metrics');
     } else {
       setStatsData([]);
+      console.log('📊 No table5Data, clearing stats');
     }
-  }, [table5Data]);
+  }, [table5Data, currentTableData.table5, lastUpdated]); // Watch multiple dependencies
 
   // Tab change handler
   const handleTabChange = (event: any, newValue: number) => setTabValue(newValue);
@@ -1032,8 +1082,6 @@ export function Financials() {
           {/* Comprehensive Financial Analytics & Performance Insights */}
         </Typography>
       </Box>
-
-     
 
       {/* Error Alert */}
       {(filterError || error) && (
@@ -1179,6 +1227,19 @@ export function Financials() {
                 deleteIcon={<CloseIcon sx={{ fontSize: '1rem' }} />}
               />
             )}
+
+            {/* FIX: Show filter status indicator */}
+            {filtersApplied && (
+              <Chip
+                label={`Last Updated: ${format(lastUpdated, 'HH:mm:ss')}`}
+                size="small"
+                sx={{
+                  backgroundColor: alpha(theme.palette.success.main, 0.1),
+                  color: theme.palette.success.main,
+                  fontWeight: 500,
+                }}
+              />
+            )}
           </Box>
 
           {/* Enhanced Apply Filters Button */}
@@ -1243,8 +1304,6 @@ export function Financials() {
           </Box>
         </CardContent>
       </GradientCard>
-
-  
 
       {/* Enhanced Week-Over-Week Analysis Card */}
       <StyledCard 
@@ -1527,14 +1586,20 @@ export function Financials() {
             backdropFilter: 'blur(20px)'
           }}>
             {/* UPDATED: Pass currentTableData (which now includes table1) to ComprehensiveFinancialDashboard */}
-            <ComprehensiveFinancialDashboard financialData={currentTableData} />
+            <ComprehensiveFinancialDashboard 
+              financialData={currentTableData} 
+              key={lastUpdated} // FIX: Force re-render when data updates
+            />
           </Box>
         </TabPanel>
 
         {/* Tab 2 - Dashboard */}
         <TabPanel value={tabValue} index={1}>
           <Box sx={{ p: 4 }}>
-            <FinancialTable data={table5Data} />
+            <FinancialTable 
+              data={table5Data} 
+              key={`financial-table-${lastUpdated}`} // FIX: Force re-render when data updates
+            />
           </Box>
         </TabPanel>
         
@@ -1545,6 +1610,7 @@ export function Financials() {
               salesData={table2Data}
               ordersData={table3Data} 
               avgTicketData={table4Data}
+              key={`dow-analysis-${lastUpdated}`} // FIX: Force re-render when data updates
             />
             
             {currentFinancialData && (table2Data.length > 0 || table3Data.length > 0 || table4Data.length > 0) && (
@@ -1567,19 +1633,28 @@ export function Financials() {
                 
                 {table2Data.length > 0 && (
                   <Box sx={{ mb: 4 }}>
-                    <SalesChart data={table2Data} />
+                    <SalesChart 
+                      data={table2Data} 
+                      key={`sales-chart-${lastUpdated}`} // FIX: Force re-render when data updates
+                    />
                   </Box>
                 )}
                 
                 {table3Data.length > 0 && (
                   <Box sx={{ mb: 4 }}>
-                    <OrdersChart data={table3Data} />
+                    <OrdersChart 
+                      data={table3Data} 
+                      key={`orders-chart-${lastUpdated}`} // FIX: Force re-render when data updates
+                    />
                   </Box>
                 )}
                 
                 {table4Data.length > 0 && (
                   <Box>
-                    <AvgTicketChart data={table4Data} />
+                    <AvgTicketChart 
+                      data={table4Data} 
+                      key={`avg-ticket-chart-${lastUpdated}`} // FIX: Force re-render when data updates
+                    />
                   </Box>
                 )}
               </Box>
