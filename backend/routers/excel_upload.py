@@ -58,7 +58,11 @@ async def upload_excel(
         
         # Save file to disk with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        file_name = f"{timestamp}_{request.fileName}"
+        safe_file_name = os.path.basename(request.fileName)  # Prevent path issues
+        
+        # Ensure the file name is safe and does not contain any path components
+        file_name = f"{timestamp}_{safe_file_name}"
+        # file_name = f"{timestamp}_{request.fileName}"
         file_path = os.path.join(UPLOAD_DIR, file_name)
         
         with open(file_path, "wb") as f:
