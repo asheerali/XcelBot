@@ -324,9 +324,9 @@ interface FileInfo {
 // UPDATED: Enhanced location extraction function
 const extractLocationsFromResponse = (response: any): string[] => {
   console.log("🔍 Extracting locations from response:", response);
-  
+
   let locations: string[] = [];
-  
+
   try {
     // Handle array responses (multiple dashboards)
     if (Array.isArray(response)) {
@@ -339,15 +339,18 @@ const extractLocationsFromResponse = (response: any): string[] => {
             locations.push(dashboardData.fileLocation);
           }
         }
-        
+
         // Extract from locations field
         if (dashboardData.locations && Array.isArray(dashboardData.locations)) {
           locations = [...locations, ...dashboardData.locations];
         }
-        
+
         // Extract from fileName if no explicit location
         if (dashboardData.fileName && locations.length === 0) {
-          const locationFromFileName = dashboardData.fileName.replace(/\.(xlsx|xls)$/i, '');
+          const locationFromFileName = dashboardData.fileName.replace(
+            /\.(xlsx|xls)$/i,
+            ""
+          );
           locations.push(locationFromFileName);
         }
       });
@@ -360,26 +363,28 @@ const extractLocationsFromResponse = (response: any): string[] => {
           locations.push(response.fileLocation);
         }
       }
-      
+
       if (response.locations && Array.isArray(response.locations)) {
         locations = [...locations, ...response.locations];
       }
-      
+
       // Fallback to fileName
       if (response.fileName && locations.length === 0) {
-        const locationFromFileName = response.fileName.replace(/\.(xlsx|xls)$/i, '');
+        const locationFromFileName = response.fileName.replace(
+          /\.(xlsx|xls)$/i,
+          ""
+        );
         locations.push(locationFromFileName);
       }
     }
-    
+
     // Remove duplicates and filter out empty strings
-    const uniqueLocations = [...new Set(locations)].filter(loc => 
-      loc && typeof loc === 'string' && loc.trim() !== ''
+    const uniqueLocations = [...new Set(locations)].filter(
+      (loc) => loc && typeof loc === "string" && loc.trim() !== ""
     );
-    
+
     console.log("📍 Extracted unique locations:", uniqueLocations);
     return uniqueLocations;
-    
   } catch (error) {
     console.error("❌ Error extracting locations:", error);
     return [];
@@ -393,14 +398,18 @@ const extractCategoriesFromData = (data: any, location?: string): string[] => {
   try {
     if (Array.isArray(data)) {
       data.forEach((dashboardData) => {
-        const dashboardCategories = extractCategoriesFromSingleDashboard(dashboardData);
+        const dashboardCategories =
+          extractCategoriesFromSingleDashboard(dashboardData);
         categories = [...new Set([...categories, ...dashboardCategories])];
       });
     } else {
       categories = extractCategoriesFromSingleDashboard(data);
     }
 
-    console.log(`🏷️ Extracted categories for location ${location}:`, categories);
+    console.log(
+      `🏷️ Extracted categories for location ${location}:`,
+      categories
+    );
     return categories;
   } catch (error) {
     console.error("❌ Error extracting categories:", error);
@@ -422,16 +431,37 @@ const extractCategoriesFromSingleDashboard = (dashboardData: any): string[] => {
     }
 
     // Extract from table data if no explicit categories
-    if (categories.length === 0 && dashboardData.table1 && Array.isArray(dashboardData.table1) && dashboardData.table1.length > 0) {
+    if (
+      categories.length === 0 &&
+      dashboardData.table1 &&
+      Array.isArray(dashboardData.table1) &&
+      dashboardData.table1.length > 0
+    ) {
       const firstRow = dashboardData.table1[0];
       if (typeof firstRow === "object" && firstRow !== null) {
         const tableKeys = Object.keys(firstRow);
         const filteredTableKeys = tableKeys.filter((key) => {
           const keyLower = key.toLowerCase();
           const excludePatterns = [
-            "week", "date", "time", "id", "index", "total", "grand", "sum", 
-            "count", "avg", "average", "min", "max", "store", "location", 
-            "file", "upload", "dashboard", "data",
+            "week",
+            "date",
+            "time",
+            "id",
+            "index",
+            "total",
+            "grand",
+            "sum",
+            "count",
+            "avg",
+            "average",
+            "min",
+            "max",
+            "store",
+            "location",
+            "file",
+            "upload",
+            "dashboard",
+            "data",
           ];
           return !excludePatterns.some((pattern) => keyLower.includes(pattern));
         });
@@ -467,7 +497,7 @@ const ExcelUploadPage: React.FC = () => {
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         const droppedFiles = Array.from(e.dataTransfer.files);
         const excelFiles = droppedFiles.filter(
-          (file) => file.name.endsWith(".xlsx") || file.name.endsWith(".xls") || file.name.endsWith(".csv")
+          (file) => file.name.endsWith(".xlsx") || file.name.endsWith(".xls")
         );
 
         if (excelFiles.length === 0) {
@@ -504,7 +534,7 @@ const ExcelUploadPage: React.FC = () => {
       if (e.target.files && e.target.files.length > 0) {
         const selectedFiles = Array.from(e.target.files);
         const excelFiles = selectedFiles.filter(
-          (file) => file.name.endsWith(".xlsx") || file.name.endsWith(".xls") || file.name.endsWith(".csv")
+          (file) => file.name.endsWith(".xlsx") || file.name.endsWith(".xls")
         );
 
         if (excelFiles.length === 0) {
@@ -589,13 +619,12 @@ const ExcelUploadPage: React.FC = () => {
       //   dashboard: fileInfo.dashboard,
       // });
 
-
-  // In your uploadFile function:
-  const response = await apiClient.post('/api/excel/upload', {
-    fileName: fileInfo.file.name,
-    fileContent: base64Content,
-    dashboard: fileInfo.dashboard,
-  });
+      // In your uploadFile function:
+      const response = await apiClient.post("/api/excel/upload", {
+        fileName: fileInfo.file.name,
+        fileContent: base64Content,
+        dashboard: fileInfo.dashboard,
+      });
 
       clearInterval(progressInterval);
 
@@ -612,7 +641,7 @@ const ExcelUploadPage: React.FC = () => {
           primaryLocation = extractedLocations[0];
         } else {
           // Fallback to filename
-          primaryLocation = fileInfo.file.name.replace(/\.(xlsx|xls)$/i, '');
+          primaryLocation = fileInfo.file.name.replace(/\.(xlsx|xls)$/i, "");
           extractedLocations.push(primaryLocation);
         }
 
@@ -635,15 +664,18 @@ const ExcelUploadPage: React.FC = () => {
           // Handle multiple dashboard response
           response.data.forEach((dashboardData) => {
             const dashboardName = dashboardData.dashboardName?.trim();
-            const extractedCategories = extractCategoriesFromData(dashboardData, primaryLocation);
-            
+            const extractedCategories = extractCategoriesFromData(
+              dashboardData,
+              primaryLocation
+            );
+
             const enhancedDashboardData = {
               ...dashboardData,
               categories: extractedCategories,
             };
 
             // Store data for all locations
-            extractedLocations.forEach(location => {
+            extractedLocations.forEach((location) => {
               allLocationsData.push({
                 location,
                 data: enhancedDashboardData,
@@ -706,16 +738,20 @@ const ExcelUploadPage: React.FC = () => {
           });
         } else {
           // Handle single dashboard response
-          const dashboardName = response.data.dashboardName?.trim() || fileInfo.dashboard;
-          const extractedCategories = extractCategoriesFromData(response.data, primaryLocation);
-          
+          const dashboardName =
+            response.data.dashboardName?.trim() || fileInfo.dashboard;
+          const extractedCategories = extractCategoriesFromData(
+            response.data,
+            primaryLocation
+          );
+
           const enhancedDashboardData = {
             ...response.data,
             categories: extractedCategories,
           };
 
           // Store data for all locations
-          extractedLocations.forEach(location => {
+          extractedLocations.forEach((location) => {
             allLocationsData.push({
               location,
               data: enhancedDashboardData,
@@ -779,7 +815,7 @@ const ExcelUploadPage: React.FC = () => {
 
         // UPDATED: Update Redux with all locations
         dispatch(setLocations(extractedLocations));
-        
+
         // Set primary location as selected
         if (primaryLocation) {
           dispatch(selectLocation(primaryLocation));
@@ -802,7 +838,10 @@ const ExcelUploadPage: React.FC = () => {
           return updatedFiles;
         });
 
-        console.log("✅ File upload completed successfully with locations:", extractedLocations);
+        console.log(
+          "✅ File upload completed successfully with locations:",
+          extractedLocations
+        );
         return true;
       } else {
         throw new Error("Invalid response data");
@@ -986,8 +1025,8 @@ const ExcelUploadPage: React.FC = () => {
                       onClick={() => handleDashboardChange(option.value)}
                     >
                       {selectedDashboard === option.value && (
-                        <SelectedBadge 
-                          label="Selected" 
+                        <SelectedBadge
+                          label="Selected"
                           icon={<StarIcon sx={{ fontSize: "12px" }} />}
                         />
                       )}
@@ -1000,7 +1039,7 @@ const ExcelUploadPage: React.FC = () => {
                             color: "white",
                             fontSize: 32,
                             transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-                          }
+                          },
                         }}
                       >
                         {option.icon}
@@ -1027,7 +1066,7 @@ const ExcelUploadPage: React.FC = () => {
                       <Typography
                         variant="body2"
                         color="text.secondary"
-                        sx={{ 
+                        sx={{
                           lineHeight: 1.3,
                           fontSize: "0.875rem",
                           zIndex: 2,
@@ -1089,7 +1128,7 @@ const ExcelUploadPage: React.FC = () => {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".xlsx,.xls, .csv"
+                accept=".xlsx,.xls"
                 multiple
                 onChange={handleFileChange}
                 style={{ display: "none" }}
@@ -1170,7 +1209,6 @@ const ExcelUploadPage: React.FC = () => {
                                 </Typography>
 
                                 {/* Show extracted filename from backend */}
-                               
 
                                 <Stack
                                   direction="row"
@@ -1191,11 +1229,16 @@ const ExcelUploadPage: React.FC = () => {
                                       getStatusColor(fileInfo.status) as any
                                     }
                                   />
-                                
                                 </Stack>
 
                                 {/* UPDATED: Enhanced location display with multiple location support */}
-                                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 1,
+                                  }}
+                                >
                                   {/* Primary Location */}
                                   {fileInfo.primaryLocation && (
                                     <Box
@@ -1204,47 +1247,58 @@ const ExcelUploadPage: React.FC = () => {
                                         alignItems: "center",
                                         gap: 1,
                                       }}
-                                    >
-                            
-                                    </Box>
+                                    ></Box>
                                   )}
 
                                   {/* All Locations */}
-                                  {fileInfo.locations && fileInfo.locations.length > 0 && (
-                                    <Box
-                                      sx={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 1,
-                                        flexWrap: "wrap",
-                                      }}
-                                    >
-                                      <LocationCityIcon fontSize="small" color="action" />
-                                      <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                        sx={{ mr: 1 }}
+                                  {fileInfo.locations &&
+                                    fileInfo.locations.length > 0 && (
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 1,
+                                          flexWrap: "wrap",
+                                        }}
                                       >
-                                        All Locations ({fileInfo.locations.length}):
-                                      </Typography>
-                                      {fileInfo.locations.map((location, locIndex) => (
-                                        <Chip
-                                          key={locIndex}
-                                          label={location}
-                                          size="small"
-                                          variant="outlined"
-                                          color={
-                                            location === fileInfo.primaryLocation 
-                                              ? "default" 
-                                              : "default"
-                                          }
-                                          icon={location === fileInfo.primaryLocation ? <LocationOnIcon /> : <LocationOnIcon />}
+                                        <LocationCityIcon
+                                          fontSize="small"
+                                          color="action"
                                         />
-                                      ))}
-                                    </Box>
-                                  )}
-
-                               
+                                        <Typography
+                                          variant="body2"
+                                          color="text.secondary"
+                                          sx={{ mr: 1 }}
+                                        >
+                                          All Locations (
+                                          {fileInfo.locations.length}):
+                                        </Typography>
+                                        {fileInfo.locations.map(
+                                          (location, locIndex) => (
+                                            <Chip
+                                              key={locIndex}
+                                              label={location}
+                                              size="small"
+                                              variant="outlined"
+                                              color={
+                                                location ===
+                                                fileInfo.primaryLocation
+                                                  ? "default"
+                                                  : "default"
+                                              }
+                                              icon={
+                                                location ===
+                                                fileInfo.primaryLocation ? (
+                                                  <LocationOnIcon />
+                                                ) : (
+                                                  <LocationOnIcon />
+                                                )
+                                              }
+                                            />
+                                          )
+                                        )}
+                                      </Box>
+                                    )}
                                 </Box>
                               </Box>
                             </Box>
@@ -1314,14 +1368,17 @@ const ExcelUploadPage: React.FC = () => {
                                       View Dashboard
                                     </Button>
                                   )}
-                                  
+
                                   {/* Two separate buttons for combination dashboards */}
-                                  {fileInfo.dashboard === "Sales Split and Product Mix" && (
+                                  {fileInfo.dashboard ===
+                                    "Sales Split and Product Mix" && (
                                     <>
                                       <Button
                                         variant="contained"
                                         color="primary"
-                                        onClick={() => viewDashboard(fileInfo, "Sales Split")}
+                                        onClick={() =>
+                                          viewDashboard(fileInfo, "Sales Split")
+                                        }
                                         startIcon={<FileOpenIcon />}
                                         sx={{ borderRadius: 2 }}
                                       >
@@ -1330,7 +1387,9 @@ const ExcelUploadPage: React.FC = () => {
                                       <Button
                                         variant="outlined"
                                         color="primary"
-                                        onClick={() => viewDashboard(fileInfo, "Product Mix")}
+                                        onClick={() =>
+                                          viewDashboard(fileInfo, "Product Mix")
+                                        }
                                         startIcon={<RestaurantIcon />}
                                         sx={{ borderRadius: 2 }}
                                       >
@@ -1339,12 +1398,15 @@ const ExcelUploadPage: React.FC = () => {
                                     </>
                                   )}
 
-                                  {fileInfo.dashboard === "Financials and Sales Wide" && (
+                                  {fileInfo.dashboard ===
+                                    "Financials and Sales Wide" && (
                                     <>
                                       <Button
                                         variant="contained"
                                         color="primary"
-                                        onClick={() => viewDashboard(fileInfo, "Financials")}
+                                        onClick={() =>
+                                          viewDashboard(fileInfo, "Financials")
+                                        }
                                         startIcon={<AttachMoneyIcon />}
                                         sx={{ borderRadius: 2 }}
                                       >
@@ -1353,7 +1415,9 @@ const ExcelUploadPage: React.FC = () => {
                                       <Button
                                         variant="outlined"
                                         color="primary"
-                                        onClick={() => viewDashboard(fileInfo, "Sales Wide")}
+                                        onClick={() =>
+                                          viewDashboard(fileInfo, "Sales Wide")
+                                        }
                                         startIcon={<TrendingUpIcon />}
                                         sx={{ borderRadius: 2 }}
                                       >
