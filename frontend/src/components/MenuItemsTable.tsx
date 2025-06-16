@@ -53,27 +53,11 @@ const MenuItemsTable = ({ table12 = [] }) => {
   return (
     <div
       style={{
-        padding: "24px",
-        backgroundColor: "#f8f9fa",
-        minHeight: "100vh",
         fontFamily:
           '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        width: "100%",
       }}
     >
-      {/* Header */}
-      <div style={{ marginBottom: "24px", textAlign: "center" }}>
-        <h1
-          style={{
-            fontSize: "28px",
-            fontWeight: "700",
-            color: "#1a237e",
-            margin: "0 0 8px 0",
-          }}
-        >
-          Menu Items Performance Analysis
-        </h1>
-      </div>
-
       {/* Toggle Buttons */}
       <div
         style={{
@@ -134,7 +118,7 @@ const MenuItemsTable = ({ table12 = [] }) => {
         </button>
       </div>
 
-      {/* Table */}
+      {/* Table Container */}
       <div
         style={{
           background: "white",
@@ -142,22 +126,22 @@ const MenuItemsTable = ({ table12 = [] }) => {
           boxShadow: "0 4px 20px rgba(0, 0, 0, 0.1)",
           overflow: "hidden",
           border: "1px solid #e0e0e0",
+          width: "100%",
         }}
       >
-        <div style={{ overflowX: "auto" }}>
+        <div style={{ overflowX: "auto", width: "100%" }}>
           <table
             style={{
               width: "100%",
               borderCollapse: "collapse",
-              minWidth: "800px",
-              tableLayout: "fixed", // This makes columns respect width percentages
+              tableLayout: "fixed", // Fixed layout to ensure columns fill container
             }}
           >
             <thead>
               <tr style={{ backgroundColor: "#f5f7fa" }}>
                 <th
                   style={{
-                    width: "20%", // Equal width for all columns
+                    width: "25%",
                     padding: "16px 12px",
                     textAlign: "left",
                     fontWeight: "600",
@@ -172,7 +156,7 @@ const MenuItemsTable = ({ table12 = [] }) => {
                 </th>
                 <th
                   style={{
-                    width: "20%", // Equal width for all columns
+                    width: "18%",
                     padding: "16px 12px",
                     textAlign: "center",
                     fontWeight: "600",
@@ -187,7 +171,7 @@ const MenuItemsTable = ({ table12 = [] }) => {
                 </th>
                 <th
                   style={{
-                    width: "20%", // Equal width for all columns
+                    width: "19%",
                     padding: "16px 12px",
                     textAlign: "center",
                     fontWeight: "600",
@@ -212,7 +196,7 @@ const MenuItemsTable = ({ table12 = [] }) => {
                 </th>
                 <th
                   style={{
-                    width: "20%", // Equal width for all columns
+                    width: "18%",
                     padding: "16px 12px",
                     textAlign: "center",
                     fontWeight: "600",
@@ -227,7 +211,7 @@ const MenuItemsTable = ({ table12 = [] }) => {
                 </th>
                 <th
                   style={{
-                    width: "20%", // Equal width for all columns
+                    width: "20%",
                     padding: "16px 12px",
                     textAlign: "left",
                     fontWeight: "600",

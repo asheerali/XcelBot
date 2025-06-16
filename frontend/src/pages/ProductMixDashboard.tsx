@@ -95,8 +95,9 @@ function TabPanel(props: TabPanelProps) {
       id={`product-mix-tabpanel-${index}`}
       aria-labelledby={`product-mix-tab-${index}`}
       {...other}
+      style={{ width: "100%" }} // Add explicit width
     >
-      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
+      {value === index && <Box sx={{ pt: 3, width: "100%" }}>{children}</Box>}
     </div>
   );
 }
@@ -732,7 +733,12 @@ export default function ProductMixDashboard() {
   }, []);
 
   return (
-    <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+    <Box sx={{ 
+      p: { xs: 1, sm: 2, md: 3 },
+      width: "100%",  // Ensure full width
+      maxWidth: "none",  // Remove any max-width constraints
+      boxSizing: "border-box"  // Include padding in width calculation
+    }}>
       {/* Dashboard Header */}
       <Box
         sx={{
@@ -742,62 +748,63 @@ export default function ProductMixDashboard() {
           mb: 3,
           flexWrap: "wrap",
           gap: 2,
+          width: "100%"  // Add explicit width
         }}
       >
-    <div style={{ 
-      textAlign: 'center', 
-      marginBottom: '2rem',
-      display: 'flex',
-      justifyContent: 'center',
-      width: '100%'
-    }}>
-            <h1 
-              style={{ 
-                fontWeight: 800,
-                background: 'linear-gradient(135deg, #1976d2 0%, #9c27b0 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                fontSize: 'clamp(1.75rem, 5vw, 3rem)',
-                marginBottom: '8px',
-                letterSpacing: '-0.02em',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '16px',
-                margin: '0',
-                textAlign: 'center'
-              }}
-            >
-              <span style={{ 
-                color: '#1976d2',
-                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
-                fontSize: 'inherit',
-                display: 'inline-flex',
-                alignItems: 'center'
-              }}>
-                <svg 
-                  width="1em" 
-                  height="1em" 
-                  viewBox="0 0 100 100" 
-                  fill="currentColor"
-                  style={{ fontSize: 'inherit' }}
-                >
-                  {/* 4-square logo matching your design */}
-                  <rect x="10" y="10" width="35" height="35" rx="4" fill="#5A8DEE"/>
-                  <rect x="55" y="10" width="35" height="35" rx="4" fill="#4285F4"/>
-                  <rect x="10" y="55" width="35" height="35" rx="4" fill="#1976D2"/>
-                  <rect x="55" y="55" width="35" height="35" rx="4" fill="#3F51B5"/>
-                </svg>
-              </span>
+        <div style={{ 
+          textAlign: 'center', 
+          marginBottom: '2rem',
+          display: 'flex',
+          justifyContent: 'center',
+          width: '100%'
+        }}>
+          <h1 
+            style={{ 
+              fontWeight: 800,
+              background: 'linear-gradient(135deg, #1976d2 0%, #9c27b0 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              fontSize: 'clamp(1.75rem, 5vw, 3rem)',
+              marginBottom: '8px',
+              letterSpacing: '-0.02em',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '16px',
+              margin: '0',
+              textAlign: 'center'
+            }}
+          >
+            <span style={{ 
+              color: '#1976d2',
+              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+              fontSize: 'inherit',
+              display: 'inline-flex',
+              alignItems: 'center'
+            }}>
+              <svg 
+                width="1em" 
+                height="1em" 
+                viewBox="0 0 100 100" 
+                fill="currentColor"
+                style={{ fontSize: 'inherit' }}
+              >
+                {/* 4-square logo matching your design */}
+                <rect x="10" y="10" width="35" height="35" rx="4" fill="#5A8DEE"/>
+                <rect x="55" y="10" width="35" height="35" rx="4" fill="#4285F4"/>
+                <rect x="10" y="55" width="35" height="35" rx="4" fill="#1976D2"/>
+                <rect x="55" y="55" width="35" height="35" rx="4" fill="#3F51B5"/>
+              </svg>
+            </span>
             Product Mix Dashboard
-            </h1>
-          </div>
+          </h1>
+        </div>
       </Box>
 
       {/* Alert message when no data is available */}
       {!currentProductMixData && (
-        <Alert severity="info" sx={{ mb: 3 }}>
+        <Alert severity="info" sx={{ mb: 3, width: "100%" }}>
           No Product Mix data available. Please upload files with "Product Mix"
           dashboard type from the Excel Upload page.
         </Alert>
@@ -807,7 +814,7 @@ export default function ProductMixDashboard() {
       {(filterError || error) && (
         <Alert
           severity="error"
-          sx={{ mb: 3 }}
+          sx={{ mb: 3, width: "100%" }}
           onClose={() => {
             setFilterError("");
             dispatch(setError(null));
@@ -821,7 +828,7 @@ export default function ProductMixDashboard() {
       {dataUpdated && (
         <Alert 
           severity="success" 
-          sx={{ mb: 3 }}
+          sx={{ mb: 3, width: "100%" }}
           onClose={() => setDataUpdated(false)}
         >
           <Typography variant="body2">
@@ -836,33 +843,26 @@ export default function ProductMixDashboard() {
         </Alert>
       )}
 
-      {/* Info Alert for Initial State
-      {selectedLocations.length > 0 && !dataUpdated && !filterError && !error && (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            <strong>Ready to Filter:</strong> All available locations ({selectedLocations.length}) are initially selected. 
-            Optionally modify any filters, then click "Apply Filters" to analyze your data.
-          </Typography>
-        </Alert>
-      )} */}
-
       {/* Filters Section */}
-      <Card elevation={3} sx={{ mb: 3, borderRadius: 2, overflow: "hidden" }}>
-        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+      <Card elevation={3} sx={{ 
+        mb: 3, 
+        borderRadius: 2, 
+        overflow: "hidden",
+        width: "100%",  // Add explicit width
+        maxWidth: "none"  // Remove any max-width constraints
+      }}>
+        <CardContent sx={{ p: { xs: 2, md: 3 }, width: "100%" }}>
           {/* Filter Header */}
-          <Box sx={{ mb: 2 }}>
+          <Box sx={{ mb: 2, width: "100%" }}>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
               <FilterListIcon color="primary" />
               <Typography variant="h6" sx={{ fontWeight: 500 }}>
                 Filters
               </Typography>
-              {/* <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                (All locations initially selected)
-              </Typography> */}
             </Box>
           </Box>
 
-          <Grid container spacing={2}>
+          <Grid container spacing={2} sx={{ width: "100%" }}>
             {/* Location filter */}
             <Grid item {...gridSizes}>
               <MultiSelect
@@ -958,7 +958,7 @@ export default function ProductMixDashboard() {
             selectedServers.length > 0 ||
             selectedMenuItems.length > 0 ||
             selectedCategories.length > 0) && (
-            <Box sx={{ mt: 2 }}>
+            <Box sx={{ mt: 2, width: "100%" }}>
               <Typography
                 variant="body2"
                 color="text.secondary"
@@ -1045,7 +1045,7 @@ export default function ProductMixDashboard() {
           )}
 
           {/* UPDATED: Apply Filters Button with validation feedback */}
-          <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-start", gap: 2 }}>
+          <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-start", gap: 2, width: "100%" }}>
             <Button
               variant="contained"
               color="primary"
@@ -1100,7 +1100,7 @@ export default function ProductMixDashboard() {
 
           {/* Helper text for Clear All behavior */}
           {(selectedLocations.length > 0 || localStartDate || localEndDate) && (
-            <Box sx={{ mt: 1 }}>
+            <Box sx={{ mt: 1, width: "100%" }}>
               <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                 💡 Tip: "Clear All Filters" will reset everything to empty. To re-select all locations, use the location filter's "Select All" option.
                 Date range is optional - filters will apply to all available data if no date range is selected.
@@ -1110,14 +1110,12 @@ export default function ProductMixDashboard() {
 
           {/* Validation message for required fields */}
           {selectedLocations.length === 0 && (
-            <Alert severity="warning" sx={{ mt: 2 }}>
+            <Alert severity="warning" sx={{ mt: 2, width: "100%" }}>
               <Typography variant="body2">
                 <strong>Required:</strong> Please select at least one location to apply filters.
               </Typography>
             </Alert>
           )}
-
-         
         </CardContent>
       </Card>
 
@@ -1126,7 +1124,13 @@ export default function ProductMixDashboard() {
         <>
           {/* Tabs */}
           <Card
-            sx={{ borderRadius: 2, mb: 3, overflow: "hidden" }}
+            sx={{ 
+              borderRadius: 2, 
+              mb: 3, 
+              overflow: "hidden",
+              width: "100%",  // Add explicit width
+              maxWidth: "none"  // Remove any max-width constraints
+            }}
             elevation={3}
           >
             <Tabs
@@ -1134,6 +1138,7 @@ export default function ProductMixDashboard() {
               onChange={handleTabChange}
               variant="fullWidth"
               sx={{
+                width: "100%",  // Ensure tabs take full width
                 "& .MuiTab-root": {
                   fontWeight: 500,
                   textTransform: "none",
@@ -1155,14 +1160,18 @@ export default function ProductMixDashboard() {
 
             {/* Server Performance Tab */}
             <TabPanel value={tabValue} index={0}>
-              <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+              <Box sx={{ 
+                p: { xs: 1, sm: 2, md: 3 },
+                width: "100%",  // Add explicit width
+                boxSizing: "border-box"  // Ensure padding doesn't affect width
+              }}>
                 {isLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                     <CircularProgress size={40} />
                     <Typography sx={{ ml: 2 }}>Updating dashboard data...</Typography>
                   </Box>
                 ) : (
-                  <Box>
+                  <Box sx={{ width: "100%" }}>  {/* Add explicit width */}
                     {/* Sales Dashboard Component */}
                     <MenuAnalysisDashboard 
                       key={`performance-${currentProductMixLocation}-${currentProductMixData?.filterTimestamp || 'original'}`}
@@ -1170,12 +1179,16 @@ export default function ProductMixDashboard() {
                     />
                     
                     {/* Divider */}
-                    <Box sx={{ my: 4 }}>
+                    <Box sx={{ my: 4, width: "100%" }}>  {/* Add explicit width */}
                       <Divider sx={{ borderColor: '#e0e0e0', borderWidth: 1 }} />
                     </Box>
                     
                     {/* Menu Items Table Component */}
-                    <Box sx={{ mt: 4 }}>
+                    <Box sx={{ 
+                      mt: 4, 
+                      width: "100%",  // Add explicit width
+                      overflow: "hidden"  // Prevent any overflow issues
+                    }}>
                       <Typography 
                         variant="h5" 
                         sx={{ 
@@ -1199,7 +1212,11 @@ export default function ProductMixDashboard() {
 
             {/* Menu Analysis Tab */}
             <TabPanel value={tabValue} index={1}>
-              <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+              <Box sx={{ 
+                p: { xs: 1, sm: 2, md: 3 },
+                width: "100%",  // Add explicit width
+                boxSizing: "border-box"
+              }}>
                 {isLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                     <CircularProgress size={40} />
@@ -1219,7 +1236,7 @@ export default function ProductMixDashboard() {
 
       {/* Show message if no data available */}
       {!currentProductMixData && productMixFiles.length === 0 && (
-        <Card sx={{ borderRadius: 2, mb: 3, p: 3 }}>
+        <Card sx={{ borderRadius: 2, mb: 3, p: 3, width: "100%" }}>
           <Button
             variant="contained"
             color="primary"
