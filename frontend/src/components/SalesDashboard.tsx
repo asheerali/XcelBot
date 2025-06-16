@@ -241,14 +241,9 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
     summaryData.total_quantity_change
   );
 
-  // Format currency
+  // Format currency - UPDATED: Shows exact value with $ prefix
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
+    return `$${value}`;
   };
 
   // Format percentage change with proper styling - show exact backend values
@@ -273,7 +268,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
       }
 
       return {
-        text: `${isPositive ? "+" : ""}${value.toFixed(1)}%`,
+        text: `${isPositive ? "+" : ""}${value}%`, // UPDATED: Removed .toFixed() to show exact value
         color: isPositive ? "#2e7d32" : "#d32f2f",
         arrow: isPositive ? "▲" : "▼",
       };
@@ -528,7 +523,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
             >
               <span>{label}</span>
               <span style={{ color: "#4caf50", fontWeight: "bold" }}>
-                Total: {formatCurrency(total)}
+                Total: ${total}
               </span>
             </div>
             
@@ -578,7 +573,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
                     flexShrink: 0,
                     fontSize: "11px"
                   }}>
-                    {formatCurrency(entry.value)}
+                    ${entry.value}
                   </span>
                 </div>
               ))}
@@ -593,7 +588,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
                 fontSize: "10px",
                 color: "#666"
               }}>
-                Top 3 categories: {((breakdown.slice(0, 3).reduce((sum, cat) => sum + cat.value, 0) / total) * 100).toFixed(0)}% of total
+                Top 3 categories: {((breakdown.slice(0, 3).reduce((sum, cat) => sum + cat.value, 0) / total) * 100)}% of total
               </div>
             )}
           </div>
@@ -623,9 +618,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
             <YAxis 
               tick={{ fontSize: 12 }}
               stroke="#666"
-              tickFormatter={(value) => 
-                value >= 1000 ? `${(value / 1000).toFixed(0)}k` : `${value}`
-              }
+              tickFormatter={(value) => String(value)}
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend 
@@ -794,7 +787,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
             value={netSales}
             change={netSalesChange}
             color="#1e88e5"
-            formatValue={formatCurrency}
+            formatValue={(v) => `$${v}`}
           />
 
           <StatCard
@@ -802,7 +795,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
             value={orders}
             change={ordersChange}
             color="#7cb342"
-            formatValue={(v) => v.toLocaleString()}
+            formatValue={(v) => String(v)}
           />
 
           <StatCard
@@ -810,7 +803,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
             value={qtySold}
             change={qtySoldChange}
             color="#fb8c00"
-            formatValue={(v) => v.toLocaleString()}
+            formatValue={(v) => String(v)}
           />
 
           <StatCard
@@ -818,7 +811,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
             value={averageOrderValue}
             change={averageOrderValueChange}
             color="#9c27b0"
-            formatValue={formatCurrency}
+            formatValue={(v) => `$${v}`}
           />
 
           <StatCard
@@ -826,7 +819,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
             value={averageItemsPerOrder}
             change={averageItemsPerOrderChange}
             color="#f44336"
-            formatValue={(v) => v.toFixed(1)}
+            formatValue={(v) => String(v)}
           />
         </div>
       </div>
@@ -924,7 +917,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
                         {category["Sales Category"]}
                       </div>
                       <div style={{ fontSize: "13px", color: "#666" }}>
-                        Total Sales: {formatCurrency(category.lastWeeksSales)}
+                        Total Sales: ${category.lastWeeksSales}
                       </div>
                     </div>
                     <div style={{ textAlign: "right" }}>
@@ -958,7 +951,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
                           color: "#333",
                         }}
                       >
-                        Current: {formatCurrency(category.currentSales)}
+                        Current: ${category.currentSales}
                       </div>
                     </div>
                   </div>

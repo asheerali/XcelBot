@@ -592,106 +592,114 @@ const DateRangeSelectorComponent: React.FC<DateRangeSelectorComponentProps> = ({
       </Box>
 
       {/* Fixed Modal Dialog - Made even bigger with buttons at bottom right */}
-      <Dialog
-        open={open}
-        onClose={handleClose}
-        maxWidth={false}
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            overflow: 'visible',
-            width: '1200px',
-            height: '700px',
-            maxWidth: '95vw',
-            maxHeight: '95vh'
-          }
-        }}
+   <Dialog
+  open={open}
+  onClose={handleClose}
+  maxWidth={false}
+  PaperProps={{
+    sx: {
+      borderRadius: 2,
+      overflow: 'visible',
+      width: '1200px',
+      height: '700px',
+      maxWidth: '95vw',
+      maxHeight: '95vh'
+    }
+  }}
+  sx={{
+    '& .MuiDialog-container': {
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 2
+    },
+    '& .MuiBackdrop-root': {
+      backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    }
+  }}
+>
+  <Box sx={{ 
+    p: 4, 
+    width: '100%', 
+    height: '100%', 
+    display: 'flex', 
+    flexDirection: 'column',
+    overflow: 'hidden'
+  }}>
+    <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+      Select Date Range
+    </Typography>
+    
+    {/* Container for DateRangeSelector with more space */}
+    <Box sx={{ 
+      flexGrow: 1,
+      display: 'flex',
+      justifyContent: 'flex-start',
+      alignItems: 'flex-start',
+      minHeight: '500px',
+      mb: 3,
+      overflow: 'auto',
+      pl: 0, // Remove any left padding
+      ml: 0  // Remove any left margin
+    }}>
+      <Box sx={{ 
+        width: '100%',
+        pl: 0, // Ensure DateRangeSelector starts from the left
+        ml: 0
+      }}>
+        <DateRangeSelector onSelect={handleTempDateRangeSelect} />
+      </Box>
+    </Box>
+    
+    {/* Action Buttons - Moved to bottom right */}
+    <Box sx={{ 
+      display: 'flex', 
+      justifyContent: 'flex-end', 
+      pt: 2, 
+      borderTop: '1px solid #e0e0e0',
+      gap: 2,
+      flexShrink: 0
+    }}>
+      <Button
+        variant="outlined"
+        onClick={handleCancel}
         sx={{
-          '& .MuiDialog-container': {
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 2
-          },
-          '& .MuiBackdrop-root': {
-            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+          borderColor: '#e0e0e0',
+          color: '#666',
+          minWidth: '100px',
+          textTransform: 'uppercase',
+          py: 1.5,
+          px: 3,
+          '&:hover': {
+            borderColor: '#999',
+            backgroundColor: '#f5f5f5',
           }
         }}
       >
-        <Box sx={{ 
-          p: 4, 
-          width: '100%', 
-          height: '100%', 
-          display: 'flex', 
-          flexDirection: 'column',
-          overflow: 'hidden'
-        }}>
-          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-            Select Date Range
-          </Typography>
-          
-          {/* Container for DateRangeSelector with more space */}
-          <Box sx={{ 
-            flexGrow: 1,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: '500px',
-            mb: 3,
-            overflow: 'auto'
-          }}>
-            <DateRangeSelector onSelect={handleTempDateRangeSelect} />
-          </Box>
-          
-          {/* Action Buttons - Moved to bottom right */}
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'flex-end', 
-            pt: 2, 
-            borderTop: '1px solid #e0e0e0',
-            gap: 2,
-            flexShrink: 0
-          }}>
-            <Button
-              variant="outlined"
-              onClick={handleCancel}
-              sx={{
-                borderColor: '#e0e0e0',
-                color: '#666',
-                minWidth: '100px',
-                textTransform: 'uppercase',
-                py: 1.5,
-                px: 3,
-                '&:hover': {
-                  borderColor: '#999',
-                  backgroundColor: '#f5f5f5',
-                }
-              }}
-            >
-              CANCEL
-            </Button>
-            <Button
-              variant="contained"
-              onClick={handleSetDateRange}
-              disabled={!tempRange}
-              sx={{
-                backgroundColor: '#1976d2',
-                minWidth: '160px',
-                textTransform: 'uppercase',
-                py: 1.5,
-                px: 3,
-                '&:hover': {
-                  backgroundColor: '#1565c0',
-                },
-                '&:disabled': {
-                  backgroundColor: '#ccc'
-                }
-              }}
-            >
-              SET DATE RANGE
-            </Button>
-          </Box>
-        </Box>
-      </Dialog>
+        CANCEL
+      </Button>
+      <Button
+        variant="contained"
+        onClick={handleSetDateRange}
+        disabled={!tempRange}
+        sx={{
+          backgroundColor: '#1976d2',
+          minWidth: '160px',
+          textTransform: 'uppercase',
+          py: 1.5,
+          px: 3,
+          '&:hover': {
+            backgroundColor: '#1565c0',
+          },
+          '&:disabled': {
+            backgroundColor: '#ccc'
+          }
+        }}
+      >
+        SET DATE RANGE
+      </Button>
+    </Box>
+  </Box>
+</Dialog>
     </>
   );
 };
