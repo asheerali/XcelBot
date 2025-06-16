@@ -671,7 +671,7 @@ const extractFinancialMetrics = (table5Data: any[]) => {
 const formatPercentageChange = (value: string | number): { value: string, isPositive: boolean } => {
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
   const isPositive = numValue >= 0;
-  const formattedValue = isPositive ? `+${Math.abs(numValue).toFixed(2)}%` : `${numValue.toFixed(2)}%`;
+  const formattedValue = isPositive ? `+${Math.abs(numValue) }%` : `${numValue }%`;
   
   return { value: formattedValue, isPositive };
 };
@@ -681,8 +681,8 @@ const formatCurrency = (value: string | number): string => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
+    // minimumFractionDigits: 2,
+    // maximumFractionDigits: 3
   }).format(numValue);
 };
 
@@ -909,7 +909,7 @@ export function Financials() {
         } else if (metricName === 'Avg Ticket' || metricName === 'SPMH' || metricName === 'LPMH') {
           formattedValue = formatCurrency(metricData.thisWeek);
         } else if (metricName.includes('%')) {
-          formattedValue = `${parseFloat(metricData.thisWeek).toFixed(2)}%`;
+          formattedValue = `${parseFloat(metricData.thisWeek) }%`;
         } else {
           formattedValue = parseInt(metricData.thisWeek).toLocaleString();
         }
