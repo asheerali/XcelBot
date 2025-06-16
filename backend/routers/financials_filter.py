@@ -37,11 +37,11 @@ async def upload_excel(request: FinancialCompanyWideUploadRequest = Body(...)):
         if request.location == "Multiple Locations":
             location_filter = "All"
         else:
-            location_filter = request.location if request.location else 'All'
+            location_filter = request.locations if request.locations else 'All'
         # location = request.location if request.location else "All"
         start_date = request.startDate if request.startDate else None
         end_date = request.endDate if request.endDate else None
-        print("i am here checking the startdate and end date 2 ", start_date, end_date)
+        print("i am here checking the startdate and end date 2 ", start_date, end_date, "and the request", request)
         
         print("this is the year", year)
 
