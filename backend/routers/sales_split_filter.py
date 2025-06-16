@@ -45,7 +45,16 @@ async def filter_excel_data(request: SalesSplitPmixUploadRequest = Body(...)):
         start_date = request.startDate if request.startDate else None
         end_date = request.endDate if request.endDate else None
         # server_filter = request.server if request.server else 'All'
-        category_filter = request.categories if request.categories or request.categories == '' else 'All'
+        # Step 1: Get the raw input
+        raw_categories = request.categories
+
+        # Step 2: Set to 'All' if None or empty
+        if raw_categories in [None, '']:
+            category_filter = 'All'
+        else:
+            # Step 3: Convert comma-separated string to list
+            category_filter = [cat.strip() for cat in raw_categories.split(',') if cat.strip()]
+        # category_filter = request.categories if request.categories not in [None, ''] else 'All'
         print("i am  here in sales_split_filter.py checking the category_filter", category_filter, "and the request ,", request)
         
         # fileName = "20250514_200147_midtown_east_dashboard2_template1.xlsx"
@@ -72,24 +81,24 @@ async def filter_excel_data(request: SalesSplitPmixUploadRequest = Body(...)):
             
             # response accepted from the FE
                # For now, return empty data for unsupported dashboards
-        sales_split_dashboard = {
-                "table1": pivot_table.to_dict(orient='records'),
-                "table2": in_house_table.to_dict(orient='records'),
-                "table3": week_over_week_table.to_dict(orient='records'),
-                "table4": category_summary_table.to_dict(orient='records'),
-                "table5": salesByWeek.to_dict(orient='records'),
-                "table6": salesByDayOfWeek.to_dict(orient='records'),
-                "table7": salesByTimeOfDay.to_dict(orient='records'),
-                "table8": sales_by_day_table.to_dict(orient='records'),
-                "table9": sales_by_category_table.to_dict(orient='records'),
-                "table10": category_comparison_table.to_dict(orient='records'),
-                "table11": thirteen_week_category_table.to_dict(orient='records'),
-                "locations": locations,
-                "categories": categories,
-                "dashboardName": "Sales Split",
-                "fileName": request.fileName,
-                "data": f"{request.dashboard} Dashboard is not yet implemented."
-            }
+        # sales_split_dashboard = {
+        #         "table1": pivot_table.to_dict(orient='records'),
+        #         "table2": in_house_table.to_dict(orient='records'),
+        #         "table3": week_over_week_table.to_dict(orient='records'),
+        #         "table4": category_summary_table.to_dict(orient='records'),
+        #         "table5": salesByWeek.to_dict(orient='records'),
+        #         "table6": salesByDayOfWeek.to_dict(orient='records'),
+        #         "table7": salesByTimeOfDay.to_dict(orient='records'),
+        #         "table8": sales_by_day_table.to_dict(orient='records'),
+        #         "table9": sales_by_category_table.to_dict(orient='records'),
+        #         "table10": category_comparison_table.to_dict(orient='records'),
+        #         "table11": thirteen_week_category_table.to_dict(orient='records'),
+        #         "locations": locations,
+        #         "categories": categories,
+        #         "dashboardName": "Sales Split",
+        #         "fileName": request.fileName,
+        #         "data": f"{request.dashboard} Dashboard is not yet implemented."
+        #     }
         
         sales_split_dashboard = {
         "table1": pivot_table.to_dict(orient='records'),

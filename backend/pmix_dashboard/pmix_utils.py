@@ -219,16 +219,21 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     
     # Return all tables in a dictionary
     return {
-        'net_sales': net_sales,
+        # 'net_sales': net_sales,
+        'net_sales': round(net_sales, 2),
         'orders': unique_orders,
         'qty_sold': qty_sold,
         'sales_by_category': sales_by_category,
         'sales_by_menu_group': sales_by_menu_group,
         'sales_by_server': sales_by_server,
         'top_selling_items': top_selling_items,
-        "net_sales_change": net_sales_change,
+        # "net_sales_change": net_sales_change,
+        'net_sales_change': round(net_sales_change, 2),
         "orders_change": orders_change,
-        "qty_sold_change": qty_sold_change
+        'orders_change': round(orders_change, 2),
+        # "qty_sold_change": qty_sold_change
+        'qty_sold_change': round(qty_sold_change, 2)
+
     }
 
 
@@ -634,14 +639,19 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
     return {
         'sales_by_location': sales_by_location,
         'average_price_by_item': average_price_by_item,
-        'average_order_value': average_order_value,
-        'average_items_per_order': average_items_per_order,
+        # 'average_order_value': average_order_value,
+        "average_order_value": round(average_order_value, 2),
+        # 'average_items_per_order': average_items_per_order,
+        "average_items_per_order": round(average_items_per_order, 2),
+        # 'average_items_per_order': f"{average_items_per_order:.2f}",
         'price_changes': price_changes,
         'top_items': top_items,
         'unique_orders': unique_orders,
         'total_quantity': total_quantity,
-        "average_order_value_change": average_order_value_change,
-        "average_items_per_order_change": average_items_per_order_change,
+        # "average_order_value_change": average_order_value_change,
+        "average_order_value_change": round(average_order_value_change, 2),
+        # "average_items_per_order_change": average_items_per_order_change,
+        "average_items_per_order_change": round(average_items_per_order_change, 2),
         "unique_orders_change": unique_orders_change,
         "total_quantity_change": total_quantity_change
     }
