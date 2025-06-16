@@ -450,11 +450,13 @@ def sales_analysis_tables(df, location_filter='All', start_date=None, end_date=N
         else:
             filtered_df = filtered_df[filtered_df['Location'] == location_filter]
     
+    # Apply category filter
     if categories_filter != 'All':
         if isinstance(categories_filter, list):
             filtered_df = filtered_df[filtered_df['Category'].isin(categories_filter)]
         else:
             filtered_df = filtered_df[filtered_df['Category'] == categories_filter]
+            
     # Apply date range filter - convert string dates to datetime.date objects
     if start_date is not None:
         if isinstance(start_date, str):

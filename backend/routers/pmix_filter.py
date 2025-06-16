@@ -37,12 +37,12 @@ async def upload_excel(request: SalesSplitPmixUploadRequest = Body(...)):
         fileName = request.fileName
         file_location = os.path.join(UPLOAD_DIR, fileName)
 
-        location_filter = request.location if request.location else 'All'
+        location_filter = request.locations if request.locations else 'All'
         start_date = request.startDate if request.startDate else None
         end_date = request.endDate if request.endDate else None
-        server_filter = request.server if request.server else 'All'
-        category_filter = request.category if request.category else 'All'
-      
+        server_filter = request.servers if request.servers else 'All'
+        category_filter = request.categories if request.categories else 'All'
+
 
                 
         (net_sales, 
