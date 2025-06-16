@@ -78,6 +78,351 @@ import { API_URL_Local } from "../constants"; // Import API base URL
 // API URL for Product Mix filter
 const PRODUCT_MIX_FILTER_API_URL = API_URL_Local + "/api/pmix/filter";
 
+// =====================
+// ENHANCED FORMATTING UTILITIES 
+// =====================
+
+/**
+ * Format numbers with commas (e.g., 1234 -> "1,234")
+ */
+export const formatNumber = (value: number | string | null | undefined): string => {
+  if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
+    return '0';
+  }
+  
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  
+  if (isNaN(numValue)) return '0';
+  
+  // For whole numbers, don't show decimals
+  if (Number.isInteger(numValue)) {
+    return new Intl.NumberFormat('en-US').format(numValue);
+  }
+  
+  // For decimals, format appropriately
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  }).format(numValue);
+};
+
+/**
+ * Format currency values with commas (e.g., 1234.56 -> "$1,234.56")
+ */
+export const formatCurrency = (value: number | string | null | undefined, includeCents: boolean = true): string => {
+  if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
+    return includeCents ? '$0.00' : '$0';
+  }
+  
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  
+  if (isNaN(numValue)) return includeCents ? '$0.00' : '$0';
+  
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: includeCents ? 2 : 0,
+    maximumFractionDigits: includeCents ? 2 : 0,
+  }).format(numValue);
+};
+
+/**
+ * Format percentage values (e.g., 0.1234 -> "12.34%")
+ */
+export const formatPercentage = (value: number | string | null | undefined, decimals: number = 2): string => {
+  if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
+    return '0.00%';
+  }
+  
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  
+  if (isNaN(numValue)) return '0.00%';
+  
+  return `${numValue.toFixed(decimals)}%`;
+};
+
+/**
+ * Specific formatter for SalesDashboard component data
+ * Ensures Sales Categories Performance displays numbers with commas - NO ROUNDING
+ */
+const prepareSalesDashboardData = (data: any): any => {
+  if (!data) return data;
+  
+  console.log('🎯 Preparing SalesDashboard data (NO ROUNDING):', data);
+  
+  // Clone the data
+  const preparedData = { ...data };
+  
+  // CRITICAL: Special handling for table2 which powers the Sales Categories Performance section
+  if (preparedData.table2) {
+    preparedData.table2 = preparedData.table2.map((item: any) => {
+      // Get the raw numeric values
+      const rawSales = item.SalesRaw || item.Sales;
+      const rawPercentage = item.PercentageRaw || item.Percentage;
+      
+      const processedItem = {
+        ...item,
+        
+        // MAIN VALUES: Format with commas but preserve exact values
+        Sales: typeof rawSales === 'number' ? formatNumber(rawSales) : String(rawSales || 0),
+        Percentage: typeof rawPercentage === 'number' ? rawPercentage : (rawPercentage || 0),
+        
+        // RAW VALUES: Keep for calculations
+        SalesRaw: typeof rawSales === 'number' ? rawSales : 0,
+        PercentageRaw: typeof rawPercentage === 'number' ? rawPercentage : 0,
+        
+        // DISPLAY VALUES: Multiple formats for different components
+        FormattedSales: typeof rawSales === 'number' ? formatNumber(rawSales) : '0',
+        FormattedSalesWithCurrency: typeof rawSales === 'number' ? formatCurrency(rawSales, false) : '$0',
+        FormattedPercentage: typeof rawPercentage === 'number' ? `${rawPercentage}%` : '0%',
+        
+        // NUMERIC VALUES: For charts and calculations
+        NumericSales: typeof rawSales === 'number' ? rawSales : 0,
+        NumericPercentage: typeof rawPercentage === 'number' ? rawPercentage : 0,
+      };
+      
+      console.log('📊 SalesDashboard item prepared (EXACT VALUES):', {
+        original: { Sales: rawSales, Percentage: rawPercentage },
+        prepared: {
+          Sales: processedItem.Sales,
+          FormattedSales: processedItem.FormattedSales,
+          FormattedSalesWithCurrency: processedItem.FormattedSalesWithCurrency,
+          NumericSales: processedItem.NumericSales
+        }
+      });
+      
+      return processedItem;
+    });
+  }
+  
+  // ALSO: Apply same formatting to other relevant tables
+  ['table3', 'table4', 'table5', 'table6'].forEach(tableName => {
+    if (preparedData[tableName]) {
+      preparedData[tableName] = preparedData[tableName].map((item: any) => ({
+        ...item,
+        // Ensure Sales values are formatted
+        Sales: typeof item.SalesRaw === 'number' ? formatNumber(item.SalesRaw) : 
+               typeof item.Sales === 'number' ? formatNumber(item.Sales) : item.Sales,
+        
+        FormattedSales: typeof item.SalesRaw === 'number' ? formatNumber(item.SalesRaw) :
+                       typeof item.Sales === 'number' ? formatNumber(item.Sales) : '0',
+      }));
+    }
+  });
+  
+  console.log('✅ SalesDashboard data prepared with EXACT FORMATTING:', preparedData);
+  return preparedData;
+};
+
+/**
+ * Debug component to show formatting status
+ */
+const FormattingDebugInfo: React.FC<{ data: any }> = ({ data }) => {
+  if (!data?._formatting) return null;
+  
+  return ''
+};
+
+/**
+ * Enhanced data transformation that applies formatting to numerical values
+ * Special focus on Sales Categories Performance data (table2)
+ */
+const enhanceDataWithFormatting = (data: any): any => {
+  if (!data) return data;
+  
+  // Deep clone to avoid mutations
+  const enhancedData = JSON.parse(JSON.stringify(data));
+  
+  console.log('🔍 Raw data before formatting:', enhancedData);
+  
+  // Apply formatting to various tables
+  if (enhancedData.table1) {
+    enhancedData.table1 = enhancedData.table1.map((item: any) => ({
+      ...item,
+      // Format all numerical values in table1
+      net_sales: item.net_sales?.map((val: any) => formatNumber(val)),
+      orders: item.orders?.map((val: any) => formatNumber(val)),
+      qty_sold: item.qty_sold?.map((val: any) => formatNumber(val)),
+      average_order_value: item.average_order_value?.map((val: any) => formatCurrency(val)),
+      average_items_per_order: item.average_items_per_order?.map((val: any) => formatNumber(val)),
+    }));
+  }
+  
+  // ENHANCED: Special handling for table2 - Sales Categories Performance
+  if (enhancedData.table2) {
+    console.log('🎯 Processing table2 (Sales Categories) before formatting:', enhancedData.table2);
+    
+    enhancedData.table2 = enhancedData.table2.map((item: any, index: number) => {
+      const originalSales = item.Sales;
+      const originalPercentage = item.Percentage;
+      
+      const formatted = {
+        ...item,
+        // CRITICAL: Keep original raw values for calculations
+        SalesRaw: originalSales,
+        PercentageRaw: originalPercentage,
+        
+        // OVERRIDE: Format sales values with commas - NO ROUNDING
+        Sales: typeof originalSales === 'number' ? formatNumber(originalSales) : originalSales,
+        
+        // OVERRIDE: Format percentage - NO ROUNDING, preserve exact value
+        Percentage: typeof originalPercentage === 'number' ? 
+          formatPercentage(originalPercentage, 2) : 
+          originalPercentage,
+        
+        // Additional formatted versions for different display needs
+        DisplaySales: typeof originalSales === 'number' ? formatNumber(originalSales) : originalSales,
+        DisplaySalesWithCurrency: typeof originalSales === 'number' ? formatCurrency(originalSales, false) : originalSales,
+        DisplayPercentage: typeof originalPercentage === 'number' ? 
+          `${originalPercentage}%` : originalPercentage,
+        
+        // For charts that need numeric values
+        NumericSales: originalSales,
+        NumericPercentage: originalPercentage,
+      };
+      
+      console.log(`📊 Table2 item ${index} formatted (NO ROUNDING):`, {
+        original: { Sales: originalSales, Percentage: originalPercentage },
+        formatted: { 
+          Sales: formatted.Sales, 
+          Percentage: formatted.Percentage,
+          DisplaySales: formatted.DisplaySales 
+        }
+      });
+      
+      return formatted;
+    });
+    
+    console.log('✅ Table2 after formatting (EXACT VALUES WITH COMMAS):', enhancedData.table2);
+  }
+  
+  // ENHANCED: table3 - Menu Group Sales
+  if (enhancedData.table3) {
+    console.log('🎯 Processing table3 (Menu Groups) before formatting:', enhancedData.table3);
+    
+    enhancedData.table3 = enhancedData.table3.map((item: any) => ({
+      ...item,
+      Sales: typeof item.Sales === 'number' ? formatNumber(item.Sales) : item.Sales,
+      SalesRaw: item.Sales, // Keep raw value for calculations
+      DisplaySales: typeof item.Sales === 'number' ? formatCurrency(item.Sales, false) : item.Sales,
+    }));
+  }
+  
+  // ENHANCED: table4 - Server Sales
+  if (enhancedData.table4) {
+    console.log('🎯 Processing table4 (Server Sales) before formatting:', enhancedData.table4);
+    
+    enhancedData.table4 = enhancedData.table4.map((item: any) => ({
+      ...item,
+      Sales: typeof item.Sales === 'number' ? formatNumber(item.Sales) : item.Sales,
+      SalesRaw: item.Sales, // Keep raw value for calculations
+      DisplaySales: typeof item.Sales === 'number' ? formatCurrency(item.Sales, false) : item.Sales,
+    }));
+  }
+  
+  // ENHANCED: table5 - Item Sales by Server
+  if (enhancedData.table5) {
+    console.log('🎯 Processing table5 (Item Sales) before formatting:', enhancedData.table5);
+    
+    enhancedData.table5 = enhancedData.table5.map((item: any) => ({
+      ...item,
+      Quantity: typeof item.Quantity === 'number' ? formatNumber(item.Quantity) : item.Quantity,
+      QuantityRaw: item.Quantity, // Keep raw value for calculations
+      Sales: typeof item.Sales === 'number' ? formatNumber(item.Sales) : item.Sales,
+      SalesRaw: item.Sales, // Keep raw value for calculations
+      DisplaySales: typeof item.Sales === 'number' ? formatCurrency(item.Sales, false) : item.Sales,
+    }));
+  }
+  
+  if (enhancedData.table6) {
+    enhancedData.table6 = enhancedData.table6.map((item: any) => ({
+      ...item,
+      Sales: typeof item.Sales === 'number' ? formatCurrency(item.Sales, false) : item.Sales,
+      SalesRaw: item.Sales, // Keep raw value for calculations
+    }));
+  }
+  
+  if (enhancedData.table7) {
+    enhancedData.table7 = enhancedData.table7.map((item: any) => ({
+      ...item,
+      Price: typeof item.Price === 'number' ? formatCurrency(item.Price / 100) : item.Price, // Convert cents to dollars
+      PriceRaw: item.Price, // Keep raw value for calculations
+    }));
+  }
+  
+  if (enhancedData.table8) {
+    enhancedData.table8 = enhancedData.table8.map((item: any) => ({
+      ...item,
+      Change: typeof item.Change === 'number' ? formatNumber(item.Change) : item.Change,
+      ChangeRaw: item.Change, // Keep raw value for calculations
+    }));
+  }
+  
+  if (enhancedData.table9) {
+    enhancedData.table9 = enhancedData.table9.map((item: any) => ({
+      ...item,
+      Price: typeof item.Price === 'number' ? formatCurrency(item.Price / 100) : item.Price, // Convert cents to dollars
+      PriceRaw: item.Price, // Keep raw value for calculations
+    }));
+  }
+  
+  // Format table12 (Menu Items Table) specifically
+  if (enhancedData.table12) {
+    enhancedData.table12 = enhancedData.table12.map((item: any) => ({
+      ...item,
+      // Quantity fields
+      Quantity: typeof item.Quantity === 'number' ? formatNumber(item.Quantity) : item.Quantity,
+      QuantityRaw: item.Quantity,
+      
+      // Sales/Revenue fields
+      Sales: typeof item.Sales === 'number' ? formatCurrency(item.Sales, false) : item.Sales,
+      SalesRaw: item.Sales,
+      Revenue: typeof item.Revenue === 'number' ? formatCurrency(item.Revenue, false) : item.Revenue,
+      RevenueRaw: item.Revenue,
+      
+      // Price fields
+      Price: typeof item.Price === 'number' ? formatCurrency(item.Price) : item.Price,
+      PriceRaw: item.Price,
+      'Unit Price': typeof item['Unit Price'] === 'number' ? formatCurrency(item['Unit Price']) : item['Unit Price'],
+      'Unit PriceRaw': item['Unit Price'],
+      
+      // Cost fields
+      Cost: typeof item.Cost === 'number' ? formatCurrency(item.Cost) : item.Cost,
+      CostRaw: item.Cost,
+      'Food Cost': typeof item['Food Cost'] === 'number' ? formatCurrency(item['Food Cost']) : item['Food Cost'],
+      'Food CostRaw': item['Food Cost'],
+      
+      // Percentage fields
+      'Margin %': typeof item['Margin %'] === 'number' ? formatPercentage(item['Margin %']) : item['Margin %'],
+      'Food Cost %': typeof item['Food Cost %'] === 'number' ? formatPercentage(item['Food Cost %']) : item['Food Cost %'],
+      
+      // Any other numerical fields
+      ...Object.keys(item).reduce((acc, key) => {
+        if (typeof item[key] === 'number' && !['Quantity', 'Sales', 'Revenue', 'Price', 'Unit Price', 'Cost', 'Food Cost', 'Margin %', 'Food Cost %'].includes(key)) {
+          acc[key] = formatNumber(item[key]);
+          acc[`${key}Raw`] = item[key];
+        }
+        return acc;
+      }, {} as any)
+    }));
+  }
+  
+  // Add metadata about formatting
+  enhancedData._formatting = {
+    applied: true,
+    timestamp: new Date().toISOString(),
+    tables_processed: ['table1', 'table2', 'table3', 'table4', 'table5', 'table6', 'table7', 'table8', 'table9', 'table12'],
+    formatting_functions: ['formatNumber', 'formatCurrency', 'formatPercentage'],
+    special_handling: {
+      table2: 'Sales Categories Performance with enhanced display values',
+      table12: 'Menu Items Table with comprehensive formatting'
+    }
+  };
+  
+  console.log('📊 Enhanced data with comprehensive formatting:', enhancedData);
+  return enhancedData;
+};
+
 // TabPanel Component
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -550,8 +895,7 @@ export default function ProductMixDashboard() {
     }));
   };
 
-  // UPDATED: Handle Apply Filters with validation - only location validation needed
- // UPDATED: Handle Apply Filters with validation - FIXED to send multiple locations
+  // UPDATED: Handle Apply Filters with validation - FIXED to send multiple locations
 const handleApplyFilters = async () => {
   // Validate required filters (only locations are required)
   if (selectedLocations.length === 0) {
@@ -611,12 +955,15 @@ const handleApplyFilters = async () => {
     console.log("📥 Received Product Mix filter response:", response.data);
 
     if (response.data) {
+      // ENHANCED: Apply formatting to the response data
+      const formattedResponseData = enhanceDataWithFormatting(response.data);
+      
       // Extract categories from the filtered data
-      const extractedCategories = response.data.categories || selectedCategories;
+      const extractedCategories = formattedResponseData.categories || selectedCategories;
 
       // Create enhanced data with filter metadata
       const enhancedData = {
-        ...response.data,
+        ...formattedResponseData,
         categories: extractedCategories,
         filterApplied: true,
         filterTimestamp: new Date().toISOString(),
@@ -632,7 +979,7 @@ const handleApplyFilters = async () => {
         }
       };
 
-      console.log("📊 Enhanced data with filters:", enhancedData);
+      console.log("📊 Enhanced data with filters and formatting:", enhancedData);
 
       // Update general table data (for compatibility)
       dispatch(setTableData(enhancedData));
@@ -722,22 +1069,6 @@ const formatSelectedLocationsDisplay = (locations: string[]) => {
   return `${locations.slice(0, 2).join(", ")} and ${locations.length - 2} more`;
 };
 
-// You can also update the active filters display section:
-// Replace the existing location chip with this enhanced version:
-{selectedLocations.length > 0 && (
-  <Chip
-    label={
-      selectedLocations.length === 1
-        ? `Location: ${selectedLocations[0]}`
-        : `Locations: ${formatSelectedLocationsDisplay(selectedLocations)}`
-    }
-    onDelete={() => setSelectedLocations([])}
-    color="primary"
-    variant="outlined"
-    size="small"
-  />
-)}
-
   // Calculate grid sizing based on mobile/tablet status
   const getGridSizes = () => {
     if (isMobile) {
@@ -769,6 +1100,12 @@ const formatSelectedLocationsDisplay = (locations: string[]) => {
       document.head.removeChild(styleElement);
     };
   }, []);
+
+  // ENHANCED: Apply formatting to current data before rendering
+  const formattedCurrentData = enhanceDataWithFormatting(currentProductMixData);
+  
+  // ENHANCED: Prepare data specifically for SalesDashboard component
+  const salesDashboardData = prepareSalesDashboardData(formattedCurrentData);
 
   return (
     <Box sx={{ 
@@ -862,7 +1199,7 @@ const formatSelectedLocationsDisplay = (locations: string[]) => {
         </Alert>
       )}
 
-      {/* Success Alert for Data Update */}
+      {/* Success Alert for Data Update with Formatting Info */}
       {dataUpdated && (
         <Alert 
           severity="success" 
@@ -870,15 +1207,24 @@ const formatSelectedLocationsDisplay = (locations: string[]) => {
           onClose={() => setDataUpdated(false)}
         >
           <Typography variant="body2">
-            <strong>Filters Applied Successfully!</strong> Product Mix data has been updated with your selected filters.
-            {currentProductMixData?.filterApplied && (
+            <strong>✅ Filters Applied Successfully!</strong> Product Mix data has been updated with your selected filters and enhanced number formatting.
+            {formattedCurrentData?.filterApplied && (
               <>
                 <br />
-                <strong>Applied on:</strong> {new Date(currentProductMixData.filterTimestamp).toLocaleString()}
+                <strong>Applied on:</strong> {new Date(formattedCurrentData.filterTimestamp).toLocaleString()}
+                <br />
+                <strong>🔢 Number Formatting:</strong> All numerical values now display with proper comma separators for better readability.
+                <br />
+                <strong>📊 Sales Categories:</strong> Category performance data formatted for enhanced display.
               </>
             )}
           </Typography>
         </Alert>
+      )}
+
+      {/* Debug Info for Development */}
+      {formattedCurrentData && (
+        <FormattingDebugInfo data={formattedCurrentData} />
       )}
 
       {/* Filters Section */}
@@ -897,6 +1243,13 @@ const formatSelectedLocationsDisplay = (locations: string[]) => {
               <Typography variant="h6" sx={{ fontWeight: 500 }}>
                 Filters
               </Typography>
+              <Chip 
+                label="🔢 Enhanced Formatting" 
+                size="small" 
+                color="secondary" 
+                variant="outlined"
+                sx={{ ml: 1 }}
+              />
             </Box>
           </Box>
 
@@ -1109,7 +1462,7 @@ const formatSelectedLocationsDisplay = (locations: string[]) => {
                 fontWeight: 600,
               }}
             >
-              {isLoading || loading ? "Loading..." : "APPLY FILTERS"}
+              {isLoading || loading ? "Loading..." : "APPLY FILTERS & FORMAT"}
             </Button>
 
             {/* Clear All Filters Button - Show if any filters are applied */}
@@ -1136,21 +1489,12 @@ const formatSelectedLocationsDisplay = (locations: string[]) => {
             )}
           </Box>
 
-          {/* Helper text for Clear All behavior */}
-          {(selectedLocations.length > 0 || localStartDate || localEndDate) && (
-            <Box sx={{ mt: 1, width: "100%" }}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                💡 Tip: "Clear All Filters" will reset everything to empty. To re-select all locations, use the location filter's "Select All" option.
-                Date range is optional - filters will apply to all available data if no date range is selected.
-              </Typography>
-            </Box>
-          )}
-
+         
           {/* Validation message for required fields */}
           {selectedLocations.length === 0 && (
             <Alert severity="warning" sx={{ mt: 2, width: "100%" }}>
               <Typography variant="body2">
-                <strong>Required:</strong> Please select at least one location to apply filters.
+                <strong>Required:</strong> Please select at least one location to apply filters and formatting.
               </Typography>
             </Alert>
           )}
@@ -1206,14 +1550,14 @@ const formatSelectedLocationsDisplay = (locations: string[]) => {
                 {isLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                     <CircularProgress size={40} />
-                    <Typography sx={{ ml: 2 }}>Updating dashboard data...</Typography>
+                    <Typography sx={{ ml: 2 }}>Updating dashboard data with enhanced formatting...</Typography>
                   </Box>
                 ) : (
                   <Box sx={{ width: "100%" }}>  {/* Add explicit width */}
-                    {/* Sales Dashboard Component */}
+                    {/* Sales Dashboard Component - Now receives specially formatted data */}
                     <MenuAnalysisDashboard 
-                      key={`performance-${currentProductMixLocation}-${currentProductMixData?.filterTimestamp || 'original'}`}
-                      productMixData={currentProductMixData} 
+                      key={`performance-${currentProductMixLocation}-${salesDashboardData?.filterTimestamp || 'original'}`}
+                      productMixData={salesDashboardData} 
                     />
                     
                     {/* Divider */}
@@ -1221,7 +1565,7 @@ const formatSelectedLocationsDisplay = (locations: string[]) => {
                       <Divider sx={{ borderColor: '#e0e0e0', borderWidth: 1 }} />
                     </Box>
                     
-                    {/* Menu Items Table Component */}
+                    {/* Menu Items Table Component - Now receives formatted data */}
                     <Box sx={{ 
                       mt: 4, 
                       width: "100%",  // Add explicit width
@@ -1236,11 +1580,11 @@ const formatSelectedLocationsDisplay = (locations: string[]) => {
                           textAlign: 'center'
                         }}
                       >
-                      
+                        📊 Menu Items Analysis (Enhanced with Comma Formatting - NO ROUNDING)
                       </Typography>
                       <MenuItemsTable 
-                        key={`menu-items-${currentProductMixLocation}-${currentProductMixData?.filterTimestamp || 'original'}`}
-                        table12={currentProductMixData?.table12 || []} 
+                        key={`menu-items-${currentProductMixLocation}-${formattedCurrentData?.filterTimestamp || 'original'}`}
+                        table12={formattedCurrentData?.table12 || []} 
                       />
                     </Box>
                   </Box>
@@ -1258,12 +1602,12 @@ const formatSelectedLocationsDisplay = (locations: string[]) => {
                 {isLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                     <CircularProgress size={40} />
-                    <Typography sx={{ ml: 2 }}>Updating dashboard data...</Typography>
+                    <Typography sx={{ ml: 2 }}>Updating dashboard data with enhanced formatting...</Typography>
                   </Box>
                 ) : (
                   <MenuAnalysisDashboardtwo
-                    key={`menu-analysis-${currentProductMixLocation}-${currentProductMixData?.filterTimestamp || 'original'}`}
-                    productMixData={currentProductMixData}
+                    key={`menu-analysis-${currentProductMixLocation}-${formattedCurrentData?.filterTimestamp || 'original'}`}
+                    productMixData={formattedCurrentData}
                   />
                 )}
               </Box>

@@ -811,7 +811,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
             value={averageOrderValue}
             change={averageOrderValueChange}
             color="#9c27b0"
-            formatValue={(v) => `$${v}`}
+            formatValue={(v) => `${v}`}
           />
 
           <StatCard
