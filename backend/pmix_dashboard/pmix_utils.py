@@ -530,6 +530,9 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
     # 2. Average Price by Menu Item
     # -------------------------------------------------------
     # Calculate average price for each menu item
+    if 'Avg Price' not in filtered_df.columns:
+        filtered_df['Avg Price'] = filtered_df['Net Price'] / filtered_df['Qty']
+
     average_price_by_item = filtered_df.groupby('Menu Item')['Avg Price'].mean().reset_index()
     average_price_by_item.columns = ['Menu Item', 'Price']
     

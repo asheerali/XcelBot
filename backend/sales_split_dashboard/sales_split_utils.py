@@ -208,7 +208,7 @@ from datetime import datetime, timedelta
 # category_pct_table = result['category_percent_of_total']
 # category_summary = result['category_summary']
 
-def create_sales_pivot_tables(df, location_filter='All', start_date=None, end_date=None):
+def create_sales_pivot_tables(df, location_filter='All', start_date=None, end_date=None, categories_filter='All'):
     """
     Create pivot tables showing:
     1. Sales by week and category with grand totals
@@ -245,6 +245,12 @@ def create_sales_pivot_tables(df, location_filter='All', start_date=None, end_da
         else:
             filtered_df = filtered_df[filtered_df['Location'] == location_filter]
     
+    # Apply category filter
+    if categories_filter != 'All':
+        if isinstance(categories_filter, list):
+            filtered_df = filtered_df[filtered_df['Category'].isin(categories_filter)]
+        else:
+            filtered_df = filtered_df[filtered_df['Category'] == categories_filter]
 
     if start_date is not None:
         if isinstance(start_date, str):

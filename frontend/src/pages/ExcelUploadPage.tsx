@@ -467,7 +467,7 @@ const ExcelUploadPage: React.FC = () => {
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         const droppedFiles = Array.from(e.dataTransfer.files);
         const excelFiles = droppedFiles.filter(
-          (file) => file.name.endsWith(".xlsx") || file.name.endsWith(".xls")
+          (file) => file.name.endsWith(".xlsx") || file.name.endsWith(".xls") || file.name.endsWith(".csv")
         );
 
         if (excelFiles.length === 0) {
@@ -504,7 +504,7 @@ const ExcelUploadPage: React.FC = () => {
       if (e.target.files && e.target.files.length > 0) {
         const selectedFiles = Array.from(e.target.files);
         const excelFiles = selectedFiles.filter(
-          (file) => file.name.endsWith(".xlsx") || file.name.endsWith(".xls")
+          (file) => file.name.endsWith(".xlsx") || file.name.endsWith(".xls") || file.name.endsWith(".csv")
         );
 
         if (excelFiles.length === 0) {
@@ -1089,7 +1089,7 @@ const ExcelUploadPage: React.FC = () => {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".xlsx,.xls"
+                accept=".xlsx,.xls, .csv"
                 multiple
                 onChange={handleFileChange}
                 style={{ display: "none" }}

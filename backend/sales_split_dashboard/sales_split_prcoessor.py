@@ -129,7 +129,7 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
  
     # p1 = overview_tables(df, location_filter=location_filter, order_date_filter=order_date_filter, server_filter=server_filter, dining_option_filter=dining_option_filter)
     
-    pivot = create_sales_pivot_tables(df, location_filter=location, start_date=start_date, end_date=end_date)
+    pivot = create_sales_pivot_tables(df, location_filter=location, start_date=start_date, end_date=end_date, categories_filter=category_filter)
     
     pivot_table = pivot['pivot_table'] #value
     in_house_table = pivot['in_house_table'] #value
@@ -159,8 +159,8 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
     
     sales_overview_analysis = create_sales_overview_tables(df, location_filter='All', start_date=start_date_str, end_date=end_date_str)
 
-    analysis = sales_analysis_tables(df, location_filter=location, start_date=start_date, end_date=end_date, categories_filter=category_filter )
-    
+    analysis = sales_analysis_tables(df, location_filter=location, start_date=start_date, end_date=end_date, categories_filter=category_filter)
+
     #    # Return all tables and metrics in a dictionary
     # return {
     #     'sales_by_location': sales_by_location,
