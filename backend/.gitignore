@@ -11,3 +11,4 @@ test/
 .venv
 env/
 ENV/
+app.db

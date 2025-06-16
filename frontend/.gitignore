@@ -37,3 +37,4 @@ DS_Store
 
 # shell script
 *.sh
+app.db
