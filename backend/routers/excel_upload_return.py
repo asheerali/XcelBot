@@ -103,6 +103,9 @@ def process_financials_and_sales_wide(request, file_content, file_name):
         "data": "Financial Dashboard is not yet implemented."
     }
     print("Result for the financials:", financials_result)
+    
+    startDate='2025-03-17' 
+    endDate='2025-06-15'
     # Process companywide/sales wide data
     excel_data_copy2 = io.BytesIO(file_content)
     (sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, 
@@ -111,7 +114,9 @@ def process_financials_and_sales_wide(request, file_content, file_name):
         store_filter='All', 
         year_filter=None, 
         quarter_filter='All', 
-        helper4_filter='All'
+        helper4_filter='All',
+        start_date=startDate,
+        end_date=endDate
     )
     
     sales_wide_result = {
