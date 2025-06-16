@@ -445,161 +445,179 @@ export function ExcelImport() {
   };
 
   // FIXED: New method that accepts explicit date values to avoid timing issues
-  const handleApplyFiltersWithDates = (explicitStartDate: string, explicitEndDate: string, categories: string[]) => {
-    console.log('🎯 ExcelImport: handleApplyFiltersWithDates called with explicit values:', {
-      explicitStartDate,
-      explicitEndDate,
-      categories,
-      selectedLocation
+ // Fixed handleApplyFiltersWithDates function in ExcelImport.tsx
+const handleApplyFiltersWithDates = (
+  explicitStartDate: string, 
+  explicitEndDate: string, 
+  categories: string[],
+  selectedLocations: string[] // ✅ Now receives array of selected locations
+) => {
+  console.log('🎯 ExcelImport: Applying filters with explicit values:', {
+    startDate: explicitStartDate,
+    endDate: explicitEndDate,
+    categories,
+    selectedLocations // ✅ Log all selected locations
+  });
+
+  // Check if we have any files loaded
+  if (!files || files.length === 0) {
+    setLocalError('No files uploaded. Please upload Excel files first.');
+    return;
+  }
+
+  // ✅ FIXED: Handle multiple locations - find files for all selected locations
+  const filesForLocations = selectedLocations.map(location => {
+    const file = files.find(f => f.location === location);
+    if (!file) {
+      console.warn(`No file found for location: ${location}`);
+    }
+    return { location, file };
+  }).filter(item => item.file !== undefined);
+
+  if (filesForLocations.length === 0) {
+    setLocalError(`No files found for selected locations: ${selectedLocations.join(', ')}`);
+    return;
+  }
+
+  // Use the first file for the request (or you could send multiple files)
+  const primaryFile = filesForLocations[0].file!;
+
+  try {
+    console.log('🔄 Starting backend request...');
+    setIsWaitingForBackendResponse(true);
+    setHasValidData(false);
+    
+    if (setLoading && typeof setLoading === 'function') {
+      dispatch(setLoading(true));
+    }
+    
+    if (setError && typeof setError === 'function') {
+      dispatch(setError(null));
+    }
+    
+    setLocalError('');
+    
+    // ✅ Update Redux state with the first selected location for backward compatibility
+    dispatch(selectLocation(selectedLocations[0]));
+    
+    // Format dates correctly for API
+    let formattedStartDate: string | null = null;
+    let formattedEndDate: string | null = null;
+    
+    if (explicitStartDate) {
+      const dateParts = explicitStartDate.split('/');
+      if (dateParts.length === 3) {
+        formattedStartDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
+      }
+    }
+    
+    if (explicitEndDate) {
+      const dateParts = explicitEndDate.split('/');
+      if (dateParts.length === 3) {
+        formattedEndDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
+      }
+    }
+
+    console.log('📅 Formatted dates for API:', {
+      original: { start: explicitStartDate, end: explicitEndDate },
+      formatted: { start: formattedStartDate, end: formattedEndDate }
     });
-
-    // Check if we have any files loaded
-    if (!files || files.length === 0) {
-      setLocalError('No files uploaded. Please upload Excel files first.');
-      return;
-    }
     
-    // Find the file for the selected location
-    const fileForLocation = files.find(f => f.location === selectedLocation);
+    // ✅ FIXED: Prepare filter data with ALL selected locations
+    const filterData = {
+      fileName: primaryFile.fileName,
+      startDate: formattedStartDate,
+      endDate: formattedEndDate,
+      // ✅ Send ALL selected locations as an array
+      locations: selectedLocations,
+      // Keep single location for backward compatibility
+      location: selectedLocations[0] || null,
+      dateRangeType: 'Custom Date Range',
+      selectedCategories: categories,
+      categories: categories.join(','),
+      // ✅ Additional metadata for multiple location handling
+      multipleLocations: selectedLocations.length > 1,
+      allFileNames: filesForLocations.map(item => item.file!.fileName)
+    };
     
-    if (!fileForLocation) {
-      setLocalError(`No file found for location: ${selectedLocation}`);
-      return;
-    }
-
-    try {
-      console.log('🔄 Starting backend request...');
-      setIsWaitingForBackendResponse(true);
-      setHasValidData(false); // Clear valid data flag until we get response
-      
-      if (setLoading && typeof setLoading === 'function') {
-        dispatch(setLoading(true));
-      }
-      
-      if (setError && typeof setError === 'function') {
-        dispatch(setError(null));
-      }
-      
-      setLocalError('');
-      
-      // Update Redux state with the new location
-      dispatch(selectLocation(selectedLocation));
-      
-      // FIXED: Use the explicit date values passed to this function
-      let formattedStartDate: string | null = null;
-      let formattedEndDate: string | null = null;
-      
-      if (explicitStartDate) {
-        // Convert MM/dd/yyyy to yyyy-MM-dd format for API
-        const dateParts = explicitStartDate.split('/');
-        if (dateParts.length === 3) {
-          formattedStartDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
-        }
-      }
-      
-      if (explicitEndDate) {
-        // Convert MM/dd/yyyy to yyyy-MM-dd format for API
-        const dateParts = explicitEndDate.split('/');
-        if (dateParts.length === 3) {
-          formattedEndDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
-        }
-      }
-      
-      console.log('📅 Formatted dates for API:', {
-        original: { start: explicitStartDate, end: explicitEndDate },
-        formatted: { start: formattedStartDate, end: formattedEndDate }
-      });
-      
-      // Prepare filter data with explicit values
-      const filterData = {
-        fileName: fileForLocation.fileName,
-        startDate: formattedStartDate,
-        endDate: formattedEndDate,
-        location: selectedLocation || null,
-        dateRangeType: 'Custom Date Range',
-        selectedCategories: categories,
-        categories: categories.join(',')
-      };
-      
-      console.log('📤 Sending filter request with explicit values:', filterData);
-      
-      // Call filter API
-      axios.post(FILTER_API_URL, filterData)
-        .then(response => {
-          console.log('📥 Received filter response:', response.data);
+    console.log('📤 Sending filter request with multiple locations:', filterData);
+    
+    // Call filter API
+    axios.post(FILTER_API_URL, filterData)
+      .then(response => {
+        console.log('📥 Received filter response:', response.data);
+        
+        if (response.data) {
+          // Update Redux state with new data
+          dispatch(setTableData(response.data));
           
-          if (response.data) {
-            // Update Redux state with new data
-            dispatch(setTableData(response.data));
-            
-            setLocalError('');
-            setChartKey(prevKey => prevKey + 1);
-            
-            // Update local state with the values that were actually sent
-            setStartDate(explicitStartDate);
-            setEndDate(explicitEndDate);
-            setDateRangeType('Custom Date Range');
-            
-            // Mark that we have valid data
-            setHasValidData(true);
-            setIsWaitingForBackendResponse(false);
-            
-            console.log('✅ Filter applied successfully with explicit values');
-          } else {
-            throw new Error('Invalid response data');
-          }
-        })
-        .catch(err => {
-          console.error('❌ Filter error:', err);
+          setLocalError('');
+          setChartKey(prevKey => prevKey + 1);
           
+          // Update local state with the values that were actually sent
+          setStartDate(explicitStartDate);
+          setEndDate(explicitEndDate);
+          setDateRangeType('Custom Date Range');
+          
+          // Mark that we have valid data
+          setHasValidData(true);
           setIsWaitingForBackendResponse(false);
-          setHasValidData(false);
           
-          let errorMessage = 'Error filtering data';
-          if (axios.isAxiosError(err)) {
-            if (err.response) {
-              const detail = err.response.data?.detail;
-              errorMessage = `Server error: ${detail || err.response.status}`;
-              
-              if (detail && typeof detail === 'string' && detail.includes('isinf')) {
-                errorMessage = 'Backend error: Please update the backend code to use numpy.isinf instead of pandas.isinf';
-              } else if (err.response.status === 404) {
-                errorMessage = 'API endpoint not found. Is the server running?';
-              }
-            } else if (err.request) {
-              errorMessage = 'No response from server. Please check if the backend is running.';
+          console.log('✅ Filter applied successfully with multiple locations:', selectedLocations);
+        } else {
+          throw new Error('Invalid response data');
+        }
+      })
+      .catch(err => {
+        console.error('❌ Filter error:', err);
+        
+        setIsWaitingForBackendResponse(false);
+        setHasValidData(false);
+        
+        let errorMessage = 'Error filtering data';
+        if (axios.isAxiosError(err)) {
+          if (err.response) {
+            const detail = err.response.data?.detail;
+            errorMessage = `Server error: ${detail || err.response.status}`;
+            
+            if (detail && typeof detail === 'string' && detail.includes('isinf')) {
+              errorMessage = 'Backend error: Please update the backend code to use numpy.isinf instead of pandas.isinf';
+            } else if (err.response.status === 404) {
+              errorMessage = 'API endpoint not found. Is the server running?';
             }
+          } else if (err.request) {
+            errorMessage = 'No response from server. Please check if the backend is running.';
           }
-          
-          setLocalError(errorMessage);
-          if (setError && typeof setError === 'function') {
-            dispatch(setError(errorMessage));
-          }
-        })
-        .finally(() => {
-          if (setLoading && typeof setLoading === 'function') {
-            dispatch(setLoading(false));
-          }
-        });
-      
-    } catch (err: any) {
-      console.error('Filter error:', err);
-      setIsWaitingForBackendResponse(false);
-      setHasValidData(false);
-      
-      const errorMessage = 'Error applying filters: ' + (err.message || 'Unknown error');
-      setLocalError(errorMessage);
-      
-      if (setError && typeof setError === 'function') {
-        dispatch(setError(errorMessage));
-      }
-      
-      if (setLoading && typeof setLoading === 'function') {
-        dispatch(setLoading(false));
-      }
+        }
+        
+        setLocalError(errorMessage);
+        if (setError && typeof setError === 'function') {
+          dispatch(setError(errorMessage));
+        }
+      })
+      .finally(() => {
+        if (setLoading && typeof setLoading === 'function') {
+          dispatch(setLoading(false));
+        }
+      });
+    
+  } catch (err: any) {
+    console.error('Filter error:', err);
+    setIsWaitingForBackendResponse(false);
+    setHasValidData(false);
+    
+    const errorMessage = 'Error applying filters: ' + (err.message || 'Unknown error');
+    setLocalError(errorMessage);
+    
+    if (setError && typeof setError === 'function') {
+      dispatch(setError(errorMessage));
     }
-  };
-
+    
+    if (setLoading && typeof setLoading === 'function') {
+      dispatch(setLoading(false));
+    }
+  }
+};
   // LEGACY: Keep the original method for backward compatibility
   const handleApplyFilters = (location = selectedLocation, dateRange = dateRangeType) => {
     console.log('⚠️ ExcelImport: Using legacy handleApplyFilters - may have timing issues');
@@ -1081,11 +1099,11 @@ export function ExcelImport() {
   Sales Split Dashboard
       </h1>
     </div>
-          {/* <Typography variant="subtitle1" color="text.secondary">
+          <Typography variant="subtitle1" color="text.secondary">
             {files.length > 0
               ? `Analyzing data from ${files.length} location${files.length > 1 ? 's' : ''}`
               : 'Upload Excel files to analyze sales data across different categories'}
-          </Typography> */}
+          </Typography>
         </Box>
 
         {/* Status Card */}
