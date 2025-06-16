@@ -22,8 +22,8 @@ class SalesSplitPmixUploadRequest(BaseModel):
     endDate: Optional[str] = None
     location: Optional[Union[str, List[str]]] = None
     locations: Optional[List[str]] = None
-    server: Optional[Union[str, List[str]]] = None
-    category: Optional[Union[str, List[str]]] = None
+    servers: Optional[Union[str, List[str]]] = None
+    categories: Optional[Union[str, List[str]]] = None
 
 class FinancialCompanyWideUploadRequest(BaseModel):
     fileName: str
