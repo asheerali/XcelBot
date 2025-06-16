@@ -651,9 +651,9 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
 
 
 
-def create_sales_by_category_tables(df, location_filter='All', start_date=None, end_date=None):
-    
-    
+def create_sales_by_category_tables(df, location_filter='All', start_date=None, end_date=None, category_filter='All', server_filter='All'):
+
+
     # Make a copy of the dataframe
     df_copy = df.copy()
     
@@ -664,6 +664,20 @@ def create_sales_by_category_tables(df, location_filter='All', start_date=None, 
         else:
             df_copy = df_copy[df_copy['Location'] == location_filter]
     
+    # Apply server filter
+    if server_filter != 'All':
+        if isinstance(server_filter, list):
+            df_copy = df_copy[df_copy['Server'].isin(server_filter)]
+        else:
+            df_copy = df_copy[df_copy['Server'] == server_filter]
+            
+    # Apply category filter
+    if category_filter != 'All':
+        if isinstance(category_filter, list):
+            df_copy = df_copy[df_copy['Category'].isin(category_filter)]
+        else:
+            df_copy = df_copy[df_copy['Category'] == category_filter]
+            
     # Convert dates if they're strings
     if start_date is not None and isinstance(start_date, str):
         start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
@@ -915,7 +929,7 @@ import pandas as pd
 
 
 
-def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, end_date=None):
+def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, end_date=None, category_filter='All', server_filter='All'):
     """
     Create a comparison table of top 10 vs bottom 10 items by sales.
     
@@ -944,6 +958,22 @@ def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, 
         start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
     if end_date is not None and isinstance(end_date, str):
         end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+    # Apply category filter
+    if category_filter != 'All':
+        if isinstance(category_filter, list):
+            df_copy = df_copy[df_copy['Category'].isin(category_filter)]
+        else:
+            df_copy = df_copy[df_copy['Category'] == category_filter]
+            
+    # Apply server filter
+    if server_filter != 'All':
+        
+        if isinstance(server_filter, list):
+            df_copy = df_copy[df_copy['Server'].isin(server_filter)]
+        else:
+            df_copy = df_copy[df_copy['Server'] == server_filter]
+            
     
     # Filter current period data
     filtered_df = df_copy.copy()

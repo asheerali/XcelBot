@@ -163,13 +163,13 @@ def process_pmix_file(file_data: Union[io.BytesIO, str],start_date=None, end_dat
     unique_orders_change = p2['unique_orders_change'] #value
     total_quantity_change = p2['total_quantity_change'] #value
      
-    p3 = create_sales_by_category_tables(df, location_filter=location_filter, start_date=start_date, end_date=end_date)
+    p3 = create_sales_by_category_tables(df, location_filter=location_filter, start_date=start_date, end_date=end_date, category_filter=category_filter , server_filter=server_filter)
     
     sales_by_category_tables_df = p3['sales_by_category_table']
     category_comparison_table_df = p3['category_comparison_table']
     sales_by_category_by_day_table_df = p3['sales_by_category_by_day_table']
-    
-    top_vs_bottom_comparison_df  = create_top_vs_bottom_comparison(df, location_filter=location_filter, start_date=start_date, end_date=end_date)
+
+    top_vs_bottom_comparison_df  = create_top_vs_bottom_comparison(df, location_filter=location_filter, start_date=start_date, end_date=end_date, category_filter=category_filter , server_filter=server_filter)
 
     
     return net_sales, orders, qty_sold, sales_by_category_df, sales_by_menu_group_df, sales_by_server_df, top_selling_items_df, sales_by_location_df, average_price_by_item_df, average_order_value, average_items_per_order, price_changes_df, top_items_df, unique_orders, total_quantity, locations, server, category, net_sales_change, orders_change, qty_sold_change, average_order_value_change, average_items_per_order_change, unique_orders_change, total_quantity_change, sales_by_category_tables_df, category_comparison_table_df, sales_by_category_by_day_table_df, top_vs_bottom_comparison_df

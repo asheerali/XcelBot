@@ -41,11 +41,11 @@ async def filter_excel_data(request: SalesSplitPmixUploadRequest = Body(...)):
         if request.location == "Multiple Locations":
             location_filter = "All"
         else:
-            location_filter = request.location if request.location else 'All'
+            location_filter = request.locations if request.locations else 'All'
         start_date = request.startDate if request.startDate else None
         end_date = request.endDate if request.endDate else None
-        server_filter = request.server if request.server else 'All'
-        category_filter = request.category if request.category else 'All'
+        # server_filter = request.server if request.server else 'All'
+        category_filter = request.categories if request.categories or request.categories == '' else 'All'
         print("i am  here in sales_split_filter.py checking the category_filter", category_filter, "and the request ,", request)
         
         # fileName = "20250514_200147_midtown_east_dashboard2_template1.xlsx"
