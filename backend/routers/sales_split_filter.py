@@ -106,13 +106,12 @@ async def filter_excel_data(request: SalesSplitPmixUploadRequest = Body(...)):
         "locations": locations,
         "categories": categories,
         "dashboardName": "Sales Split",
-        "fileName": request.file_name,
+        "fileName": request.fileName,
         "data": f"Sales Split Dashboard is not yet implemented."
     }
                    
 
-                        
-        print(f"Sales Split Dashboard: {sales_split_dashboard}")            
+        print(f"Sales Split Dashboard: {sales_split_dashboard}")
             # Return the properly structured response
         return sales_split_dashboard
         
