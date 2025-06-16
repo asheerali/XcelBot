@@ -80,6 +80,9 @@ import PhoneIcon from "@mui/icons-material/Phone";
 import EmailIcon from "@mui/icons-material/Email";
 import WebIcon from "@mui/icons-material/Web";
 import CloseIcon from "@mui/icons-material/Close";
+import { API_URL_Local } from "../constants";
+
+const SALES_WIDE_FILTER_API_URL = `${API_URL_Local}/company-overview/`;
 
 interface Permission {
   id: string;
@@ -276,8 +279,8 @@ const CompanyLocationManager: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await fetch('http://localhost:8000/company-overview/');
+
+      const response = await fetch(SALES_WIDE_FILTER_API_URL);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

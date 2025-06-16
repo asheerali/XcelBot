@@ -68,9 +68,12 @@ import {
   setLoading,
   setError
 } from '../store/excelSlice';
+import { API_URL_Local } from '../constants';
 
 // API URLs
-const FINANCIAL_FILTER_API_URL = 'http://localhost:8000/api/financials/filter';
+// const FINANCIAL_FILTER_API_URL = 'http://localhost:8000/api/financials/filter';
+const FINANCIAL_FILTER_API_URL = `${API_URL_Local}/api/financials/filter`;
+
 
 // Enhanced styled components
 const StyledCard = styled(Card)(({ theme }) => ({

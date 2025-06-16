@@ -199,9 +199,14 @@ import {
   setLoading,
   setError
 } from '../store/excelSlice';
+import { API_URL_Local } from '../constants';
+
+
 
 // API URL for Sales Wide filter
-const SALES_WIDE_FILTER_API_URL = 'http://localhost:8000/api/companywide/filter';
+// const SALES_WIDE_FILTER_API_URL = 'http://localhost:8000/api/companywide/filter';
+
+const SALES_WIDE_FILTER_API_URL = `${API_URL_Local}/api/companywide/filter`;
 
 // TabPanel Component
 interface TabPanelProps {
