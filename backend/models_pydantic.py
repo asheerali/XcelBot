@@ -16,17 +16,17 @@ class ExcelUploadRequest(BaseModel):
 
 class SalesSplitPmixUploadRequest(BaseModel):
     fileName: str
-    # fileContent: str  # base64 encoded file content
-    dashboard: Optional[str] = None  # Optional type of dashboard (e.g., "Sales", "Inventory")
-    dashboardName: Optional[str] = None  # Optional name for the dashboard
-    startDate: str = None  # Date filter start
-    endDate: str = None    # Date filter end
-    location: Union[str, List[str]] = "All"  # must be a string or list of strings
-    server: Union[str, List[str]] = "All" # must be a string or list of strings
-    category: Union[str, List[str]] = "All"  # must be a string or list of strings
+    dashboard: Optional[str] = None
+    dashboardName: Optional[str] = None
+    startDate: Optional[str] = None
+    endDate: Optional[str] = None
+    location: Optional[Union[str, List[str]]] = None
+    locations: Optional[List[str]] = None
+    server: Optional[Union[str, List[str]]] = None
+    category: Optional[Union[str, List[str]]] = None
 
 class FinancialCompanyWideUploadRequest(BaseModel):
-    fileName: Optional[str] = None
+    fileName: str
     dashboardName: Optional[str] = None
     dashboard: Optional[str] = None
     location: Optional[Union[str, List[str]]] = None
