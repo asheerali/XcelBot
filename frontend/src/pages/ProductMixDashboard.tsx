@@ -551,154 +551,192 @@ export default function ProductMixDashboard() {
   };
 
   // UPDATED: Handle Apply Filters with validation - only location validation needed
-  const handleApplyFilters = async () => {
-    // Validate required filters (only locations are required)
-    if (selectedLocations.length === 0) {
-      setFilterError("Please select at least one location");
-      return;
+ // UPDATED: Handle Apply Filters with validation - FIXED to send multiple locations
+const handleApplyFilters = async () => {
+  // Validate required filters (only locations are required)
+  if (selectedLocations.length === 0) {
+    setFilterError("Please select at least one location");
+    return;
+  }
+
+  setIsLoading(true);
+  setFilterError("");
+  setDataUpdated(false);
+
+  try {
+    // Check if we have any files loaded
+    if (!currentProductMixFile) {
+      throw new Error("No Product Mix data found for selected location");
     }
 
-    setIsLoading(true);
-    setFilterError("");
-    setDataUpdated(false);
+    console.log("🔄 Starting Product Mix filter process...");
 
-    try {
-      // Check if we have any files loaded
-      if (!currentProductMixFile) {
-        throw new Error("No Product Mix data found for selected location");
+    // Format dates correctly for API (convert MM/dd/yyyy to yyyy-MM-dd)
+    let formattedStartDate: string | null = null;
+    let formattedEndDate: string | null = null;
+    
+    if (localStartDate) {
+      const dateParts = localStartDate.split('/');
+      if (dateParts.length === 3) {
+        formattedStartDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
       }
+    }
+    
+    if (localEndDate) {
+      const dateParts = localEndDate.split('/');
+      if (dateParts.length === 3) {
+        formattedEndDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
+      }
+    }
 
-      console.log("🔄 Starting Product Mix filter process...");
+    // FIXED: Prepare the request payload to handle multiple locations
+    const payload = {
+      fileName: currentProductMixFile.fileName,
+      // FIXED: Send all selected locations instead of just the first one
+      locations: selectedLocations, // Send as array
+      location: selectedLocations.length === 1 ? selectedLocations[0] : null, // Keep single location for backward compatibility
+      startDate: formattedStartDate,
+      endDate: formattedEndDate,
+      servers: selectedServers,
+      categories: selectedCategories,
+      menuItems: selectedMenuItems,
+      dashboard: "Product Mix",
+    };
 
-      // Format dates correctly for API (convert MM/dd/yyyy to yyyy-MM-dd)
-      let formattedStartDate: string | null = null;
-      let formattedEndDate: string | null = null;
-      
-      if (localStartDate) {
-        const dateParts = localStartDate.split('/');
-        if (dateParts.length === 3) {
-          formattedStartDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
+    console.log("🚀 Sending Product Mix filter request with multiple locations:", payload);
+
+    // Make API call to Product Mix filter endpoint
+    const response = await axios.post(PRODUCT_MIX_FILTER_API_URL, payload);
+
+    console.log("📥 Received Product Mix filter response:", response.data);
+
+    if (response.data) {
+      // Extract categories from the filtered data
+      const extractedCategories = response.data.categories || selectedCategories;
+
+      // Create enhanced data with filter metadata
+      const enhancedData = {
+        ...response.data,
+        categories: extractedCategories,
+        filterApplied: true,
+        filterTimestamp: new Date().toISOString(),
+        appliedFilters: {
+          // FIXED: Store all selected locations
+          locations: selectedLocations, // Array of all selected locations
+          location: selectedLocations.length === 1 ? selectedLocations[0] : `${selectedLocations.length} locations`, // Display string
+          startDate: localStartDate,
+          endDate: localEndDate,
+          servers: selectedServers,
+          categories: selectedCategories,
+          menuItems: selectedMenuItems,
         }
-      }
-      
-      if (localEndDate) {
-        const dateParts = localEndDate.split('/');
-        if (dateParts.length === 3) {
-          formattedEndDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
-        }
-      }
-
-      // Prepare the request payload
-      const payload = {
-        fileName: currentProductMixFile.fileName,
-
-        location: selectedLocations[0] || currentProductMixLocation,
-        startDate: formattedStartDate,
-        endDate: formattedEndDate,
-        servers: selectedServers,
-        categories: selectedCategories,
-        menuItems: selectedMenuItems,
-        dashboard: "Product Mix",
       };
 
-      console.log("🚀 Sending Product Mix filter request:", payload);
+      console.log("📊 Enhanced data with filters:", enhancedData);
 
-      // Make API call to Product Mix filter endpoint
-      const response = await axios.post(PRODUCT_MIX_FILTER_API_URL, payload);
+      // Update general table data (for compatibility)
+      dispatch(setTableData(enhancedData));
 
-      console.log("📥 Received Product Mix filter response:", response.data);
+      // IMPORTANT: Update Product Mix data for ALL selected locations
+      selectedLocations.forEach(location => {
+        dispatch(addProductMixData({
+          location: location,
+          data: enhancedData,
+          fileName: currentProductMixFile.fileName,
+          fileContent: currentProductMixFile.fileContent || ""
+        }));
+      });
 
-      if (response.data) {
-        // Extract categories from the filtered data
-        const extractedCategories = response.data.categories || selectedCategories;
+      // Update Redux filters with all selected locations
+      dispatch(updateProductMixFilters({
+        locations: selectedLocations, // Store array
+        location: selectedLocations.length === 1 ? selectedLocations[0] : selectedLocations.join(","), // Join for display
+        startDate: localStartDate,
+        endDate: localEndDate,
+        servers: selectedServers.join(","),
+        categories: selectedCategories.join(","),
+        menuItems: selectedMenuItems.join(","),
+        selectedCategories: selectedCategories,
+        dateRangeType: (localStartDate && localEndDate) ? "Custom Date Range" : ""
+      }));
 
-        // Create enhanced data with filter metadata
-        const enhancedData = {
-          ...response.data,
-          categories: extractedCategories,
-          filterApplied: true,
-          filterTimestamp: new Date().toISOString(),
-          appliedFilters: {
-            location: selectedLocations[0] || currentProductMixLocation,
-            startDate: localStartDate,
-            endDate: localEndDate,
-            servers: selectedServers,
-            categories: selectedCategories,
-            menuItems: selectedMenuItems,
-          }
-        };
+      setDataUpdated(true);
+      console.log("✅ Product Mix filters applied successfully for locations:", selectedLocations);
 
-        console.log("📊 Enhanced data with filters:", enhancedData);
-
-        // Update general table data (for compatibility)
-        dispatch(setTableData(enhancedData));
-
-        // IMPORTANT: Update the specific Product Mix data in Redux store
-        dispatch(
-          addProductMixData({
-            fileName: currentProductMixFile.fileName,
-            fileContent: currentProductMixFile.fileContent,
-            location: selectedLocations[0] || currentProductMixLocation,
-            data: enhancedData,
-            categories: extractedCategories,
-          })
-        );
-
-        // Update Redux filters to reflect what was applied
-        dispatch(
-          updateProductMixFilters({
-            location: selectedLocations[0],
-            startDate: localStartDate,
-            endDate: localEndDate,
-            server: selectedServers.join(","),
-            category: selectedCategories.join(","),
-            selectedCategories: selectedCategories,
-            dateRangeType: 'Custom Date Range'
-          })
-        );
-
-        // Update current location if changed
-        if (selectedLocations[0] !== currentProductMixLocation) {
-          dispatch(selectProductMixLocation(selectedLocations[0]));
-        }
-
-        // Set success state
-        setDataUpdated(true);
-        
-        console.log("✅ Product Mix data updated successfully in Redux store");
-        console.log("🔍 Updated product mix data:", enhancedData);
-
-        // Auto-hide success message after 5 seconds
-        setTimeout(() => {
-          setDataUpdated(false);
-        }, 5000);
-
-      } else {
-        throw new Error("No data received from server");
-      }
-    } catch (err: any) {
-      console.error("❌ Product Mix filter error:", err);
-
-      let errorMessage = "Error applying filters";
-
-      if (axios.isAxiosError(err)) {
-        if (err.response) {
-          const detail = err.response.data?.detail;
-          errorMessage = detail || `Server error: ${err.response.status}`;
-        } else if (err.request) {
-          errorMessage =
-            "No response from server. Please check if the backend is running.";
-        }
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-
-      setFilterError(errorMessage);
-      dispatch(setError(errorMessage));
-    } finally {
-      setIsLoading(false);
+      // Show success message
+      setFilterError("");
+      
+    } else {
+      throw new Error("Invalid response data from Product Mix filter API");
     }
-  };
+
+  } catch (error) {
+    console.error("❌ Product Mix filter error:", error);
+    
+    let errorMessage = "Error applying Product Mix filters";
+    if (axios.isAxiosError(error)) {
+      if (error.response) {
+        const detail = error.response.data?.detail;
+        errorMessage = `Server error: ${detail || error.response.status}`;
+        
+        if (detail && typeof detail === 'string' && detail.includes('isinf')) {
+          errorMessage = 'Backend error: Please update the backend code to use numpy.isinf instead of pandas.isinf';
+        } else if (error.response.status === 404) {
+          errorMessage = 'Product Mix filter API endpoint not found. Is the server running?';
+        } else if (error.response.status === 500) {
+          errorMessage = 'Internal server error. Please check the server logs.';
+        }
+      } else if (error.request) {
+        errorMessage = 'Cannot connect to server. Please check your connection and server status.';
+      }
+    } else if (error instanceof Error) {
+      errorMessage = `Product Mix filter error: ${error.message}`;
+    }
+    
+    setFilterError(errorMessage);
+    setDataUpdated(false);
+    
+    // Clear loading state
+    dispatch(setLoading(false));
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+// OPTIONAL: Helper function to handle single location backward compatibility
+const handleSingleLocationFilter = async (location: string) => {
+  // Set selectedLocations to single location and apply filters
+  setSelectedLocations([location]);
+  
+  // Wait for state update and then apply filters
+  setTimeout(() => {
+    handleApplyFilters();
+  }, 100);
+};
+
+// UPDATED: Enhanced filter display to show multiple locations properly
+const formatSelectedLocationsDisplay = (locations: string[]) => {
+  if (locations.length === 0) return "No locations selected";
+  if (locations.length === 1) return locations[0];
+  if (locations.length <= 3) return locations.join(", ");
+  return `${locations.slice(0, 2).join(", ")} and ${locations.length - 2} more`;
+};
+
+// You can also update the active filters display section:
+// Replace the existing location chip with this enhanced version:
+{selectedLocations.length > 0 && (
+  <Chip
+    label={
+      selectedLocations.length === 1
+        ? `Location: ${selectedLocations[0]}`
+        : `Locations: ${formatSelectedLocationsDisplay(selectedLocations)}`
+    }
+    onDelete={() => setSelectedLocations([])}
+    color="primary"
+    variant="outlined"
+    size="small"
+  />
+)}
 
   // Calculate grid sizing based on mobile/tablet status
   const getGridSizes = () => {

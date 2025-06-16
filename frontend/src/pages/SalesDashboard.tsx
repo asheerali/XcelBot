@@ -1043,7 +1043,7 @@ export default function SalesDashboard() {
                   <rect x="55" y="55" width="35" height="35" rx="4" fill="#3F51B5"/>
                 </svg>
               </span>
-            Companywide Sales Dashboard
+            Companywide Sales Dashboard 
             </h1>
           </div>
   
