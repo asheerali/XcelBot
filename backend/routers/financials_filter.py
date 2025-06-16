@@ -31,7 +31,7 @@ async def upload_excel(request: FinancialCompanyWideUploadRequest = Body(...)):
         print("i am here in the financials filter endpoint", request)
         # fileName = "20250514_200147_midtown_east_dashboard2_template1.xlsx"
         file_location = os.path.join(UPLOAD_DIR, fileName)
-        
+        print("i am here checking the startdate and end date 1", request, request.startDate, request.endDate)
         year = request.year if request.year else "All"
         week_range = request.weekRange if request.weekRange else "All"
         if request.location == "Multiple Locations":
@@ -41,6 +41,7 @@ async def upload_excel(request: FinancialCompanyWideUploadRequest = Body(...)):
         # location = request.location if request.location else "All"
         start_date = request.startDate if request.startDate else None
         end_date = request.endDate if request.endDate else None
+        print("i am here checking the startdate and end date 2 ", start_date, end_date)
         
         print("this is the year", year)
 

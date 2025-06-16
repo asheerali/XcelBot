@@ -24,18 +24,18 @@ async def upload_excel(request: FinancialCompanyWideUploadRequest = Body(...)):
     Supports optional date range and location filtering.
     """
     try:
-        # print(f"Received file upload: {request.fileName}")
+        print(f"Received file upload in companywide filters: {request}")
         
         fileName = request.fileName
         # fileName = "20250514_200147_midtown_east_dashboard2_template1.xlsx"
         file_location = os.path.join(UPLOAD_DIR, fileName)
-        if request.location == "Multiple Locations":
+        if request.locations == "Multiple Locations":
             location_filter = "All"
         else:
-            location_filter = request.location if request.location else 'All'
-        year = request.year if request.year else "All"
-        quarter_filter = request.quarter if request.quarter else 'All'
-        week_range = request.weekRange if request.weekRange else 'All'
+            location_filter = request.locations if request.locations else 'All'
+        # year = request.year if request.year else "All"
+        # quarter_filter = request.quarter if request.quarter else 'All'
+        # week_range = request.weekRange if request.weekRange else 'All'
         start_date = request.startDate if request.startDate else None
         end_date = request.endDate if request.endDate else None
             

@@ -24,18 +24,19 @@ class SalesSplitPmixUploadRequest(BaseModel):
     location: Union[str, List[str]] = "All"  # must be a string or list of strings
     server: Union[str, List[str]] = "All" # must be a string or list of strings
     category: Union[str, List[str]] = "All"  # must be a string or list of strings
-    
-class FinancialCompanyWideUploadRequest(BaseModel):
-    fileName: str
-    dashboardName: Optional[str] = None  # Optional name for the dashboard
-    dashboard: Optional[str] = None  # Optional type of dashboard (e.g., "Sales", "Inventory")
-    location: Union[str, List[str]] = "All" # Location filter can be a single string or a list of strings
-    year: Union[Any, List[Any]] = "All"  # Year filter can be a single value or a list of values
-    weekRange: Union[str, List[str]] = "All"  # Week range filter can be a single value or a list of values
-    quarter: Union[int, List[int]] = "All"  # Quarter filter can be a single value or a list of values
-    startDate: str = None  # Date filter start
-    endDate: str = None    # Date filter end
 
+class FinancialCompanyWideUploadRequest(BaseModel):
+    fileName: Optional[str] = None
+    dashboardName: Optional[str] = None
+    dashboard: Optional[str] = None
+    location: Optional[Union[str, List[str]]] = None
+    locations: Optional[List[str]] = None
+    year: Optional[Union[Any, List[Any]]] = None
+    weekRange: Optional[Union[str, List[str]]] = None
+    quarter: Optional[Union[int, List[int]]] = None
+    startDate: Optional[str] = None
+    endDate: Optional[str] = None
+    
 class ExcelFilterRequest(BaseModel):
     fileName: str  # Name of the previously uploaded file
     fileContent: Optional[str] = None  # Optional base64 content if re-uploading
