@@ -223,7 +223,7 @@ const ModernLineChart = ({
               fill="#64748b"
               fontWeight="600"
             >
-              {value.toFixed(1)}
+              {value}
             </text>
           ))}
         </svg>
@@ -406,10 +406,10 @@ const ModernBarChart = ({
               data[hoveredBar.index].label}
           </div>
           <div style={{ marginBottom: "4px" }}>
-            Total: {processedData[hoveredBar.index].total.toFixed(1)}
+            Total: {processedData[hoveredBar.index].total }
           </div>
           <div style={{ marginBottom: "4px" }}>
-            Moving Avg: {processedData[hoveredBar.index].movingAverage.toFixed(1)}
+            Moving Avg: {processedData[hoveredBar.index].movingAverage }
           </div>
           {dataKeys.map((key: string, idx: number) => (
             <div
@@ -430,7 +430,7 @@ const ModernBarChart = ({
                 }}
               ></div>
               {labels[idx] || key}:{" "}
-              {(data[hoveredBar.index][key] || 0).toFixed(1)}
+              {(data[hoveredBar.index][key] || 0) }
             </div>
           ))}
         </div>
@@ -553,7 +553,7 @@ const ModernBarChart = ({
               fill="#64748b"
               fontWeight="600"
             >
-              {value.toFixed(0)}
+              {value }
             </text>
           ))}
         </svg>
@@ -733,10 +733,10 @@ const ModernSingleBarChart = ({
               data[hoveredBar].label}
           </div>
           <div style={{ marginBottom: "4px" }}>
-            Total: {processedData[hoveredBar].total.toFixed(1)}
+            Total: {processedData[hoveredBar].total }
           </div>
           <div style={{ marginBottom: "4px" }}>
-            Moving Avg: {movingAverageData[hoveredBar].movingAverage.toFixed(1)}
+            Moving Avg: {movingAverageData[hoveredBar].movingAverage }
           </div>
           {dataKeys.map((key: string, idx: number) => (
             <div
@@ -756,7 +756,7 @@ const ModernSingleBarChart = ({
                   borderRadius: "2px",
                 }}
               ></div>
-              {labels[idx] || key}: {(data[hoveredBar][key] || 0).toFixed(1)}
+              {labels[idx] || key}: {(data[hoveredBar][key] || 0)}
             </div>
           ))}
         </div>
@@ -853,7 +853,7 @@ const ModernSingleBarChart = ({
               fill="#64748b"
               fontWeight="600"
             >
-              {value.toFixed(0)}
+              {value}
             </text>
           ))}
         </svg>
@@ -1351,12 +1351,12 @@ const ComprehensiveFinancialDashboard: React.FC<FinancialDashboardProps> = ({
 
   const formatPercentage = (value: number): string => {
     if (isNaN(value) || value === null || value === undefined) return "0.0%";
-    return `${value.toFixed(1)}%`;
+    return `${value}%`;
   };
 
   const formatDollar = (value: number): string => {
     if (isNaN(value) || value === null || value === undefined) return "$0.00";
-    return `${value.toFixed(2)}`;
+    return `${value}`;
   };
 
   // Extract real data from tables
@@ -1373,21 +1373,14 @@ const ComprehensiveFinancialDashboard: React.FC<FinancialDashboardProps> = ({
   const kpiData = financialData?.table16 || [];
 
   // Main values from table1 (dynamic) - with fallbacks
-  const mainSalesValue = formatCurrency(table1Data.financials_sales || 0);
-  const mainLaborCostValue = formatPercentage(
-    table1Data.financials_labor_cost || 0
-  );
-  const mainAvgTicketValue = formatDollar(
-    table1Data.financials_avg_ticket || 0
-  );
-  const mainPrimeCostValue = formatPercentage(
-    table1Data.financials_prime_cost || 0
-  );
-  const mainFoodCostValue = formatPercentage(
-    table1Data.financials_food_cost || 0
-  );
-  const mainSpmhValue = formatDollar(table1Data.financials_spmh || 0);
-  const mainLpmhValue = formatDollar(table1Data.financials_lmph || 0);
+  const mainSalesValue = `$${(table1Data.financials_sales || 0).toLocaleString()}`;
+const mainPrimeCostValue = formatPercentage(table1Data.financials_prime_cost || 0);
+  const mainFoodCostValue = formatPercentage(table1Data.financials_food_cost || 0); 
+  
+const mainLaborCostValue = `$${(table1Data.financials_labor_cost || 0).toLocaleString()}`;
+const mainAvgTicketValue = `$${(table1Data.financials_avg_ticket || 0).toLocaleString()}`;
+const mainSpmhValue = `$${(table1Data.financials_spmh || 0).toLocaleString()}`;
+const mainLpmhValue = `$${(table1Data.financials_lmph || 0).toLocaleString()}`;
 
   console.log("💰 Formatted main values:", {
     sales: mainSalesValue,
