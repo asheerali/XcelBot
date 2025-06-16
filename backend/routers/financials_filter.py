@@ -33,16 +33,16 @@ async def upload_excel(request: FinancialCompanyWideUploadRequest = Body(...)):
         file_location = os.path.join(UPLOAD_DIR, fileName)
         print("i am here checking the startdate and end date 1", request, request.startDate, request.endDate)
         year = request.year if request.year else "All"
-        week_range = request.weekRange if request.weekRange else "All"
-        if request.location == "Multiple Locations":
+        # week_range = request.weekRange if request.weekRange else "All"
+        if request.locations == "Multiple Locations":
             location_filter = "All"
         else:
             location_filter = request.locations if request.locations else 'All'
         # location = request.location if request.location else "All"
         start_date = request.startDate if request.startDate else None
         end_date = request.endDate if request.endDate else None
-        print("i am here checking the startdate and end date 2 ", start_date, end_date, "and the request", request)
-        
+        print("i am here checking the startdate and end date 2 ", start_date, end_date,"locations filter", location_filter, "and the request", request)
+
         print("this is the year", year)
 
 
@@ -58,7 +58,6 @@ async def upload_excel(request: FinancialCompanyWideUploadRequest = Body(...)):
          stores)  = process_financials_file(
                 file_location,  
                 year=year, 
-                week_range=week_range, 
                 location=location_filter, 
                 start_date=start_date,
                 end_date=end_date

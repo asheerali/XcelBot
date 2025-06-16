@@ -28,7 +28,8 @@ def financials_filters(df):
     return unique_weeks, unique_years, unique_stores
 
 
-def day_of_the_week_tables(df, store='All', start_date=None, end_date=None):
+def day_of_the_week_tables(df, store='All', start_date=None, end_date=None):  
+
 
 
     # sales_table
@@ -307,18 +308,21 @@ def calculate_tw_lw_bdg_comparison(df, df_budget, store='All', year='All', week_
             filtered_df = filtered_df[filtered_df['Store'].isin(store)]
         else:
             filtered_df = filtered_df[filtered_df['Store'] == store]
-    
+            
+    print("i am here in the financials_utils.py file checking the year", year, "and the store", store, filtered_df['Store'].unique(), filtered_df.head())
+    # Filter by year
+
     if year != 'All':
         if isinstance(year, list):
             filtered_df = filtered_df[filtered_df['Year'].isin(year)]
         else:
             filtered_df = filtered_df[filtered_df['Year'] == year]
     
-    if week_range != 'All':
-        if isinstance(week_range, list):
-            filtered_df = filtered_df[filtered_df['Helper 4'].isin(week_range)]
-        else:
-            filtered_df = filtered_df[filtered_df['Helper 4'] == week_range]
+    # if week_range != 'All':
+    #     if isinstance(week_range, list):
+    #         filtered_df = filtered_df[filtered_df['Helper 4'].isin(week_range)]
+    #     else:
+    #         filtered_df = filtered_df[filtered_df['Helper 4'] == week_range]
     
     # Apply filters to budget dataframe
     if store != 'All':
@@ -333,11 +337,11 @@ def calculate_tw_lw_bdg_comparison(df, df_budget, store='All', year='All', week_
         else:
             filtered_budget_df = filtered_budget_df[filtered_budget_df['Year'] == year]
     
-    if week_range != 'All':
-        if isinstance(week_range, list):
-            filtered_budget_df = filtered_budget_df[filtered_budget_df['Helper 2'].isin(week_range)]
-        else:
-            filtered_budget_df = filtered_budget_df[filtered_budget_df['Helper 2'] == week_range]
+    # if week_range != 'All':
+    #     if isinstance(week_range, list):
+    #         filtered_budget_df = filtered_budget_df[filtered_budget_df['Helper 2'].isin(week_range)]
+    #     else:
+    #         filtered_budget_df = filtered_budget_df[filtered_budget_df['Helper 2'] == week_range]
     
     # Clean function
     def clean_currency(df, col):
@@ -518,4 +522,10 @@ def calculate_tw_lw_bdg_comparison(df, df_budget, store='All', year='All', week_
         rows, 
         columns=["Metric", "This Week", "Last Week", "Tw/Lw (+/-)", "Budget", "Tw/Bdg (+/-)"]
     )
+    
+    print( " i am here in the financials_utils.py file checking the result", result)
     return result
+
+
+
+
