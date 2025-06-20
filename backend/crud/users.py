@@ -5,6 +5,13 @@ from models import users as user_model
 from schemas import users as user_schema
 from datetime import datetime
 from passlib.hash import bcrypt
+from crud.user_company import create_user_company
+from schemas.user_company import UserCompanyCreate
+from crud.user_location import create_user_location
+from schemas.user_location import UserLocationCreate
+from crud.user_location import delete_all_user_locations
+
+
 
 # def create_user(db: Session, user: user_schema.UserCreate):
 #     # Check if email exists
@@ -31,6 +38,34 @@ from passlib.hash import bcrypt
 
 from fastapi import HTTPException
 
+
+# def create_user(db: Session, user: user_schema.UserCreate):
+#     # Check if email exists
+#     existing_user = db.query(user_model.User).filter(user_model.User.email == user.email).first()
+#     if existing_user:
+#         raise ValueError("Email already registered.")
+    
+#     # Enforce company_id check for non-superusers
+#     if user.role != user_schema.RoleEnum.superuser and not user.company_id:
+#         raise HTTPException(status_code=400, detail="Non-superuser accounts must be associated with a company.")
+
+#     hashed_password = bcrypt.hash(user.password)
+#     db_user = user_model.User(
+#         first_name=user.first_name,
+#         last_name=user.last_name,
+#         email=user.email,
+#         password_hash=hashed_password,
+#         phone_number=user.phone_number,
+#         # theme=user.theme,
+#         role=user.role,
+#         company_id=user.company_id  # Make sure to store it
+#     )
+#     db.add(db_user)
+#     db.commit()
+#     db.refresh(db_user)
+#     return db_user
+
+
 def create_user(db: Session, user: user_schema.UserCreate):
     # Check if email exists
     existing_user = db.query(user_model.User).filter(user_model.User.email == user.email).first()
@@ -48,13 +83,31 @@ def create_user(db: Session, user: user_schema.UserCreate):
         email=user.email,
         password_hash=hashed_password,
         phone_number=user.phone_number,
-        theme=user.theme,
         role=user.role,
-        company_id=user.company_id  # Make sure to store it
+        company_id=user.company_id
     )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+
+    # ✅ Add user-company mapping
+    if db_user.company_id:
+        user_company_data = UserCompanyCreate(
+            user_id=db_user.id,
+            company_id=db_user.company_id
+        )
+        create_user_company(db, user_company_data)
+
+    # ✅ handle assigned_location
+    if user.assigned_location:
+        for loc_id in user.assigned_location:
+            user_loc = UserLocationCreate(
+                user_id=db_user.id,
+                company_id=db_user.company_id,
+                location_id=loc_id
+            )
+            create_user_location(db, user_loc)
+            
     return db_user
 
 # def get_users(db: Session):
@@ -84,6 +137,18 @@ def update_user(db: Session, user_id: int, user: user_schema.UserCreate):
     db_user.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(db_user)
+    
+        # ✅ handle reassignment of locations
+    if user.assigned_location is not None:
+        delete_all_user_locations(db, db_user.id)
+        for loc_id in user.assigned_location:
+            user_loc = UserLocationCreate(
+                user_id=db_user.id,
+                company_id=db_user.company_id,
+                location_id=loc_id
+            )
+            create_user_location(db, user_loc)
+            
     return db_user
 
 def delete_user(db: Session, user_id: int):

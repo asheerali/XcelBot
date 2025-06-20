@@ -2,6 +2,8 @@ from datetime import datetime
 from sqlalchemy import Column, DateTime, Integer, String, ForeignKey
 from database import Base
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+
 
 class Store(Base):
     __tablename__ = "locations"
@@ -20,3 +22,6 @@ class Store(Base):
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    company_locations = relationship("CompanyLocation", backref="store", cascade="all, delete-orphan")
+

@@ -3,7 +3,7 @@
 from pydantic import BaseModel, EmailStr
 from enum import Enum
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 
 
@@ -19,12 +19,14 @@ class UserBase(BaseModel):
     last_name: str
     email: EmailStr
     phone_number: Optional[str] = None  
-    theme: bool = False
+    # theme: bool = False
     role: RoleEnum
-    company_id: Optional[UUID] = None  # Now optional
+    company_id: Optional[int] = None  # Now optional
 
 class UserCreate(UserBase):
     password: str  # Plain password for registration
+    assigned_location: Optional[List[int]] = None  # ✅ new
+
 
 class User(UserBase):
     id: int
@@ -33,3 +35,8 @@ class User(UserBase):
 
     class Config:
         from_attributes = True
+
+
+class UserUpdate(UserBase):
+    password: Optional[str] = None
+    assigned_location: Optional[List[int]] = None  # ✅ new

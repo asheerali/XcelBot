@@ -12,9 +12,12 @@ from sqlalchemy.orm import relationship
 class RoleEnum(str, enum.Enum):
     superuser = "superuser"
     admin = "admin"
-    auditor = "auditor"
     manager = "manager"
     trial = "trial"
+    user = "user"
+    # trial = "trial"  # optional, if trial is in your system
+    
+    
 
 class User(Base):
     __tablename__ = "users"

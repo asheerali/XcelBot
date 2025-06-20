@@ -3,6 +3,8 @@ from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
 import uuid
 from database import Base
+from sqlalchemy.orm import relationship
+
 
 class Company(Base):
     __tablename__ = "companies"
@@ -18,3 +20,5 @@ class Company(Base):
     email = Column(String(255), nullable=False)
     website = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    locations = relationship("CompanyLocation", backref="company", cascade="all, delete-orphan")

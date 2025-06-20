@@ -1,9 +1,11 @@
 import { _agents, _roles , _guid} from '../_mock';
 
 export const roleArray = () => [
-  { id: "1", title: 'Admin' },
-  { id: "2", title: 'Auditor' },
-  { id: "3", title: 'Manager' },
+  { id: "1", title: 'superuser' },
+  { id: "2", title: 'admin' },
+  { id: "3", title: 'manager' },
+  { id: "4", title: 'user' },
+  { id: "5", title: 'trial' }
 
 ]
 

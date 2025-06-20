@@ -3,7 +3,7 @@ from uuid import UUID
 
 class UserCompanyBase(BaseModel):
     user_id: int
-    company_id: UUID
+    company_id: int
 
 class UserCompanyCreate(UserCompanyBase):
     pass
