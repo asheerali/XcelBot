@@ -48,20 +48,21 @@ def get_company_overview(db: Session = Depends(get_db)):
                 if getattr(user_permission, "d7", False): permissions_list.append("reporting")
 
             users_payload.append({
-                "id": f"u{str(company.id)}-{user.id}",
+                "id": user.id,
                 "name": f"{user.first_name} {user.last_name}".strip(),
                 "email": user.email,
                 "role": user.role.name.capitalize() if user.role else "Unknown",
                 "permissions": permissions_list,
                 "assignedLocations": assigned_locations,
                 "isActive": user.is_active if hasattr(user, "is_active") else True,
+                "companyId": user.company_id,
                 "createdAt": user.created_at or None,
             })
 
         locations_payload = []
         for loc in company_locations:
             locations_payload.append({
-                "id": f"{str(company.id)}-{loc.id}",
+                "id": loc.id,
                 "name": loc.name,
                 "city": loc.city or "",
                 "state": loc.state or "",
@@ -69,6 +70,7 @@ def get_company_overview(db: Session = Depends(get_db)):
                 "address": loc.address or "",
                 "phone": loc.phone or "",
                 "email": loc.email or "",
+                "companyId": loc.company_id,
                 "isActive": True,
                 "createdAt": loc.created_at or None,
                 "updatedAt": loc.updated_at or None,
@@ -76,7 +78,7 @@ def get_company_overview(db: Session = Depends(get_db)):
             })
 
         response.append({
-            "id": str(company.id),
+            "id": company.id,
             "name": company.name,
             "city": getattr(company, "city", company.state),  # fallback
             "state": company.state,
