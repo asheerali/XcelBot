@@ -30,6 +30,8 @@
     "apexcharts": "^4.0.0",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.1",
     "lucide-react": "^0.507.0",
     "papaparse": "^5.5.2",
     "react": "^18.2.0",

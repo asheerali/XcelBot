@@ -48,6 +48,7 @@ import {
   LinearProgress,
   CircularProgress,
 } from "@mui/material";
+import axios from "axios";
 
 // Icons
 import AddIcon from "@mui/icons-material/Add";
@@ -80,9 +81,17 @@ import PhoneIcon from "@mui/icons-material/Phone";
 import EmailIcon from "@mui/icons-material/Email";
 import WebIcon from "@mui/icons-material/Web";
 import CloseIcon from "@mui/icons-material/Close";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { API_URL_Local } from "../constants";
 
-const SALES_WIDE_FILTER_API_URL = `${API_URL_Local}/company-overview/`;
+const COMPANY_OVERVIEW_API_URL = `${API_URL_Local}/company-overview/`;
+
+// API Endpoints
+const API_ENDPOINTS = {
+  users: `${API_URL_Local}/users`,
+  stores: `${API_URL_Local}/stores`,
+  companies: `${API_URL_Local}/companies`,
+};
 
 interface Permission {
   id: string;
@@ -93,8 +102,10 @@ interface Permission {
 
 interface User {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
+  phone: string;
   role: string;
   permissions: string[];
   assignedLocations: string[];
@@ -106,9 +117,10 @@ interface User {
 interface Location {
   id: string;
   name: string;
+  address: string;
   city: string;
   state: string;
-  postCode: string;
+  postcode: string;
   phone?: string;
   email?: string;
   isActive: boolean;
@@ -120,9 +132,9 @@ interface Location {
 interface Company {
   id: string;
   name: string;
-  city: string;
+  address: string;
   state: string;
-  postCode: string;
+  postcode: string;
   phone: string;
   email?: string;
   website?: string;
@@ -135,7 +147,6 @@ interface Company {
 
 type DialogMode = "add" | "edit" | "view" | null;
 type EntityType = "company" | "location" | "user";
-type ViewMode = "table" | "cards";
 
 const AVAILABLE_PERMISSIONS: Permission[] = [
   {
@@ -199,6 +210,82 @@ const USER_ROLES = [
 const CompanyLocationManager: React.FC = () => {
   const theme = useTheme();
 
+  // Utility function to normalize ID format (remove hyphens if present)
+  const normalizeId = (id: string): string => {
+    if (!id) return id;
+    // Remove hyphens to get the original format
+    const normalized = id.replace(/-/g, '');
+    console.log(`ID normalization: "${id}" -> "${normalized}"`);
+    return normalized;
+  };
+
+  // Utility function to extract location ID only (remove company prefix if present)
+  const extractLocationId = (fullId: string, company_id?: string): string => {
+    if (!fullId) return fullId;
+    
+    console.log(`=== ID EXTRACTION PROCESS ===`);
+    console.log(`Full ID: "${fullId}"`);
+    console.log(`Company ID: "${company_id}"`);
+    console.log(`Full ID type: ${typeof fullId}`);
+    console.log(`Company ID type: ${typeof company_id}`);
+    
+    // Convert to strings to ensure proper comparison
+    const fullIdStr = String(fullId);
+    const company_idStr = String(company_id || '');
+    
+    // If we have the company ID and the full ID starts with it, extract the location part
+    if (company_idStr && fullIdStr.startsWith(company_idStr)) {
+      const locationId = fullIdStr.substring(company_idStr.length);
+      console.log(`SUCCESS: Extracted location ID by removing company prefix`);
+      console.log(`"${fullIdStr}" - "${company_idStr}" = "${locationId}"`);
+      console.log(`=== END ID EXTRACTION ===`);
+      return locationId;
+    }
+    
+    // Check for common compound ID patterns
+    if (fullIdStr.includes('_')) {
+      // Pattern: "company123_location456"
+      const parts = fullIdStr.split('_');
+      const locationId = parts[parts.length - 1];
+      console.log(`Split by underscore: "${fullIdStr}" -> "${locationId}"`);
+      console.log(`=== END ID EXTRACTION ===`);
+      return locationId;
+    }
+    
+    if (fullIdStr.includes('-') && fullIdStr.split('-').length > 4) {
+      // Pattern might be "company_id-locationId" where both are UUIDs
+      // UUID format: 8-4-4-4-12 characters
+      const parts = fullIdStr.split('-');
+      if (parts.length > 5) {
+        // Take last 5 parts as location UUID
+        const locationId = parts.slice(-5).join('-');
+        console.log(`Split compound UUID: "${fullIdStr}" -> "${locationId}"`);
+        console.log(`=== END ID EXTRACTION ===`);
+        return locationId;
+      }
+    }
+    
+    // If no pattern matches, return the original ID
+    console.log(`WARNING: No pattern matched, using original ID: "${fullIdStr}"`);
+    console.log(`=== END ID EXTRACTION ===`);
+    return fullIdStr;
+  };
+
+  // Utility function to get clean location ID for API calls
+  const getLocationIdForAPI = (fullId: string, company_id?: string): string => {
+    // First extract location part using company ID if available, then normalize
+    const locationPart = extractLocationId(fullId, company_id);
+    const normalized = normalizeId(locationPart);
+    console.log(`Location ID for API: "${fullId}" (company: "${company_id}") -> "${normalized}"`);
+    return normalized;
+  };
+
+  // Utility function to format ID for display (if needed)
+  const getOriginalId = (id: string): string => {
+    // Always return the ID without hyphens for consistency
+    return normalizeId(id);
+  };
+
   // State for companies and locations
   const [companies, setCompanies] = useState<Company[]>([]);
   const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
@@ -227,9 +314,9 @@ const CompanyLocationManager: React.FC = () => {
   // Form states
   const [companyForm, setCompanyForm] = useState({
     name: "",
-    city: "",
+    address: "",
     state: "",
-    postCode: "",
+    postcode: "",
     phone: "",
     email: "",
     website: "",
@@ -238,21 +325,27 @@ const CompanyLocationManager: React.FC = () => {
 
   const [locationForm, setLocationForm] = useState({
     name: "",
+    address: "",
     city: "",
     state: "",
-    postCode: "",
+    postcode: "",
     phone: "",
     email: "",
     manager: "",
+    company_id: "", // Hidden field for company association
     isActive: true,
   });
 
+  // Updated user form with firstName, lastName, and phone
   const [userForm, setUserForm] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
+    phone: "",
     role: "",
     permissions: [] as string[],
     assignedLocations: [] as string[],
+    company_id: "", // Hidden field for company association
     isActive: true,
   });
 
@@ -274,938 +367,932 @@ const CompanyLocationManager: React.FC = () => {
     severity: "success",
   });
 
+  // Calculate summary statistics
+  const summaryStats = useMemo(() => {
+    const totalCompanies = companies.length;
+    const activeCompanies = companies.filter(c => c.isActive).length;
+    const inactiveCompanies = totalCompanies - activeCompanies;
+    
+    const totalLocations = companies.reduce((sum, company) => sum + company.locations.length, 0);
+    const activeLocations = companies.reduce((sum, company) => 
+      sum + company.locations.filter(l => l.isActive).length, 0);
+    const inactiveLocations = totalLocations - activeLocations;
+    
+    const totalUsers = companies.reduce((sum, company) => sum + company.users.length, 0);
+    const activeUsers = companies.reduce((sum, company) => 
+      sum + company.users.filter(u => u.isActive).length, 0);
+    const inactiveUsers = totalUsers - activeUsers;
+
+    return {
+      companies: { total: totalCompanies, active: activeCompanies, inactive: inactiveCompanies },
+      locations: { total: totalLocations, active: activeLocations, inactive: inactiveLocations },
+      users: { total: totalUsers, active: activeUsers, inactive: inactiveUsers }
+    };
+  }, [companies]);
+
+  // API Functions for Users
+  const createUser = async (userData: any) => {
+    try {
+      console.log("Creating user with data (including company ID):", userData);
+      console.log("Company ID being sent:", userData.company_id);
+      
+      const response = await axios.post(API_ENDPOINTS.users, userData);
+      
+      console.log("User creation response:", response.data);
+      showNotification("User created successfully", "success");
+      return response.data;
+    } catch (error) {
+      console.error("Error creating user:", error);
+      showNotification("Failed to create user", "error");
+      throw error;
+    }
+  };
+
+  const updateUser = async (userId: string, userData: any) => {
+    try {
+      const response = await axios.put(`${API_ENDPOINTS.users}/${userId}`, userData);
+      showNotification("User updated successfully", "success");
+      return response.data;
+    } catch (error) {
+      console.error("Error updating user:", error);
+      showNotification("Failed to update user", "error");
+      throw error;
+    }
+  };
+
+  const deleteUser = async (userId: string) => {
+    try {
+      const normalizedId = normalizeId(userId);
+      console.log("Deleting user with normalized ID:", normalizedId);
+      await axios.delete(`${API_ENDPOINTS.users}/${normalizedId}`);
+      showNotification("User deleted successfully", "success");
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      showNotification("Failed to delete user", "error");
+      throw error;
+    }
+  };
+
+  // API Functions for Locations/Stores
+  const createLocation = async (locationData: any) => {
+    try {
+      console.log("Creating location with data (including company ID):", locationData);
+      console.log("Company ID being sent:", locationData.company_id);
+      
+      const response = await axios.post(API_ENDPOINTS.stores, locationData);
+      
+      console.log("Location creation response:", response.data);
+      showNotification("Location created successfully", "success");
+      return response.data;
+    } catch (error) {
+      console.error("Error creating location:", error);
+      showNotification("Failed to create location", "error");
+      throw error;
+    }
+  };
+
+  const updateLocation = async (locationId: string, locationData: any) => {
+    try {
+      const response = await axios.put(`${API_ENDPOINTS.stores}/${locationId}`, locationData);
+      showNotification("Location updated successfully", "success");
+      return response.data;
+    } catch (error) {
+      console.error("Error updating location:", error);
+      showNotification("Failed to update location", "error");
+      throw error;
+    }
+  };
+
+  const deleteLocation = async (locationId: string) => {
+    try {
+      await axios.delete(`${API_ENDPOINTS.stores}/${locationId}`);
+      showNotification("Location deleted successfully", "success");
+    } catch (error) {
+      console.error("Error deleting location:", error);
+      showNotification("Failed to delete location", "error");
+      throw error;
+    }
+  };
+
+  // API Functions for Companies
+  const createCompany = async (companyData: any) => {
+    try {
+      const response = await axios.post(API_ENDPOINTS.companies, companyData);
+      showNotification("Company created successfully", "success");
+      return response.data;
+    } catch (error) {
+      console.error("Error creating company:", error);
+      showNotification("Failed to create company", "error");
+      throw error;
+    }
+  };
+
+  const updateCompany = async (company_id: string, companyData: any) => {
+    try {
+      const response = await axios.put(`${API_ENDPOINTS.companies}/${company_id}`, companyData);
+      showNotification("Company updated successfully", "success");
+      return response.data;
+    } catch (error) {
+      console.error("Error updating company:", error);
+      showNotification("Failed to update company", "error");
+      throw error;
+    }
+  };
+
+  const deleteCompany = async (company_id: string) => {
+    try {
+      await axios.delete(`${API_ENDPOINTS.companies}/${company_id}`);
+      showNotification("Company deleted successfully", "success");
+    } catch (error) {
+      console.error("Error deleting company:", error);
+      showNotification("Failed to delete company", "error");
+      throw error;
+    }
+  };
+
   // API call to fetch company data
   const fetchCompanyData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(SALES_WIDE_FILTER_API_URL);
+      console.log("Fetching data from:", COMPANY_OVERVIEW_API_URL);
+      
+      const response = await fetch(COMPANY_OVERVIEW_API_URL);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
+      console.log("Raw API Response:", data);
       
-      // Transform the API response to match our interface
-      const transformedCompanies: Company[] = data.map((apiCompany: any) => ({
-        id: apiCompany.id,
-        name: apiCompany.name,
-        city: apiCompany.city,
-        state: apiCompany.state,
-        postCode: apiCompany.postCode,
-        phone: apiCompany.phone,
-        email: apiCompany.email,
-        website: apiCompany.website,
-        isActive: apiCompany.isActive,
-        createdAt: new Date(apiCompany.createdAt),
-        updatedAt: new Date(apiCompany.updatedAt),
-        locations: apiCompany.locations.map((apiLocation: any) => ({
-          id: apiLocation.id,
-          name: apiLocation.name,
-          city: apiLocation.city,
-          state: apiLocation.state,
-          postCode: apiLocation.postCode,
-          phone: apiLocation.phone,
-          email: apiLocation.email,
-          isActive: apiLocation.isActive,
-          manager: apiLocation.manager,
-          createdAt: new Date(apiLocation.createdAt),
-          updatedAt: new Date(apiLocation.updatedAt),
-        })),
-        users: apiCompany.users.map((apiUser: any) => ({
-          id: apiUser.id,
-          name: apiUser.name,
-          email: apiUser.email,
-          role: apiUser.role,
-          permissions: apiUser.permissions || [],
-          assignedLocations: apiUser.assignedLocations || [],
-          isActive: apiUser.isActive,
-          createdAt: new Date(apiUser.createdAt),
-        })),
-      }));
+      // Handle different possible response structures
+      let companiesData = [];
       
-      setCompanies(transformedCompanies);
+      if (data && Array.isArray(data)) {
+        companiesData = data;
+        console.log("Set companies from direct array:", data);
+      } else if (data && data.companies && Array.isArray(data.companies)) {
+        companiesData = data.companies;
+        console.log("Set companies from data.companies:", data.companies);
+      } else if (data && data.data && Array.isArray(data.data)) {
+        companiesData = data.data;
+        console.log("Set companies from data.data:", data.data);
+      } else if (data && data.results && Array.isArray(data.results)) {
+        companiesData = data.results;
+        console.log("Set companies from data.results:", data.results);
+      } else {
+        console.warn("No companies data found in response. Response structure:", data);
+        
+        // Create sample data for testing if no data is returned
+        const sampleData = [
+          {
+            id: "4f50ec60c70046669490bd34d3953046", // Keep original format
+            name: "Default Company",
+            address: "123 Main Street",
+            state: "NY",
+            postcode: "10001",
+            phone: "000-000-0000",
+            email: "default@company.com",
+            website: "",
+            isActive: true,
+            locations: [
+              {
+                id: "loc1",
+                name: "Main Office",
+                address: "456 Business Ave",
+                city: "Default City",
+                state: "DC",
+                postcode: "00000",
+                phone: "000-000-0000",
+                email: "main@company.com",
+                isActive: true,
+                manager: "",
+                createdAt: new Date(),
+                updatedAt: new Date()
+              }
+            ],
+            users: [
+              {
+                id: "user1",
+                firstName: "John",
+                lastName: "Doe",
+                email: "john@company.com",
+                phone: "000-000-0000",
+                role: "admin",
+                permissions: ["user_management"],
+                assignedLocations: ["Main Office"],
+                isActive: true,
+                createdAt: new Date()
+              }
+            ],
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        ];
+        
+        console.log("Using sample data for testing:", sampleData);
+        companiesData = sampleData;
+      }
       
-    } catch (err) {
-      console.error('Error fetching company data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch company data');
+      // Debug: Check ID formats in the received data
+      companiesData.forEach((company, index) => {
+        console.log(`Company ${index} - Original ID from API:`, company.id);
+        console.log(`Company ${index} - ID type:`, typeof company.id);
+        console.log(`Company ${index} - ID length:`, company.id?.length);
+        
+        // Debug location IDs
+        if (company.locations) {
+          company.locations.forEach((location, locIndex) => {
+            console.log(`  Location ${locIndex} - Original ID from API:`, location.id);
+            console.log(`  Location ${locIndex} - Extracted location ID:`, extractLocationId(location.id, company.id));
+            console.log(`  Location ${locIndex} - Clean API ID:`, getLocationIdForAPI(location.id, company.id));
+          });
+        }
+      });
+      
+      setCompanies(companiesData);
+      
+    } catch (error) {
+      console.error("Error fetching company data:", error);
+      setError(`Failed to load company data: ${error.message}`);
+      setCompanies([]);
+      
+      // Show more detailed error information
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        setError("Network error: Cannot connect to the API. Please check if the server is running.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Initial data fetch
+  // Initialize data
   useEffect(() => {
+    console.log("Component mounted, API_URL_Local:", API_URL_Local);
+    console.log("Full API URL:", COMPANY_OVERVIEW_API_URL);
     fetchCompanyData();
   }, []);
 
-  // Handle refresh
-  const handleRefresh = () => {
-    fetchCompanyData();
-  };
-
   // Filter companies based on search and filters
-  const filteredAndSortedCompanies = useMemo(() => {
+  const filteredCompaniesData = useMemo(() => {
     let filtered = companies;
 
-    // Apply search filter
+    // Search filter
     if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (company) =>
-          company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          company.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          company.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          company.name.toLowerCase().includes(searchLower) ||
+          company.address.toLowerCase().includes(searchLower) ||
+          company.state.toLowerCase().includes(searchLower) ||
+          company.email?.toLowerCase().includes(searchLower) ||
           company.locations.some(
             (location) =>
-              location.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              location.city.toLowerCase().includes(searchTerm.toLowerCase())
+              location.name.toLowerCase().includes(searchLower) ||
+              location.address.toLowerCase().includes(searchLower) ||
+              location.city.toLowerCase().includes(searchLower)
           ) ||
           company.users.some(
             (user) =>
-              user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              user.email.toLowerCase().includes(searchTerm.toLowerCase())
+              `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchLower) ||
+              user.email.toLowerCase().includes(searchLower)
           )
       );
     }
 
-    // Apply role filter
+    // Role filter
     if (selectedRole) {
       filtered = filtered.filter((company) =>
         company.users.some((user) => user.role === selectedRole)
       );
     }
 
-    // Apply active/inactive filter
+    // Active/Inactive filter
     if (showInactiveOnly) {
       filtered = filtered.filter((company) => !company.isActive);
     }
 
-    return filtered.sort((a, b) => a.name.localeCompare(b.name));
+    return filtered;
   }, [companies, searchTerm, selectedRole, showInactiveOnly]);
 
+  // Update filtered companies when data changes
   useEffect(() => {
-    setFilteredCompanies(filteredAndSortedCompanies);
-  }, [filteredAndSortedCompanies]);
+    setFilteredCompanies(filteredCompaniesData);
+  }, [filteredCompaniesData]);
 
-  // Helper functions
+  // Notification helper
   const showNotification = (
     message: string,
     severity: "success" | "error" | "warning" | "info"
   ) => {
-    setNotification({ open: true, message, severity });
+    setNotification({
+      open: true,
+      message,
+      severity,
+    });
   };
 
-  const generateId = () => Math.random().toString(36).substr(2, 9);
+  // Close notification
+  const handleCloseNotification = () => {
+    setNotification((prev) => ({ ...prev, open: false }));
+  };
+
+  // Dialog handlers
+  const handleOpenDialog = (
+    mode: DialogMode,
+    type: EntityType,
+    item?: Company | Location | User,
+    company_id?: string // Add optional company ID parameter
+  ) => {
+    setDialogMode(mode);
+    setEntityType(type);
+    
+    // Reset forms first
+    resetForms();
+    
+    // Populate forms for edit mode
+    if (mode === "edit" && item) {
+      console.log("Opening edit dialog for item:", item);
+      console.log("Original item ID:", item.id);
+      console.log("Normalized item ID:", normalizeId(item.id));
+      
+      if (type === "company" && "name" in item && !("manager" in item) && !("firstName" in item)) {
+        const company = item as Company;
+        console.log("Populating company form with:", company);
+        console.log("Company ID before normalization:", company.id);
+        
+        // Create a company object with normalized ID
+        const normalizedCompany = {
+          ...company,
+          id: normalizeId(company.id)
+        };
+        
+        console.log("Company ID after normalization:", normalizedCompany.id);
+        
+        setCompanyForm({
+          name: company.name || "",
+          address: company.address || "",
+          state: company.state || "",
+          postcode: company.postcode || "",
+          phone: company.phone || "",
+          email: company.email || "",
+          website: company.website || "",
+          isActive: company.isActive,
+        });
+        setSelectedCompany(normalizedCompany);
+      } else if (type === "location" && "manager" in item) {
+        const location = item as Location;
+        console.log("Populating location form with:", location);
+        console.log("Original location ID:", location.id);
+        console.log("Company ID provided for location edit:", company_id);
+        
+        // Extract clean location ID using the company ID
+        const cleanLocationId = getLocationIdForAPI(location.id, company_id);
+        console.log("Extracted clean location ID:", cleanLocationId);
+        
+        const normalizedLocation = {
+          ...location,
+          id: cleanLocationId // Use clean location ID
+        };
+        
+        console.log("Clean location ID for form:", normalizedLocation.id);
+        
+        setLocationForm({
+          name: location.name || "",
+          address: location.address || "",
+          city: location.city || "",
+          state: location.state || "",
+          postcode: location.postcode || "",
+          phone: location.phone || "",
+          email: location.email || "",
+          manager: location.manager || "",
+          company_id: company_id ? normalizeId(company_id) : "", // Always set company ID for edit mode
+          isActive: location.isActive,
+        });
+        setSelectedLocation(normalizedLocation);
+      } else if (type === "user" && "firstName" in item) {
+        const user = item as User;
+        console.log("Populating user form with:", user);
+        console.log("User ID before normalization:", user.id);
+        
+        const normalizedUser = {
+          ...user,
+          id: normalizeId(user.id)
+        };
+        
+        console.log("User ID after normalization:", normalizedUser.id);
+        
+        setUserForm({
+          firstName: user.firstName || "",
+          lastName: user.lastName || "",
+          email: user.email || "",
+          phone: user.phone || "",
+          role: user.role || "",
+          permissions: user.permissions || [],
+          assignedLocations: user.assignedLocations || [],
+          isActive: user.isActive,
+        });
+        setSelectedUser(normalizedUser);
+      }
+    } else if (mode === "add") {
+      // For add mode, set company ID if provided (for location/user creation)
+      if (type === "location" && company_id) {
+        console.log("Setting company ID for new location:", company_id);
+        setLocationForm(prev => ({
+          ...prev,
+          company_id: normalizeId(company_id) // Normalize the company ID
+        }));
+      } else if (type === "user" && company_id) {
+        console.log("Setting company ID for new user:", company_id);
+        setUserForm(prev => ({
+          ...prev,
+          company_id: normalizeId(company_id) // Normalize the company ID
+        }));
+      }
+      
+      // Clear selections for add mode
+      setSelectedCompany(null);
+      setSelectedLocation(null);
+      setSelectedUser(null);
+    }
+    
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setDialogMode(null);
+    setEntityType("company");
+    setSelectedCompany(null);
+    setSelectedLocation(null);
+    setSelectedUser(null);
+    resetForms();
+  };
 
   const resetForms = () => {
     setCompanyForm({
       name: "",
-      city: "",
+      address: "",
       state: "",
-      postCode: "",
+      postcode: "",
       phone: "",
       email: "",
       website: "",
       isActive: true,
     });
-
     setLocationForm({
       name: "",
+      address: "",
       city: "",
       state: "",
-      postCode: "",
+      postcode: "",
       phone: "",
       email: "",
       manager: "",
+      company_id: "", // Reset company ID
       isActive: true,
     });
-
     setUserForm({
-      name: "",
+      firstName: "",
+      lastName: "",
       email: "",
+      phone: "",
       role: "",
       permissions: [],
       assignedLocations: [],
+      company_id: "", // Reset company ID
       isActive: true,
     });
   };
 
-  // Get role color
-  const getRoleColor = (role: string) => {
-    const roleConfig = USER_ROLES.find((r) => r.value === role);
-    return roleConfig?.color || "#9e9e9e";
+  // Save handlers
+  const handleSave = async () => {
+    try {
+      if (dialogMode === "add") {
+        console.log("Creating new entity..."); // Debug log
+        if (entityType === "company") {
+          console.log("Creating company with data:", companyForm); // Debug log
+          await createCompany(companyForm);
+        } else if (entityType === "location") {
+          console.log("Creating location with data:", locationForm);
+          
+          // Validate that company ID is present
+          if (!locationForm.company_id) {
+            console.error("Company ID is missing for location creation");
+            showNotification("Error: Company ID is required for location creation", "error");
+            return;
+          }
+          
+          // Create update data without the company_id field (it becomes company_id)
+          const { company_id, ...locationDataWithoutCompanyId } = locationForm;
+          
+          // Prepare data for creation with company_id
+          const createData = {
+            ...locationDataWithoutCompanyId,
+            company_id: locationForm.company_id // Include company_id in request body
+          };
+          
+          console.log("Creating location with prepared data:", createData);
+          await createLocation(createData);
+        } else if (entityType === "user") {
+          console.log("Creating user with data:", userForm);
+          
+          // Validate that company ID is present
+          if (!userForm.company_id) {
+            console.error("Company ID is missing for user creation");
+            showNotification("Error: Company ID is required for user creation", "error");
+            return;
+          }
+          
+          await createUser(userForm);
+        }
+      } else if (dialogMode === "edit") {
+        console.log("Updating existing entity..."); // Debug log
+        if (entityType === "company" && selectedCompany) {
+          const updateData = { ...companyForm, id: selectedCompany.id };
+          console.log("Updating company with data:", updateData); // Debug log
+          await updateCompany(selectedCompany.id, updateData);
+        } else if (entityType === "location" && selectedLocation) {
+          const updateData = { ...locationForm, id: selectedLocation.id };
+          console.log("Updating location with data:", updateData); // Debug log
+          await updateLocation(selectedLocation.id, updateData);
+        } else if (entityType === "user" && selectedUser) {
+          const updateData = { ...userForm, id: selectedUser.id };
+          console.log("Updating user with data:", updateData); // Debug log
+          await updateUser(selectedUser.id, updateData);
+        }
+      }
+      
+      handleCloseDialog();
+      fetchCompanyData(); // Refresh data
+    } catch (error) {
+      console.error("Error saving:", error);
+    }
   };
 
-  // Get users assigned to a specific location
-  const getUsersForLocation = (companyId: string, locationId: string) => {
-    const company = companies.find((c) => c.id === companyId);
-    if (!company) return [];
-
-    return company.users.filter(
-      (user) => user.assignedLocations.includes(locationId) && user.isActive
-    );
+  // Delete handlers
+  const handleDelete = async (id: string, type: EntityType) => {
+    if (window.confirm(`Are you sure you want to delete this ${type}?`)) {
+      try {
+        if (type === "company") {
+          await deleteCompany(id);
+        } else if (type === "location") {
+          await deleteLocation(id);
+        } else if (type === "user") {
+          await deleteUser(id);
+        }
+        
+        fetchCompanyData(); // Refresh data
+      } catch (error) {
+        console.error("Error deleting:", error);
+      }
+    }
   };
 
-  // Get location name by ID
-  const getLocationName = (companyId: string, locationId: string) => {
-    const company = companies.find((c) => c.id === companyId);
-    if (!company) return "Unknown Location";
-
-    const location = company.locations.find((l) => l.id === locationId);
-    return location ? location.name : "Unknown Location";
-  };
-
-  // Toggle functions
-  const toggleCompanyExpansion = (companyId: string) => {
+  // Toggle company expansion
+  const toggleCompanyExpansion = (company_id: string) => {
     setExpandedCompanies((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(companyId)) {
-        newSet.delete(companyId);
+      if (newSet.has(company_id)) {
+        newSet.delete(company_id);
       } else {
-        newSet.add(companyId);
+        newSet.add(company_id);
       }
       return newSet;
     });
   };
 
-  // CRUD operations (these would need to be implemented with actual API calls)
-  const handleSaveCompany = () => {
-    if (dialogMode === "add") {
-      const newCompany: Company = {
-        id: generateId(),
-        ...companyForm,
-        locations: [],
-        users: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      setCompanies((prev) => [...prev, newCompany]);
-      showNotification("Company added successfully", "success");
-    } else if (dialogMode === "edit" && selectedCompany) {
-      setCompanies((prev) =>
-        prev.map((company) =>
-          company.id === selectedCompany.id
-            ? { ...company, ...companyForm, updatedAt: new Date() }
-            : company
-        )
-      );
-      showNotification("Company updated successfully", "success");
-    }
-    setDialogOpen(false);
-    resetForms();
+  // Get user role color
+  const getUserRoleColor = (role: string) => {
+    const roleConfig = USER_ROLES.find((r) => r.value === role);
+    return roleConfig?.color || "#666";
   };
 
-  const handleSaveLocation = () => {
-    if (!selectedCompany) return;
-
-    if (dialogMode === "add") {
-      const newLocation: Location = {
-        id: generateId(),
-        ...locationForm,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      setCompanies((prev) =>
-        prev.map((company) =>
-          company.id === selectedCompany.id
-            ? {
-                ...company,
-                locations: [...company.locations, newLocation],
-                updatedAt: new Date(),
-              }
-            : company
-        )
-      );
-      showNotification("Location added successfully", "success");
-    } else if (dialogMode === "edit" && selectedLocation) {
-      setCompanies((prev) =>
-        prev.map((company) =>
-          company.id === selectedCompany.id
-            ? {
-                ...company,
-                locations: company.locations.map((location) =>
-                  location.id === selectedLocation.id
-                    ? { ...location, ...locationForm, updatedAt: new Date() }
-                    : location
-                ),
-                updatedAt: new Date(),
-              }
-            : company
-        )
-      );
-      showNotification("Location updated successfully", "success");
-    }
-    setDialogOpen(false);
-    resetForms();
-  };
-
-  const handleSaveUser = () => {
-    if (!selectedCompany) return;
-
-    if (dialogMode === "add") {
-      const newUser: User = {
-        id: generateId(),
-        ...userForm,
-        createdAt: new Date(),
-      };
-      setCompanies((prev) =>
-        prev.map((company) =>
-          company.id === selectedCompany.id
-            ? {
-                ...company,
-                users: [...company.users, newUser],
-                updatedAt: new Date(),
-              }
-            : company
-        )
-      );
-      showNotification("User added successfully", "success");
-    } else if (dialogMode === "edit" && selectedUser) {
-      setCompanies((prev) =>
-        prev.map((company) =>
-          company.id === selectedCompany.id
-            ? {
-                ...company,
-                users: company.users.map((user) =>
-                  user.id === selectedUser.id ? { ...user, ...userForm } : user
-                ),
-                updatedAt: new Date(),
-              }
-            : company
-        )
-      );
-      showNotification("User updated successfully", "success");
-    }
-    setDialogOpen(false);
-    resetForms();
-  };
-
-  // Handle dialog opening for different entities
-  const handleOpenDialog = (
-    mode: DialogMode,
-    type: EntityType,
-    company?: Company,
-    location?: Location,
-    user?: User
-  ) => {
-    setDialogMode(mode);
-    setEntityType(type);
-    setSelectedCompany(company || null);
-    setSelectedLocation(location || null);
-    setSelectedUser(user || null);
-
-    if (mode === "edit") {
-      if (type === "company" && company) {
-        setCompanyForm({
-          name: company.name,
-          city: company.city,
-          state: company.state,
-          postCode: company.postCode,
-          phone: company.phone,
-          email: company.email || "",
-          website: company.website || "",
-          isActive: company.isActive,
-        });
-      } else if (type === "location" && location) {
-        setLocationForm({
-          name: location.name,
-          city: location.city,
-          state: location.state,
-          postCode: location.postCode,
-          phone: location.phone || "",
-          email: location.email || "",
-          manager: location.manager || "",
-          isActive: location.isActive,
-        });
-      } else if (type === "user" && user) {
-        setUserForm({
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          permissions: user.permissions,
-          assignedLocations: user.assignedLocations,
-          isActive: user.isActive,
-        });
-      }
-    } else {
-      resetForms();
-    }
-
-    setDialogOpen(true);
-  };
-
-  // Handle menu actions
-  const handleMenuAction = (action: string) => {
-    setAnchorEl(null);
-    
-    if (action === "edit") {
-      if (selectedItemType === "company") {
-        const company = companies.find((c) => c.id === selectedItemId);
-        if (company) {
-          handleOpenDialog("edit", "company", company);
-        }
-      }
-    } else if (action === "delete") {
-      showNotification("Delete functionality not implemented yet", "info");
-    }
-  };
-
-  // Show loading state
+  // Loading state
   if (loading) {
     return (
       <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "400px",
-          flexDirection: "column",
-          gap: 2,
-        }}
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
       >
         <CircularProgress size={60} />
-        <Typography variant="h6" color="textSecondary">
-          Loading company data...
-        </Typography>
       </Box>
     );
   }
 
-  // Show error state
+  // Error state
   if (error) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Alert 
-          severity="error" 
+      <Box p={3}>
+        <Alert
+          severity="error"
           action={
-            <Button color="inherit" size="small" onClick={handleRefresh} startIcon={<RefreshIcon />}>
+            <Button
+              color="inherit"
+              size="small"
+              onClick={fetchCompanyData}
+              startIcon={<RefreshIcon />}
+            >
               Retry
             </Button>
           }
         >
-          <Typography variant="h6">Error loading company data</Typography>
-          <Typography variant="body2">{error}</Typography>
+          {error}
         </Alert>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ flexGrow: 1, p: 3 }}>
-      {/* Modern Header with Stats */}
-      <Box sx={{ mb: 4 }}>
-        {/* Title Section */}
-        <Box
-          sx={{
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            borderRadius: 4,
-            p: 4,
-            mb: 3,
-            color: "white",
-            position: "relative",
-            overflow: "hidden",
-            "&::before": {
-              content: '""',
-              position: "absolute",
-              top: 0,
-              right: 0,
-              width: "200px",
-              height: "200px",
-              background: "rgba(255,255,255,0.1)",
-              borderRadius: "50%",
-              transform: "translate(25%, -25%)",
-            },
-          }}
-        >
-          <Box sx={{ position: "relative", zIndex: 1 }}>
-            <Typography variant="h3" sx={{ fontWeight: "bold", mb: 1 }}>
-              Company & Location Manager
-            </Typography>
-            <Typography variant="h6" sx={{ opacity: 0.9 }}>
-              Manage your organizations, locations, and team members
-            </Typography>
-          </Box>
-        </Box>
+    <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
+      {/* Header Section */}
+      <Box
+        sx={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          borderRadius: 3,
+          p: 4,
+          mb: 3,
+          color: 'white'
+        }}
+      >
+        <Typography variant="h3" fontWeight="bold" gutterBottom>
+          Company & Location Manager
+        </Typography>
+        <Typography variant="h6" sx={{ opacity: 0.9 }}>
+          Manage your organizations, locations, and team members
+        </Typography>
+      </Box>
 
-        {/* Compact Stats Cards Grid */}
-        <Grid container spacing={2} sx={{ justifyContent: "center" }}>
-          {/* Total Companies Card */}
-          <Grid item xs={6} sm={3}>
-            <Card
-              sx={{
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                color: "white",
-                borderRadius: 3,
-                boxShadow: "0 8px 24px rgba(102, 126, 234, 0.15)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                transition: "all 0.2s ease",
-                "&:hover": {
-                  transform: "translateY(-4px)",
-                  boxShadow: "0 12px 32px rgba(102, 126, 234, 0.25)",
-                },
-                height: 160,
-              }}
-            >
-              <CardContent sx={{ p: 2.5, height: "100%" }}>
-                <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
-                    <Typography variant="h3" sx={{ fontWeight: "900", fontSize: "2rem" }}>
-                      {companies.length}
-                    </Typography>
-                    <CompanyIcon sx={{ fontSize: 32, opacity: 0.4 }} />
-                  </Box>
-                  <Typography variant="body1" sx={{ opacity: 0.9, fontWeight: "600", mb: 1 }}>
+      {/* Summary Cards */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {/* Total Companies Card */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Card
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              borderRadius: 3,
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+                <Box>
+                  <Typography variant="h3" fontWeight="bold">
+                    {summaryStats.companies.total}
+                  </Typography>
+                  <Typography variant="h6" sx={{ opacity: 0.9, mb: 1 }}>
                     Total Companies
                   </Typography>
-                  <Box sx={{ height: 3, bgcolor: "rgba(255,255,255,0.3)", borderRadius: 1.5, mb: 1 }}>
-                    <Box 
-                      sx={{ 
-                        height: "100%", 
-                        bgcolor: "white", 
-                        borderRadius: 1.5,
-                        width: `${companies.length > 0 ? (companies.filter(c => c.isActive).length / companies.length) * 100 : 0}%`,
-                        transition: "width 0.3s ease"
-                      }} 
-                    />
-                  </Box>
-                  <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                    {companies.filter(c => c.isActive).length} Active • {companies.filter(c => !c.isActive).length} Inactive
+                  <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                    {summaryStats.companies.active} Active • {summaryStats.companies.inactive} Inactive
                   </Typography>
                 </Box>
-              </CardContent>
-            </Card>
-          </Grid>
+                <BusinessIcon sx={{ fontSize: 40, opacity: 0.8 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
 
-          {/* Total Locations Card */}
-          <Grid item xs={6} sm={3}>
-            <Card
-              sx={{
-                background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-                color: "white",
-                borderRadius: 3,
-                boxShadow: "0 8px 24px rgba(240, 147, 251, 0.15)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                transition: "all 0.2s ease",
-                "&:hover": {
-                  transform: "translateY(-4px)",
-                  boxShadow: "0 12px 32px rgba(240, 147, 251, 0.25)",
-                },
-                height: 160,
-              }}
-            >
-              <CardContent sx={{ p: 2.5, height: "100%" }}>
-                <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
-                    <Typography variant="h3" sx={{ fontWeight: "900", fontSize: "2rem" }}>
-                      {companies.reduce((acc, company) => acc + company.locations.length, 0)}
-                    </Typography>
-                    <PlaceIcon sx={{ fontSize: 32, opacity: 0.4 }} />
-                  </Box>
-                  <Typography variant="body1" sx={{ opacity: 0.9, fontWeight: "600", mb: 1 }}>
+        {/* Total Locations Card */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Card
+            sx={{
+              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+              color: 'white',
+              borderRadius: 3,
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+                <Box>
+                  <Typography variant="h3" fontWeight="bold">
+                    {summaryStats.locations.total}
+                  </Typography>
+                  <Typography variant="h6" sx={{ opacity: 0.9, mb: 1 }}>
                     Total Locations
                   </Typography>
-                  <Box sx={{ height: 3, bgcolor: "rgba(255,255,255,0.3)", borderRadius: 1.5, mb: 1 }}>
-                    <Box 
-                      sx={{ 
-                        height: "100%", 
-                        bgcolor: "white", 
-                        borderRadius: 1.5,
-                        width: `${companies.reduce((acc, company) => acc + company.locations.length, 0) > 0 ? (companies.reduce((acc, company) => acc + company.locations.filter(l => l.isActive).length, 0) / companies.reduce((acc, company) => acc + company.locations.length, 0)) * 100 : 0}%`,
-                        transition: "width 0.3s ease"
-                      }} 
-                    />
-                  </Box>
-                  <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                    {companies.reduce((acc, company) => acc + company.locations.filter(l => l.isActive).length, 0)} Active • {companies.reduce((acc, company) => acc + company.locations.filter(l => !l.isActive).length, 0)} Inactive
+                  <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                    {summaryStats.locations.active} Active • {summaryStats.locations.inactive} Inactive
                   </Typography>
                 </Box>
-              </CardContent>
-            </Card>
-          </Grid>
+                <LocationOnIcon sx={{ fontSize: 40, opacity: 0.8 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
 
-          {/* Total Users Card */}
-          <Grid item xs={6} sm={3}>
-            <Card
-              sx={{
-                background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
-                color: "white",
-                borderRadius: 3,
-                boxShadow: "0 8px 24px rgba(79, 172, 254, 0.15)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                transition: "all 0.2s ease",
-                "&:hover": {
-                  transform: "translateY(-4px)",
-                  boxShadow: "0 12px 32px rgba(79, 172, 254, 0.25)",
-                },
-                height: 160,
-              }}
-            >
-              <CardContent sx={{ p: 2.5, height: "100%" }}>
-                <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
-                    <Typography variant="h3" sx={{ fontWeight: "900", fontSize: "2rem" }}>
-                      {companies.reduce((acc, company) => acc + company.users.length, 0)}
-                    </Typography>
-                    <PersonIcon sx={{ fontSize: 32, opacity: 0.4 }} />
-                  </Box>
-                  <Typography variant="body1" sx={{ opacity: 0.9, fontWeight: "600", mb: 1 }}>
+        {/* Total Users Card */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Card
+            sx={{
+              background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+              color: 'white',
+              borderRadius: 3,
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+                <Box>
+                  <Typography variant="h3" fontWeight="bold">
+                    {summaryStats.users.total}
+                  </Typography>
+                  <Typography variant="h6" sx={{ opacity: 0.9, mb: 1 }}>
                     Total Users
                   </Typography>
-                  <Box sx={{ height: 3, bgcolor: "rgba(255,255,255,0.3)", borderRadius: 1.5, mb: 1 }}>
-                    <Box 
-                      sx={{ 
-                        height: "100%", 
-                        bgcolor: "white", 
-                        borderRadius: 1.5,
-                        width: `${companies.reduce((acc, company) => acc + company.users.length, 0) > 0 ? (companies.reduce((acc, company) => acc + company.users.filter(u => u.isActive).length, 0) / companies.reduce((acc, company) => acc + company.users.length, 0)) * 100 : 0}%`,
-                        transition: "width 0.3s ease"
-                      }} 
-                    />
-                  </Box>
-                  <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                    {companies.reduce((acc, company) => acc + company.users.filter(u => u.isActive).length, 0)} Active • {companies.reduce((acc, company) => acc + company.users.filter(u => !u.isActive).length, 0)} Inactive
+                  <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                    {summaryStats.users.active} Active • {summaryStats.users.inactive} Inactive
                   </Typography>
                 </Box>
-              </CardContent>
-            </Card>
-          </Grid>
+                <PersonIcon sx={{ fontSize: 40, opacity: 0.8 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
 
-          {/* Add Company Button */}
-          <Grid item xs={6} sm={3}>
-            <Card
-              sx={{
-                background: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
-                color: "white",
-                borderRadius: 3,
-                boxShadow: "0 8px 24px rgba(67, 233, 123, 0.15)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                "&:hover": {
-                  transform: "translateY(-4px)",
-                  boxShadow: "0 12px 32px rgba(67, 233, 123, 0.25)",
-                },
-                height: 160,
-              }}
-              onClick={() => handleOpenDialog("add", "company")}
-            >
-              <CardContent sx={{ p: 2.5, textAlign: "center", height: "100%" }}>
-                <Box sx={{ 
-                  display: "flex", 
-                  flexDirection: "column", 
-                  justifyContent: "center", 
-                  alignItems: "center",
-                  height: "100%" 
-                }}>
-                  <AddIcon sx={{ fontSize: 36, mb: 1, opacity: 0.9 }} />
-                  <Typography variant="h6" sx={{ fontWeight: "bold", mb: 0.5 }}>
+        {/* Add Company Card */}
+        <Grid item xs={12} sm={6} md={3}>
+          <Card
+            sx={{
+              background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+              color: 'white',
+              borderRadius: 3,
+              position: 'relative',
+              overflow: 'hidden',
+              cursor: 'pointer',
+              transition: 'transform 0.2s',
+              '&:hover': {
+                transform: 'translateY(-4px)'
+              }
+            }}
+            onClick={() => handleOpenDialog("add", "company")}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Box display="flex" justifyContent="space-between" alignItems="center" height="100%">
+                <Box>
+                  <Typography variant="h5" fontWeight="bold" gutterBottom>
                     ADD COMPANY
                   </Typography>
-                  <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
                     Create new organization
                   </Typography>
                 </Box>
-              </CardContent>
-            </Card>
-          </Grid>
+                <AddIcon sx={{ fontSize: 40, opacity: 0.8 }} />
+              </Box>
+            </CardContent>
+          </Card>
         </Grid>
+      </Grid>
+
+      {/* Filters & Search Section */}
+      <Box sx={{ mb: 3 }}>
+        <Box display="flex" alignItems="center" mb={2}>
+          <FilterListIcon sx={{ mr: 1, color: 'text.secondary' }} />
+          <Typography variant="h6" color="text.secondary">
+            Filters & Search
+          </Typography>
+        </Box>
+        
+        <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+          <CardContent>
+            <Grid container spacing={3} alignItems="center">
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  placeholder="Search companies, addresses, locations, users..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  InputProps={{
+                    startAdornment: <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />,
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                    }
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <FormControl fullWidth>
+                  <InputLabel>Role</InputLabel>
+                  <Select
+                    value={selectedRole}
+                    label="Role"
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                    sx={{ borderRadius: 2 }}
+                  >
+                    <MenuItem value="">All Roles</MenuItem>
+                    {USER_ROLES.map((role) => (
+                      <MenuItem key={role.value} value={role.value}>
+                        {role.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={showInactiveOnly}
+                      onChange={(e) => setShowInactiveOnly(e.target.checked)}
+                    />
+                  }
+                  label="Inactive Only"
+                />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<RefreshIcon />}
+                  onClick={fetchCompanyData}
+                  disabled={loading}
+                  sx={{ borderRadius: 2, height: 56 }}
+                >
+                  REFRESH
+                </Button>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
       </Box>
 
-      {/* Modern Filters Section */}
-      <Card 
-        elevation={0} 
-        sx={{ 
-          mb: 4, 
-          bgcolor: "white", 
-          borderRadius: 4,
-          border: "1px solid",
-          borderColor: "grey.200",
-          boxShadow: "0 10px 40px rgba(0,0,0,0.05)",
-        }}
-      >
-        <CardContent sx={{ p: 4 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
-            <FilterListIcon sx={{ color: "primary.main" }} />
-            <Typography variant="h6" sx={{ fontWeight: "bold", color: "text.primary" }}>
-              Filters & Search
-            </Typography>
-          </Box>
-          <Grid container spacing={3} alignItems="center">
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                placeholder="Search companies, locations, users..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                InputProps={{
-                  startAdornment: <SearchIcon sx={{ mr: 1, color: "action.active" }} />,
-                }}
-                sx={{
-                  bgcolor: "grey.50",
-                  borderRadius: 3,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 3,
-                    "&:hover fieldset": {
-                      borderColor: "primary.main",
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: "primary.main",
-                      borderWidth: 2,
-                    },
-                  },
-                }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} sm={4} md={2}>
-              <FormControl fullWidth>
-                <InputLabel sx={{ fontWeight: "500" }}>Role</InputLabel>
-                <Select
-                  value={selectedRole}
-                  label="Role"
-                  onChange={(e) => setSelectedRole(e.target.value)}
-                  sx={{ 
-                    bgcolor: "grey.50", 
-                    borderRadius: 3,
-                    "& .MuiOutlinedInput-notchedOutline": {
-                      borderRadius: 3,
-                    },
-                    "&:hover .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "primary.main",
-                    },
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "primary.main",
-                      borderWidth: 2,
-                    },
-                  }}
-                >
-                  <MenuItem value="">All Roles</MenuItem>
-                  {USER_ROLES.map((role) => (
-                    <MenuItem key={role.value} value={role.value}>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        <Box
-                          sx={{
-                            width: 12,
-                            height: 12,
-                            borderRadius: "50%",
-                            bgcolor: role.color,
-                          }}
-                        />
-                        {role.label}
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12} sm={4} md={2}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={showInactiveOnly}
-                    onChange={(e) => setShowInactiveOnly(e.target.checked)}
-                    sx={{
-                      "& .MuiSwitch-switchBase.Mui-checked": {
-                        color: "primary.main",
-                      },
-                      "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                        backgroundColor: "primary.main",
-                      },
-                    }}
-                  />
-                }
-                label={
-                  <Typography sx={{ fontWeight: "500" }}>
-                    Inactive Only
-                  </Typography>
-                }
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={4} md={2}>
-              <Button
-                variant="outlined"
-                startIcon={<RefreshIcon />}
-                onClick={handleRefresh}
-                disabled={loading}
-                fullWidth
-                sx={{
-                  borderRadius: 3,
-                  py: 1.5,
-                  fontWeight: "600",
-                  borderColor: "primary.main",
-                  color: "primary.main",
-                  "&:hover": {
-                    borderColor: "primary.dark",
-                    bgcolor: "primary.50",
-                  },
-                }}
-              >
-                Refresh
-              </Button>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
-
-      {/* Companies Table */}
-      {filteredCompanies.length === 0 ? (
-        <Paper 
-          sx={{ 
-            p: 8, 
-            textAlign: "center", 
-            borderRadius: 4,
-            background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
-            border: "1px solid",
-            borderColor: "grey.200",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.08)",
-          }}
-        >
-          <Box
-            sx={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              borderRadius: "50%",
-              width: 120,
-              height: 120,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 24px auto",
-              boxShadow: "0 20px 40px rgba(102, 126, 234, 0.3)",
-            }}
-          >
-            <BusinessIcon sx={{ fontSize: 64, color: "white" }} />
-          </Box>
-          <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold", color: "text.primary" }}>
-            No companies found
-          </Typography>
-          <Typography variant="h6" color="textSecondary" sx={{ mb: 4, maxWidth: 400, mx: "auto" }}>
-            {companies.length === 0 
-              ? "Welcome! Start building your organization by adding your first company."
-              : "No companies match your current filters. Try adjusting your search terms or filters."
-            }
-          </Typography>
-          <Button
-            variant="contained"
-            size="large"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenDialog("add", "company")}
-            sx={{ 
-              borderRadius: 3, 
-              py: 2, 
-              px: 4,
-              fontSize: "1.1rem",
-              fontWeight: "bold",
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              boxShadow: "0 10px 30px rgba(102, 126, 234, 0.3)",
-              "&:hover": {
-                background: "linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)",
-                boxShadow: "0 15px 40px rgba(102, 126, 234, 0.4)",
-                transform: "translateY(-2px)",
-              },
-            }}
-          >
-            Add Your First Company
-          </Button>
-        </Paper>
-      ) : (
-        <TableContainer 
-          component={Paper} 
-          sx={{ 
-            borderRadius: 4, 
-            boxShadow: "0 20px 60px rgba(0,0,0,0.08)",
-            border: "1px solid",
-            borderColor: "grey.200",
-            overflow: "hidden",
-          }}
-        >
+      {/* Main Table */}
+      <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        <TableContainer>
           <Table>
             <TableHead>
-              <TableRow 
-                sx={{ 
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                }}
-              >
-                <TableCell sx={{ color: "white", fontWeight: "bold", fontSize: "1rem", py: 3 }}>
+              <TableRow sx={{ bgcolor: '#667eea' }}>
+                <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>
                   Company Details
                 </TableCell>
-                <TableCell sx={{ color: "white", fontWeight: "bold", fontSize: "1rem", py: 3 }}>
+                <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>
                   Contact & Info
                 </TableCell>
-                <TableCell sx={{ color: "white", fontWeight: "bold", fontSize: "1rem", py: 3 }}>
+                <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>
                   Locations
                 </TableCell>
-                <TableCell sx={{ color: "white", fontWeight: "bold", fontSize: "1rem", py: 3 }}>
+                <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>
                   Users
                 </TableCell>
-                <TableCell sx={{ color: "white", fontWeight: "bold", fontSize: "1rem", py: 3 }}>
+                <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>
                   Actions
                 </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredCompanies.map((company, index) => (
+              {filteredCompanies.map((company) => (
                 <React.Fragment key={company.id}>
-                  <TableRow
-                    sx={{
-                      backgroundColor: index % 2 === 0 ? "white" : "grey.50",
-                      "&:hover": { 
-                        backgroundColor: "primary.50",
-                        transform: "scale(1.002)",
-                        transition: "all 0.2s ease",
-                      },
-                      cursor: "pointer",
-                    }}
-                  >
+                  <TableRow sx={{ 
+                    '&:hover': { bgcolor: '#f5f5f5' },
+                    borderLeft: `4px solid ${company.isActive ? '#4caf50' : '#f44336'}`
+                  }}>
                     {/* Company Details */}
                     <TableCell sx={{ py: 3 }}>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                      <Box display="flex" alignItems="center">
                         <IconButton
                           size="small"
                           onClick={() => toggleCompanyExpansion(company.id)}
-                          sx={{ 
-                            color: "primary.main",
-                            bgcolor: "primary.50",
-                            "&:hover": { bgcolor: "primary.100" },
-                          }}
+                          sx={{ mr: 1 }}
                         >
                           {expandedCompanies.has(company.id) ? (
                             <ExpandLessIcon />
                           ) : (
-                            <ExpandMoreIcon />
+                            <KeyboardArrowDownIcon />
                           )}
                         </IconButton>
-                        <Avatar 
-                          sx={{ 
-                            bgcolor: "primary.main", 
-                            width: 48, 
+                        <Avatar
+                          sx={{
+                            bgcolor: company.isActive ? 'primary.main' : 'grey.400',
+                            mr: 2,
+                            width: 48,
                             height: 48,
-                            boxShadow: "0 4px 14px rgba(102, 126, 234, 0.3)",
                           }}
                         >
-                          <CompanyIcon />
+                          <BusinessIcon />
                         </Avatar>
                         <Box>
-                          <Typography variant="h6" sx={{ fontWeight: "bold", mb: 0.5 }}>
+                          <Typography variant="h6" fontWeight="bold">
                             {company.name}
                           </Typography>
-                          <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-                            {company.city}, {company.state} {company.postCode}
+                          <Typography variant="body2" color="text.secondary">
+                            {company.address}, {company.state} {company.postcode}
                           </Typography>
                           <Chip
                             label={company.isActive ? "Active" : "Inactive"}
+                            color={company.isActive ? "success" : "error"}
                             size="small"
-                            color={company.isActive ? "success" : "default"}
-                            sx={{ 
-                              fontWeight: "600",
-                              ...(company.isActive && {
-                                bgcolor: "success.main",
-                                color: "white",
-                              }),
-                            }}
+                            sx={{ mt: 1 }}
                           />
                         </Box>
                       </Box>
@@ -1213,77 +1300,50 @@ const CompanyLocationManager: React.FC = () => {
 
                     {/* Contact & Info */}
                     <TableCell sx={{ py: 3 }}>
-                      <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                          <Avatar sx={{ bgcolor: "grey.100", width: 24, height: 24 }}>
-                            <PhoneIcon sx={{ fontSize: 14, color: "grey.600" }} />
-                          </Avatar>
+                      <Stack spacing={1}>
+                        <Box display="flex" alignItems="center">
+                          <PhoneIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
                           <Typography variant="body2">{company.phone}</Typography>
                         </Box>
                         {company.email && (
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                            <Avatar sx={{ bgcolor: "grey.100", width: 24, height: 24 }}>
-                              <EmailIcon sx={{ fontSize: 14, color: "grey.600" }} />
-                            </Avatar>
-                            <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
-                              {company.email}
-                            </Typography>
+                          <Box display="flex" alignItems="center">
+                            <EmailIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
+                            <Typography variant="body2">{company.email}</Typography>
                           </Box>
                         )}
                         {company.website && (
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                            <Avatar sx={{ bgcolor: "grey.100", width: 24, height: 24 }}>
-                              <WebIcon sx={{ fontSize: 14, color: "grey.600" }} />
-                            </Avatar>
-                            <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
-                              {company.website}
-                            </Typography>
+                          <Box display="flex" alignItems="center">
+                            <WebIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
+                            <Typography variant="body2">{company.website}</Typography>
                           </Box>
                         )}
-                      </Box>
+                      </Stack>
                     </TableCell>
 
                     {/* Locations */}
                     <TableCell sx={{ py: 3 }}>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                        <Badge
-                          badgeContent={company.locations.length}
-                          color="primary"
+                      <Box display="flex" alignItems="center">
+                        <LocationOnIcon sx={{ color: '#f093fb', mr: 1 }} />
+                        <Chip
+                          label={`${company.locations.length} LOCATIONS`}
                           sx={{
-                            "& .MuiBadge-badge": {
-                              right: -3,
-                              top: 13,
-                              fontWeight: "bold",
-                            },
+                            bgcolor: '#f093fb',
+                            color: 'white',
+                            fontWeight: 'bold',
+                            mr: 1
                           }}
+                        />
+                        <Badge
+                          badgeContent={company.locations.filter(l => l.isActive).length}
+                          color="success"
+                          sx={{ mr: 1 }}
                         >
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            startIcon={<PlaceIcon />}
-                            onClick={() => handleOpenDialog("add", "location", company)}
-                            sx={{ 
-                              mr: 1,
-                              borderRadius: 2,
-                              borderColor: "primary.main",
-                              color: "primary.main",
-                              "&:hover": {
-                                borderColor: "primary.dark",
-                                bgcolor: "primary.50",
-                              },
-                            }}
-                          >
-                            {company.locations.length} location{company.locations.length !== 1 ? 's' : ''}
-                          </Button>
+                          <Box />
                         </Badge>
                         <IconButton
                           size="small"
-                          onClick={() => handleOpenDialog("add", "location", company)}
-                          sx={{ 
-                            color: "primary.main",
-                            bgcolor: "primary.50",
-                            "&:hover": { bgcolor: "primary.100" },
-                          }}
+                          onClick={() => handleOpenDialog("add", "location", undefined, company.id)}
+                          sx={{ color: '#f093fb' }}
                         >
                           <AddIcon />
                         </IconButton>
@@ -1292,45 +1352,28 @@ const CompanyLocationManager: React.FC = () => {
 
                     {/* Users */}
                     <TableCell sx={{ py: 3 }}>
-                      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                        <Badge
-                          badgeContent={company.users.length}
-                          color="secondary"
+                      <Box display="flex" alignItems="center">
+                        <PersonIcon sx={{ color: '#4facfe', mr: 1 }} />
+                        <Chip
+                          label={`${company.users.length} USER${company.users.length !== 1 ? 'S' : ''}`}
                           sx={{
-                            "& .MuiBadge-badge": {
-                              right: -3,
-                              top: 13,
-                              fontWeight: "bold",
-                            },
+                            bgcolor: '#4facfe',
+                            color: 'white',
+                            fontWeight: 'bold',
+                            mr: 1
                           }}
+                        />
+                        <Badge
+                          badgeContent={company.users.filter(u => u.isActive).length}
+                          color="success"
+                          sx={{ mr: 1 }}
                         >
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            startIcon={<PersonIcon />}
-                            onClick={() => handleOpenDialog("add", "user", company)}
-                            sx={{ 
-                              mr: 1,
-                              borderRadius: 2,
-                              borderColor: "secondary.main",
-                              color: "secondary.main",
-                              "&:hover": {
-                                borderColor: "secondary.dark",
-                                bgcolor: "secondary.50",
-                              },
-                            }}
-                          >
-                            {company.users.length} user{company.users.length !== 1 ? 's' : ''}
-                          </Button>
+                          <Box />
                         </Badge>
                         <IconButton
                           size="small"
-                          onClick={() => handleOpenDialog("add", "user", company)}
-                          sx={{ 
-                            color: "secondary.main",
-                            bgcolor: "secondary.50",
-                            "&:hover": { bgcolor: "secondary.100" },
-                          }}
+                          onClick={() => handleOpenDialog("add", "user", undefined, company.id)}
+                          sx={{ color: '#4facfe' }}
                         >
                           <AddIcon />
                         </IconButton>
@@ -1339,164 +1382,140 @@ const CompanyLocationManager: React.FC = () => {
 
                     {/* Actions */}
                     <TableCell sx={{ py: 3 }}>
-                      <Box sx={{ display: "flex", gap: 1 }}>
+                      <Stack direction="row" spacing={1}>
                         <IconButton
                           size="small"
                           onClick={() => handleOpenDialog("edit", "company", company)}
-                          sx={{ 
-                            color: "primary.main",
-                            bgcolor: "primary.50",
-                            "&:hover": { bgcolor: "primary.100" },
-                          }}
+                          sx={{ color: '#667eea' }}
                         >
                           <EditIcon />
                         </IconButton>
                         <IconButton
                           size="small"
-                          onClick={(e) => {
-                            setAnchorEl(e.currentTarget);
-                            setSelectedItemId(company.id);
-                            setSelectedItemType("company");
+                          onClick={() => {
+                            if (window.confirm(
+                              `⚠️ DELETE COMPANY WARNING ⚠️\n\n` +
+                              `Are you sure you want to delete "${company.name}"?\n\n` +
+                              `This will permanently delete:\n` +
+                              `• The company and all its data\n` +
+                              `• ${company.locations?.length || 0} associated location(s)\n` +
+                              `• ${company.users?.length || 0} associated user(s)\n\n` +
+                              `⚠️ THIS ACTION CANNOT BE UNDONE! ⚠️\n\n` +
+                              `Type "DELETE" in the next prompt to confirm.`
+                            )) {
+                              const confirmation = window.prompt(
+                                `To confirm deletion of "${company.name}", please type "DELETE" (in capital letters):`
+                              );
+                              if (confirmation === "DELETE") {
+                                handleDelete(company.id, "company");
+                              } else {
+                                alert("Deletion cancelled - confirmation text did not match.");
+                              }
+                            }
                           }}
-                          sx={{ 
-                            color: "grey.600",
-                            bgcolor: "grey.100",
-                            "&:hover": { bgcolor: "grey.200" },
+                          sx={{ color: '#f44336' }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const menu = document.createElement('div');
+                            // Simple menu implementation
                           }}
                         >
                           <MoreVertIcon />
                         </IconButton>
-                      </Box>
+                      </Stack>
                     </TableCell>
                   </TableRow>
 
                   {/* Expanded Row Content */}
                   <TableRow>
-                    <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
-                      <Collapse in={expandedCompanies.has(company.id)} timeout="auto" unmountOnExit>
-                        <Box sx={{ margin: 3, bgcolor: "grey.50", borderRadius: 2, p: 3 }}>
-                          {/* Locations Section */}
+                    <TableCell colSpan={5} sx={{ p: 0, border: 0 }}>
+                      <Collapse in={expandedCompanies.has(company.id)}>
+                        <Box sx={{ p: 3, bgcolor: '#fafafa' }}>
+                          
+                          {/* Locations Table */}
                           {company.locations.length > 0 && (
                             <Box sx={{ mb: 4 }}>
-                              <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-                                <PlaceIcon sx={{ color: "primary.main" }} />
-                                <Typography variant="h6" sx={{ color: "primary.main", fontWeight: "bold" }}>
-                                  Locations ({company.locations.length})
-                                </Typography>
-                              </Box>
-                              <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 2 }}>
+                              <Typography variant="h6" color="primary" gutterBottom sx={{ mb: 2 }}>
+                                📍 Locations ({company.locations.length})
+                              </Typography>
+                              <TableContainer component={Paper} elevation={1} sx={{ borderRadius: 2 }}>
                                 <Table size="small">
                                   <TableHead>
-                                    <TableRow sx={{ bgcolor: "primary.main" }}>
-                                      <TableCell sx={{ color: "white", fontWeight: "bold" }}>Location Details</TableCell>
-                                      <TableCell sx={{ color: "white", fontWeight: "bold" }}>Address</TableCell>
-                                      <TableCell sx={{ color: "white", fontWeight: "bold" }}>Contact</TableCell>
-                                      <TableCell sx={{ color: "white", fontWeight: "bold" }}>Manager</TableCell>
-                                      <TableCell sx={{ color: "white", fontWeight: "bold" }}>Assigned Users</TableCell>
-                                      <TableCell sx={{ color: "white", fontWeight: "bold" }}>Actions</TableCell>
+                                    <TableRow sx={{ bgcolor: '#f093fb' }}>
+                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Location Name</TableCell>
+                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Address</TableCell>
+                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Contact</TableCell>
+                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Manager</TableCell>
+                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Status</TableCell>
+                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Actions</TableCell>
                                     </TableRow>
                                   </TableHead>
                                   <TableBody>
-                                    {company.locations.map((location, locationIndex) => (
-                                      <TableRow
-                                        key={location.id}
-                                        sx={{
-                                          backgroundColor: locationIndex % 2 === 0 ? "white" : "grey.50",
-                                          "&:hover": { backgroundColor: "primary.50" },
-                                        }}
-                                      >
+                                    {company.locations.map((location) => (
+                                      <TableRow key={location.id} sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
                                         <TableCell>
-                                          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                                            <Avatar sx={{ bgcolor: "primary.main", width: 32, height: 32 }}>
-                                              <PlaceIcon fontSize="small" />
-                                            </Avatar>
-                                            <Box>
-                                              <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
-                                                {location.name}
-                                              </Typography>
-                                              <Chip
-                                                label={location.isActive ? "Active" : "Inactive"}
-                                                size="small"
-                                                color={location.isActive ? "success" : "default"}
-                                                sx={{ mt: 0.5 }}
-                                              />
-                                            </Box>
-                                          </Box>
+                                          <Typography variant="subtitle2" fontWeight="bold">
+                                            {location.name}
+                                          </Typography>
                                         </TableCell>
                                         <TableCell>
                                           <Typography variant="body2">
-                                            {location.city}, {location.state}
-                                          </Typography>
-                                          <Typography variant="body2" color="textSecondary">
-                                            {location.postCode}
+                                            {location.address}, {location.city}, {location.state} {location.postcode}
                                           </Typography>
                                         </TableCell>
                                         <TableCell>
-                                          {location.phone && (
-                                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
-                                              <PhoneIcon sx={{ fontSize: 14, color: "text.secondary" }} />
-                                              <Typography variant="body2">{location.phone}</Typography>
-                                            </Box>
-                                          )}
-                                          {location.email && (
-                                            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                                              <EmailIcon sx={{ fontSize: 14, color: "text.secondary" }} />
-                                              <Typography variant="body2">{location.email}</Typography>
-                                            </Box>
-                                          )}
-                                        </TableCell>
-                                        <TableCell>
-                                          {location.manager ? (
-                                            <Chip
-                                              label={company.users.find(u => u.id === location.manager)?.name || "Unknown Manager"}
-                                              size="small"
-                                              variant="outlined"
-                                              color="primary"
-                                            />
-                                          ) : (
-                                            <Typography variant="body2" color="textSecondary">
-                                              No manager assigned
-                                            </Typography>
-                                          )}
-                                        </TableCell>
-                                        <TableCell>
-                                          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                                            {getUsersForLocation(company.id, location.id).map((user) => (
-                                              <Chip
-                                                key={user.id}
-                                                avatar={
-                                                  <Avatar sx={{ bgcolor: getRoleColor(user.role), width: 24, height: 24 }}>
-                                                    {user.name.charAt(0)}
-                                                  </Avatar>
-                                                }
-                                                label={user.name}
-                                                size="small"
-                                                variant="outlined"
-                                              />
-                                            ))}
-                                            {getUsersForLocation(company.id, location.id).length === 0 && (
-                                              <Typography variant="body2" color="textSecondary">
-                                                No users assigned
+                                          <Stack spacing={0.5}>
+                                            {location.phone && (
+                                              <Typography variant="caption">
+                                                📞 {location.phone}
                                               </Typography>
                                             )}
-                                          </Box>
+                                            {location.email && (
+                                              <Typography variant="caption">
+                                                ✉️ {location.email}
+                                              </Typography>
+                                            )}
+                                            {!location.phone && !location.email && (
+                                              <Typography variant="caption" color="text.secondary">
+                                                No contact info
+                                              </Typography>
+                                            )}
+                                          </Stack>
                                         </TableCell>
                                         <TableCell>
-                                          <Box sx={{ display: "flex", gap: 0.5 }}>
+                                          <Typography variant="body2">
+                                            {location.manager || "No manager assigned"}
+                                          </Typography>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Chip
+                                            label={location.isActive ? "Active" : "Inactive"}
+                                            color={location.isActive ? "success" : "error"}
+                                            size="small"
+                                          />
+                                        </TableCell>
+                                        <TableCell>
+                                          <Stack direction="row" spacing={1}>
                                             <IconButton
                                               size="small"
-                                              onClick={() => handleOpenDialog("edit", "location", company, location)}
+                                              onClick={() => handleOpenDialog("edit", "location", location, company.id)}
                                               color="primary"
                                             >
                                               <EditIcon fontSize="small" />
                                             </IconButton>
                                             <IconButton
                                               size="small"
+                                              onClick={() => handleDelete(location.id, "location", company.id)}
                                               color="error"
                                             >
                                               <DeleteIcon fontSize="small" />
                                             </IconButton>
-                                          </Box>
+                                          </Stack>
                                         </TableCell>
                                       </TableRow>
                                     ))}
@@ -1506,141 +1525,106 @@ const CompanyLocationManager: React.FC = () => {
                             </Box>
                           )}
 
-                          {/* Users Section */}
+                          {/* Users Table */}
                           {company.users.length > 0 && (
                             <Box>
-                              <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-                                <GroupIcon sx={{ color: "primary.main" }} />
-                                <Typography variant="h6" sx={{ color: "primary.main", fontWeight: "bold" }}>
-                                  Company Users ({company.users.length})
-                                </Typography>
-                              </Box>
-                              <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 2 }}>
+                              <Typography variant="h6" color="primary" gutterBottom sx={{ mb: 2 }}>
+                                👥 Users ({company.users.length})
+                              </Typography>
+                              <TableContainer component={Paper} elevation={1} sx={{ borderRadius: 2 }}>
                                 <Table size="small">
                                   <TableHead>
-                                    <TableRow sx={{ bgcolor: "primary.main" }}>
-                                      <TableCell sx={{ color: "white", fontWeight: "bold" }}>User Details</TableCell>
-                                      <TableCell sx={{ color: "white", fontWeight: "bold" }}>Role & Status</TableCell>
-                                      <TableCell sx={{ color: "white", fontWeight: "bold" }}>Assigned Locations</TableCell>
-                                      <TableCell sx={{ color: "white", fontWeight: "bold" }}>Permissions</TableCell>
-                                      <TableCell sx={{ color: "white", fontWeight: "bold" }}>Actions</TableCell>
+                                    <TableRow sx={{ bgcolor: '#4facfe' }}>
+                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Name</TableCell>
+                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Contact</TableCell>
+                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Role</TableCell>
+                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Assigned Locations</TableCell>
+                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Status</TableCell>
+                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Actions</TableCell>
                                     </TableRow>
                                   </TableHead>
                                   <TableBody>
-                                    {company.users.map((user, userIndex) => (
-                                      <TableRow
-                                        key={user.id}
-                                        sx={{
-                                          backgroundColor: userIndex % 2 === 0 ? "white" : "grey.50",
-                                          "&:hover": { backgroundColor: "primary.50" },
-                                        }}
-                                      >
+                                    {company.users.map((user) => (
+                                      <TableRow key={user.id} sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
                                         <TableCell>
-                                          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                                            <Avatar
-                                              sx={{
-                                                bgcolor: getRoleColor(user.role),
-                                                width: 40,
-                                                height: 40,
-                                                fontWeight: "bold",
-                                              }}
-                                            >
-                                              {user.name.split(' ').map(n => n.charAt(0)).join('').toUpperCase()}
-                                            </Avatar>
-                                            <Box>
-                                              <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
-                                                {user.name}
-                                              </Typography>
-                                              <Typography variant="body2" color="textSecondary">
-                                                {user.email}
-                                              </Typography>
-                                              <Typography variant="caption" color="textSecondary">
-                                                Last login: {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
-                                              </Typography>
-                                            </Box>
-                                          </Box>
+                                          <Typography variant="subtitle2" fontWeight="bold">
+                                            {user.firstName} {user.lastName}
+                                          </Typography>
                                         </TableCell>
                                         <TableCell>
-                                          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-                                            <Chip
-                                              label={USER_ROLES.find(r => r.value === user.role)?.label || user.role}
-                                              size="small"
-                                              sx={{
-                                                bgcolor: getRoleColor(user.role),
-                                                color: "white",
-                                                fontWeight: "bold",
-                                              }}
-                                            />
-                                            <Chip
-                                              label={user.isActive ? "Active" : "Inactive"}
-                                              size="small"
-                                              color={user.isActive ? "success" : "default"}
-                                            />
-                                          </Box>
+                                          <Stack spacing={0.5}>
+                                            <Typography variant="caption">
+                                              ✉️ {user.email}
+                                            </Typography>
+                                            {user.phone && (
+                                              <Typography variant="caption">
+                                                📞 {user.phone}
+                                              </Typography>
+                                            )}
+                                          </Stack>
                                         </TableCell>
                                         <TableCell>
-                                          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                                            {user.assignedLocations.map((locationId) => (
-                                              <Chip
-                                                key={locationId}
-                                                label={getLocationName(company.id, locationId)}
-                                                size="small"
-                                                variant="outlined"
-                                                color="primary"
-                                                icon={<PlaceIcon />}
-                                              />
-                                            ))}
-                                            {user.assignedLocations.length === 0 && (
-                                              <Typography variant="body2" color="textSecondary">
+                                          <Chip
+                                            label={user.role}
+                                            size="small"
+                                            sx={{
+                                              bgcolor: getUserRoleColor(user.role),
+                                              color: "white",
+                                            }}
+                                          />
+                                        </TableCell>
+                                        <TableCell>
+                                          <Box sx={{ maxWidth: 200 }}>
+                                            {user.assignedLocations.length > 0 ? (
+                                              <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                                                {user.assignedLocations.slice(0, 2).map((location, index) => (
+                                                  <Chip
+                                                    key={index}
+                                                    label={location}
+                                                    size="small"
+                                                    variant="outlined"
+                                                  />
+                                                ))}
+                                                {user.assignedLocations.length > 2 && (
+                                                  <Chip
+                                                    label={`+${user.assignedLocations.length - 2} more`}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="primary"
+                                                  />
+                                                )}
+                                              </Stack>
+                                            ) : (
+                                              <Typography variant="caption" color="text.secondary">
                                                 No locations assigned
                                               </Typography>
                                             )}
                                           </Box>
                                         </TableCell>
                                         <TableCell>
-                                          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                                            {user.permissions.slice(0, 2).map((permission) => (
-                                              <Chip
-                                                key={permission}
-                                                label={
-                                                  AVAILABLE_PERMISSIONS.find(p => p.id === permission)?.name || permission
-                                                }
-                                                size="small"
-                                                variant="outlined"
-                                                color="secondary"
-                                              />
-                                            ))}
-                                            {user.permissions.length > 2 && (
-                                              <Chip
-                                                label={`+${user.permissions.length - 2} more`}
-                                                size="small"
-                                                variant="outlined"
-                                                color="secondary"
-                                              />
-                                            )}
-                                            {user.permissions.length === 0 && (
-                                              <Typography variant="body2" color="textSecondary">
-                                                No permissions assigned
-                                              </Typography>
-                                            )}
-                                          </Box>
+                                          <Chip
+                                            label={user.isActive ? "Active" : "Inactive"}
+                                            color={user.isActive ? "success" : "error"}
+                                            size="small"
+                                          />
                                         </TableCell>
                                         <TableCell>
-                                          <Box sx={{ display: "flex", gap: 0.5 }}>
+                                          <Stack direction="row" spacing={1}>
                                             <IconButton
                                               size="small"
-                                              onClick={() => handleOpenDialog("edit", "user", company, undefined, user)}
+                                              onClick={() => handleOpenDialog("edit", "user", user)}
                                               color="primary"
                                             >
                                               <EditIcon fontSize="small" />
                                             </IconButton>
                                             <IconButton
                                               size="small"
+                                              onClick={() => handleDelete(user.id, "user")}
                                               color="error"
                                             >
                                               <DeleteIcon fontSize="small" />
                                             </IconButton>
-                                          </Box>
+                                          </Stack>
                                         </TableCell>
                                       </TableRow>
                                     ))}
@@ -1649,6 +1633,66 @@ const CompanyLocationManager: React.FC = () => {
                               </TableContainer>
                             </Box>
                           )}
+
+                          {/* Empty States */}
+                          {company.locations.length === 0 && company.users.length === 0 && (
+                            <Box textAlign="center" py={4}>
+                              <Typography variant="body2" color="text.secondary" gutterBottom>
+                                No locations or users added yet
+                              </Typography>
+                              <Stack direction="row" spacing={2} justifyContent="center" mt={2}>
+                                <Button
+                                  variant="outlined"
+                                  startIcon={<AddIcon />}
+                                  onClick={() => handleOpenDialog("add", "location", undefined, company.id)}
+                                  size="small"
+                                >
+                                  Add Location
+                                </Button>
+                                <Button
+                                  variant="outlined"
+                                  startIcon={<AddIcon />}
+                                  onClick={() => handleOpenDialog("add", "user", undefined, company.id)}
+                                  size="small"
+                                >
+                                  Add User
+                                </Button>
+                              </Stack>
+                            </Box>
+                          )}
+
+                          {company.locations.length === 0 && company.users.length > 0 && (
+                            <Box textAlign="center" py={2} mb={2}>
+                              <Typography variant="body2" color="text.secondary" gutterBottom>
+                                No locations added yet
+                              </Typography>
+                              <Button
+                                variant="outlined"
+                                startIcon={<AddIcon />}
+                                onClick={() => handleOpenDialog("add", "location", undefined, company.id)}
+                                size="small"
+                              >
+                                Add Location
+                              </Button>
+                            </Box>
+                          )}
+
+                          {company.locations.length > 0 && company.users.length === 0 && (
+                            <Box textAlign="center" py={2}>
+                              <Typography variant="body2" color="text.secondary" gutterBottom>
+                                No users added yet
+                              </Typography>
+                              <Button
+                                variant="outlined"
+                                startIcon={<AddIcon />}
+                                onClick={() => handleOpenDialog("add", "user", undefined, company.id)}
+                                size="small"
+                              >
+                                Add User
+                              </Button>
+                            </Box>
+                          )}
+
                         </Box>
                       </Collapse>
                     </TableCell>
@@ -1658,102 +1702,150 @@ const CompanyLocationManager: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
+      </Card>
+
+      {/* Empty State */}
+      {filteredCompanies.length === 0 && (
+        <Box textAlign="center" py={8}>
+          <BusinessIcon sx={{ fontSize: 80, color: "text.disabled", mb: 2 }} />
+          <Typography variant="h6" color="text.secondary" gutterBottom>
+            No companies found
+          </Typography>
+          <Typography variant="body2" color="text.secondary" mb={3}>
+            {searchTerm || selectedRole || showInactiveOnly
+              ? "Try adjusting your filters"
+              : "Get started by adding your first company"}
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenDialog("add", "company")}
+            size="large"
+            sx={{ borderRadius: 2 }}
+          >
+            Add Company
+          </Button>
+        </Box>
       )}
 
-      {/* Context Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={() => setAnchorEl(null)}
-      >
-        <MenuItem onClick={() => handleMenuAction("edit")}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          Edit
-        </MenuItem>
-        <MenuItem onClick={() => handleMenuAction("delete")}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" />
-          </ListItemIcon>
-          Delete
-        </MenuItem>
-      </Menu>
-
-      {/* Add/Edit Dialog */}
+      {/* Dialog for Add/Edit */}
       <Dialog
         open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
+        onClose={handleCloseDialog}
         maxWidth="md"
         fullWidth
+        PaperProps={{
+          sx: { borderRadius: 2 },
+        }}
       >
-        <DialogTitle>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <Typography variant="h6">
-              {dialogMode === "add" ? "Add" : "Edit"} {entityType}
-            </Typography>
-            <IconButton onClick={() => setDialogOpen(false)}>
-              <CloseIcon />
-            </IconButton>
+        <DialogTitle
+          sx={{
+            pb: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Box display="flex" alignItems="center">
+            {entityType === "company" && <CompanyIcon sx={{ mr: 2 }} />}
+            {entityType === "location" && <PlaceIcon sx={{ mr: 2 }} />}
+            {entityType === "user" && <PersonIcon sx={{ mr: 2 }} />}
+            <Box>
+              <Typography variant="h6">
+                {dialogMode === "add" ? "Add" : "Edit"}{" "}
+                {entityType.charAt(0).toUpperCase() + entityType.slice(1)}
+              </Typography>
+              {dialogMode === "edit" && (
+                <Typography variant="body2" color="text.secondary">
+                  {entityType === "company" && selectedCompany && `Editing: ${selectedCompany.name} (ID: ${selectedCompany.id})`}
+                  {entityType === "location" && selectedLocation && `Editing: ${selectedLocation.name} (ID: ${selectedLocation.id})`}
+                  {entityType === "user" && selectedUser && `Editing: ${selectedUser.firstName} ${selectedUser.lastName} (ID: ${selectedUser.id})`}
+                </Typography>
+              )}
+            </Box>
           </Box>
+          <IconButton onClick={handleCloseDialog} size="small">
+            <CloseIcon />
+          </IconButton>
         </DialogTitle>
-        
-        <DialogContent>
+
+        <DialogContent dividers>
+          {/* Company Form */}
           {entityType === "company" && (
             <Grid container spacing={2} sx={{ mt: 1 }}>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Company Name"
+                  label="Company Name *"
                   value={companyForm.name}
                   onChange={(e) =>
                     setCompanyForm({ ...companyForm, name: e.target.value })
                   }
                   required
+                  error={!companyForm.name.trim()}
+                  helperText={!companyForm.name.trim() ? "Company name is required" : ""}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="City"
-                  value={companyForm.city}
+                  label="Website"
+                  value={companyForm.website}
                   onChange={(e) =>
-                    setCompanyForm({ ...companyForm, city: e.target.value })
+                    setCompanyForm({ ...companyForm, website: e.target.value })
                   }
-                  required
                 />
               </Grid>
-              <Grid item xs={12} sm={3}>
+              <Grid item xs={12} sm={4}>
                 <TextField
                   fullWidth
-                  label="State"
+                  label="Address *"
+                  value={companyForm.address}
+                  onChange={(e) =>
+                    setCompanyForm({ ...companyForm, address: e.target.value })
+                  }
+                  required
+                  error={!companyForm.address.trim()}
+                  helperText={!companyForm.address.trim() ? "Address is required" : ""}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  label="State *"
                   value={companyForm.state}
                   onChange={(e) =>
                     setCompanyForm({ ...companyForm, state: e.target.value })
                   }
                   required
+                  error={!companyForm.state.trim()}
+                  helperText={!companyForm.state.trim() ? "State is required" : ""}
                 />
               </Grid>
-              <Grid item xs={12} sm={3}>
+              <Grid item xs={12} sm={4}>
                 <TextField
                   fullWidth
-                  label="Post Code"
-                  value={companyForm.postCode}
+                  label="Post Code *"
+                  value={companyForm.postcode}
                   onChange={(e) =>
-                    setCompanyForm({ ...companyForm, postCode: e.target.value })
+                    setCompanyForm({ ...companyForm, postcode: e.target.value })
                   }
                   required
+                  error={!companyForm.postcode.trim()}
+                  helperText={!companyForm.postcode.trim() ? "Post code is required" : ""}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Phone"
+                  label="Phone *"
                   value={companyForm.phone}
                   onChange={(e) =>
                     setCompanyForm({ ...companyForm, phone: e.target.value })
                   }
                   required
+                  error={!companyForm.phone.trim()}
+                  helperText={!companyForm.phone.trim() ? "Phone is required" : ""}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -1764,16 +1856,6 @@ const CompanyLocationManager: React.FC = () => {
                   value={companyForm.email}
                   onChange={(e) =>
                     setCompanyForm({ ...companyForm, email: e.target.value })
-                  }
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Website"
-                  value={companyForm.website}
-                  onChange={(e) =>
-                    setCompanyForm({ ...companyForm, website: e.target.value })
                   }
                 />
               </Grid>
@@ -1790,72 +1872,155 @@ const CompanyLocationManager: React.FC = () => {
                   label="Active"
                 />
               </Grid>
+
+              {/* Delete Section for Edit Mode */}
+              {dialogMode === "edit" && selectedCompany && (
+                <Grid item xs={12}>
+                  <Paper 
+                    elevation={0} 
+                    sx={{ 
+                      p: 2, 
+                      mt: 2, 
+                      border: '1px solid #f44336', 
+                      borderRadius: 2,
+                      bgcolor: '#ffebee' 
+                    }}
+                  >
+                    <Typography variant="h6" color="error" gutterBottom>
+                      ⚠️ Danger Zone
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Permanently delete this company and all associated data. This action cannot be undone.
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      onClick={() => {
+                        if (window.confirm(
+                          `Are you sure you want to delete "${selectedCompany.name}"?\n\n` +
+                          `This will permanently delete:\n` +
+                          `• The company and all its data\n` +
+                          `• ${selectedCompany.locations?.length || 0} associated location(s)\n` +
+                          `• ${selectedCompany.users?.length || 0} associated user(s)\n\n` +
+                          `This action CANNOT be undone!`
+                        )) {
+                          handleDelete(selectedCompany.id, "company");
+                          handleCloseDialog();
+                        }
+                      }}
+                      sx={{ borderRadius: 2 }}
+                    >
+                      Delete Company
+                    </Button>
+                  </Paper>
+                </Grid>
+              )}
             </Grid>
           )}
 
+          {/* Location Form */}
           {entityType === "location" && (
             <Grid container spacing={2} sx={{ mt: 1 }}>
+              {/* Hidden Company ID field */}
+              <input 
+                type="hidden" 
+                value={locationForm.company_id} 
+                onChange={() => {}} // Read-only hidden field
+              />
+              
+              {/* Debug info for company ID (remove in production) */}
+              {locationForm.company_id && (
+                <Grid item xs={12}>
+                  <Alert severity="info" sx={{ mb: 1 }}>
+                    {dialogMode === "add" ? "Creating" : "Updating"} location for Company ID: {locationForm.company_id}
+                    <br />
+                    Will be sent as company_id: {locationForm.company_id}
+                    {dialogMode === "edit" && selectedLocation && (
+                      <>
+                        <br />
+                        Clean location ID for API: {selectedLocation.id}
+                        <br />
+                        API endpoint: /stores/{selectedLocation.id}
+                      </>
+                    )}
+                  </Alert>
+                </Grid>
+              )}
+              
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Location Name"
+                  label="Location Name *"
                   value={locationForm.name}
                   onChange={(e) =>
                     setLocationForm({ ...locationForm, name: e.target.value })
                   }
                   required
+                  error={!locationForm.name.trim()}
+                  helperText={!locationForm.name.trim() ? "Location name is required" : ""}
                 />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Manager</InputLabel>
-                  <Select
-                    value={locationForm.manager}
-                    label="Manager"
-                    onChange={(e) =>
-                      setLocationForm({ ...locationForm, manager: e.target.value })
-                    }
-                  >
-                    <MenuItem value="">No Manager</MenuItem>
-                    {selectedCompany?.users.map((user) => (
-                      <MenuItem key={user.id} value={user.id}>
-                        {user.name} ({user.role})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="City"
+                  label="Manager"
+                  value={locationForm.manager}
+                  onChange={(e) =>
+                    setLocationForm({ ...locationForm, manager: e.target.value })
+                  }
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Address *"
+                  value={locationForm.address}
+                  onChange={(e) =>
+                    setLocationForm({ ...locationForm, address: e.target.value })
+                  }
+                  required
+                  error={!locationForm.address.trim()}
+                  helperText={!locationForm.address.trim() ? "Address is required" : ""}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  label="City *"
                   value={locationForm.city}
                   onChange={(e) =>
                     setLocationForm({ ...locationForm, city: e.target.value })
                   }
                   required
+                  error={!locationForm.city.trim()}
+                  helperText={!locationForm.city.trim() ? "City is required" : ""}
                 />
               </Grid>
-              <Grid item xs={12} sm={3}>
+              <Grid item xs={12} sm={4}>
                 <TextField
                   fullWidth
-                  label="State"
+                  label="State *"
                   value={locationForm.state}
                   onChange={(e) =>
                     setLocationForm({ ...locationForm, state: e.target.value })
                   }
                   required
+                  error={!locationForm.state.trim()}
+                  helperText={!locationForm.state.trim() ? "State is required" : ""}
                 />
               </Grid>
-              <Grid item xs={12} sm={3}>
+              <Grid item xs={12} sm={4}>
                 <TextField
                   fullWidth
-                  label="Post Code"
-                  value={locationForm.postCode}
+                  label="Post Code *"
+                  value={locationForm.postcode}
                   onChange={(e) =>
-                    setLocationForm({ ...locationForm, postCode: e.target.value })
+                    setLocationForm({ ...locationForm, postcode: e.target.value })
                   }
                   required
+                  error={!locationForm.postcode.trim()}
+                  helperText={!locationForm.postcode.trim() ? "Post code is required" : ""}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -1895,29 +2060,76 @@ const CompanyLocationManager: React.FC = () => {
             </Grid>
           )}
 
+          {/* User Form */}
           {entityType === "user" && (
             <Grid container spacing={2} sx={{ mt: 1 }}>
+              {/* Hidden Company ID field */}
+              <input 
+                type="hidden" 
+                value={userForm.company_id} 
+                onChange={() => {}} // Read-only hidden field
+              />
+              
+              {/* Debug info for company ID (remove in production) */}
+              {userForm.company_id && (
+                <Grid item xs={12}>
+                  <Alert severity="info" sx={{ mb: 1 }}>
+                    Creating user for Company ID: {userForm.company_id}
+                  </Alert>
+                </Grid>
+              )}
+              
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Name"
-                  value={userForm.name}
+                  label="First Name *"
+                  value={userForm.firstName}
                   onChange={(e) =>
-                    setUserForm({ ...userForm, name: e.target.value })
+                    setUserForm({ ...userForm, firstName: e.target.value })
                   }
                   required
+                  error={!userForm.firstName.trim()}
+                  helperText={!userForm.firstName.trim() ? "First name is required" : ""}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Email"
+                  label="Last Name *"
+                  value={userForm.lastName}
+                  onChange={(e) =>
+                    setUserForm({ ...userForm, lastName: e.target.value })
+                  }
+                  required
+                  error={!userForm.lastName.trim()}
+                  helperText={!userForm.lastName.trim() ? "Last name is required" : ""}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Email *"
                   type="email"
                   value={userForm.email}
                   onChange={(e) =>
                     setUserForm({ ...userForm, email: e.target.value })
                   }
                   required
+                  error={!userForm.email.trim()}
+                  helperText={!userForm.email.trim() ? "Email is required" : ""}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Phone *"
+                  value={userForm.phone}
+                  onChange={(e) =>
+                    setUserForm({ ...userForm, phone: e.target.value })
+                  }
+                  required
+                  error={!userForm.phone.trim()}
+                  helperText={!userForm.phone.trim() ? "Phone is required" : ""}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -1957,21 +2169,21 @@ const CompanyLocationManager: React.FC = () => {
                     renderValue={(selected) => (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                         {selected.map((value) => (
-                          <Chip 
-                            key={value} 
-                            label={getLocationName(selectedCompany?.id || '', value)} 
-                            size="small" 
-                          />
+                          <Chip key={value} label={value} size="small" />
                         ))}
                       </Box>
                     )}
                   >
-                    {selectedCompany?.locations.map((location) => (
-                      <MenuItem key={location.id} value={location.id}>
-                        <Checkbox checked={userForm.assignedLocations.indexOf(location.id) > -1} />
-                        <ListItemText primary={location.name} />
-                      </MenuItem>
-                    ))}
+                    {companies.flatMap(company => 
+                      company.locations.map(location => (
+                        <MenuItem key={location.id} value={location.name}>
+                          <Checkbox 
+                            checked={userForm.assignedLocations.indexOf(location.name) > -1} 
+                          />
+                          <ListItemText primary={location.name} />
+                        </MenuItem>
+                      ))
+                    )}
                   </Select>
                 </FormControl>
               </Grid>
@@ -1993,18 +2205,16 @@ const CompanyLocationManager: React.FC = () => {
                     renderValue={(selected) => (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                         {selected.map((value) => (
-                          <Chip 
-                            key={value} 
-                            label={AVAILABLE_PERMISSIONS.find(p => p.id === value)?.name || value} 
-                            size="small" 
-                          />
+                          <Chip key={value} label={value} size="small" />
                         ))}
                       </Box>
                     )}
                   >
                     {AVAILABLE_PERMISSIONS.map((permission) => (
                       <MenuItem key={permission.id} value={permission.id}>
-                        <Checkbox checked={userForm.permissions.indexOf(permission.id) > -1} />
+                        <Checkbox 
+                          checked={userForm.permissions.indexOf(permission.id) > -1} 
+                        />
                         <ListItemText 
                           primary={permission.name} 
                           secondary={permission.description}
@@ -2030,19 +2240,29 @@ const CompanyLocationManager: React.FC = () => {
             </Grid>
           )}
         </DialogContent>
-        
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={handleCloseDialog} color="inherit">
+            Cancel
+          </Button>
           <Button
+            onClick={handleSave}
             variant="contained"
-            onClick={() => {
-              if (entityType === "company") handleSaveCompany();
-              else if (entityType === "location") handleSaveLocation();
-              else if (entityType === "user") handleSaveUser();
-            }}
             startIcon={<SaveIcon />}
+            disabled={
+              (entityType === "company" && (!companyForm.name.trim() || !companyForm.phone.trim() || !companyForm.address.trim() || !companyForm.state.trim() || !companyForm.postcode.trim())) ||
+              (entityType === "location" && (
+                !locationForm.name.trim() || 
+                !locationForm.address.trim() || 
+                !locationForm.city.trim() || 
+                !locationForm.state.trim() || 
+                !locationForm.postcode.trim() || 
+                !locationForm.company_id.trim() // Always require company ID for locations
+              )) ||
+              (entityType === "user" && (!userForm.firstName.trim() || !userForm.lastName.trim() || !userForm.email.trim() || !userForm.phone.trim() || (dialogMode === "add" && !userForm.company_id.trim())))
+            }
           >
-            {dialogMode === "add" ? "Add" : "Save"}
+            {dialogMode === "add" ? "Create" : "Update"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -2051,11 +2271,13 @@ const CompanyLocationManager: React.FC = () => {
       <Snackbar
         open={notification.open}
         autoHideDuration={6000}
-        onClose={() => setNotification({ ...notification, open: false })}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
         <Alert
-          onClose={() => setNotification({ ...notification, open: false })}
+          onClose={handleCloseNotification}
           severity={notification.severity}
+          variant="filled"
           sx={{ width: "100%" }}
         >
           {notification.message}

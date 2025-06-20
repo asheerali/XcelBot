@@ -3,6 +3,7 @@ from models.companies import Company
 from schemas.companies import CompanyCreate
 
 def create_company(db: Session, company: CompanyCreate) -> Company:
+    # print("Creating company:", company)
     db_company = Company(**company.model_dump())
     db.add(db_company)
     db.commit()

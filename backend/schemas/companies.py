@@ -8,7 +8,7 @@ class CompanyBase(BaseModel):
     state: str
     postcode: str
     address: Optional[str] = None  # New field
-    phone_number: str
+    phone: str
     email: EmailStr
     website: Optional[str] = None
 
@@ -16,7 +16,7 @@ class CompanyCreate(CompanyBase):
     pass
 
 class Company(CompanyBase):
-    id: UUID
+    id: int  # Changed from UUID to int
     created_at: datetime
 
     class Config:

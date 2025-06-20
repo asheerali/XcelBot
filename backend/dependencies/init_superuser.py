@@ -16,7 +16,7 @@ def create_default_superusers(db: Session):
                 address="123 Default St",  # Add address here
                 state="N/A",
                 postcode="00000",
-                phone_number="000-000-0000",
+                phone="000-000-0000",
                 email="default@company.com",
                 website=None
             )
@@ -34,7 +34,7 @@ def create_default_superusers(db: Session):
                 address="456 Main Ave",  # Add address here
                 state="CA",
                 postcode="90001",
-                phone_number="123-456-7890",
+                phone="123-456-7890",
                 email="info@secondcompany.com",
                 website="https://secondcompany.com"
             )
@@ -48,6 +48,7 @@ def create_default_superusers(db: Session):
                 name="Second Company Store",
                 city="Los Angeles",
                 state="CA",
+                address="789 Sunset Blvd",  # Add address here
                 postcode="90001",
                 phone="323-1112222",
                 email="store@secondcompany.com",
@@ -125,6 +126,7 @@ def create_default_superusers(db: Session):
                     city="Berlin",
                     state="BE",
                     postcode="10115",
+                    address="123 Main St",  # Add address here
                     phone="030-123456",
                     email="store-a@default.com",
                     company_id=user.company_id
@@ -134,6 +136,7 @@ def create_default_superusers(db: Session):
                     city="Munich",
                     state="BY",
                     postcode="80331",
+                    address="456 Elm St ",  # Add address here
                     phone="089-654321",
                     email="store-b@default.com",
                     company_id=user.company_id

@@ -16,6 +16,7 @@ def get_store(db: Session, store_id: int):
     return db.query(Store).filter(Store.id == store_id).first()
 
 def update_store(db: Session, store_id: int, store_data: StoreCreate):
+    print("Updating store:", store_data)
     db_store = get_store(db, store_id)
     if not db_store:
         return None

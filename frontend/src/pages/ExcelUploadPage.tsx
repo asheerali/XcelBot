@@ -1428,21 +1428,19 @@ const ExcelUploadPage: React.FC = () => {
                                 </>
                               )}
 
-                              <IconButton
-                                color="error"
-                                onClick={() => removeFile(index)}
-                                sx={{
-                                  borderRadius: 2,
-                                  "&:hover": {
-                                    backgroundColor: alpha(
-                                      theme.palette.error.main,
-                                      0.1
-                                    ),
-                                  },
-                                }}
-                              >
-                                <DeleteIcon />
-                              </IconButton>
+                             <IconButton
+  color="error"
+  onClick={() => removeFile(index)}
+  disabled={fileInfo.status === "uploading"}
+  sx={{
+    borderRadius: 2,
+    "&:hover": {
+      backgroundColor: alpha(theme.palette.error.main, 0.1),
+    },
+  }}
+>
+  <DeleteIcon />
+</IconButton>
                             </Stack>
                           </Grid>
                         </Grid>

@@ -32,7 +32,7 @@ def get_company_overview(db: Session = Depends(get_db)):
 
             # Assigned locations based on mapping
             assigned_locations = [
-                f"{company.id}-{location.location_id}" for location in company_locations
+                f"{str(company.id)}-{location.id}" for location in company_locations
                 if user.id in [uc.user_id for uc in user_company_map if uc.company_id == company.id]
             ]
 
@@ -48,25 +48,25 @@ def get_company_overview(db: Session = Depends(get_db)):
                 if getattr(user_permission, "d7", False): permissions_list.append("reporting")
 
             users_payload.append({
-                "id": f"u{company.id}-{user.id}",
+                "id": f"u{str(company.id)}-{user.id}",
                 "name": f"{user.first_name} {user.last_name}".strip(),
                 "email": user.email,
                 "role": user.role.name.capitalize() if user.role else "Unknown",
                 "permissions": permissions_list,
                 "assignedLocations": assigned_locations,
                 "isActive": user.is_active if hasattr(user, "is_active") else True,
-                # "lastLogin": user.last_login or None,
                 "createdAt": user.created_at or None,
             })
 
         locations_payload = []
         for loc in company_locations:
             locations_payload.append({
-                "id": f"{company.id}-{loc.location_id}",
+                "id": f"{str(company.id)}-{loc.id}",
                 "name": loc.name,
                 "city": loc.city or "",
                 "state": loc.state or "",
-                "postCode": loc.postcode or "",
+                "postcode": loc.postcode or "",
+                "address": loc.address or "",
                 "phone": loc.phone or "",
                 "email": loc.email or "",
                 "isActive": True,
@@ -80,8 +80,9 @@ def get_company_overview(db: Session = Depends(get_db)):
             "name": company.name,
             "city": getattr(company, "city", company.state),  # fallback
             "state": company.state,
-            "postCode": company.postcode,
-            "phone": company.phone_number,
+            "postcode": company.postcode,
+            "address": company.address,
+            "phone": company.phone,
             "email": company.email,
             "website": company.website,
             "industry": getattr(company, "industry", "Unknown"),

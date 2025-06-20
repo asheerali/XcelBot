@@ -1,5 +1,6 @@
 python -m venv xcelbot
 xcelbot\Scripts\activate
+source xcelbot/bin/activate
 
 pip install -r requirements.txt
 
@@ -20,4 +21,16 @@ FRONTEND_URL=http://localhost:5173
 DATABASE_URL=sqlite:///./app.db
 
 
+also send compnay id modify it to first name , last name , phone number 
+post /users 
+delete /users
+put / users
+
+post /stors 
+delete/ stores
+put /stores
+
+post / companes
+delete / companes
+put / companes
 

@@ -11,6 +11,7 @@ router = APIRouter(
 
 @router.post("/", response_model=Store)
 def create_store(store: StoreCreate, db: Session = Depends(get_db)):
+    print("Creating store:", store)
     return store_crud.create_store(db, store)
 
 @router.get("/", response_model=list[Store])

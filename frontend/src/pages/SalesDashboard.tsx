@@ -1213,16 +1213,6 @@ export default function SalesDashboard() {
           </div>
   
 
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Tooltip title="Help">
-            <IconButton 
-              color="info" 
-              sx={{ backgroundColor: 'white', boxShadow: 1 }}
-            >
-              <HelpOutlineIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
       </Box>
 
       {/* Alert message when no data is available */}

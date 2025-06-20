@@ -17,26 +17,23 @@ import {
   Tooltip
 } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
+import NewspaperIcon from '@mui/icons-material/Newspaper';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import HelpIcon from '@mui/icons-material/Help';
+import PaymentIcon from '@mui/icons-material/Payment';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import BarChartIcon from '@mui/icons-material/BarChart';
 import LogoutIcon from '@mui/icons-material/Logout';
+// NEW IMPORT: Add this for the new logo
 import DashboardIcon from '@mui/icons-material/Dashboard';
-
-// UPDATED IMPORTS: Better, more relevant icons for each section
-import UploadFileIcon from '@mui/icons-material/UploadFile';           // Upload Excel - Perfect fit
-import BarChartIcon from '@mui/icons-material/BarChart';               // Sales Split - Chart visualization
-import CategoryIcon from '@mui/icons-material/Category';               // Product Mix - Product categories
-import AccountBalanceIcon from '@mui/icons-material/AccountBalance';   // Financials - Financial/banking
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';           // Companywide Sales - Sales growth
-import PaymentIcon from '@mui/icons-material/Payment';                 // Payments - Payment processing
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';        // Help Center - Help/support
-import BusinessIcon from '@mui/icons-material/Business';              // Company - Corporate/business
 
 const drawerWidth = 260;
 const gradientBackground = 'linear-gradient(180deg, #050b1b 0%, #150949 100%)';
 
-// Custom Logo Component - Exact same design as homepage
+// NEW COMPONENT: Custom Logo Component - Exact same design as homepage
 const CustomLogo = ({ size = 32 }) => (
   <Box
     sx={{
@@ -62,6 +59,7 @@ const CustomLogo = ({ size = 32 }) => (
   </Box>
 );
 
+// UPDATED: Remove logo and title props, use internal app name
 const CustomSidebar = ({ onSignOut }) => {
   const theme = useTheme();
   const location = useLocation();
@@ -69,59 +67,19 @@ const CustomSidebar = ({ onSignOut }) => {
   const [open, setOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // App name
+  // NEW: Define your app name here - CHANGE THIS TO YOUR DESIRED NAME
   const appName = 'INSIGHTiQ';
 
-  // UPDATED: Navigation items with better, more meaningful icons
   const navItems = [
-    { 
-      title: 'Upload Excel', 
-      path: '/upload-excel', 
-      icon: <UploadFileIcon />,
-      description: 'Upload and process Excel files'
-    },
-    { 
-      title: 'Sales Split', 
-      path: '/manage-reports', 
-      icon: <BarChartIcon />,
-      description: 'Analyze sales data and reports'
-    },
-    { 
-      title: 'Product Mix', 
-      path: '/Productmix', 
-      icon: <CategoryIcon />,
-      description: 'Product category analysis'
-    },
-    { 
-      title: 'Financials', 
-      path: '/Financials', 
-      icon: <AccountBalanceIcon />,
-      description: 'Financial reports and analytics'
-    },
-    { 
-      title: 'Companywide Sales', 
-      path: '/Saleswide', 
-      icon: <TrendingUpIcon />,
-      description: 'Overall sales performance'
-    },
-    { 
-      title: 'Payments', 
-      path: '/Payments', 
-      icon: <PaymentIcon />,
-      description: 'Payment processing and billing'
-    },
-    { 
-      title: 'Help Center', 
-      path: '/HelpCenter', 
-      icon: <HelpOutlineIcon />,
-      description: 'Support and documentation'
-    },
-    { 
-      title: 'Company', 
-      path: '/CompanyLocationManager', 
-      icon: <BusinessIcon />,
-      description: 'Company and location management'
-    },
+    { title: 'Upload Excel', path: '/upload-excel', icon: <UploadFileIcon /> },
+    { title: 'Sales Split', path: '/manage-reports', icon: <BarChartIcon /> },
+    { title: 'Product Mix', path: '/Productmix', icon: <NewspaperIcon /> },
+    { title: 'Financials', path: '/Financials', icon: <NewspaperIcon /> },
+    { title: 'Companywide Sales', path: '/Saleswide', icon: <NewspaperIcon /> },
+    // { title: 'User Permissions', path: '/UserPermissions', icon: <AdminPanelSettingsIcon /> },
+    { title: 'Payments', path: '/Payments', icon: <PaymentIcon /> },
+    { title: 'Help Center', path: '/HelpCenter', icon: <HelpIcon /> },
+    { title: 'Company', path: '/CompanyLocationManager', icon: <NewspaperIcon /> },
   ];
 
   const handleDrawerToggle = () => {
@@ -187,11 +145,7 @@ const CustomSidebar = ({ onSignOut }) => {
               boxShadow: isSelected ? `0 0 10px 1px ${alpha('#ffffff', 0.15)}` : 'none'
             }}
           >
-            <Tooltip 
-              title={open ? '' : `${item.title} - ${item.description}`} 
-              placement="right" 
-              arrow
-            >
+            <Tooltip title={open ? '' : item.title} placement="right" arrow>
               <ListItemIcon
                 sx={{
                   minWidth: 0,
@@ -259,10 +213,11 @@ const CustomSidebar = ({ onSignOut }) => {
               color: '#ffffff'
             }}
           >
+            {/* CHANGED: Use new CustomLogo component instead of {logo} */}
             <CustomLogo size={32} />
           </ListItemIcon>
           <ListItemText
-            primary={appName}
+            primary={appName} // CHANGED: Use appName variable instead of {title}
             sx={{
               transition: 'opacity 0.3s ease',
               opacity: open ? 1 : 0,

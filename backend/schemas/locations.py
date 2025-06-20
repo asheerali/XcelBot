@@ -7,14 +7,15 @@ class StoreBase(BaseModel):
     state: str
     postcode: str
     phone: str
+    address: str 
     email: EmailStr
-    company_id: UUID
+    company_id: int
 
 class StoreCreate(StoreBase):
     pass
 
 class Store(StoreBase):
-    location_id: int
+    id: int
 
     class Config:
         from_attributes = True

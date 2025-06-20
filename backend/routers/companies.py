@@ -18,21 +18,21 @@ def get_companies(db: Session = Depends(get_db)):
     return company_crud.get_companies(db)
 
 @router.get("/{company_id}", response_model=company_schema.Company)
-def get_company(company_id: str, db: Session = Depends(get_db)):
+def get_company(company_id: int, db: Session = Depends(get_db)):  # CHANGED
     company = company_crud.get_company(db, company_id)
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     return company
 
 @router.put("/{company_id}", response_model=company_schema.Company)
-def update_company(company_id: str, company: company_schema.CompanyCreate, db: Session = Depends(get_db)):
+def update_company(company_id: int, company: company_schema.CompanyCreate, db: Session = Depends(get_db)):  # CHANGED
     updated = company_crud.update_company(db, company_id, company)
     if not updated:
         raise HTTPException(status_code=404, detail="Company not found")
     return updated
 
 @router.delete("/{company_id}")
-def delete_company(company_id: str, db: Session = Depends(get_db)):
+def delete_company(company_id: int, db: Session = Depends(get_db)):  # CHANGED
     success = company_crud.delete_company(db, company_id)
     if not success:
         raise HTTPException(status_code=404, detail="Company not found")
