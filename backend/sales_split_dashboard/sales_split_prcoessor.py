@@ -128,13 +128,6 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
     categories = df["Category"].unique().tolist()
     locations = df["Location"].unique().tolist()
 
-    print("df i am here in sales split processor after stripping column names for 13 weeks", "\n", df.columns)
-    print("df i am here in sales split processor checking the uniques in dining option and category", "\n", df['Dining Option'].unique(), "\n", df['Category'].unique())
-
-    # print("i am here in sales split processor checking the categories and locations", "\n", categories, "\n", locations)
- 
- 
-    print("df i am here in sales split procesor after df cleanign and transforming", "\n", df.head())
     # sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df = companywide_tables(df, store_filter=store_filter, year_filter=year_filter, quarter_filter=quarter_filter, helper4_filter=helper4_filter)
  
     # p1 = overview_tables(df, location_filter=location_filter, order_date_filter=order_date_filter, server_filter=server_filter, dining_option_filter=dining_option_filter)
