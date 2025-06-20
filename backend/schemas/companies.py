@@ -7,6 +7,7 @@ class CompanyBase(BaseModel):
     name: str
     state: str
     postcode: str
+    address: Optional[str] = None  # New field
     phone_number: str
     email: EmailStr
     website: Optional[str] = None

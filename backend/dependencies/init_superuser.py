@@ -13,12 +13,14 @@ def create_default_superusers(db: Session):
         if not default_company:
             default_company = Company(
                 name="Default Company",
+                address="123 Default St",  # Add address here
                 state="N/A",
                 postcode="00000",
                 phone_number="000-000-0000",
                 email="default@company.com",
                 website=None
             )
+
             db.add(default_company)
             db.commit()
             db.refresh(default_company)
@@ -29,6 +31,7 @@ def create_default_superusers(db: Session):
         if not second_company:
             second_company = Company(
                 name="Second Company",
+                address="456 Main Ave",  # Add address here
                 state="CA",
                 postcode="90001",
                 phone_number="123-456-7890",
