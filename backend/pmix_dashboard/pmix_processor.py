@@ -76,14 +76,16 @@ def process_pmix_file(file_data: Union[io.BytesIO, str],start_date=None, end_dat
     # Define groups
     in_house = [
         "Kiosk - Dine In", "Kiosk - Take Out", "Take Out - Cashier",
-        "Take Out  - Cashier", "Pick Up - Phone", "Inkind - Take Out"
+        "Take Out  - Cashier", "Pick Up - Phone", "Inkind - Take Out",
+        "Dine In", "Take Out"
     ]
     one_p = [
         "Delivery - Phone", "ChowNow: Pick Up", "Lunchbox Delivery",
-        "Lunchbox Pick Up", "ChowNow: Delivery"
+        "Lunchbox Pick Up", "ChowNow: Delivery", "Online Ordering - Takeout"
     ]
     dd = [
-        "DoorDash Pick Up", "DoorDash Self-Delivery"
+        "DoorDash Pick Up", "DoorDash Self-Delivery", "DoorDash - Takeout",
+        "DoorDash - Delivery", "DoorDash - Pick Up", "DoorDash - Self-Delivery",
     ]
     catering = [
         "EZ Cater - Pick Up", "LB Catering Delivery", "Catering Delivery - Phone",
@@ -91,10 +93,15 @@ def process_pmix_file(file_data: Union[io.BytesIO, str],start_date=None, end_dat
         "CaterCow - Delivery", "Fooda Pick up", "Sharebite - Pick Up"
     ]
     gh = [
-        "Grubhub Pick Up", "Grubhub Self - Delivery"
+        "Grubhub Pick Up", "Grubhub Self - Delivery", "Grubhub - Takeout",
+        "Grubhub - Delivery", "Grubhub - Pick Up", "Grubhub - Self-Delivery",
     ]
     ub = [
-        "UberEats Pick Up", "UberEats Self-Delivery"
+        "UberEats Pick Up", "UberEats Self-Delivery", "UberEats - Takeout",
+        "UberEats - Delivery", "UberEats - Pick Up", "UberEats - Self-Delivery",
+        "Uber Eats - Delivery", "Uber Eats - Takeout", "Uber Eats - Pick Up",
+        "Uber Eats - Self-Delivery", "Uber Eats - Delivery",
+        "Uber Eats - Takeout", "Uber Eats - Pick Up", "Uber Eats - Self-Delivery"
     ]
 
     # Create conditions and corresponding values
