@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import axios from "axios";
 import {
   Box,
   Typography,
@@ -48,7 +49,6 @@ import {
   LinearProgress,
   CircularProgress,
 } from "@mui/material";
-import axios from "axios";
 
 // Icons
 import AddIcon from "@mui/icons-material/Add";
@@ -81,17 +81,9 @@ import PhoneIcon from "@mui/icons-material/Phone";
 import EmailIcon from "@mui/icons-material/Email";
 import WebIcon from "@mui/icons-material/Web";
 import CloseIcon from "@mui/icons-material/Close";
-import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { API_URL_Local } from "../constants";
 
-const COMPANY_OVERVIEW_API_URL = `${API_URL_Local}/company-overview/`;
-
-// API Endpoints
-const API_ENDPOINTS = {
-  users: `${API_URL_Local}/users`,
-  stores: `${API_URL_Local}/stores`,
-  companies: `${API_URL_Local}/companies`,
-};
+const SALES_WIDE_FILTER_API_URL = `${API_URL_Local}/company-overview/`;
 
 interface Permission {
   id: string;
@@ -100,6 +92,7 @@ interface Permission {
   category: string;
 }
 
+// Updated User interface with firstName, lastName, and phone
 interface User {
   id: string;
   firstName: string;
@@ -117,7 +110,6 @@ interface User {
 interface Location {
   id: string;
   name: string;
-  address: string;
   city: string;
   state: string;
   postcode: string;
@@ -132,12 +124,13 @@ interface Location {
 interface Company {
   id: string;
   name: string;
-  address: string;
+  city: string;
   state: string;
   postcode: string;
   phone: string;
   email?: string;
   website?: string;
+  industry?: string;
   locations: Location[];
   users: User[];
   isActive: boolean;
@@ -147,6 +140,7 @@ interface Company {
 
 type DialogMode = "add" | "edit" | "view" | null;
 type EntityType = "company" | "location" | "user";
+type ViewMode = "table" | "cards";
 
 const AVAILABLE_PERMISSIONS: Permission[] = [
   {
@@ -207,84 +201,21 @@ const USER_ROLES = [
   { value: "trial", label: "Trial", color: "#9c27b0", level: 5 },
 ];
 
+const INDUSTRIES = [
+  "Technology",
+  "Healthcare",
+  "Finance",
+  "Manufacturing",
+  "Retail",
+  "Education",
+  "Construction",
+  "Transportation",
+  "Energy",
+  "Other",
+];
+
 const CompanyLocationManager: React.FC = () => {
   const theme = useTheme();
-
-  // Utility function to normalize ID format (remove hyphens if present)
-  const normalizeId = (id: string): string => {
-    if (!id) return id;
-    // Remove hyphens to get the original format
-    const normalized = id.replace(/-/g, '');
-    console.log(`ID normalization: "${id}" -> "${normalized}"`);
-    return normalized;
-  };
-
-  // Utility function to extract location ID only (remove company prefix if present)
-  const extractLocationId = (fullId: string, company_id?: string): string => {
-    if (!fullId) return fullId;
-    
-    console.log(`=== ID EXTRACTION PROCESS ===`);
-    console.log(`Full ID: "${fullId}"`);
-    console.log(`Company ID: "${company_id}"`);
-    console.log(`Full ID type: ${typeof fullId}`);
-    console.log(`Company ID type: ${typeof company_id}`);
-    
-    // Convert to strings to ensure proper comparison
-    const fullIdStr = String(fullId);
-    const company_idStr = String(company_id || '');
-    
-    // If we have the company ID and the full ID starts with it, extract the location part
-    if (company_idStr && fullIdStr.startsWith(company_idStr)) {
-      const locationId = fullIdStr.substring(company_idStr.length);
-      console.log(`SUCCESS: Extracted location ID by removing company prefix`);
-      console.log(`"${fullIdStr}" - "${company_idStr}" = "${locationId}"`);
-      console.log(`=== END ID EXTRACTION ===`);
-      return locationId;
-    }
-    
-    // Check for common compound ID patterns
-    if (fullIdStr.includes('_')) {
-      // Pattern: "company123_location456"
-      const parts = fullIdStr.split('_');
-      const locationId = parts[parts.length - 1];
-      console.log(`Split by underscore: "${fullIdStr}" -> "${locationId}"`);
-      console.log(`=== END ID EXTRACTION ===`);
-      return locationId;
-    }
-    
-    if (fullIdStr.includes('-') && fullIdStr.split('-').length > 4) {
-      // Pattern might be "company_id-locationId" where both are UUIDs
-      // UUID format: 8-4-4-4-12 characters
-      const parts = fullIdStr.split('-');
-      if (parts.length > 5) {
-        // Take last 5 parts as location UUID
-        const locationId = parts.slice(-5).join('-');
-        console.log(`Split compound UUID: "${fullIdStr}" -> "${locationId}"`);
-        console.log(`=== END ID EXTRACTION ===`);
-        return locationId;
-      }
-    }
-    
-    // If no pattern matches, return the original ID
-    console.log(`WARNING: No pattern matched, using original ID: "${fullIdStr}"`);
-    console.log(`=== END ID EXTRACTION ===`);
-    return fullIdStr;
-  };
-
-  // Utility function to get clean location ID for API calls
-  const getLocationIdForAPI = (fullId: string, company_id?: string): string => {
-    // First extract location part using company ID if available, then normalize
-    const locationPart = extractLocationId(fullId, company_id);
-    const normalized = normalizeId(locationPart);
-    console.log(`Location ID for API: "${fullId}" (company: "${company_id}") -> "${normalized}"`);
-    return normalized;
-  };
-
-  // Utility function to format ID for display (if needed)
-  const getOriginalId = (id: string): string => {
-    // Always return the ID without hyphens for consistency
-    return normalizeId(id);
-  };
 
   // State for companies and locations
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -314,29 +245,28 @@ const CompanyLocationManager: React.FC = () => {
   // Form states
   const [companyForm, setCompanyForm] = useState({
     name: "",
-    address: "",
+    city: "",
     state: "",
     postcode: "",
     phone: "",
     email: "",
     website: "",
+    industry: "",
     isActive: true,
   });
 
   const [locationForm, setLocationForm] = useState({
     name: "",
-    address: "",
     city: "",
     state: "",
     postcode: "",
     phone: "",
     email: "",
     manager: "",
-    company_id: "", // Hidden field for company association
     isActive: true,
   });
 
-  // Updated user form with firstName, lastName, and phone
+  // Updated userForm to include firstName, lastName, phone
   const [userForm, setUserForm] = useState({
     firstName: "",
     lastName: "",
@@ -345,7 +275,6 @@ const CompanyLocationManager: React.FC = () => {
     role: "",
     permissions: [] as string[],
     assignedLocations: [] as string[],
-    company_id: "", // Hidden field for company association
     isActive: true,
   });
 
@@ -367,493 +296,171 @@ const CompanyLocationManager: React.FC = () => {
     severity: "success",
   });
 
-  // Calculate summary statistics
-  const summaryStats = useMemo(() => {
-    const totalCompanies = companies.length;
-    const activeCompanies = companies.filter(c => c.isActive).length;
-    const inactiveCompanies = totalCompanies - activeCompanies;
-    
-    const totalLocations = companies.reduce((sum, company) => sum + company.locations.length, 0);
-    const activeLocations = companies.reduce((sum, company) => 
-      sum + company.locations.filter(l => l.isActive).length, 0);
-    const inactiveLocations = totalLocations - activeLocations;
-    
-    const totalUsers = companies.reduce((sum, company) => sum + company.users.length, 0);
-    const activeUsers = companies.reduce((sum, company) => 
-      sum + company.users.filter(u => u.isActive).length, 0);
-    const inactiveUsers = totalUsers - activeUsers;
-
-    return {
-      companies: { total: totalCompanies, active: activeCompanies, inactive: inactiveCompanies },
-      locations: { total: totalLocations, active: activeLocations, inactive: inactiveLocations },
-      users: { total: totalUsers, active: activeUsers, inactive: inactiveUsers }
-    };
-  }, [companies]);
-
-  // API Functions for Users
-  const createUser = async (userData: any) => {
-    try {
-      console.log("Creating user with data (including company ID):", userData);
-      console.log("Company ID being sent:", userData.company_id);
-      
-      const response = await axios.post(API_ENDPOINTS.users, userData);
-      
-      console.log("User creation response:", response.data);
-      showNotification("User created successfully", "success");
-      return response.data;
-    } catch (error) {
-      console.error("Error creating user:", error);
-      showNotification("Failed to create user", "error");
-      throw error;
-    }
-  };
-
-  const updateUser = async (userId: string, userData: any) => {
-    try {
-      const response = await axios.put(`${API_ENDPOINTS.users}/${userId}`, userData);
-      showNotification("User updated successfully", "success");
-      return response.data;
-    } catch (error) {
-      console.error("Error updating user:", error);
-      showNotification("Failed to update user", "error");
-      throw error;
-    }
-  };
-
-  const deleteUser = async (userId: string) => {
-    try {
-      const normalizedId = normalizeId(userId);
-      console.log("Deleting user with normalized ID:", normalizedId);
-      await axios.delete(`${API_ENDPOINTS.users}/${normalizedId}`);
-      showNotification("User deleted successfully", "success");
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      showNotification("Failed to delete user", "error");
-      throw error;
-    }
-  };
-
-  // API Functions for Locations/Stores
-  const createLocation = async (locationData: any) => {
-    try {
-      console.log("Creating location with data (including company ID):", locationData);
-      console.log("Company ID being sent:", locationData.company_id);
-      
-      const response = await axios.post(API_ENDPOINTS.stores, locationData);
-      
-      console.log("Location creation response:", response.data);
-      showNotification("Location created successfully", "success");
-      return response.data;
-    } catch (error) {
-      console.error("Error creating location:", error);
-      showNotification("Failed to create location", "error");
-      throw error;
-    }
-  };
-
-  const updateLocation = async (locationId: string, locationData: any) => {
-    try {
-      const response = await axios.put(`${API_ENDPOINTS.stores}/${locationId}`, locationData);
-      showNotification("Location updated successfully", "success");
-      return response.data;
-    } catch (error) {
-      console.error("Error updating location:", error);
-      showNotification("Failed to update location", "error");
-      throw error;
-    }
-  };
-
-  const deleteLocation = async (locationId: string) => {
-    try {
-      await axios.delete(`${API_ENDPOINTS.stores}/${locationId}`);
-      showNotification("Location deleted successfully", "success");
-    } catch (error) {
-      console.error("Error deleting location:", error);
-      showNotification("Failed to delete location", "error");
-      throw error;
-    }
-  };
-
-  // API Functions for Companies
-  const createCompany = async (companyData: any) => {
-    try {
-      const response = await axios.post(API_ENDPOINTS.companies, companyData);
-      showNotification("Company created successfully", "success");
-      return response.data;
-    } catch (error) {
-      console.error("Error creating company:", error);
-      showNotification("Failed to create company", "error");
-      throw error;
-    }
-  };
-
-  const updateCompany = async (company_id: string, companyData: any) => {
-    try {
-      const response = await axios.put(`${API_ENDPOINTS.companies}/${company_id}`, companyData);
-      showNotification("Company updated successfully", "success");
-      return response.data;
-    } catch (error) {
-      console.error("Error updating company:", error);
-      showNotification("Failed to update company", "error");
-      throw error;
-    }
-  };
-
-  const deleteCompany = async (company_id: string) => {
-    try {
-      await axios.delete(`${API_ENDPOINTS.companies}/${company_id}`);
-      showNotification("Company deleted successfully", "success");
-    } catch (error) {
-      console.error("Error deleting company:", error);
-      showNotification("Failed to delete company", "error");
-      throw error;
-    }
-  };
-
   // API call to fetch company data
   const fetchCompanyData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      console.log("Fetching data from:", COMPANY_OVERVIEW_API_URL);
+      const response = await axios.get(SALES_WIDE_FILTER_API_URL);
       
-      const response = await fetch(COMPANY_OVERVIEW_API_URL);
+      console.log('API Response:', response.data); // Debug log
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("Raw API Response:", data);
+      // Handle different API response structures
+      let apiData = response.data;
       
-      // Handle different possible response structures
-      let companiesData = [];
-      
-      if (data && Array.isArray(data)) {
-        companiesData = data;
-        console.log("Set companies from direct array:", data);
-      } else if (data && data.companies && Array.isArray(data.companies)) {
-        companiesData = data.companies;
-        console.log("Set companies from data.companies:", data.companies);
-      } else if (data && data.data && Array.isArray(data.data)) {
-        companiesData = data.data;
-        console.log("Set companies from data.data:", data.data);
-      } else if (data && data.results && Array.isArray(data.results)) {
-        companiesData = data.results;
-        console.log("Set companies from data.results:", data.results);
-      } else {
-        console.warn("No companies data found in response. Response structure:", data);
-        
-        // Create sample data for testing if no data is returned
-        const sampleData = [
-          {
-            id: "4f50ec60c70046669490bd34d3953046", // Keep original format
-            name: "Default Company",
-            address: "123 Main Street",
-            state: "NY",
-            postcode: "10001",
-            phone: "000-000-0000",
-            email: "default@company.com",
-            website: "",
-            isActive: true,
-            locations: [
-              {
-                id: "loc1",
-                name: "Main Office",
-                address: "456 Business Ave",
-                city: "Default City",
-                state: "DC",
-                postcode: "00000",
-                phone: "000-000-0000",
-                email: "main@company.com",
-                isActive: true,
-                manager: "",
-                createdAt: new Date(),
-                updatedAt: new Date()
-              }
-            ],
-            users: [
-              {
-                id: "user1",
-                firstName: "John",
-                lastName: "Doe",
-                email: "john@company.com",
-                phone: "000-000-0000",
-                role: "admin",
-                permissions: ["user_management"],
-                assignedLocations: ["Main Office"],
-                isActive: true,
-                createdAt: new Date()
-              }
-            ],
-            createdAt: new Date(),
-            updatedAt: new Date()
-          }
-        ];
-        
-        console.log("Using sample data for testing:", sampleData);
-        companiesData = sampleData;
-      }
-      
-      // Debug: Check ID formats in the received data
-      companiesData.forEach((company, index) => {
-        console.log(`Company ${index} - Original ID from API:`, company.id);
-        console.log(`Company ${index} - ID type:`, typeof company.id);
-        console.log(`Company ${index} - ID length:`, company.id?.length);
-        
-        // Debug location IDs
-        if (company.locations) {
-          company.locations.forEach((location, locIndex) => {
-            console.log(`  Location ${locIndex} - Original ID from API:`, location.id);
-            console.log(`  Location ${locIndex} - Extracted location ID:`, extractLocationId(location.id, company.id));
-            console.log(`  Location ${locIndex} - Clean API ID:`, getLocationIdForAPI(location.id, company.id));
-          });
+      // If the response is not an array, it might be wrapped in a data property
+      if (!Array.isArray(apiData)) {
+        if (apiData.data && Array.isArray(apiData.data)) {
+          apiData = apiData.data;
+        } else {
+          // If we still don't have an array, create empty array
+          console.warn('API response is not an array:', apiData);
+          apiData = [];
         }
-      });
-      
-      setCompanies(companiesData);
-      
-    } catch (error) {
-      console.error("Error fetching company data:", error);
-      setError(`Failed to load company data: ${error.message}`);
-      setCompanies([]);
-      
-      // Show more detailed error information
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        setError("Network error: Cannot connect to the API. Please check if the server is running.");
       }
+      
+      // Transform the API response to match our interface
+      const transformedCompanies: Company[] = apiData.map((apiCompany: any) => ({
+        id: apiCompany.id || apiCompany.company_id || generateId(),
+        name: apiCompany.name || apiCompany.company_name || '',
+        city: apiCompany.city || '',
+        state: apiCompany.state || '',
+        postcode: apiCompany.postcode || apiCompany.post_code || '',
+        phone: apiCompany.phone || '',
+        email: apiCompany.email || '',
+        website: apiCompany.website || '',
+        industry: apiCompany.industry || '',
+        isActive: apiCompany.isActive !== undefined ? apiCompany.isActive : true,
+        createdAt: apiCompany.createdAt ? new Date(apiCompany.createdAt) : new Date(),
+        updatedAt: apiCompany.updatedAt ? new Date(apiCompany.updatedAt) : new Date(),
+        locations: Array.isArray(apiCompany.locations) ? apiCompany.locations.map((apiLocation: any) => ({
+          id: apiLocation.id || apiLocation.location_id || generateId(),
+          name: apiLocation.name || apiLocation.location_name || '',
+          city: apiLocation.city || '',
+          state: apiLocation.state || '',
+          postcode: apiLocation.postcode || apiLocation.post_code || '',
+          phone: apiLocation.phone || '',
+          email: apiLocation.email || '',
+          isActive: apiLocation.isActive !== undefined ? apiLocation.isActive : true,
+          manager: apiLocation.manager || '',
+          createdAt: apiLocation.createdAt ? new Date(apiLocation.createdAt) : new Date(),
+          updatedAt: apiLocation.updatedAt ? new Date(apiLocation.updatedAt) : new Date(),
+        })) : [],
+        users: Array.isArray(apiCompany.users) ? apiCompany.users.map((apiUser: any) => ({
+          id: apiUser.id || apiUser.user_id || generateId(),
+          firstName: apiUser.firstName || apiUser.first_name || '',
+          lastName: apiUser.lastName || apiUser.last_name || '',
+          email: apiUser.email || '',
+          phone: apiUser.phone || '',
+          role: apiUser.role || 'user',
+          permissions: Array.isArray(apiUser.permissions) ? apiUser.permissions : [],
+          assignedLocations: Array.isArray(apiUser.assignedLocations) ? apiUser.assignedLocations : [],
+          isActive: apiUser.isActive !== undefined ? apiUser.isActive : true,
+          createdAt: apiUser.createdAt ? new Date(apiUser.createdAt) : new Date(),
+        })) : [],
+      }));
+      
+      setCompanies(transformedCompanies);
+      
+    } catch (err) {
+      console.error('Error fetching company data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch company data');
+      // Set empty companies array on error to prevent rendering issues
+      setCompanies([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Initialize data
+  // Initial data fetch
   useEffect(() => {
-    console.log("Component mounted, API_URL_Local:", API_URL_Local);
-    console.log("Full API URL:", COMPANY_OVERVIEW_API_URL);
     fetchCompanyData();
   }, []);
 
+  // Handle refresh
+  const handleRefresh = () => {
+    fetchCompanyData();
+  };
+
   // Filter companies based on search and filters
-  const filteredCompaniesData = useMemo(() => {
+  const filteredAndSortedCompanies = useMemo(() => {
     let filtered = companies;
 
-    // Search filter
+    // Apply search filter
     if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (company) =>
-          company.name.toLowerCase().includes(searchLower) ||
-          company.address.toLowerCase().includes(searchLower) ||
-          company.state.toLowerCase().includes(searchLower) ||
-          company.email?.toLowerCase().includes(searchLower) ||
-          company.locations.some(
+          company.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          company.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          company.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          company.locations?.some(
             (location) =>
-              location.name.toLowerCase().includes(searchLower) ||
-              location.address.toLowerCase().includes(searchLower) ||
-              location.city.toLowerCase().includes(searchLower)
+              location.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              location.city?.toLowerCase().includes(searchTerm.toLowerCase())
           ) ||
-          company.users.some(
+          company.users?.some(
             (user) =>
-              `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchLower) ||
-              user.email.toLowerCase().includes(searchLower)
+              user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              user.email?.toLowerCase().includes(searchTerm.toLowerCase())
           )
       );
     }
 
-    // Role filter
+    // Apply role filter
     if (selectedRole) {
       filtered = filtered.filter((company) =>
-        company.users.some((user) => user.role === selectedRole)
+        company.users?.some((user) => user.role === selectedRole)
       );
     }
 
-    // Active/Inactive filter
+    // Apply active/inactive filter
     if (showInactiveOnly) {
       filtered = filtered.filter((company) => !company.isActive);
     }
 
-    return filtered;
+    return filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   }, [companies, searchTerm, selectedRole, showInactiveOnly]);
 
-  // Update filtered companies when data changes
   useEffect(() => {
-    setFilteredCompanies(filteredCompaniesData);
-  }, [filteredCompaniesData]);
+    setFilteredCompanies(filteredAndSortedCompanies);
+  }, [filteredAndSortedCompanies]);
 
-  // Notification helper
+  // Helper functions
   const showNotification = (
     message: string,
     severity: "success" | "error" | "warning" | "info"
   ) => {
-    setNotification({
-      open: true,
-      message,
-      severity,
-    });
+    setNotification({ open: true, message, severity });
   };
 
-  // Close notification
-  const handleCloseNotification = () => {
-    setNotification((prev) => ({ ...prev, open: false }));
-  };
-
-  // Dialog handlers
-  const handleOpenDialog = (
-    mode: DialogMode,
-    type: EntityType,
-    item?: Company | Location | User,
-    company_id?: string // Add optional company ID parameter
-  ) => {
-    setDialogMode(mode);
-    setEntityType(type);
-    
-    // Reset forms first
-    resetForms();
-    
-    // Populate forms for edit mode
-    if (mode === "edit" && item) {
-      console.log("Opening edit dialog for item:", item);
-      console.log("Original item ID:", item.id);
-      console.log("Normalized item ID:", normalizeId(item.id));
-      
-      if (type === "company" && "name" in item && !("manager" in item) && !("firstName" in item)) {
-        const company = item as Company;
-        console.log("Populating company form with:", company);
-        console.log("Company ID before normalization:", company.id);
-        
-        // Create a company object with normalized ID
-        const normalizedCompany = {
-          ...company,
-          id: normalizeId(company.id)
-        };
-        
-        console.log("Company ID after normalization:", normalizedCompany.id);
-        
-        setCompanyForm({
-          name: company.name || "",
-          address: company.address || "",
-          state: company.state || "",
-          postcode: company.postcode || "",
-          phone: company.phone || "",
-          email: company.email || "",
-          website: company.website || "",
-          isActive: company.isActive,
-        });
-        setSelectedCompany(normalizedCompany);
-      } else if (type === "location" && "manager" in item) {
-        const location = item as Location;
-        console.log("Populating location form with:", location);
-        console.log("Original location ID:", location.id);
-        console.log("Company ID provided for location edit:", company_id);
-        
-        // Extract clean location ID using the company ID
-        const cleanLocationId = getLocationIdForAPI(location.id, company_id);
-        console.log("Extracted clean location ID:", cleanLocationId);
-        
-        const normalizedLocation = {
-          ...location,
-          id: cleanLocationId // Use clean location ID
-        };
-        
-        console.log("Clean location ID for form:", normalizedLocation.id);
-        
-        setLocationForm({
-          name: location.name || "",
-          address: location.address || "",
-          city: location.city || "",
-          state: location.state || "",
-          postcode: location.postcode || "",
-          phone: location.phone || "",
-          email: location.email || "",
-          manager: location.manager || "",
-          company_id: company_id ? normalizeId(company_id) : "", // Always set company ID for edit mode
-          isActive: location.isActive,
-        });
-        setSelectedLocation(normalizedLocation);
-      } else if (type === "user" && "firstName" in item) {
-        const user = item as User;
-        console.log("Populating user form with:", user);
-        console.log("User ID before normalization:", user.id);
-        
-        const normalizedUser = {
-          ...user,
-          id: normalizeId(user.id)
-        };
-        
-        console.log("User ID after normalization:", normalizedUser.id);
-        
-        setUserForm({
-          firstName: user.firstName || "",
-          lastName: user.lastName || "",
-          email: user.email || "",
-          phone: user.phone || "",
-          role: user.role || "",
-          permissions: user.permissions || [],
-          assignedLocations: user.assignedLocations || [],
-          isActive: user.isActive,
-        });
-        setSelectedUser(normalizedUser);
-      }
-    } else if (mode === "add") {
-      // For add mode, set company ID if provided (for location/user creation)
-      if (type === "location" && company_id) {
-        console.log("Setting company ID for new location:", company_id);
-        setLocationForm(prev => ({
-          ...prev,
-          company_id: normalizeId(company_id) // Normalize the company ID
-        }));
-      } else if (type === "user" && company_id) {
-        console.log("Setting company ID for new user:", company_id);
-        setUserForm(prev => ({
-          ...prev,
-          company_id: normalizeId(company_id) // Normalize the company ID
-        }));
-      }
-      
-      // Clear selections for add mode
-      setSelectedCompany(null);
-      setSelectedLocation(null);
-      setSelectedUser(null);
-    }
-    
-    setDialogOpen(true);
-  };
-
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
-    setDialogMode(null);
-    setEntityType("company");
-    setSelectedCompany(null);
-    setSelectedLocation(null);
-    setSelectedUser(null);
-    resetForms();
-  };
+  const generateId = () => Math.random().toString(36).substr(2, 9);
 
   const resetForms = () => {
     setCompanyForm({
       name: "",
-      address: "",
+      city: "",
       state: "",
       postcode: "",
       phone: "",
       email: "",
       website: "",
+      industry: "",
       isActive: true,
     });
+
     setLocationForm({
       name: "",
-      address: "",
       city: "",
       state: "",
       postcode: "",
       phone: "",
       email: "",
       manager: "",
-      company_id: "", // Reset company ID
       isActive: true,
     });
+
     setUserForm({
       firstName: "",
       lastName: "",
@@ -862,116 +469,352 @@ const CompanyLocationManager: React.FC = () => {
       role: "",
       permissions: [],
       assignedLocations: [],
-      company_id: "", // Reset company ID
       isActive: true,
     });
   };
 
-  // Save handlers
-  const handleSave = async () => {
+  // Get role color
+  const getRoleColor = (role: string) => {
+    const roleConfig = USER_ROLES.find((r) => r.value === role);
+    return roleConfig?.color || "#9e9e9e";
+  };
+
+  // Get users assigned to a specific location
+  const getUsersForLocation = (companyId: string, locationId: string) => {
+    const company = companies.find((c) => c.id === companyId);
+    if (!company || !company.users) return [];
+
+    return company.users.filter(
+      (user) => 
+        user.assignedLocations && 
+        Array.isArray(user.assignedLocations) &&
+        user.assignedLocations.includes(locationId) && 
+        user.isActive
+    );
+  };
+
+  // Get location name by ID
+  const getLocationName = (companyId: string, locationId: string) => {
+    const company = companies.find((c) => c.id === companyId);
+    if (!company || !company.locations) return "Unknown Location";
+
+    const location = company.locations.find((l) => l.id === locationId);
+    return location ? location.name || "Unknown Location" : "Unknown Location";
+  };
+
+  // CRUD Operations for Users
+  const handleCreateUser = async () => {
     try {
-      if (dialogMode === "add") {
-        console.log("Creating new entity..."); // Debug log
-        if (entityType === "company") {
-          console.log("Creating company with data:", companyForm); // Debug log
-          await createCompany(companyForm);
-        } else if (entityType === "location") {
-          console.log("Creating location with data:", locationForm);
-          
-          // Validate that company ID is present
-          if (!locationForm.company_id) {
-            console.error("Company ID is missing for location creation");
-            showNotification("Error: Company ID is required for location creation", "error");
-            return;
-          }
-          
-          // Create update data without the company_id field (it becomes company_id)
-          const { company_id, ...locationDataWithoutCompanyId } = locationForm;
-          
-          // Prepare data for creation with company_id
-          const createData = {
-            ...locationDataWithoutCompanyId,
-            company_id: locationForm.company_id // Include company_id in request body
-          };
-          
-          console.log("Creating location with prepared data:", createData);
-          await createLocation(createData);
-        } else if (entityType === "user") {
-          console.log("Creating user with data:", userForm);
-          
-          // Validate that company ID is present
-          if (!userForm.company_id) {
-            console.error("Company ID is missing for user creation");
-            showNotification("Error: Company ID is required for user creation", "error");
-            return;
-          }
-          
-          await createUser(userForm);
-        }
-      } else if (dialogMode === "edit") {
-        console.log("Updating existing entity..."); // Debug log
-        if (entityType === "company" && selectedCompany) {
-          const updateData = { ...companyForm, id: selectedCompany.id };
-          console.log("Updating company with data:", updateData); // Debug log
-          await updateCompany(selectedCompany.id, updateData);
-        } else if (entityType === "location" && selectedLocation) {
-          const updateData = { ...locationForm, id: selectedLocation.id };
-          console.log("Updating location with data:", updateData); // Debug log
-          await updateLocation(selectedLocation.id, updateData);
-        } else if (entityType === "user" && selectedUser) {
-          const updateData = { ...userForm, id: selectedUser.id };
-          console.log("Updating user with data:", updateData); // Debug log
-          await updateUser(selectedUser.id, updateData);
-        }
-      }
+      setLoading(true);
+      const userData = {
+        ...userForm,
+        companyId: selectedCompany?.id,
+      };
+
+      const response = await axios.post(`${API_URL_Local}/users`, userData);
       
-      handleCloseDialog();
-      fetchCompanyData(); // Refresh data
+      showNotification("User created successfully", "success");
+      await fetchCompanyData(); // Refresh data
+      setDialogOpen(false);
+      resetForms();
     } catch (error) {
-      console.error("Error saving:", error);
+      console.error('Error creating user:', error);
+      showNotification("Failed to create user", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Delete handlers
-  const handleDelete = async (id: string, type: EntityType) => {
-    if (window.confirm(`Are you sure you want to delete this ${type}?`)) {
-      try {
-        if (type === "company") {
-          await deleteCompany(id);
-        } else if (type === "location") {
-          await deleteLocation(id);
-        } else if (type === "user") {
-          await deleteUser(id);
-        }
-        
-        fetchCompanyData(); // Refresh data
-      } catch (error) {
-        console.error("Error deleting:", error);
+  const handleUpdateUser = async () => {
+    try {
+      setLoading(true);
+      const userData = {
+        ...userForm,
+        id: selectedUser?.id,
+      };
+
+      await axios.put(`${API_URL_Local}/users/${selectedUser?.id}`, userData);
+      
+      showNotification("User updated successfully", "success");
+      await fetchCompanyData(); // Refresh data
+      setDialogOpen(false);
+      resetForms();
+    } catch (error) {
+      console.error('Error updating user:', error);
+      showNotification("Failed to update user", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      setLoading(true);
+      await axios.delete(`${API_URL_Local}/users/${userId}`);
+      
+      showNotification("User deleted successfully", "success");
+      await fetchCompanyData(); // Refresh data
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      showNotification("Failed to delete user", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // CRUD Operations for Locations
+  const handleCreateLocation = async () => {
+    try {
+      setLoading(true);
+      const locationData = {
+        ...locationForm,
+        companyId: selectedCompany?.id,
+      };
+
+      await axios.post(`${API_URL_Local}/stores`, locationData);
+      
+      showNotification("Location created successfully", "success");
+      await fetchCompanyData(); // Refresh data
+      setDialogOpen(false);
+      resetForms();
+    } catch (error) {
+      console.error('Error creating location:', error);
+      showNotification("Failed to create location", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateLocation = async () => {
+    try {
+      setLoading(true);
+      const locationData = {
+        ...locationForm,
+        id: selectedLocation?.id,
+      };
+
+      await axios.put(`${API_URL_Local}/stores/${selectedLocation?.id}`, locationData);
+      
+      showNotification("Location updated successfully", "success");
+      await fetchCompanyData(); // Refresh data
+      setDialogOpen(false);
+      resetForms();
+    } catch (error) {
+      console.error('Error updating location:', error);
+      showNotification("Failed to update location", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteLocation = async (locationId: string) => {
+    try {
+      setLoading(true);
+      await axios.delete(`${API_URL_Local}/stores/${locationId}`);
+      
+      showNotification("Location deleted successfully", "success");
+      await fetchCompanyData(); // Refresh data
+    } catch (error) {
+      console.error('Error deleting location:', error);
+      showNotification("Failed to delete location", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // CRUD Operations for Companies
+  const handleCreateCompany = async () => {
+    try {
+      setLoading(true);
+      await axios.post(`${API_URL_Local}/companies`, companyForm);
+      
+      showNotification("Company created successfully", "success");
+      await fetchCompanyData(); // Refresh data
+      setDialogOpen(false);
+      resetForms();
+    } catch (error) {
+      console.error('Error creating company:', error);
+      showNotification("Failed to create company", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateCompany = async () => {
+    try {
+      setLoading(true);
+      const companyData = {
+        ...companyForm,
+        id: selectedCompany?.id,
+      };
+
+      await axios.put(`${API_URL_Local}/companies/${selectedCompany?.id}`, companyData);
+      
+      showNotification("Company updated successfully", "success");
+      await fetchCompanyData(); // Refresh data
+      setDialogOpen(false);
+      resetForms();
+    } catch (error) {
+      console.error('Error updating company:', error);
+      showNotification("Failed to update company", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteCompany = async (companyId: string) => {
+    try {
+      setLoading(true);
+      await axios.delete(`${API_URL_Local}/companies/${companyId}`);
+      
+      showNotification("Company deleted successfully", "success");
+      await fetchCompanyData(); // Refresh data
+    } catch (error) {
+      console.error('Error deleting company:', error);
+      showNotification("Failed to delete company", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Dialog handlers
+  const handleOpenDialog = (
+    mode: DialogMode,
+    type: EntityType,
+    company?: Company,
+    location?: Location,
+    user?: User
+  ) => {
+    setDialogMode(mode);
+    setEntityType(type);
+    setSelectedCompany(company || null);
+    setSelectedLocation(location || null);
+    setSelectedUser(user || null);
+
+    if (mode === "edit") {
+      if (type === "company" && company) {
+        setCompanyForm({
+          name: company.name,
+          city: company.city,
+          state: company.state,
+          postcode: company.postcode,
+          phone: company.phone,
+          email: company.email || "",
+          website: company.website || "",
+          industry: company.industry || "",
+          isActive: company.isActive,
+        });
+      } else if (type === "location" && location) {
+        setLocationForm({
+          name: location.name,
+          city: location.city,
+          state: location.state,
+          postcode: location.postcode,
+          phone: location.phone || "",
+          email: location.email || "",
+          manager: location.manager || "",
+          isActive: location.isActive,
+        });
+      } else if (type === "user" && user) {
+        setUserForm({
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          permissions: user.permissions,
+          assignedLocations: user.assignedLocations,
+          isActive: user.isActive,
+        });
+      }
+    } else {
+      resetForms();
+    }
+
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setDialogMode(null);
+    resetForms();
+  };
+
+  const handleSave = () => {
+    if (dialogMode === "add") {
+      if (entityType === "company") {
+        handleCreateCompany();
+      } else if (entityType === "location") {
+        handleCreateLocation();
+      } else if (entityType === "user") {
+        handleCreateUser();
+      }
+    } else if (dialogMode === "edit") {
+      if (entityType === "company") {
+        handleUpdateCompany();
+      } else if (entityType === "location") {
+        handleUpdateLocation();
+      } else if (entityType === "user") {
+        handleUpdateUser();
       }
     }
   };
 
-  // Toggle company expansion
-  const toggleCompanyExpansion = (company_id: string) => {
+  // Menu handlers
+  const handleMenuClick = (
+    event: React.MouseEvent<HTMLElement>,
+    itemId: string,
+    itemType: EntityType
+  ) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedItemId(itemId);
+    setSelectedItemType(itemType);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedItemId("");
+  };
+
+  const handleMenuAction = (action: string) => {
+    const company = companies.find((c) => c.id === selectedItemId);
+    const location = company?.locations.find((l) => l.id === selectedItemId);
+    const user = company?.users.find((u) => u.id === selectedItemId);
+
+    if (action === "edit") {
+      if (selectedItemType === "company") {
+        handleOpenDialog("edit", "company", company);
+      } else if (selectedItemType === "location") {
+        handleOpenDialog("edit", "location", company, location);
+      } else if (selectedItemType === "user") {
+        handleOpenDialog("edit", "user", company, undefined, user);
+      }
+    } else if (action === "delete") {
+      if (selectedItemType === "company") {
+        handleDeleteCompany(selectedItemId);
+      } else if (selectedItemType === "location") {
+        handleDeleteLocation(selectedItemId);
+      } else if (selectedItemType === "user") {
+        handleDeleteUser(selectedItemId);
+      }
+    }
+
+    handleMenuClose();
+  };
+
+  const handleToggleCompany = (companyId: string) => {
     setExpandedCompanies((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(company_id)) {
-        newSet.delete(company_id);
+      if (newSet.has(companyId)) {
+        newSet.delete(companyId);
       } else {
-        newSet.add(company_id);
+        newSet.add(companyId);
       }
       return newSet;
     });
   };
 
-  // Get user role color
-  const getUserRoleColor = (role: string) => {
-    const roleConfig = USER_ROLES.find((r) => r.value === role);
-    return roleConfig?.color || "#666";
-  };
-
-  // Loading state
-  if (loading) {
+  if (loading && companies.length === 0) {
     return (
       <Box
         display="flex"
@@ -984,1239 +827,1034 @@ const CompanyLocationManager: React.FC = () => {
     );
   }
 
-  // Error state
-  if (error) {
+  // Safety check: if companies is not an array, show error
+  if (!Array.isArray(companies)) {
     return (
-      <Box p={3}>
-        <Alert
-          severity="error"
-          action={
-            <Button
-              color="inherit"
-              size="small"
-              onClick={fetchCompanyData}
-              startIcon={<RefreshIcon />}
-            >
-              Retry
-            </Button>
-          }
-        >
-          {error}
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error" sx={{ borderRadius: 2 }}>
+          Error: Invalid data structure received from API. Expected array but got: {typeof companies}
         </Alert>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
-      {/* Header Section */}
-      <Box
-        sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          borderRadius: 3,
-          p: 4,
-          mb: 3,
-          color: 'white'
-        }}
-      >
-        <Typography variant="h3" fontWeight="bold" gutterBottom>
-          Company & Location Manager
-        </Typography>
-        <Typography variant="h6" sx={{ opacity: 0.9 }}>
-          Manage your organizations, locations, and team members
-        </Typography>
-      </Box>
-
-      {/* Summary Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {/* Total Companies Card */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
-              borderRadius: 3,
-              position: 'relative',
-              overflow: 'hidden'
-            }}
+    <Box sx={{ p: 3 }}>
+      {/* Header */}
+      <Card elevation={0} sx={{ mb: 3, borderRadius: 3 }}>
+        <CardContent>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            spacing={2}
           >
-            <CardContent sx={{ p: 3 }}>
-              <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-                <Box>
-                  <Typography variant="h3" fontWeight="bold">
-                    {summaryStats.companies.total}
-                  </Typography>
-                  <Typography variant="h6" sx={{ opacity: 0.9, mb: 1 }}>
-                    Total Companies
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                    {summaryStats.companies.active} Active • {summaryStats.companies.inactive} Inactive
-                  </Typography>
-                </Box>
-                <BusinessIcon sx={{ fontSize: 40, opacity: 0.8 }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+            <Box>
+              <Typography variant="h4" fontWeight="bold" color="primary.main">
+                Company & Location Manager
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Manage companies, locations, and users in your organization
+              </Typography>
+            </Box>
+            <Button
+              variant="contained"
+              startIcon={<RefreshIcon />}
+              onClick={handleRefresh}
+              disabled={loading}
+              sx={{ borderRadius: 2 }}
+            >
+              Refresh
+            </Button>
+          </Stack>
+        </CardContent>
+      </Card>
 
-        {/* Total Locations Card */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-              color: 'white',
-              borderRadius: 3,
-              position: 'relative',
-              overflow: 'hidden'
-            }}
-          >
-            <CardContent sx={{ p: 3 }}>
-              <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-                <Box>
-                  <Typography variant="h3" fontWeight="bold">
-                    {summaryStats.locations.total}
-                  </Typography>
-                  <Typography variant="h6" sx={{ opacity: 0.9, mb: 1 }}>
-                    Total Locations
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                    {summaryStats.locations.active} Active • {summaryStats.locations.inactive} Inactive
-                  </Typography>
-                </Box>
-                <LocationOnIcon sx={{ fontSize: 40, opacity: 0.8 }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+          {error}
+        </Alert>
+      )}
 
-        {/* Total Users Card */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-              color: 'white',
-              borderRadius: 3,
-              position: 'relative',
-              overflow: 'hidden'
-            }}
-          >
-            <CardContent sx={{ p: 3 }}>
-              <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-                <Box>
-                  <Typography variant="h3" fontWeight="bold">
-                    {summaryStats.users.total}
-                  </Typography>
-                  <Typography variant="h6" sx={{ opacity: 0.9, mb: 1 }}>
-                    Total Users
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                    {summaryStats.users.active} Active • {summaryStats.users.inactive} Inactive
-                  </Typography>
-                </Box>
-                <PersonIcon sx={{ fontSize: 40, opacity: 0.8 }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Add Company Card */}
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-              color: 'white',
-              borderRadius: 3,
-              position: 'relative',
-              overflow: 'hidden',
-              cursor: 'pointer',
-              transition: 'transform 0.2s',
-              '&:hover': {
-                transform: 'translateY(-4px)'
-              }
-            }}
-            onClick={() => handleOpenDialog("add", "company")}
-          >
-            <CardContent sx={{ p: 3 }}>
-              <Box display="flex" justifyContent="space-between" alignItems="center" height="100%">
-                <Box>
-                  <Typography variant="h5" fontWeight="bold" gutterBottom>
-                    ADD COMPANY
-                  </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Create new organization
-                  </Typography>
-                </Box>
-                <AddIcon sx={{ fontSize: 40, opacity: 0.8 }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Filters & Search Section */}
-      <Box sx={{ mb: 3 }}>
-        <Box display="flex" alignItems="center" mb={2}>
-          <FilterListIcon sx={{ mr: 1, color: 'text.secondary' }} />
-          <Typography variant="h6" color="text.secondary">
-            Filters & Search
-          </Typography>
-        </Box>
-        
-        <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-          <CardContent>
-            <Grid container spacing={3} alignItems="center">
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  placeholder="Search companies, addresses, locations, users..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  InputProps={{
-                    startAdornment: <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />,
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                    }
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} md={2}>
-                <FormControl fullWidth>
-                  <InputLabel>Role</InputLabel>
-                  <Select
-                    value={selectedRole}
-                    label="Role"
-                    onChange={(e) => setSelectedRole(e.target.value)}
-                    sx={{ borderRadius: 2 }}
-                  >
-                    <MenuItem value="">All Roles</MenuItem>
-                    {USER_ROLES.map((role) => (
-                      <MenuItem key={role.value} value={role.value}>
-                        {role.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={2}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={showInactiveOnly}
-                      onChange={(e) => setShowInactiveOnly(e.target.checked)}
-                    />
-                  }
-                  label="Inactive Only"
-                />
-              </Grid>
-              <Grid item xs={12} md={2}>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  startIcon={<RefreshIcon />}
-                  onClick={fetchCompanyData}
-                  disabled={loading}
-                  sx={{ borderRadius: 2, height: 56 }}
-                >
-                  REFRESH
-                </Button>
-              </Grid>
+      {/* Search and Filters */}
+      <Card elevation={1} sx={{ mb: 3, borderRadius: 2 }}>
+        <CardContent>
+          <Grid container spacing={3} alignItems="center">
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                placeholder="Search companies, locations, or users..."
+                variant="outlined"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: <SearchIcon sx={{ mr: 1, color: "text.secondary" }} />,
+                }}
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+              />
             </Grid>
-          </CardContent>
-        </Card>
-      </Box>
 
-      {/* Main Table */}
-      <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: '#667eea' }}>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>
-                  Company Details
-                </TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>
-                  Contact & Info
-                </TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>
-                  Locations
-                </TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>
-                  Users
-                </TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', py: 2 }}>
-                  Actions
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth>
+                <InputLabel>Filter by Role</InputLabel>
+                <Select
+                  value={selectedRole}
+                  label="Filter by Role"
+                  onChange={(e: SelectChangeEvent) => setSelectedRole(e.target.value)}
+                  sx={{ borderRadius: 2 }}
+                >
+                  <MenuItem value="">All Roles</MenuItem>
+                  {USER_ROLES.map((role) => (
+                    <MenuItem key={role.value} value={role.value}>
+                      {role.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} md={3}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showInactiveOnly}
+                    onChange={(e) => setShowInactiveOnly(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label="Show Inactive Only"
+              />
+            </Grid>
+
+            <Grid item xs={12} md={2}>
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => handleOpenDialog("add", "company")}
+                sx={{ borderRadius: 2 }}
+              >
+                Add Company
+              </Button>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
+      {/* Companies List */}
+      <Card elevation={1} sx={{ borderRadius: 2 }}>
+        <CardContent>
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+            Companies ({filteredCompanies.length})
+          </Typography>
+
+          {filteredCompanies.length === 0 ? (
+            <Box
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              justifyContent="center"
+              py={6}
+            >
+              <BusinessIcon sx={{ fontSize: 64, color: "text.secondary", mb: 2 }} />
+              <Typography variant="h6" color="text.secondary">
+                No companies found
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                {searchTerm
+                  ? "Try adjusting your search or filters"
+                  : "Get started by adding your first company"}
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => handleOpenDialog("add", "company")}
+                sx={{ borderRadius: 2 }}
+              >
+                Add Company
+              </Button>
+            </Box>
+          ) : (
+            <Stack spacing={2}>
               {filteredCompanies.map((company) => (
-                <React.Fragment key={company.id}>
-                  <TableRow sx={{ 
-                    '&:hover': { bgcolor: '#f5f5f5' },
-                    borderLeft: `4px solid ${company.isActive ? '#4caf50' : '#f44336'}`
-                  }}>
-                    {/* Company Details */}
-                    <TableCell sx={{ py: 3 }}>
-                      <Box display="flex" alignItems="center">
+                <Paper
+                  key={company.id}
+                  elevation={2}
+                  sx={{
+                    borderRadius: 2,
+                    overflow: "hidden",
+                    border: !company.isActive ? `2px solid ${theme.palette.error.light}` : undefined,
+                  }}
+                >
+                  {/* Company Header */}
+                  <Box
+                    sx={{
+                      p: 2,
+                      bgcolor: company.isActive ? "background.paper" : "grey.50",
+                      borderBottom: `1px solid ${theme.palette.divider}`,
+                    }}
+                  >
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      spacing={2}
+                    >
+                      <Stack direction="row" alignItems="center" spacing={2}>
                         <IconButton
+                          onClick={() => handleToggleCompany(company.id)}
                           size="small"
-                          onClick={() => toggleCompanyExpansion(company.id)}
-                          sx={{ mr: 1 }}
                         >
                           {expandedCompanies.has(company.id) ? (
                             <ExpandLessIcon />
                           ) : (
-                            <KeyboardArrowDownIcon />
+                            <ExpandMoreIcon />
                           )}
                         </IconButton>
+
                         <Avatar
                           sx={{
-                            bgcolor: company.isActive ? 'primary.main' : 'grey.400',
-                            mr: 2,
+                            bgcolor: company.isActive ? "primary.main" : "grey.400",
                             width: 48,
                             height: 48,
                           }}
                         >
                           <BusinessIcon />
                         </Avatar>
+
                         <Box>
-                          <Typography variant="h6" fontWeight="bold">
-                            {company.name}
-                          </Typography>
+                          <Stack direction="row" alignItems="center" spacing={1}>
+                            <Typography variant="h6" fontWeight="600">
+                              {company.name || 'Unnamed Company'}
+                            </Typography>
+                            <Chip
+                              label={company.isActive ? "Active" : "Inactive"}
+                              color={company.isActive ? "success" : "error"}
+                              size="small"
+                              variant="outlined"
+                            />
+                          </Stack>
                           <Typography variant="body2" color="text.secondary">
-                            {company.address}, {company.state} {company.postcode}
+                            📍 {(company.city || '') + ', ' + (company.state || '') + ' ' + (company.postcode || '')}
                           </Typography>
-                          <Chip
-                            label={company.isActive ? "Active" : "Inactive"}
-                            color={company.isActive ? "success" : "error"}
-                            size="small"
-                            sx={{ mt: 1 }}
-                          />
+                          <Stack direction="row" spacing={2} sx={{ mt: 0.5 }}>
+                            {company.phone && (
+                              <Typography variant="caption" color="text.secondary">
+                                📞 {company.phone}
+                              </Typography>
+                            )}
+                            {company.email && (
+                              <Typography variant="caption" color="text.secondary">
+                                ✉️ {company.email}
+                              </Typography>
+                            )}
+                            {company.website && (
+                              <Typography variant="caption" color="text.secondary">
+                                🌐 {company.website}
+                              </Typography>
+                            )}
+                          </Stack>
                         </Box>
-                      </Box>
-                    </TableCell>
-
-                    {/* Contact & Info */}
-                    <TableCell sx={{ py: 3 }}>
-                      <Stack spacing={1}>
-                        <Box display="flex" alignItems="center">
-                          <PhoneIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
-                          <Typography variant="body2">{company.phone}</Typography>
-                        </Box>
-                        {company.email && (
-                          <Box display="flex" alignItems="center">
-                            <EmailIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
-                            <Typography variant="body2">{company.email}</Typography>
-                          </Box>
-                        )}
-                        {company.website && (
-                          <Box display="flex" alignItems="center">
-                            <WebIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
-                            <Typography variant="body2">{company.website}</Typography>
-                          </Box>
-                        )}
                       </Stack>
-                    </TableCell>
 
-                    {/* Locations */}
-                    <TableCell sx={{ py: 3 }}>
-                      <Box display="flex" alignItems="center">
-                        <LocationOnIcon sx={{ color: '#f093fb', mr: 1 }} />
+                      <Stack direction="row" alignItems="center" spacing={1}>
                         <Chip
-                          label={`${company.locations.length} LOCATIONS`}
-                          sx={{
-                            bgcolor: '#f093fb',
-                            color: 'white',
-                            fontWeight: 'bold',
-                            mr: 1
-                          }}
-                        />
-                        <Badge
-                          badgeContent={company.locations.filter(l => l.isActive).length}
-                          color="success"
-                          sx={{ mr: 1 }}
-                        >
-                          <Box />
-                        </Badge>
-                        <IconButton
+                          label={`${company.locations?.length || 0} Locations`}
+                          variant="outlined"
                           size="small"
-                          onClick={() => handleOpenDialog("add", "location", undefined, company.id)}
-                          sx={{ color: '#f093fb' }}
-                        >
-                          <AddIcon />
-                        </IconButton>
-                      </Box>
-                    </TableCell>
-
-                    {/* Users */}
-                    <TableCell sx={{ py: 3 }}>
-                      <Box display="flex" alignItems="center">
-                        <PersonIcon sx={{ color: '#4facfe', mr: 1 }} />
+                          icon={<LocationOnIcon />}
+                        />
                         <Chip
-                          label={`${company.users.length} USER${company.users.length !== 1 ? 'S' : ''}`}
-                          sx={{
-                            bgcolor: '#4facfe',
-                            color: 'white',
-                            fontWeight: 'bold',
-                            mr: 1
-                          }}
+                          label={`${company.users?.length || 0} Users`}
+                          variant="outlined"
+                          size="small"
+                          icon={<PersonIcon />}
                         />
-                        <Badge
-                          badgeContent={company.users.filter(u => u.isActive).length}
-                          color="success"
-                          sx={{ mr: 1 }}
-                        >
-                          <Box />
-                        </Badge>
                         <IconButton
+                          onClick={(e) => handleMenuClick(e, company.id, "company")}
                           size="small"
-                          onClick={() => handleOpenDialog("add", "user", undefined, company.id)}
-                          sx={{ color: '#4facfe' }}
-                        >
-                          <AddIcon />
-                        </IconButton>
-                      </Box>
-                    </TableCell>
-
-                    {/* Actions */}
-                    <TableCell sx={{ py: 3 }}>
-                      <Stack direction="row" spacing={1}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleOpenDialog("edit", "company", company)}
-                          sx={{ color: '#667eea' }}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={() => {
-                            if (window.confirm(
-                              `⚠️ DELETE COMPANY WARNING ⚠️\n\n` +
-                              `Are you sure you want to delete "${company.name}"?\n\n` +
-                              `This will permanently delete:\n` +
-                              `• The company and all its data\n` +
-                              `• ${company.locations?.length || 0} associated location(s)\n` +
-                              `• ${company.users?.length || 0} associated user(s)\n\n` +
-                              `⚠️ THIS ACTION CANNOT BE UNDONE! ⚠️\n\n` +
-                              `Type "DELETE" in the next prompt to confirm.`
-                            )) {
-                              const confirmation = window.prompt(
-                                `To confirm deletion of "${company.name}", please type "DELETE" (in capital letters):`
-                              );
-                              if (confirmation === "DELETE") {
-                                handleDelete(company.id, "company");
-                              } else {
-                                alert("Deletion cancelled - confirmation text did not match.");
-                              }
-                            }
-                          }}
-                          sx={{ color: '#f44336' }}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            const menu = document.createElement('div');
-                            // Simple menu implementation
-                          }}
                         >
                           <MoreVertIcon />
                         </IconButton>
                       </Stack>
-                    </TableCell>
-                  </TableRow>
+                    </Stack>
+                  </Box>
 
-                  {/* Expanded Row Content */}
-                  <TableRow>
-                    <TableCell colSpan={5} sx={{ p: 0, border: 0 }}>
-                      <Collapse in={expandedCompanies.has(company.id)}>
-                        <Box sx={{ p: 3, bgcolor: '#fafafa' }}>
-                          
-                          {/* Locations Table */}
-                          {company.locations.length > 0 && (
-                            <Box sx={{ mb: 4 }}>
-                              <Typography variant="h6" color="primary" gutterBottom sx={{ mb: 2 }}>
-                                📍 Locations ({company.locations.length})
-                              </Typography>
-                              <TableContainer component={Paper} elevation={1} sx={{ borderRadius: 2 }}>
-                                <Table size="small">
-                                  <TableHead>
-                                    <TableRow sx={{ bgcolor: '#f093fb' }}>
-                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Location Name</TableCell>
-                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Address</TableCell>
-                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Contact</TableCell>
-                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Manager</TableCell>
-                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Status</TableCell>
-                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Actions</TableCell>
-                                    </TableRow>
-                                  </TableHead>
-                                  <TableBody>
-                                    {company.locations.map((location) => (
-                                      <TableRow key={location.id} sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
-                                        <TableCell>
-                                          <Typography variant="subtitle2" fontWeight="bold">
-                                            {location.name}
-                                          </Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                          <Typography variant="body2">
-                                            {location.address}, {location.city}, {location.state} {location.postcode}
-                                          </Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                          <Stack spacing={0.5}>
-                                            {location.phone && (
-                                              <Typography variant="caption">
-                                                📞 {location.phone}
-                                              </Typography>
-                                            )}
-                                            {location.email && (
-                                              <Typography variant="caption">
-                                                ✉️ {location.email}
-                                              </Typography>
-                                            )}
-                                            {!location.phone && !location.email && (
-                                              <Typography variant="caption" color="text.secondary">
-                                                No contact info
-                                              </Typography>
-                                            )}
-                                          </Stack>
-                                        </TableCell>
-                                        <TableCell>
-                                          <Typography variant="body2">
-                                            {location.manager || "No manager assigned"}
-                                          </Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                          <Chip
-                                            label={location.isActive ? "Active" : "Inactive"}
-                                            color={location.isActive ? "success" : "error"}
-                                            size="small"
-                                          />
-                                        </TableCell>
-                                        <TableCell>
-                                          <Stack direction="row" spacing={1}>
-                                            <IconButton
-                                              size="small"
-                                              onClick={() => handleOpenDialog("edit", "location", location, company.id)}
-                                              color="primary"
-                                            >
-                                              <EditIcon fontSize="small" />
-                                            </IconButton>
-                                            <IconButton
-                                              size="small"
-                                              onClick={() => handleDelete(location.id, "location", company.id)}
-                                              color="error"
-                                            >
-                                              <DeleteIcon fontSize="small" />
-                                            </IconButton>
-                                          </Stack>
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </TableContainer>
-                            </Box>
-                          )}
+                  {/* Expanded Content */}
+                  <Collapse in={expandedCompanies.has(company.id)}>
+                    <Box sx={{ p: 2 }}>
+                      <Grid container spacing={3}>
+                        {/* Locations Section */}
+                        <Grid item xs={12} md={6}>
+                          <Stack
+                            direction="row"
+                            justifyContent="space-between"
+                            alignItems="center"
+                            sx={{ mb: 2 }}
+                          >
+                            <Typography variant="subtitle1" fontWeight="600">
+                              Locations ({company.locations?.length || 0})
+                            </Typography>
+                            <Button
+                              size="small"
+                              startIcon={<AddIcon />}
+                              onClick={() => handleOpenDialog("add", "location", company)}
+                              variant="outlined"
+                              sx={{ borderRadius: 2 }}
+                            >
+                              Add Location
+                            </Button>
+                          </Stack>
 
-                          {/* Users Table */}
-                          {company.users.length > 0 && (
-                            <Box>
-                              <Typography variant="h6" color="primary" gutterBottom sx={{ mb: 2 }}>
-                                👥 Users ({company.users.length})
-                              </Typography>
-                              <TableContainer component={Paper} elevation={1} sx={{ borderRadius: 2 }}>
-                                <Table size="small">
-                                  <TableHead>
-                                    <TableRow sx={{ bgcolor: '#4facfe' }}>
-                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Name</TableCell>
-                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Contact</TableCell>
-                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Role</TableCell>
-                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Assigned Locations</TableCell>
-                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Status</TableCell>
-                                      <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Actions</TableCell>
-                                    </TableRow>
-                                  </TableHead>
-                                  <TableBody>
-                                    {company.users.map((user) => (
-                                      <TableRow key={user.id} sx={{ '&:hover': { bgcolor: '#f5f5f5' } }}>
-                                        <TableCell>
-                                          <Typography variant="subtitle2" fontWeight="bold">
-                                            {user.firstName} {user.lastName}
-                                          </Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                          <Stack spacing={0.5}>
-                                            <Typography variant="caption">
-                                              ✉️ {user.email}
-                                            </Typography>
-                                            {user.phone && (
-                                              <Typography variant="caption">
-                                                📞 {user.phone}
-                                              </Typography>
-                                            )}
-                                          </Stack>
-                                        </TableCell>
-                                        <TableCell>
-                                          <Chip
-                                            label={user.role}
-                                            size="small"
-                                            sx={{
-                                              bgcolor: getUserRoleColor(user.role),
-                                              color: "white",
-                                            }}
-                                          />
-                                        </TableCell>
-                                        <TableCell>
-                                          <Box sx={{ maxWidth: 200 }}>
-                                            {user.assignedLocations.length > 0 ? (
-                                              <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                                                {user.assignedLocations.slice(0, 2).map((location, index) => (
-                                                  <Chip
-                                                    key={index}
-                                                    label={location}
-                                                    size="small"
-                                                    variant="outlined"
-                                                  />
-                                                ))}
-                                                {user.assignedLocations.length > 2 && (
-                                                  <Chip
-                                                    label={`+${user.assignedLocations.length - 2} more`}
-                                                    size="small"
-                                                    variant="outlined"
-                                                    color="primary"
-                                                  />
-                                                )}
-                                              </Stack>
-                                            ) : (
-                                              <Typography variant="caption" color="text.secondary">
-                                                No locations assigned
-                                              </Typography>
-                                            )}
-                                          </Box>
-                                        </TableCell>
-                                        <TableCell>
-                                          <Chip
-                                            label={user.isActive ? "Active" : "Inactive"}
-                                            color={user.isActive ? "success" : "error"}
-                                            size="small"
-                                          />
-                                        </TableCell>
-                                        <TableCell>
-                                          <Stack direction="row" spacing={1}>
-                                            <IconButton
-                                              size="small"
-                                              onClick={() => handleOpenDialog("edit", "user", user)}
-                                              color="primary"
-                                            >
-                                              <EditIcon fontSize="small" />
-                                            </IconButton>
-                                            <IconButton
-                                              size="small"
-                                              onClick={() => handleDelete(user.id, "user")}
-                                              color="error"
-                                            >
-                                              <DeleteIcon fontSize="small" />
-                                            </IconButton>
-                                          </Stack>
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </TableContainer>
-                            </Box>
-                          )}
-
-                          {/* Empty States */}
-                          {company.locations.length === 0 && company.users.length === 0 && (
-                            <Box textAlign="center" py={4}>
-                              <Typography variant="body2" color="text.secondary" gutterBottom>
-                                No locations or users added yet
-                              </Typography>
-                              <Stack direction="row" spacing={2} justifyContent="center" mt={2}>
-                                <Button
-                                  variant="outlined"
-                                  startIcon={<AddIcon />}
-                                  onClick={() => handleOpenDialog("add", "location", undefined, company.id)}
-                                  size="small"
-                                >
-                                  Add Location
-                                </Button>
-                                <Button
-                                  variant="outlined"
-                                  startIcon={<AddIcon />}
-                                  onClick={() => handleOpenDialog("add", "user", undefined, company.id)}
-                                  size="small"
-                                >
-                                  Add User
-                                </Button>
-                              </Stack>
-                            </Box>
-                          )}
-
-                          {company.locations.length === 0 && company.users.length > 0 && (
-                            <Box textAlign="center" py={2} mb={2}>
-                              <Typography variant="body2" color="text.secondary" gutterBottom>
+                          {company.locations?.length === 0 ? (
+                            <Paper
+                              sx={{
+                                p: 3,
+                                textAlign: "center",
+                                bgcolor: "grey.50",
+                                borderRadius: 2,
+                              }}
+                            >
+                              <PlaceIcon sx={{ fontSize: 48, color: "text.secondary", mb: 1 }} />
+                              <Typography variant="body2" color="text.secondary">
                                 No locations added yet
                               </Typography>
-                              <Button
-                                variant="outlined"
-                                startIcon={<AddIcon />}
-                                onClick={() => handleOpenDialog("add", "location", undefined, company.id)}
-                                size="small"
-                              >
-                                Add Location
-                              </Button>
-                            </Box>
+                            </Paper>
+                          ) : (
+                            <Stack spacing={1}>
+                              {company.locations?.map((location) => (
+                                <Paper
+                                  key={location.id}
+                                  sx={{
+                                    p: 2,
+                                    borderRadius: 2,
+                                    border: !location.isActive
+                                      ? `1px solid ${theme.palette.error.light}`
+                                      : `1px solid ${theme.palette.divider}`,
+                                  }}
+                                >
+                                  <Stack
+                                    direction="row"
+                                    justifyContent="space-between"
+                                    alignItems="center"
+                                  >
+                                    <Box>
+                                      <Stack direction="row" alignItems="center" spacing={1}>
+                                        <Typography variant="subtitle2" fontWeight="500">
+                                          {location.name || 'Unnamed Location'}
+                                        </Typography>
+                                        <Chip
+                                          label={location.isActive ? "Active" : "Inactive"}
+                                          color={location.isActive ? "success" : "error"}
+                                          size="small"
+                                          variant="outlined"
+                                        />
+                                      </Stack>
+                                      <Typography variant="body2" color="text.secondary">
+                                        📍 {(location.city || '') + ', ' + (location.state || '') + ' ' + (location.postcode || '')}
+                                      </Typography>
+                                      <Box>
+                                        {location.phone && (
+                                          <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                            📞 {location.phone}
+                                          </Typography>
+                                        )}
+                                        {location.email && (
+                                          <Typography variant="body2">
+                                            ✉️ {location.email}
+                                          </Typography>
+                                        )}
+                                        {!location.phone && !location.email && (
+                                          <Typography variant="caption" color="text.secondary">
+                                            No contact info
+                                          </Typography>
+                                        )}
+                                      </Box>
+                                    </Box>
+                                    <IconButton
+                                      onClick={(e) => handleMenuClick(e, location.id, "location")}
+                                      size="small"
+                                    >
+                                      <MoreVertIcon />
+                                    </IconButton>
+                                  </Stack>
+                                </Paper>
+                              ))}
+                            </Stack>
                           )}
+                        </Grid>
 
-                          {company.locations.length > 0 && company.users.length === 0 && (
-                            <Box textAlign="center" py={2}>
-                              <Typography variant="body2" color="text.secondary" gutterBottom>
+                        {/* Users Section */}
+                        <Grid item xs={12} md={6}>
+                          <Stack
+                            direction="row"
+                            justifyContent="space-between"
+                            alignItems="center"
+                            sx={{ mb: 2 }}
+                          >
+                            <Typography variant="subtitle1" fontWeight="600">
+                              Users ({company.users?.length || 0})
+                            </Typography>
+                            <Button
+                              size="small"
+                              startIcon={<AddIcon />}
+                              onClick={() => handleOpenDialog("add", "user", company)}
+                              variant="outlined"
+                              sx={{ borderRadius: 2 }}
+                            >
+                              Add User
+                            </Button>
+                          </Stack>
+
+                          {company.users?.length === 0 ? (
+                            <Paper
+                              sx={{
+                                p: 3,
+                                textAlign: "center",
+                                bgcolor: "grey.50",
+                                borderRadius: 2,
+                              }}
+                            >
+                              <PersonIcon sx={{ fontSize: 48, color: "text.secondary", mb: 1 }} />
+                              <Typography variant="body2" color="text.secondary">
                                 No users added yet
                               </Typography>
-                              <Button
-                                variant="outlined"
-                                startIcon={<AddIcon />}
-                                onClick={() => handleOpenDialog("add", "user", undefined, company.id)}
-                                size="small"
-                              >
-                                Add User
-                              </Button>
-                            </Box>
+                            </Paper>
+                          ) : (
+                            <Stack spacing={1}>
+                              {company.users?.map((user) => (
+                                <Paper
+                                  key={user.id}
+                                  sx={{
+                                    p: 2,
+                                    borderRadius: 2,
+                                    border: !user.isActive
+                                      ? `1px solid ${theme.palette.error.light}`
+                                      : `1px solid ${theme.palette.divider}`,
+                                  }}
+                                >
+                                  <Stack
+                                    direction="row"
+                                    justifyContent="space-between"
+                                    alignItems="center"
+                                  >
+                                    <Box>
+                                      <Stack direction="row" alignItems="center" spacing={1}>
+                                        <Typography variant="subtitle2" fontWeight="500">
+                                          {(user.firstName || '') + ' ' + (user.lastName || '')}
+                                        </Typography>
+                                        <Chip
+                                          label={user.role || 'user'}
+                                          size="small"
+                                          sx={{
+                                            bgcolor: getRoleColor(user.role || 'user') + "20",
+                                            color: getRoleColor(user.role || 'user'),
+                                            fontWeight: 500,
+                                          }}
+                                        />
+                                        <Chip
+                                          label={user.isActive ? "Active" : "Inactive"}
+                                          color={user.isActive ? "success" : "error"}
+                                          size="small"
+                                          variant="outlined"
+                                        />
+                                      </Stack>
+                                      <Typography variant="body2" color="text.secondary">
+                                        ✉️ {user.email || 'No email'}
+                                      </Typography>
+                                      <Typography variant="body2" color="text.secondary">
+                                        📞 {user.phone || 'No phone'}
+                                      </Typography>
+                                      {user.assignedLocations && user.assignedLocations.length > 0 && (
+                                        <Typography variant="caption" color="text.secondary">
+                                          📍 {user.assignedLocations.length} location(s) assigned
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                    <IconButton
+                                      onClick={(e) => handleMenuClick(e, user.id, "user")}
+                                      size="small"
+                                    >
+                                      <MoreVertIcon />
+                                    </IconButton>
+                                  </Stack>
+                                </Paper>
+                              ))}
+                            </Stack>
                           )}
-
-                        </Box>
-                      </Collapse>
-                    </TableCell>
-                  </TableRow>
-                </React.Fragment>
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  </Collapse>
+                </Paper>
               ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+            </Stack>
+          )}
+        </CardContent>
       </Card>
 
-      {/* Empty State */}
-      {filteredCompanies.length === 0 && (
-        <Box textAlign="center" py={8}>
-          <BusinessIcon sx={{ fontSize: 80, color: "text.disabled", mb: 2 }} />
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            No companies found
-          </Typography>
-          <Typography variant="body2" color="text.secondary" mb={3}>
-            {searchTerm || selectedRole || showInactiveOnly
-              ? "Try adjusting your filters"
-              : "Get started by adding your first company"}
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenDialog("add", "company")}
-            size="large"
-            sx={{ borderRadius: 2 }}
-          >
-            Add Company
-          </Button>
-        </Box>
-      )}
+      {/* Context Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+        transformOrigin={{ horizontal: "right", vertical: "top" }}
+        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+      >
+        <MenuItem onClick={() => handleMenuAction("edit")}>
+          <ListItemIcon>
+            <EditIcon fontSize="small" />
+          </ListItemIcon>
+          Edit
+        </MenuItem>
+        <MenuItem onClick={() => handleMenuAction("delete")} sx={{ color: "error.main" }}>
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" color="error" />
+          </ListItemIcon>
+          Delete
+        </MenuItem>
+      </Menu>
 
-      {/* Dialog for Add/Edit */}
+      {/* Dialog */}
       <Dialog
         open={dialogOpen}
         onClose={handleCloseDialog}
         maxWidth="md"
         fullWidth
-        PaperProps={{
-          sx: { borderRadius: 2 },
-        }}
+        PaperProps={{ sx: { borderRadius: 3 } }}
       >
-        <DialogTitle
-          sx={{
-            pb: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <Box display="flex" alignItems="center">
-            {entityType === "company" && <CompanyIcon sx={{ mr: 2 }} />}
-            {entityType === "location" && <PlaceIcon sx={{ mr: 2 }} />}
-            {entityType === "user" && <PersonIcon sx={{ mr: 2 }} />}
-            <Box>
-              <Typography variant="h6">
-                {dialogMode === "add" ? "Add" : "Edit"}{" "}
-                {entityType.charAt(0).toUpperCase() + entityType.slice(1)}
-              </Typography>
-              {dialogMode === "edit" && (
-                <Typography variant="body2" color="text.secondary">
-                  {entityType === "company" && selectedCompany && `Editing: ${selectedCompany.name} (ID: ${selectedCompany.id})`}
-                  {entityType === "location" && selectedLocation && `Editing: ${selectedLocation.name} (ID: ${selectedLocation.id})`}
-                  {entityType === "user" && selectedUser && `Editing: ${selectedUser.firstName} ${selectedUser.lastName} (ID: ${selectedUser.id})`}
-                </Typography>
-              )}
-            </Box>
-          </Box>
-          <IconButton onClick={handleCloseDialog} size="small">
-            <CloseIcon />
-          </IconButton>
+        <DialogTitle>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6" fontWeight="600">
+              {dialogMode === "add" ? "Add" : "Edit"}{" "}
+              {entityType === "company"
+                ? "Company"
+                : entityType === "location"
+                ? "Location"
+                : "User"}
+            </Typography>
+            <IconButton onClick={handleCloseDialog} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Stack>
         </DialogTitle>
 
-        <DialogContent dividers>
-          {/* Company Form */}
-          {entityType === "company" && (
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} sm={6}>
+        <DialogContent>
+          {entityType === "company" ? (
+            <Grid container spacing={3} sx={{ mt: 1 }}>
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="Company Name *"
                   value={companyForm.name}
                   onChange={(e) =>
-                    setCompanyForm({ ...companyForm, name: e.target.value })
+                    setCompanyForm((prev) => ({
+                      ...prev,
+                      name: e.target.value,
+                    }))
                   }
                   required
                   error={!companyForm.name.trim()}
                   helperText={!companyForm.name.trim() ? "Company name is required" : ""}
+                  placeholder="Enter company name"
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="Website"
-                  value={companyForm.website}
+                  label="City *"
+                  value={companyForm.city}
                   onChange={(e) =>
-                    setCompanyForm({ ...companyForm, website: e.target.value })
-                  }
-                />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField
-                  fullWidth
-                  label="Address *"
-                  value={companyForm.address}
-                  onChange={(e) =>
-                    setCompanyForm({ ...companyForm, address: e.target.value })
+                    setCompanyForm((prev) => ({
+                      ...prev,
+                      city: e.target.value,
+                    }))
                   }
                   required
-                  error={!companyForm.address.trim()}
-                  helperText={!companyForm.address.trim() ? "Address is required" : ""}
+                  error={!companyForm.city.trim()}
+                  helperText={!companyForm.city.trim() ? "City is required" : ""}
+                  placeholder="Enter city"
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
+
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="State *"
                   value={companyForm.state}
                   onChange={(e) =>
-                    setCompanyForm({ ...companyForm, state: e.target.value })
+                    setCompanyForm((prev) => ({
+                      ...prev,
+                      state: e.target.value,
+                    }))
                   }
                   required
                   error={!companyForm.state.trim()}
                   helperText={!companyForm.state.trim() ? "State is required" : ""}
+                  placeholder="Enter state"
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
+
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="Post Code *"
                   value={companyForm.postcode}
                   onChange={(e) =>
-                    setCompanyForm({ ...companyForm, postcode: e.target.value })
+                    setCompanyForm((prev) => ({
+                      ...prev,
+                      postcode: e.target.value,
+                    }))
                   }
                   required
                   error={!companyForm.postcode.trim()}
                   helperText={!companyForm.postcode.trim() ? "Post code is required" : ""}
+                  placeholder="12345"
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="Phone *"
                   value={companyForm.phone}
                   onChange={(e) =>
-                    setCompanyForm({ ...companyForm, phone: e.target.value })
+                    setCompanyForm((prev) => ({
+                      ...prev,
+                      phone: e.target.value,
+                    }))
                   }
                   required
                   error={!companyForm.phone.trim()}
                   helperText={!companyForm.phone.trim() ? "Phone is required" : ""}
+                  placeholder="(555) 123-4567"
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="Email"
+                  label="Email (Optional)"
                   type="email"
                   value={companyForm.email}
                   onChange={(e) =>
-                    setCompanyForm({ ...companyForm, email: e.target.value })
+                    setCompanyForm((prev) => ({
+                      ...prev,
+                      email: e.target.value,
+                    }))
                   }
+                  placeholder="contact@company.com"
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                 />
               </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Website (Optional)"
+                  value={companyForm.website}
+                  onChange={(e) =>
+                    setCompanyForm((prev) => ({
+                      ...prev,
+                      website: e.target.value,
+                    }))
+                  }
+                  placeholder="https://company.com"
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Industry</InputLabel>
+                  <Select
+                    value={companyForm.industry}
+                    label="Industry"
+                    onChange={(e: SelectChangeEvent) =>
+                      setCompanyForm((prev) => ({
+                        ...prev,
+                        industry: e.target.value,
+                      }))
+                    }
+                    sx={{ borderRadius: 2 }}
+                  >
+                    {INDUSTRIES.map((industry) => (
+                      <MenuItem key={industry} value={industry}>
+                        {industry}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
               <Grid item xs={12}>
                 <FormControlLabel
                   control={
                     <Switch
                       checked={companyForm.isActive}
                       onChange={(e) =>
-                        setCompanyForm({ ...companyForm, isActive: e.target.checked })
+                        setCompanyForm((prev) => ({
+                          ...prev,
+                          isActive: e.target.checked,
+                        }))
                       }
+                      color="primary"
                     />
                   }
-                  label="Active"
+                  label="Active Company"
                 />
               </Grid>
-
-              {/* Delete Section for Edit Mode */}
-              {dialogMode === "edit" && selectedCompany && (
-                <Grid item xs={12}>
-                  <Paper 
-                    elevation={0} 
-                    sx={{ 
-                      p: 2, 
-                      mt: 2, 
-                      border: '1px solid #f44336', 
-                      borderRadius: 2,
-                      bgcolor: '#ffebee' 
-                    }}
-                  >
-                    <Typography variant="h6" color="error" gutterBottom>
-                      ⚠️ Danger Zone
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Permanently delete this company and all associated data. This action cannot be undone.
-                    </Typography>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      startIcon={<DeleteIcon />}
-                      onClick={() => {
-                        if (window.confirm(
-                          `Are you sure you want to delete "${selectedCompany.name}"?\n\n` +
-                          `This will permanently delete:\n` +
-                          `• The company and all its data\n` +
-                          `• ${selectedCompany.locations?.length || 0} associated location(s)\n` +
-                          `• ${selectedCompany.users?.length || 0} associated user(s)\n\n` +
-                          `This action CANNOT be undone!`
-                        )) {
-                          handleDelete(selectedCompany.id, "company");
-                          handleCloseDialog();
-                        }
-                      }}
-                      sx={{ borderRadius: 2 }}
-                    >
-                      Delete Company
-                    </Button>
-                  </Paper>
-                </Grid>
-              )}
             </Grid>
-          )}
-
-          {/* Location Form */}
-          {entityType === "location" && (
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              {/* Hidden Company ID field */}
-              <input 
-                type="hidden" 
-                value={locationForm.company_id} 
-                onChange={() => {}} // Read-only hidden field
-              />
-              
-              {/* Debug info for company ID (remove in production) */}
-              {locationForm.company_id && (
-                <Grid item xs={12}>
-                  <Alert severity="info" sx={{ mb: 1 }}>
-                    {dialogMode === "add" ? "Creating" : "Updating"} location for Company ID: {locationForm.company_id}
-                    <br />
-                    Will be sent as company_id: {locationForm.company_id}
-                    {dialogMode === "edit" && selectedLocation && (
-                      <>
-                        <br />
-                        Clean location ID for API: {selectedLocation.id}
-                        <br />
-                        API endpoint: /stores/{selectedLocation.id}
-                      </>
-                    )}
-                  </Alert>
-                </Grid>
-              )}
-              
-              <Grid item xs={12} sm={6}>
+          ) : entityType === "location" ? (
+            <Grid container spacing={3} sx={{ mt: 1 }}>
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
                   label="Location Name *"
                   value={locationForm.name}
                   onChange={(e) =>
-                    setLocationForm({ ...locationForm, name: e.target.value })
+                    setLocationForm((prev) => ({
+                      ...prev,
+                      name: e.target.value,
+                    }))
                   }
                   required
                   error={!locationForm.name.trim()}
                   helperText={!locationForm.name.trim() ? "Location name is required" : ""}
+                  placeholder="Enter location name"
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Manager"
-                  value={locationForm.manager}
-                  onChange={(e) =>
-                    setLocationForm({ ...locationForm, manager: e.target.value })
-                  }
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Address *"
-                  value={locationForm.address}
-                  onChange={(e) =>
-                    setLocationForm({ ...locationForm, address: e.target.value })
-                  }
-                  required
-                  error={!locationForm.address.trim()}
-                  helperText={!locationForm.address.trim() ? "Address is required" : ""}
-                />
-              </Grid>
-              <Grid item xs={12} sm={4}>
+
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="City *"
                   value={locationForm.city}
                   onChange={(e) =>
-                    setLocationForm({ ...locationForm, city: e.target.value })
+                    setLocationForm((prev) => ({
+                      ...prev,
+                      city: e.target.value,
+                    }))
                   }
                   required
                   error={!locationForm.city.trim()}
                   helperText={!locationForm.city.trim() ? "City is required" : ""}
+                  placeholder="Enter city"
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
+
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="State *"
                   value={locationForm.state}
                   onChange={(e) =>
-                    setLocationForm({ ...locationForm, state: e.target.value })
+                    setLocationForm((prev) => ({
+                      ...prev,
+                      state: e.target.value,
+                    }))
                   }
                   required
                   error={!locationForm.state.trim()}
                   helperText={!locationForm.state.trim() ? "State is required" : ""}
+                  placeholder="Enter state"
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                 />
               </Grid>
-              <Grid item xs={12} sm={4}>
+
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="Post Code *"
                   value={locationForm.postcode}
                   onChange={(e) =>
-                    setLocationForm({ ...locationForm, postcode: e.target.value })
+                    setLocationForm((prev) => ({
+                      ...prev,
+                      postcode: e.target.value,
+                    }))
                   }
                   required
                   error={!locationForm.postcode.trim()}
                   helperText={!locationForm.postcode.trim() ? "Post code is required" : ""}
+                  placeholder="12345"
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="Phone"
+                  label="Phone (Optional)"
                   value={locationForm.phone}
                   onChange={(e) =>
-                    setLocationForm({ ...locationForm, phone: e.target.value })
+                    setLocationForm((prev) => ({
+                      ...prev,
+                      phone: e.target.value,
+                    }))
                   }
+                  placeholder="(555) 123-4567"
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="Email"
+                  label="Email (Optional)"
                   type="email"
                   value={locationForm.email}
                   onChange={(e) =>
-                    setLocationForm({ ...locationForm, email: e.target.value })
+                    setLocationForm((prev) => ({
+                      ...prev,
+                      email: e.target.value,
+                    }))
                   }
+                  placeholder="location@company.com"
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                 />
               </Grid>
+
+              {selectedCompany && selectedCompany.users?.length > 0 && (
+                <Grid item xs={12}>
+                  <FormControl fullWidth>
+                    <InputLabel>Location Manager (Optional)</InputLabel>
+                    <Select
+                      value={locationForm.manager}
+                      label="Location Manager (Optional)"
+                      onChange={(e: SelectChangeEvent) =>
+                        setLocationForm((prev) => ({
+                          ...prev,
+                          manager: e.target.value,
+                        }))
+                      }
+                      sx={{ borderRadius: 2 }}
+                    >
+                      <MenuItem value="">No Manager</MenuItem>
+                                      {selectedCompany?.users
+                        .filter((user) => user.isActive)
+                        .map((user) => (
+                          <MenuItem key={user.id} value={user.id}>
+                            {user.firstName} {user.lastName} ({user.role})
+                          </MenuItem>
+                        ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+              )}
+
               <Grid item xs={12}>
                 <FormControlLabel
                   control={
                     <Switch
                       checked={locationForm.isActive}
                       onChange={(e) =>
-                        setLocationForm({ ...locationForm, isActive: e.target.checked })
+                        setLocationForm((prev) => ({
+                          ...prev,
+                          isActive: e.target.checked,
+                        }))
                       }
+                      color="primary"
                     />
                   }
-                  label="Active"
+                  label="Active Location"
                 />
               </Grid>
             </Grid>
-          )}
-
-          {/* User Form */}
-          {entityType === "user" && (
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              {/* Hidden Company ID field */}
-              <input 
-                type="hidden" 
-                value={userForm.company_id} 
-                onChange={() => {}} // Read-only hidden field
-              />
-              
-              {/* Debug info for company ID (remove in production) */}
-              {userForm.company_id && (
-                <Grid item xs={12}>
-                  <Alert severity="info" sx={{ mb: 1 }}>
-                    Creating user for Company ID: {userForm.company_id}
-                  </Alert>
-                </Grid>
-              )}
-              
-              <Grid item xs={12} sm={6}>
+          ) : (
+            // User Form - Updated with firstName, lastName, phone
+            <Grid container spacing={3} sx={{ mt: 1 }}>
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="First Name *"
                   value={userForm.firstName}
                   onChange={(e) =>
-                    setUserForm({ ...userForm, firstName: e.target.value })
+                    setUserForm((prev) => ({
+                      ...prev,
+                      firstName: e.target.value,
+                    }))
                   }
                   required
                   error={!userForm.firstName.trim()}
                   helperText={!userForm.firstName.trim() ? "First name is required" : ""}
+                  placeholder="Enter first name"
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="Last Name *"
                   value={userForm.lastName}
                   onChange={(e) =>
-                    setUserForm({ ...userForm, lastName: e.target.value })
+                    setUserForm((prev) => ({
+                      ...prev,
+                      lastName: e.target.value,
+                    }))
                   }
                   required
                   error={!userForm.lastName.trim()}
                   helperText={!userForm.lastName.trim() ? "Last name is required" : ""}
+                  placeholder="Enter last name"
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="Email *"
                   type="email"
                   value={userForm.email}
                   onChange={(e) =>
-                    setUserForm({ ...userForm, email: e.target.value })
+                    setUserForm((prev) => ({
+                      ...prev,
+                      email: e.target.value,
+                    }))
                   }
                   required
                   error={!userForm.email.trim()}
                   helperText={!userForm.email.trim() ? "Email is required" : ""}
+                  placeholder="user@company.com"
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+
+              <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
                   label="Phone *"
                   value={userForm.phone}
                   onChange={(e) =>
-                    setUserForm({ ...userForm, phone: e.target.value })
+                    setUserForm((prev) => ({
+                      ...prev,
+                      phone: e.target.value,
+                    }))
                   }
                   required
                   error={!userForm.phone.trim()}
-                  helperText={!userForm.phone.trim() ? "Phone is required" : ""}
+                  helperText={!userForm.phone.trim() ? "Phone number is required" : ""}
+                  placeholder="(555) 123-4567"
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Role</InputLabel>
+
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>Role *</InputLabel>
                   <Select
                     value={userForm.role}
-                    label="Role"
-                    onChange={(e) =>
-                      setUserForm({ ...userForm, role: e.target.value })
+                    label="Role *"
+                    onChange={(e: SelectChangeEvent) =>
+                      setUserForm((prev) => ({
+                        ...prev,
+                        role: e.target.value,
+                      }))
                     }
-                    required
+                    error={!userForm.role}
+                    sx={{ borderRadius: 2 }}
                   >
                     {USER_ROLES.map((role) => (
                       <MenuItem key={role.value} value={role.value}>
-                        {role.label}
+                        <Stack direction="row" alignItems="center" spacing={1}>
+                          <Box
+                            sx={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: "50%",
+                              bgcolor: role.color,
+                            }}
+                          />
+                          <Typography>{role.label}</Typography>
+                        </Stack>
                       </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
+
+              <Grid item xs={12} md={6}>
                 <FormControl fullWidth>
                   <InputLabel>Assigned Locations</InputLabel>
                   <Select
                     multiple
                     value={userForm.assignedLocations}
-                    label="Assigned Locations"
-                    onChange={(e) =>
-                      setUserForm({
-                        ...userForm,
-                        assignedLocations: typeof e.target.value === 'string' 
-                          ? e.target.value.split(',') 
-                          : e.target.value,
-                      })
+                    onChange={(e: SelectChangeEvent<string[]>) =>
+                      setUserForm((prev) => ({
+                        ...prev,
+                        assignedLocations: e.target.value as string[],
+                      }))
                     }
                     renderValue={(selected) => (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {selected.map((value) => (
-                          <Chip key={value} label={value} size="small" />
+                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                        {(selected as string[]).map((value) => (
+                          <Chip
+                            key={value}
+                            label={getLocationName(selectedCompany?.id || "", value)}
+                            size="small"
+                          />
                         ))}
                       </Box>
                     )}
+                    sx={{ borderRadius: 2 }}
                   >
-                    {companies.flatMap(company => 
-                      company.locations.map(location => (
-                        <MenuItem key={location.id} value={location.name}>
-                          <Checkbox 
-                            checked={userForm.assignedLocations.indexOf(location.name) > -1} 
-                          />
-                          <ListItemText primary={location.name} />
-                        </MenuItem>
-                      ))
-                    )}
+                    {selectedCompany?.locations && selectedCompany.locations.map((location) => (
+                      <MenuItem key={location.id} value={location.id}>
+                        <Checkbox
+                          checked={userForm.assignedLocations.indexOf(location.id) > -1}
+                        />
+                        <ListItemText primary={location.name || 'Unnamed Location'} />
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Grid>
+
               <Grid item xs={12}>
                 <FormControl fullWidth>
                   <InputLabel>Permissions</InputLabel>
                   <Select
                     multiple
                     value={userForm.permissions}
-                    label="Permissions"
-                    onChange={(e) =>
-                      setUserForm({
-                        ...userForm,
-                        permissions: typeof e.target.value === 'string' 
-                          ? e.target.value.split(',') 
-                          : e.target.value,
-                      })
+                    onChange={(e: SelectChangeEvent<string[]>) =>
+                      setUserForm((prev) => ({
+                        ...prev,
+                        permissions: e.target.value as string[],
+                      }))
                     }
                     renderValue={(selected) => (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {selected.map((value) => (
-                          <Chip key={value} label={value} size="small" />
-                        ))}
+                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                        {(selected as string[]).map((value) => {
+                          const permission = AVAILABLE_PERMISSIONS.find(p => p.id === value);
+                          return (
+                            <Chip
+                              key={value}
+                              label={permission?.name || value}
+                              size="small"
+                            />
+                          );
+                        })}
                       </Box>
                     )}
+                    sx={{ borderRadius: 2 }}
                   >
                     {AVAILABLE_PERMISSIONS.map((permission) => (
                       <MenuItem key={permission.id} value={permission.id}>
-                        <Checkbox 
-                          checked={userForm.permissions.indexOf(permission.id) > -1} 
+                        <Checkbox
+                          checked={userForm.permissions.indexOf(permission.id) > -1}
                         />
                         <ListItemText 
-                          primary={permission.name} 
+                          primary={permission.name}
                           secondary={permission.description}
                         />
                       </MenuItem>
@@ -2224,43 +1862,42 @@ const CompanyLocationManager: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
+
               <Grid item xs={12}>
                 <FormControlLabel
                   control={
                     <Switch
                       checked={userForm.isActive}
                       onChange={(e) =>
-                        setUserForm({ ...userForm, isActive: e.target.checked })
+                        setUserForm((prev) => ({
+                          ...prev,
+                          isActive: e.target.checked,
+                        }))
                       }
+                      color="primary"
                     />
                   }
-                  label="Active"
+                  label="Active User"
                 />
               </Grid>
             </Grid>
           )}
         </DialogContent>
 
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleCloseDialog} color="inherit">
+        <DialogActions sx={{ p: 3 }}>
+          <Button
+            onClick={handleCloseDialog}
+            variant="outlined"
+            sx={{ borderRadius: 2 }}
+          >
             Cancel
           </Button>
           <Button
             onClick={handleSave}
             variant="contained"
-            startIcon={<SaveIcon />}
-            disabled={
-              (entityType === "company" && (!companyForm.name.trim() || !companyForm.phone.trim() || !companyForm.address.trim() || !companyForm.state.trim() || !companyForm.postcode.trim())) ||
-              (entityType === "location" && (
-                !locationForm.name.trim() || 
-                !locationForm.address.trim() || 
-                !locationForm.city.trim() || 
-                !locationForm.state.trim() || 
-                !locationForm.postcode.trim() || 
-                !locationForm.company_id.trim() // Always require company ID for locations
-              )) ||
-              (entityType === "user" && (!userForm.firstName.trim() || !userForm.lastName.trim() || !userForm.email.trim() || !userForm.phone.trim() || (dialogMode === "add" && !userForm.company_id.trim())))
-            }
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={20} /> : <SaveIcon />}
+            sx={{ borderRadius: 2 }}
           >
             {dialogMode === "add" ? "Create" : "Update"}
           </Button>
@@ -2271,18 +1908,38 @@ const CompanyLocationManager: React.FC = () => {
       <Snackbar
         open={notification.open}
         autoHideDuration={6000}
-        onClose={handleCloseNotification}
+        onClose={() => setNotification((prev) => ({ ...prev, open: false }))}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
         <Alert
-          onClose={handleCloseNotification}
+          onClose={() => setNotification((prev) => ({ ...prev, open: false }))}
           severity={notification.severity}
           variant="filled"
-          sx={{ width: "100%" }}
+          sx={{ borderRadius: 2 }}
         >
           {notification.message}
         </Alert>
       </Snackbar>
+
+      {/* Loading Overlay */}
+      {loading && companies.length > 0 && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            bgcolor: "rgba(255, 255, 255, 0.8)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+          }}
+        >
+          <CircularProgress size={60} />
+        </Box>
+      )}
     </Box>
   );
 };
