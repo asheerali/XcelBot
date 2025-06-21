@@ -624,6 +624,7 @@ const CompanyLocationManager: React.FC = () => {
 
   // CRUD Operations for Companies
   const handleCreateCompany = async () => {
+    console.log('Creating company with form data:', companyForm); // Debug log
     try {
       setLoading(true);
       await axios.post(`${API_URL_Local}/companies`, companyForm);
