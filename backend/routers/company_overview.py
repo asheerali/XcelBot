@@ -7,6 +7,9 @@ from models.users import User
 from models.permissions import Permission
 from models.user_company import UserCompany
 from datetime import datetime
+from models.user_company_companylocation import UserCompanyCompanyLocation
+from models.company_locations import CompanyLocation
+
 
 router = APIRouter(
     prefix="/company-overview",
@@ -30,10 +33,30 @@ def get_company_overview(db: Session = Depends(get_db)):
         for user in company_users:
             user_permission = permissions_map.get(user.id)
 
-            # Assigned locations based on mapping
+            # # Get assigned locations for the user from the user_location table
+            # user_location_entries = db.query(Store.id, Store.company_id, Store.name).join(
+            #     UserLocation, Store.id == UserLocation.location_id
+            # ).filter(
+            #     UserLocation.user_id == user.id,
+            #     UserLocation.company_id == company.id
+            # ).all()
+
+
+            user_location_entries = db.query(Store.id, Store.company_id, Store.name).join(
+                CompanyLocation, Store.id == CompanyLocation.location_id
+            ).join(
+                UserCompanyCompanyLocation, CompanyLocation.id == UserCompanyCompanyLocation.company_location_id
+            ).filter(
+                UserCompanyCompanyLocation.user_id == user.id
+            ).all()
+
             assigned_locations = [
-                f"{str(company.id)}-{location.id}" for location in company_locations
-                if user.id in [uc.user_id for uc in user_company_map if uc.company_id == company.id]
+                {
+                    "location_id": loc_id,
+                    "company_id": comp_id,
+                    "location_name": loc_name
+                }
+                for loc_id, comp_id, loc_name in user_location_entries
             ]
 
             permissions_list = []
@@ -80,7 +103,7 @@ def get_company_overview(db: Session = Depends(get_db)):
         response.append({
             "id": company.id,
             "name": company.name,
-            "city": getattr(company, "city", company.state),  # fallback
+            "city": getattr(company, "city", company.state),
             "state": company.state,
             "postcode": company.postcode,
             "address": company.address,

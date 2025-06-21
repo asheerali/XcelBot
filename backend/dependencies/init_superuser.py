@@ -2,9 +2,12 @@ from sqlalchemy.orm import Session
 from models.users import User, RoleEnum
 from models.companies import Company
 from models.user_company import UserCompany
-from models.locations import Store
 from passlib.hash import bcrypt
 from datetime import datetime
+
+from schemas.locations import StoreCreate
+from crud.locations import create_store  # Use this to insert store + company_locations
+
 
 def create_default_superusers(db: Session):
     try:
@@ -13,14 +16,13 @@ def create_default_superusers(db: Session):
         if not default_company:
             default_company = Company(
                 name="Default Company",
-                address="123 Default St",  # Add address here
+                address="123 Default St",
                 state="N/A",
                 postcode="00000",
                 phone="000-000-0000",
                 email="default@company.com",
                 website=None
             )
-
             db.add(default_company)
             db.commit()
             db.refresh(default_company)
@@ -31,7 +33,7 @@ def create_default_superusers(db: Session):
         if not second_company:
             second_company = Company(
                 name="Second Company",
-                address="456 Main Ave",  # Add address here
+                address="456 Main Ave",
                 state="CA",
                 postcode="90001",
                 phone="123-456-7890",
@@ -44,19 +46,18 @@ def create_default_superusers(db: Session):
             print(f"Second company '{second_company.name}' created.")
 
             # Add a location for the second company
-            location = Store(
+            store_data = StoreCreate(
                 name="Second Company Store",
                 city="Los Angeles",
                 state="CA",
-                address="789 Sunset Blvd",  # Add address here
+                address="789 Sunset Blvd",
                 postcode="90001",
                 phone="323-1112222",
                 email="store@secondcompany.com",
                 company_id=second_company.id
             )
-            db.add(location)
-            db.commit()
-            print("Location for second company added.")
+            create_store(db, store_data)
+            print("Location for second company added via create_store().")
 
         # Step 2: Define default users
         default_superusers = [
@@ -121,28 +122,29 @@ def create_default_superusers(db: Session):
             if user.role != RoleEnum.superuser:
                 db.add(UserCompany(user_id=user.id, company_id=user.company_id))
 
-                location1 = Store(
+                store_a = StoreCreate(
                     name="Default Store A",
                     city="Berlin",
                     state="BE",
                     postcode="10115",
-                    address="123 Main St",  # Add address here
+                    address="123 Main St",
                     phone="030-123456",
                     email="store-a@default.com",
                     company_id=user.company_id
                 )
-                location2 = Store(
+                store_b = StoreCreate(
                     name="Default Store B",
                     city="Munich",
                     state="BY",
                     postcode="80331",
-                    address="456 Elm St ",  # Add address here
+                    address="456 Elm St",
                     phone="089-654321",
                     email="store-b@default.com",
                     company_id=user.company_id
                 )
-                db.add_all([location1, location2])
-                print("Added dummy locations for manager.")
+                create_store(db, store_a)
+                create_store(db, store_b)
+                print("Added dummy locations for manager via create_store().")
 
             print(f"User '{user.email}' with role '{user.role.name}' created.")
 
