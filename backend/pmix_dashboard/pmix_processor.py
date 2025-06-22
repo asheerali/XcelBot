@@ -130,6 +130,7 @@ def process_pmix_file(file_data: Union[io.BytesIO, str],start_date=None, end_dat
  
     p1 = overview_tables(df, location_filter=location_filter, server_filter=server_filter, category_filter=category_filter,  start_date=start_date, end_date=end_date)
     
+    print("i am here in pmix_processor.py printing p1", p1)
     net_sales = p1['net_sales'] #value
     orders = p1['orders'] #value
     qty_sold = p1['qty_sold'] #value

@@ -3,7 +3,7 @@ import numpy as np
 from datetime import datetime, timedelta
 
 
-def overview_tables(df, location_filter='All', order_date_filter=None, server_filter='All', dining_option_filter='All', category_filter='All', start_date=None, end_date=None  ):
+def overview_tables(df, location_filter='All', server_filter='All', dining_option_filter='All', category_filter='All', start_date=None, end_date=None  ):
     """
     Create dashboard tables for restaurant visualization with optional filters.
     
