@@ -37,6 +37,12 @@ import SignUpView from "./pages/SignUpView";
 import ForgotPasswordView from "./pages/ForgotPasswordView";
 import ResetPasswordView from "./pages/ResetPasswordView";
 import CompanyLocationManager from "./pages/CompanyLocationManager";
+import AnalyticsDashboard from "./pages/AnalyticsDashboard"; // Import the AnalyticsDashboard component
+import MasterFile from "./pages/MasterFile";
+import FiltersOrderIQ from "./components/FiltersOrderIQ";
+import SummaryFinancialDashboard from "./pages/SummaryFinancialDashboard";
+import OrderIQDashboard from "./pages/OrderIQDashboard"; // Import the OrderIQDashboard component
+import StoreSummaryProduction from "./pages/StoreSummaryProduction"; // Import the StoreSummaryProduction component
 const router = createBrowserRouter([
   {
     path: "/sign-in",
@@ -89,6 +95,20 @@ const router = createBrowserRouter([
             path: "SalesSplitDashboard",
             Component: SalesSplitDashboard,
           },
+          {
+            path: "AnalyticsDashboard",
+            Component: AnalyticsDashboard,
+          },
+         {
+            path: "MasterFile",
+            Component: MasterFile,
+          },
+          {
+            path: "StoreSummaryProduction",
+            Component: StoreSummaryProduction,
+          },
+          
+        
           
            {
             path: "daterange",
@@ -130,6 +150,20 @@ const router = createBrowserRouter([
             path: "UserPermissions",
             Component: UserPermissions,
           },
+          {
+            path: "FiltersOrderIQ",
+            Component: FiltersOrderIQ,
+          },
+          {
+            path: "SummaryFinancialDashboard",
+            Component:  SummaryFinancialDashboard,
+          },
+          {
+            path: "OrderIQDashboard",
+            Component:  OrderIQDashboard, // Assuming you have this component
+          },
+
+
           {
             path: "ComingSoon",
             Component: ComingSoon,

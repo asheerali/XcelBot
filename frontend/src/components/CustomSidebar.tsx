@@ -14,26 +14,38 @@ import {
   useMediaQuery,
   useTheme,
   alpha,
-  Tooltip
+  Tooltip,
+  Collapse
 } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
 import NewspaperIcon from '@mui/icons-material/Newspaper';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import ExpandLess from '@mui/icons-material/ExpandLess';
+import ExpandMore from '@mui/icons-material/ExpandMore';
 import HelpIcon from '@mui/icons-material/Help';
 import PaymentIcon from '@mui/icons-material/Payment';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import LogoutIcon from '@mui/icons-material/Logout';
-// NEW IMPORT: Add this for the new logo
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import PieChartIcon from '@mui/icons-material/PieChart';
+import RestaurantIcon from '@mui/icons-material/Restaurant';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import ShowChartIcon from '@mui/icons-material/ShowChart';
+import InventoryIcon from '@mui/icons-material/Inventory';
+import FactoryIcon from '@mui/icons-material/Factory';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import BusinessIcon from '@mui/icons-material/Business';
 
 const drawerWidth = 260;
 const gradientBackground = 'linear-gradient(180deg, #050b1b 0%, #150949 100%)';
 
-// NEW COMPONENT: Custom Logo Component - Exact same design as homepage
+// Custom Logo Component - Exact same design as homepage
 const CustomLogo = ({ size = 32 }) => (
   <Box
     sx={{
@@ -59,28 +71,49 @@ const CustomLogo = ({ size = 32 }) => (
   </Box>
 );
 
-// UPDATED: Remove logo and title props, use internal app name
 const CustomSidebar = ({ onSignOut }) => {
   const theme = useTheme();
   const location = useLocation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [open, setOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [insightiqOpen, setInsightiqOpen] = useState(false);
+  const [orderiqOpen, setOrderiqOpen] = useState(false);
 
-  // NEW: Define your app name here - CHANGE THIS TO YOUR DESIRED NAME
-  const appName = 'INSIGHTiQ';
+  // Define your app name here
+  const appName = 'KPI360';
 
-  const navItems = [
+  // INSIGHTIQ dropdown items (renamed from analyticsItems)
+  const insightiqItems = [
     { title: 'Upload Excel', path: '/upload-excel', icon: <UploadFileIcon /> },
-    { title: 'Sales Split', path: '/manage-reports', icon: <BarChartIcon /> },
-    { title: 'Product Mix', path: '/Productmix', icon: <NewspaperIcon /> },
-    { title: 'Financials', path: '/Financials', icon: <NewspaperIcon /> },
-    { title: 'Companywide Sales', path: '/Saleswide', icon: <NewspaperIcon /> },
-    // { title: 'User Permissions', path: '/UserPermissions', icon: <AdminPanelSettingsIcon /> },
+    { title: 'Sales Split', path: '/manage-reports', icon: <PieChartIcon /> },
+    { title: 'Product Mix', path: '/Productmix', icon: <RestaurantIcon /> },
+    { title: 'Financials', path: '/Financials', icon: <AttachMoneyIcon /> },
+    { title: 'Companywide Sales', path: '/Saleswide', icon: <ShowChartIcon /> },
+  ];
+
+  // OrderIQ dropdown items
+  const orderiqItems = [
+    { title: 'Master File', path: '/MasterFile', icon: <InventoryIcon /> },
+    { title: 'Store Summary Production', path: '/StoreSummaryProduction', icon: <FactoryIcon /> },
+    { title: 'Order IQ Dashboard', path: '/OrderIQDashboard', icon: <DashboardIcon /> },
+    { title: 'Summary Financial Dashboard', path: '/SummaryFinancialDashboard', icon: <TrendingUpIcon /> },
+  ];
+
+  // Other navigation items (removed items that are now in OrderIQ dropdown)
+  const navItems = [
+    // { title: 'Analytics Dashboard', path: '/AnalyticsDashboard', icon: <DashboardIcon /> },
     { title: 'Payments', path: '/Payments', icon: <PaymentIcon /> },
     { title: 'Help Center', path: '/HelpCenter', icon: <HelpIcon /> },
-    { title: 'Company', path: '/CompanyLocationManager', icon: <NewspaperIcon /> },
+    { title: 'Company', path: '/CompanyLocationManager', icon: <BusinessIcon /> },
+    { title: 'Admin', path: '/Admin', icon: <AdminPanelSettingsIcon /> },
   ];
+
+  // Check if any INSIGHTIQ item is currently selected
+  const isInsightiqSelected = insightiqItems.some(item => location.pathname === item.path);
+  
+  // Check if any OrderIQ item is currently selected
+  const isOrderiqSelected = orderiqItems.some(item => location.pathname === item.path);
 
   const handleDrawerToggle = () => {
     if (isMobile) setMobileOpen(!mobileOpen);
@@ -91,7 +124,15 @@ const CustomSidebar = ({ onSignOut }) => {
     if (isMobile) setMobileOpen(false);
   };
 
-  const renderNavItems = (items) =>
+  const handleInsightiqToggle = () => {
+    setInsightiqOpen(!insightiqOpen);
+  };
+
+  const handleOrderiqToggle = () => {
+    setOrderiqOpen(!orderiqOpen);
+  };
+
+  const renderNavItems = (items, isSubItem = false) =>
     items.map((item) => {
       const isSelected = location.pathname === item.path;
       return (
@@ -107,6 +148,7 @@ const CustomSidebar = ({ onSignOut }) => {
               px: 2.5,
               mx: 1,
               mb: 0.5,
+              ml: isSubItem ? 2 : 1, // Indent sub-items
               borderRadius: '10px',
               position: 'relative',
               overflow: 'hidden',
@@ -168,7 +210,8 @@ const CustomSidebar = ({ onSignOut }) => {
                 textOverflow: 'ellipsis',
                 '& .MuiTypography-root': {
                   fontWeight: isSelected ? 700 : 400,
-                  color: isSelected ? '#ffffff' : '#f0f0f0'
+                  color: isSelected ? '#ffffff' : '#f0f0f0',
+                  fontSize: isSubItem ? '0.875rem' : '1rem' // Smaller font for sub-items
                 }
               }}
             />
@@ -176,6 +219,90 @@ const CustomSidebar = ({ onSignOut }) => {
         </ListItem>
       );
     });
+
+  const renderDropdownButton = (title, isOpen, isSelected, onToggle, icon) => (
+    <ListItem disablePadding>
+      <ListItemButton
+        onClick={onToggle}
+        sx={{
+          minHeight: 48,
+          justifyContent: open ? 'initial' : 'center',
+          px: 2.5,
+          mx: 1,
+          mb: 0.5,
+          borderRadius: '10px',
+          position: 'relative',
+          overflow: 'hidden',
+          transition: theme.transitions.create(['background-color', 'box-shadow'], {
+            duration: 300,
+            easing: theme.transitions.easing.easeInOut
+          }),
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            height: '100%',
+            width: '4px',
+            backgroundColor: isSelected ? '#ffffff' : 'transparent',
+            transition: 'all 0.3s ease-in-out'
+          },
+          '&:hover': {
+            backgroundColor: alpha('#ffffff', 0.08),
+            '&::before': {
+              backgroundColor: alpha('#ffffff', 0.5)
+            }
+          },
+          backgroundColor: isSelected ? alpha('#ffffff', 0.12) : 'transparent',
+          '& .MuiListItemIcon-root': { 
+            color: isSelected ? '#ffffff' : '#e0e0e0' 
+          },
+          '& .MuiListItemText-primary': {
+            color: isSelected ? '#ffffff' : '#f0f0f0',
+            fontWeight: isSelected ? 'bold' : 'normal'
+          },
+          boxShadow: isSelected ? `0 0 10px 1px ${alpha('#ffffff', 0.15)}` : 'none'
+        }}
+      >
+        <Tooltip title={open ? '' : title} placement="right" arrow>
+          <ListItemIcon
+            sx={{
+              minWidth: 0,
+              mr: open ? 2 : 'auto',
+              justifyContent: 'center',
+              color: isSelected ? '#ffffff' : '#e0e0e0',
+              transition: 'color 0.3s ease'
+            }}
+          >
+            {icon}
+          </ListItemIcon>
+        </Tooltip>
+        <ListItemText
+          primary={title}
+          sx={{
+            transition: 'opacity 0.3s ease',
+            opacity: open ? 1 : 0,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            '& .MuiTypography-root': {
+              fontWeight: isSelected ? 700 : 400,
+              color: isSelected ? '#ffffff' : '#f0f0f0'
+            }
+          }}
+        />
+        {open && (
+          <Box sx={{ ml: 1 }}>
+            {isOpen ? (
+              <ExpandLess sx={{ color: isSelected ? '#ffffff' : '#e0e0e0' }} />
+            ) : (
+              <ExpandMore sx={{ color: isSelected ? '#ffffff' : '#e0e0e0' }} />
+            )}
+          </Box>
+        )}
+      </ListItemButton>
+    </ListItem>
+  );
 
   const drawerContent = (
     <>
@@ -213,11 +340,10 @@ const CustomSidebar = ({ onSignOut }) => {
               color: '#ffffff'
             }}
           >
-            {/* CHANGED: Use new CustomLogo component instead of {logo} */}
             <CustomLogo size={32} />
           </ListItemIcon>
           <ListItemText
-            primary={appName} // CHANGED: Use appName variable instead of {title}
+            primary={appName}
             sx={{
               transition: 'opacity 0.3s ease',
               opacity: open ? 1 : 0,
@@ -236,6 +362,27 @@ const CustomSidebar = ({ onSignOut }) => {
 
       {/* Navigation Items */}
       <List sx={{ p: 1, mt: 1, flexGrow: 1 }}>
+        {/* INSIGHTIQ Dropdown */}
+        {renderDropdownButton('INSIGHTIQ', insightiqOpen, isInsightiqSelected, handleInsightiqToggle, <AssessmentIcon />)}
+
+        {/* INSIGHTIQ Sub-items */}
+        <Collapse in={insightiqOpen && open} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            {renderNavItems(insightiqItems, true)}
+          </List>
+        </Collapse>
+
+        {/* OrderIQ Dropdown */}
+        {renderDropdownButton('OrderIQ', orderiqOpen, isOrderiqSelected, handleOrderiqToggle, <ShoppingCartIcon />)}
+
+        {/* OrderIQ Sub-items */}
+        <Collapse in={orderiqOpen && open} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            {renderNavItems(orderiqItems, true)}
+          </List>
+        </Collapse>
+
+        {/* Other Navigation Items */}
         {renderNavItems(navItems)}
       </List>
 
