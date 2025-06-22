@@ -129,7 +129,7 @@ async def upload_excel(request: SalesSplitPmixUploadRequest = Body(...)):
             
         print("i am here in pmix_filter.py printing the pmix_dashboard", pmix_dashboard)
           
-        return [pmix_dashboard]
+        return pmix_dashboard
             # return {"message": "Financial Dashboard is not yet implemented."}
        
     except Exception as e:
