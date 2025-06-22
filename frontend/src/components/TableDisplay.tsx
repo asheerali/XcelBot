@@ -118,7 +118,7 @@ const formatNumber = (value: any): string => {
   // Handle string values
   if (typeof value === "string") {
     const trimmedValue = value.trim();
-    
+
     // If it's already formatted or non-numeric text, return as-is
     if (!isNumericValue(trimmedValue)) {
       return trimmedValue;
@@ -127,12 +127,12 @@ const formatNumber = (value: any): string => {
     // Extract numeric value from string (remove $, commas, etc.)
     const cleanValue = trimmedValue.replace(/[$,\s]/g, "");
     const numValue = parseFloat(cleanValue);
-    
+
     if (isNaN(numValue)) return trimmedValue;
 
     // Check if it was a currency
     const wasCurrency = trimmedValue.includes("$");
-    
+
     // Format with commas
     const formatted = numValue.toLocaleString("en-US", {
       minimumFractionDigits: numValue % 1 === 0 ? 0 : 2,
@@ -177,14 +177,14 @@ const formatPercentage = (
   }
 
   const sign = numValue >= 0 ? "↑" : "↓";
-  
+
   // Format the percentage value with commas if it's large
   const absValue = Math.abs(numValue);
   const formattedNumber = absValue.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  
+
   const formatted = `${sign} ${formattedNumber}%`;
 
   return { formatted, numValue };
@@ -345,18 +345,26 @@ const DataTable: React.FC<DataTableProps> = ({
 
   // Analyze columns to determine formatting types
   const columnTypes = useMemo(() => {
-    const types: { [key: string]: { isPercentage: boolean; isCurrency: boolean; isNumeric: boolean } } = {};
-    
+    const types: {
+      [key: string]: {
+        isPercentage: boolean;
+        isCurrency: boolean;
+        isNumeric: boolean;
+      };
+    } = {};
+
     headers.forEach((header) => {
       const values = data.map((row) => row[header]);
-      
+
       types[header] = {
-        isPercentage: !excludePercentageFormatting && values.some((val) => isPercentageColumn(header, val)),
+        isPercentage:
+          !excludePercentageFormatting &&
+          values.some((val) => isPercentageColumn(header, val)),
         isCurrency: isCurrencyColumn(header, values),
         isNumeric: values.some((val) => isNumericValue(val)),
       };
     });
-    
+
     return types;
   }, [data, headers, excludePercentageFormatting]);
 
@@ -438,7 +446,8 @@ const DataTable: React.FC<DataTableProps> = ({
                     if (isNumericValue(cellValue) && !isFirstColumn) {
                       displayValue = formatNumber(cellValue);
                     } else {
-                      displayValue = cellValue !== undefined ? String(cellValue) : "N/A";
+                      displayValue =
+                        cellValue !== undefined ? String(cellValue) : "N/A";
                     }
                   }
 
@@ -483,7 +492,7 @@ const TableDisplay: React.FC<TableDisplayProps> = ({
   onTabChange,
 }) => {
   // Internal tab state - isolated from parent state
-  const [internalTabValue, setInternalTabValue] = useState(0);
+  const [internalTabValue, setInternalTabValue] = useState(3);
 
   // Use internal state to prevent external state changes from causing restarts
   const currentTabValue =
@@ -495,7 +504,7 @@ const TableDisplay: React.FC<TableDisplayProps> = ({
       // Prevent default behavior that might cause issues
       event.preventDefault();
       event.stopPropagation();
- 
+
       // Update internal state
       setInternalTabValue(newValue);
 
@@ -546,26 +555,27 @@ const TableDisplay: React.FC<TableDisplayProps> = ({
           allowScrollButtonsMobile
         >
           <CleanTab
+            label="Pivot"
+            icon={<CategoryIcon />}
+            iconPosition="start"
+            {...a11yProps(0)}
+          />
+
+          <CleanTab
             label="Percentage Table"
             icon={<PercentIcon />}
             iconPosition="start"
-            {...a11yProps(0)}
+            {...a11yProps(1)}
           />
           <CleanTab
             label="In-House Table"
             icon={<HomeIcon />}
             iconPosition="start"
-            {...a11yProps(1)}
+            {...a11yProps(2)}
           />
           <CleanTab
             label="Week-over-Week (WOW)"
             icon={<TrendingUpIcon />}
-            iconPosition="start"
-            {...a11yProps(2)}
-          />
-          <CleanTab
-            label="Pivot"
-            icon={<CategoryIcon />}
             iconPosition="start"
             {...a11yProps(3)}
           />
@@ -574,8 +584,17 @@ const TableDisplay: React.FC<TableDisplayProps> = ({
 
       {/* Tab Panels - All rendered but hidden when not active */}
       <Box sx={{ mt: 2 }}>
-        {/* Percentage Table */}
+        {/* Pivot Table */}
         <TabPanel value={currentTabValue} index={0} forceRender>
+          <DataTable
+            title="Category Summary"
+            data={memoizedTableData.table1}
+            icon={<CategoryIcon />}
+            excludePercentageFormatting={true}
+          />
+        </TabPanel>
+        {/* Percentage Table */}
+        <TabPanel value={currentTabValue} index={1} forceRender>
           <DataTable
             title="Percentage Table - Week over Week Changes"
             data={memoizedTableData.table2}
@@ -584,7 +603,7 @@ const TableDisplay: React.FC<TableDisplayProps> = ({
         </TabPanel>
 
         {/* In-House Table */}
-        <TabPanel value={currentTabValue} index={1} forceRender>
+        <TabPanel value={currentTabValue} index={2} forceRender>
           <DataTable
             title="In-House Table - Category Percentages"
             data={memoizedTableData.table3}
@@ -593,7 +612,7 @@ const TableDisplay: React.FC<TableDisplayProps> = ({
         </TabPanel>
 
         {/* WOW Table */}
-        <TabPanel value={currentTabValue} index={2} forceRender>
+        <TabPanel value={currentTabValue} index={3} forceRender>
           <DataTable
             title="Week-over-Week Analysis"
             data={memoizedTableData.table4}
@@ -602,14 +621,6 @@ const TableDisplay: React.FC<TableDisplayProps> = ({
         </TabPanel>
 
         {/* Category Summary */}
-        <TabPanel value={currentTabValue} index={3} forceRender>
-          <DataTable
-            title="Category Summary"
-            data={memoizedTableData.table1}
-            icon={<CategoryIcon />}
-            excludePercentageFormatting={true}
-          />
-        </TabPanel>
       </Box>
     </Box>
   );
