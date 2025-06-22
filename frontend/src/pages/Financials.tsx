@@ -861,7 +861,7 @@ export function Financials() {
         }, 0);
 
         // Also update Redux state if needed
-        dispatch(setTableData(response.data));
+        // dispatch(setTableData(response.data));
 
         // Update Redux filters
         dispatch(updateFinancialFilters({ 

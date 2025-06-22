@@ -1332,15 +1332,17 @@ const handleApplyFilters = async () => {
       console.log("📊 Enhanced data with filters and formatting:", enhancedData);
 
       // Update general table data (for compatibility)
-      dispatch(setTableData(enhancedData));
+      // dispatch(setTableData(enhancedData));
+      
+      
 
       // IMPORTANT: Update Product Mix data for ALL selected locations
       selectedLocations.forEach(location => {
         dispatch(addProductMixData({
           location: location,
           data: enhancedData,
-          fileName: currentProductMixFile.fileName,
-          fileContent: currentProductMixFile.fileContent || ""
+         fileName: currentProductMixFile?.fileName || "Unknown",
+         fileContent: currentProductMixFile?.fileContent || ""
         }));
       });
 
