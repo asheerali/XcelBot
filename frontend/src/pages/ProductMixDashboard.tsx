@@ -142,16 +142,43 @@ export const formatPercentage = (value: number | string | null | undefined, deci
 };
 
 /**
- * Specific formatter for SalesDashboard component data
- * Ensures Sales Categories Performance displays numbers with commas - NO ROUNDING
+ * FIXED: Clean a value by removing commas, currency symbols, and converting to number
+ */
+const cleanAndParseValue = (value: any): number => {
+  if (typeof value === 'number') return value;
+  if (!value) return 0;
+  
+  // Convert to string and remove commas, $, and other formatting
+  const cleanedValue = String(value)
+    .replace(/[$,]/g, '') // Remove $ and commas
+    .trim();
+  
+  const parsed = parseFloat(cleanedValue);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
+/**
+ * FIXED: Specific formatter for SalesDashboard component data
+ * Now properly handles both table1 (KPI cards) and table2 (Sales Categories)
  */
 const prepareSalesDashboardData = (data: any): any => {
   if (!data) return data;
   
-  console.log('🎯 Preparing SalesDashboard data (NO ROUNDING):', data);
+  console.log('🎯 Preparing SalesDashboard data (PRESERVING TABLE1):', data);
   
   // Clone the data
   const preparedData = { ...data };
+  
+  // FIXED: Preserve table1 formatting from enhanceDataWithFormatting
+  if (preparedData.table1) {
+    console.log('🔧 Preserving table1 formatting for KPI cards:', preparedData.table1);
+    
+    // Don't modify table1 - it's already properly formatted by enhanceDataWithFormatting
+    // Just ensure it's passed through correctly
+    preparedData.table1 = [...preparedData.table1];
+    
+    console.log('✅ Table1 preserved for KPI cards:', preparedData.table1);
+  }
   
   // CRITICAL: Special handling for table2 which powers the Sales Categories Performance section
   if (preparedData.table2) {
@@ -195,7 +222,7 @@ const prepareSalesDashboardData = (data: any): any => {
     });
   }
   
-  // ALSO: Apply same formatting to other relevant tables
+  // ALSO: Apply same formatting to other relevant tables (but NOT table1!)
   ['table3', 'table4', 'table5', 'table6'].forEach(tableName => {
     if (preparedData[tableName]) {
       preparedData[tableName] = preparedData[tableName].map((item: any) => ({
@@ -210,7 +237,7 @@ const prepareSalesDashboardData = (data: any): any => {
     }
   });
   
-  console.log('✅ SalesDashboard data prepared with EXACT FORMATTING:', preparedData);
+  console.log('✅ SalesDashboard data prepared with TABLE1 PRESERVED:', preparedData);
   return preparedData;
 };
 
@@ -224,8 +251,8 @@ const FormattingDebugInfo: React.FC<{ data: any }> = ({ data }) => {
 };
 
 /**
- * Enhanced data transformation that applies formatting to numerical values
- * Special focus on Sales Categories Performance data (table2)
+ * FIXED: Enhanced data transformation that correctly handles already-formatted values
+ * This fixes both the Table1 array issue and Table12 T_Sales/$NaN issue
  */
 const enhanceDataWithFormatting = (data: any): any => {
   if (!data) return data;
@@ -235,17 +262,200 @@ const enhanceDataWithFormatting = (data: any): any => {
   
   console.log('🔍 Raw data before formatting:', enhancedData);
   
-  // Apply formatting to various tables
+  // FIXED: Apply formatting to table1 - Handle pre-formatted values
   if (enhancedData.table1) {
-    enhancedData.table1 = enhancedData.table1.map((item: any) => ({
-      ...item,
-      // Format all numerical values in table1
-      net_sales: item.net_sales?.map((val: any) => formatNumber(val)),
-      orders: item.orders?.map((val: any) => formatNumber(val)),
-      qty_sold: item.qty_sold?.map((val: any) => formatNumber(val)),
-      average_order_value: item.average_order_value?.map((val: any) => formatCurrency(val)),
-      average_items_per_order: item.average_items_per_order?.map((val: any) => formatNumber(val)),
-    }));
+    console.log('🎯 Processing table1 BEFORE fix:', enhancedData.table1);
+    
+    enhancedData.table1 = enhancedData.table1.map((item: any) => {
+      console.log('🔧 Fixing table1 item:', item);
+      
+      const result = {
+        ...item,
+        
+        // FIXED: Clean values before formatting
+        net_sales: (() => {
+          const rawValue = Array.isArray(item.net_sales) ? item.net_sales[0] : item.net_sales;
+          const cleanValue = cleanAndParseValue(rawValue);
+          const formatted = cleanValue > 0 ? formatNumber(cleanValue) : '0';
+          console.log('🔍 NET_SALES:', { original: rawValue, cleaned: cleanValue, formatted });
+          return formatted;
+        })(),
+        net_sales_raw: (() => {
+          const rawValue = Array.isArray(item.net_sales) ? item.net_sales[0] : item.net_sales;
+          return cleanAndParseValue(rawValue);
+        })(),
+        
+        orders: (() => {
+          const rawValue = Array.isArray(item.orders) ? item.orders[0] : item.orders;
+          const cleanValue = cleanAndParseValue(rawValue);
+          const formatted = cleanValue > 0 ? formatNumber(cleanValue) : '0';
+          console.log('🔍 ORDERS:', { original: rawValue, cleaned: cleanValue, formatted });
+          return formatted;
+        })(),
+        orders_raw: (() => {
+          const rawValue = Array.isArray(item.orders) ? item.orders[0] : item.orders;
+          return cleanAndParseValue(rawValue);
+        })(),
+        
+        qty_sold: (() => {
+          const rawValue = Array.isArray(item.qty_sold) ? item.qty_sold[0] : item.qty_sold;
+          const cleanValue = cleanAndParseValue(rawValue);
+          const formatted = cleanValue > 0 ? formatNumber(cleanValue) : '0';
+          console.log('🔍 QTY_SOLD:', { original: rawValue, cleaned: cleanValue, formatted });
+          return formatted;
+        })(),
+        qty_sold_raw: (() => {
+          const rawValue = Array.isArray(item.qty_sold) ? item.qty_sold[0] : item.qty_sold;
+          return cleanAndParseValue(rawValue);
+        })(),
+        
+        total_quantity: (() => {
+          const rawValue = Array.isArray(item.total_quantity) ? item.total_quantity[0] : item.total_quantity;
+          const cleanValue = cleanAndParseValue(rawValue);
+          const formatted = cleanValue > 0 ? formatNumber(cleanValue) : '0';
+          console.log('🔍 TOTAL_QUANTITY:', { original: rawValue, cleaned: cleanValue, formatted });
+          return formatted;
+        })(),
+        total_quantity_raw: (() => {
+          const rawValue = Array.isArray(item.total_quantity) ? item.total_quantity[0] : item.total_quantity;
+          return cleanAndParseValue(rawValue);
+        })(),
+        
+        average_order_value: (() => {
+          const rawValue = Array.isArray(item.average_order_value) ? item.average_order_value[0] : item.average_order_value;
+          const cleanValue = cleanAndParseValue(rawValue);
+          const formatted = cleanValue > 0 ? formatCurrency(cleanValue) : '$0.00';
+          console.log('🔍 AVG_ORDER_VALUE:', { original: rawValue, cleaned: cleanValue, formatted });
+          return formatted;
+        })(),
+        average_order_value_raw: (() => {
+          const rawValue = Array.isArray(item.average_order_value) ? item.average_order_value[0] : item.average_order_value;
+          return cleanAndParseValue(rawValue);
+        })(),
+        
+        average_items_per_order: (() => {
+          const rawValue = Array.isArray(item.average_items_per_order) ? item.average_items_per_order[0] : item.average_items_per_order;
+          const cleanValue = cleanAndParseValue(rawValue);
+          const formatted = cleanValue > 0 ? formatNumber(cleanValue) : '0';
+          console.log('🔍 AVG_ITEMS_PER_ORDER:', { original: rawValue, cleaned: cleanValue, formatted });
+          return formatted;
+        })(),
+        average_items_per_order_raw: (() => {
+          const rawValue = Array.isArray(item.average_items_per_order) ? item.average_items_per_order[0] : item.average_items_per_order;
+          return cleanAndParseValue(rawValue);
+        })(),
+        
+        // Additional field variations - using cleaned values
+        NetSales: (() => {
+          const rawValue = Array.isArray(item.net_sales) ? item.net_sales[0] : item.net_sales;
+          const cleanValue = cleanAndParseValue(rawValue);
+          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
+        })(),
+        'Net Sales': (() => {
+          const rawValue = Array.isArray(item.net_sales) ? item.net_sales[0] : item.net_sales;
+          const cleanValue = cleanAndParseValue(rawValue);
+          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
+        })(),
+        sales: (() => {
+          const rawValue = Array.isArray(item.net_sales) ? item.net_sales[0] : item.net_sales;
+          const cleanValue = cleanAndParseValue(rawValue);
+          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
+        })(),
+        Sales: (() => {
+          const rawValue = Array.isArray(item.net_sales) ? item.net_sales[0] : item.net_sales;
+          const cleanValue = cleanAndParseValue(rawValue);
+          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
+        })(),
+        
+        Orders: (() => {
+          const rawValue = Array.isArray(item.orders) ? item.orders[0] : item.orders;
+          const cleanValue = cleanAndParseValue(rawValue);
+          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
+        })(),
+        unique_orders: (() => {
+          const rawValue = Array.isArray(item.unique_orders) ? item.unique_orders[0] : item.unique_orders;
+          const cleanValue = cleanAndParseValue(rawValue);
+          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
+        })(),
+        
+        QTY_Sold: (() => {
+          const rawValue = Array.isArray(item.qty_sold) ? item.qty_sold[0] : item.qty_sold;
+          const cleanValue = cleanAndParseValue(rawValue);
+          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
+        })(),
+        'Qty Sold': (() => {
+          const rawValue = Array.isArray(item.qty_sold) ? item.qty_sold[0] : item.qty_sold;
+          const cleanValue = cleanAndParseValue(rawValue);
+          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
+        })(),
+        quantity: (() => {
+          const rawValue = Array.isArray(item.qty_sold) ? item.qty_sold[0] : item.qty_sold;
+          const cleanValue = cleanAndParseValue(rawValue);
+          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
+        })(),
+        Quantity: (() => {
+          const rawValue = Array.isArray(item.qty_sold) ? item.qty_sold[0] : item.qty_sold;
+          const cleanValue = cleanAndParseValue(rawValue);
+          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
+        })(),
+        
+        'Average Order Value': (() => {
+          const rawValue = Array.isArray(item.average_order_value) ? item.average_order_value[0] : item.average_order_value;
+          const cleanValue = cleanAndParseValue(rawValue);
+          return cleanValue > 0 ? formatCurrency(cleanValue) : '$0.00';
+        })(),
+        'Avg Order Value': (() => {
+          const rawValue = Array.isArray(item.average_order_value) ? item.average_order_value[0] : item.average_order_value;
+          const cleanValue = cleanAndParseValue(rawValue);
+          return cleanValue > 0 ? formatCurrency(cleanValue) : '$0.00';
+        })(),
+        avgOrderValue: (() => {
+          const rawValue = Array.isArray(item.average_order_value) ? item.average_order_value[0] : item.average_order_value;
+          const cleanValue = cleanAndParseValue(rawValue);
+          return cleanValue > 0 ? formatCurrency(cleanValue) : '$0.00';
+        })(),
+        AvgOrderValue: (() => {
+          const rawValue = Array.isArray(item.average_order_value) ? item.average_order_value[0] : item.average_order_value;
+          const cleanValue = cleanAndParseValue(rawValue);
+          return cleanValue > 0 ? formatCurrency(cleanValue) : '$0.00';
+        })(),
+        
+        'Average items per order': (() => {
+          const rawValue = Array.isArray(item.average_items_per_order) ? item.average_items_per_order[0] : item.average_items_per_order;
+          const cleanValue = cleanAndParseValue(rawValue);
+          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
+        })(),
+        'Average Items Per Order': (() => {
+          const rawValue = Array.isArray(item.average_items_per_order) ? item.average_items_per_order[0] : item.average_items_per_order;
+          const cleanValue = cleanAndParseValue(rawValue);
+          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
+        })(),
+        avgItemsPerOrder: (() => {
+          const rawValue = Array.isArray(item.average_items_per_order) ? item.average_items_per_order[0] : item.average_items_per_order;
+          const cleanValue = cleanAndParseValue(rawValue);
+          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
+        })(),
+        
+        // Keep change values as is
+        net_sales_change: item.net_sales_change?.[0] || item.net_sales_change || 0,
+        orders_change: item.orders_change?.[0] || item.orders_change || 0,
+        qty_sold_change: item.qty_sold_change?.[0] || item.qty_sold_change || 0,
+        average_order_value_change: item.average_order_value_change?.[0] || item.average_order_value_change || 0,
+        average_items_per_order_change: item.average_items_per_order_change?.[0] || item.average_items_per_order_change || 0,
+      };
+      
+      console.log('✅ Table1 item AFTER cleaning and transformation:', {
+        net_sales: result.net_sales,
+        orders: result.orders,
+        qty_sold: result.qty_sold,
+        average_order_value: result.average_order_value,
+        average_items_per_order: result.average_items_per_order
+      });
+      
+      return result;
+    });
+    
+    console.log('✅ Table1 AFTER fix (should show cleaned values):', enhancedData.table1);
   }
   
   // ENHANCED: Special handling for table2 - Sales Categories Performance
@@ -366,45 +576,89 @@ const enhanceDataWithFormatting = (data: any): any => {
     }));
   }
   
-  // Format table12 (Menu Items Table) specifically
+  // FIXED: Format table12 (Menu Items Table) specifically - This fixes the T_Sales $NaN issue
   if (enhancedData.table12) {
-    enhancedData.table12 = enhancedData.table12.map((item: any) => ({
-      ...item,
-      // Quantity fields
-      Quantity: typeof item.Quantity === 'number' ? formatNumber(item.Quantity) : item.Quantity,
-      QuantityRaw: item.Quantity,
+    console.log('🎯 Processing table12 BEFORE T_Sales fix:', enhancedData.table12);
+    
+    enhancedData.table12 = enhancedData.table12.map((item: any) => {
+      console.log('🔧 Fixing table12 item T_Sales/B_Sales:', {
+        T_Sales: item.T_Sales,
+        B_Sales: item.B_Sales,
+        T_Sales_type: typeof item.T_Sales,
+        B_Sales_type: typeof item.B_Sales
+      });
       
-      // Sales/Revenue fields
-      Sales: typeof item.Sales === 'number' ? formatCurrency(item.Sales, false) : item.Sales,
-      SalesRaw: item.Sales,
-      Revenue: typeof item.Revenue === 'number' ? formatCurrency(item.Revenue, false) : item.Revenue,
-      RevenueRaw: item.Revenue,
+      const formatted = {
+        ...item,
+        
+        // FIXED: T_Sales field - ensure it's a number and format properly
+        T_Sales: typeof item.T_Sales === 'number' ? item.T_Sales : (parseFloat(item.T_Sales) || 0),
+        T_Sales_Raw: item.T_Sales,
+        T_Sales_Formatted: typeof item.T_Sales === 'number' ? 
+          formatCurrency(item.T_Sales, false) : 
+          formatCurrency(parseFloat(item.T_Sales) || 0, false),
+        
+        // FIXED: B_Sales field - ensure it's a number and format properly  
+        B_Sales: typeof item.B_Sales === 'number' ? item.B_Sales : (parseFloat(item.B_Sales) || 0),
+        B_Sales_Raw: item.B_Sales,
+        B_Sales_Formatted: typeof item.B_Sales === 'number' ? 
+          formatCurrency(item.B_Sales, false) : 
+          formatCurrency(parseFloat(item.B_Sales) || 0, false),
+        
+        // Quantity fields
+        T_Quantity: typeof item.T_Quantity === 'number' ? item.T_Quantity : (parseFloat(item.T_Quantity) || 0),
+        T_Quantity_Formatted: typeof item.T_Quantity === 'number' ? 
+          formatNumber(item.T_Quantity) : 
+          formatNumber(parseFloat(item.T_Quantity) || 0),
+        
+        B_Quantity: typeof item.B_Quantity === 'number' ? item.B_Quantity : (parseFloat(item.B_Quantity) || 0),
+        B_Quantity_Formatted: typeof item.B_Quantity === 'number' ? 
+          formatNumber(item.B_Quantity) : 
+          formatNumber(parseFloat(item.B_Quantity) || 0),
+        
+        // Difference Sales
+        Difference_Sales: typeof item.Difference_Sales === 'number' ? item.Difference_Sales : (parseFloat(item.Difference_Sales) || 0),
+        Difference_Sales_Formatted: typeof item.Difference_Sales === 'number' ? 
+          formatNumber(item.Difference_Sales) : 
+          formatNumber(parseFloat(item.Difference_Sales) || 0),
+        
+        // Legacy formatting for compatibility
+        Quantity: typeof item.Quantity === 'number' ? formatNumber(item.Quantity) : item.Quantity,
+        QuantityRaw: item.Quantity,
+        
+        Sales: typeof item.Sales === 'number' ? formatCurrency(item.Sales, false) : item.Sales,
+        SalesRaw: item.Sales,
+        Revenue: typeof item.Revenue === 'number' ? formatCurrency(item.Revenue, false) : item.Revenue,
+        RevenueRaw: item.Revenue,
+        
+        Price: typeof item.Price === 'number' ? formatCurrency(item.Price) : item.Price,
+        PriceRaw: item.Price,
+        'Unit Price': typeof item['Unit Price'] === 'number' ? formatCurrency(item['Unit Price']) : item['Unit Price'],
+        'Unit PriceRaw': item['Unit Price'],
+        
+        Cost: typeof item.Cost === 'number' ? formatCurrency(item.Cost) : item.Cost,
+        CostRaw: item.Cost,
+        'Food Cost': typeof item['Food Cost'] === 'number' ? formatCurrency(item['Food Cost']) : item['Food Cost'],
+        'Food CostRaw': item['Food Cost'],
+        
+        'Margin %': typeof item['Margin %'] === 'number' ? formatPercentage(item['Margin %']) : item['Margin %'],
+        'Food Cost %': typeof item['Food Cost %'] === 'number' ? formatPercentage(item['Food Cost %']) : item['Food Cost %'],
+      };
       
-      // Price fields
-      Price: typeof item.Price === 'number' ? formatCurrency(item.Price) : item.Price,
-      PriceRaw: item.Price,
-      'Unit Price': typeof item['Unit Price'] === 'number' ? formatCurrency(item['Unit Price']) : item['Unit Price'],
-      'Unit PriceRaw': item['Unit Price'],
-      
-      // Cost fields
-      Cost: typeof item.Cost === 'number' ? formatCurrency(item.Cost) : item.Cost,
-      CostRaw: item.Cost,
-      'Food Cost': typeof item['Food Cost'] === 'number' ? formatCurrency(item['Food Cost']) : item['Food Cost'],
-      'Food CostRaw': item['Food Cost'],
-      
-      // Percentage fields
-      'Margin %': typeof item['Margin %'] === 'number' ? formatPercentage(item['Margin %']) : item['Margin %'],
-      'Food Cost %': typeof item['Food Cost %'] === 'number' ? formatPercentage(item['Food Cost %']) : item['Food Cost %'],
-      
-      // Any other numerical fields
-      ...Object.keys(item).reduce((acc, key) => {
-        if (typeof item[key] === 'number' && !['Quantity', 'Sales', 'Revenue', 'Price', 'Unit Price', 'Cost', 'Food Cost', 'Margin %', 'Food Cost %'].includes(key)) {
-          acc[key] = formatNumber(item[key]);
-          acc[`${key}Raw`] = item[key];
+      console.log('✅ Table12 item AFTER T_Sales fix:', {
+        original: { T_Sales: item.T_Sales, B_Sales: item.B_Sales },
+        formatted: { 
+          T_Sales: formatted.T_Sales, 
+          T_Sales_Formatted: formatted.T_Sales_Formatted,
+          B_Sales: formatted.B_Sales,
+          B_Sales_Formatted: formatted.B_Sales_Formatted
         }
-        return acc;
-      }, {} as any)
-    }));
+      });
+      
+      return formatted;
+    });
+    
+    console.log('✅ Table12 AFTER T_Sales/B_Sales fix (should show proper currency):', enhancedData.table12);
   }
   
   // Add metadata about formatting
@@ -413,13 +667,17 @@ const enhanceDataWithFormatting = (data: any): any => {
     timestamp: new Date().toISOString(),
     tables_processed: ['table1', 'table2', 'table3', 'table4', 'table5', 'table6', 'table7', 'table8', 'table9', 'table12'],
     formatting_functions: ['formatNumber', 'formatCurrency', 'formatPercentage'],
+    fixes_applied: {
+      table1: 'FIXED: Array extraction and pre-formatted value cleaning - now extracts single values from arrays for KPI cards',
+      table12: 'FIXED: T_Sales and B_Sales formatting - now properly handles currency formatting'
+    },
     special_handling: {
       table2: 'Sales Categories Performance with enhanced display values',
-      table12: 'Menu Items Table with comprehensive formatting'
+      table12: 'Menu Items Table with comprehensive formatting including T_Sales/B_Sales fixes'
     }
   };
   
-  console.log('📊 Enhanced data with comprehensive formatting:', enhancedData);
+  console.log('📊 Enhanced data with ALL FIXES APPLIED:', enhancedData);
   return enhancedData;
 };
 
@@ -1554,6 +1812,19 @@ const formatSelectedLocationsDisplay = (locations: string[]) => {
                   </Box>
                 ) : (
                   <Box sx={{ width: "100%" }}>  {/* Add explicit width */}
+                    {/* TEMPORARY DEBUG - Add right before MenuAnalysisDashboard */}
+                    {/* {salesDashboardData?.table1 && (
+                      <Alert severity="info" sx={{ mb: 2 }}>
+                        <Typography variant="h6">🔍 DEBUG - Final SalesDashboard Data:</Typography>
+                        <Typography variant="body2" sx={{ mt: 1 }}>
+                          <strong>Table1 (KPI Cards):</strong>
+                        </Typography>
+                        <pre style={{ fontSize: '10px', marginTop: '8px', maxHeight: '200px', overflow: 'auto' }}>
+                          {JSON.stringify(salesDashboardData.table1[0], null, 2)}
+                        </pre>
+                      </Alert>
+                    )} */}
+                    
                     {/* Sales Dashboard Component - Now receives specially formatted data */}
                     <MenuAnalysisDashboard 
                       key={`performance-${currentProductMixLocation}-${salesDashboardData?.filterTimestamp || 'original'}`}
