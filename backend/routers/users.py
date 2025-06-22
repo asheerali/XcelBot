@@ -1,6 +1,6 @@
 # routers/users.py
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks  # ✅ Add BackgroundTasks
 from sqlalchemy.orm import Session
 from crud import users as user_crud
 from schemas import users as user_schema
@@ -13,9 +13,18 @@ router = APIRouter(
     tags=["Users"],
 )
 
+# @router.post("/", response_model=user_schema.User)
+# def create_user(user: user_schema.UserCreate, db: Session = Depends(get_db)):
+#     return user_crud.create_user(db, user)
+
 @router.post("/", response_model=user_schema.User)
-def create_user(user: user_schema.UserCreate, db: Session = Depends(get_db)):
-    return user_crud.create_user(db, user)
+def create_user(
+    background_tasks: BackgroundTasks,
+    user: user_schema.UserCreate,
+    db: Session = Depends(get_db),
+):
+    return user_crud.create_user(db, user, background_tasks=background_tasks)
+
 
 # @router.get("/", response_model=list[user_schema.User])
 # def get_users(db: Session = Depends(get_db)):

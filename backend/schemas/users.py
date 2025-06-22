@@ -24,7 +24,8 @@ class UserBase(BaseModel):
     company_id: Optional[int] = None  # Now optional
 
 class UserCreate(UserBase):
-    password: str  # Plain password for registration
+    # password: str  # Plain password for registration
+    password: Optional[str] = None  # Make optional
     assigned_location: Optional[List[int]] = None  # ✅ new
 
 
