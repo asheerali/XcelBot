@@ -122,7 +122,7 @@ const CustomSidebar = ({ onSignOut }) => {
       path: "/CompanyLocationManager",
       icon: <BusinessIcon />,
     },
-    { title: "Admin", path: "/Admin", icon: <AdminPanelSettingsIcon /> },
+    // { title: "Admin", path: "/Admin", icon: <AdminPanelSettingsIcon /> },
   ];
 
   // Check if any INSIGHTIQ item is currently selected

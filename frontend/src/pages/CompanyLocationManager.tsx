@@ -110,8 +110,8 @@ interface AssignedLocation {
 
 interface User {
   id: number;
-  firstName: string;
-  lastName: string;
+  first_name: string;
+  last_name: string;
   email: string;
   phone?: string;
   role: string;
@@ -265,8 +265,8 @@ const CompanyLocationManager: React.FC = () => {
   });
 
   const [userForm, setUserForm] = useState({
-    firstName: "",
-    lastName: "",
+    first_name: "",
+    last_name: "",
     email: "",
     phone: "",
     role: "",
@@ -559,8 +559,8 @@ const CompanyLocationManager: React.FC = () => {
           ) ||
           company.users.some(
             (user) =>
-              user.firstName.toLowerCase().includes(searchLower) ||
-              user.lastName.toLowerCase().includes(searchLower) ||
+              user.first_name.toLowerCase().includes(searchLower) ||
+              user.last_name.toLowerCase().includes(searchLower) ||
               user.email.toLowerCase().includes(searchLower)
           )
       );
@@ -618,8 +618,8 @@ const CompanyLocationManager: React.FC = () => {
     });
 
     setUserForm({
-      firstName: "",
-      lastName: "",
+      first_name: "",
+      last_name: "",
       email: "",
       phone: "",
       role: "",
@@ -663,7 +663,7 @@ const CompanyLocationManager: React.FC = () => {
     if (!company) return "Unknown User";
 
     const user = company.users.find((u) => u.id === userId);
-    return user ? `${user.firstName} ${user.lastName}`.trim() : "Unknown User";
+    return user ? `${user.first_name} ${user.last_name}`.trim() : "Unknown User";
   };
 
   // Toggle functions
@@ -846,8 +846,8 @@ const CompanyLocationManager: React.FC = () => {
     setEntityType("user");
     setSelectedCompany(companies.find((c) => c.id === company_id) || null);
     setUserForm({ 
-      firstName: "",
-      lastName: "",
+      first_name: "",
+      last_name: "",
       email: "",
       phone: "",
       role: "",
@@ -865,8 +865,8 @@ const CompanyLocationManager: React.FC = () => {
     setSelectedCompany(companies.find((c) => c.id === company_id) || null);
     setSelectedUser(user);
     setUserForm({
-      firstName: user.firstName,
-      lastName: user.lastName,
+      first_name: user.first_name,
+      last_name: user.last_name,
       email: user.email,
       phone: user.phone || "",
       role: user.role,
@@ -885,7 +885,7 @@ const CompanyLocationManager: React.FC = () => {
       
     if (
       user &&
-      window.confirm(`Are you sure you want to delete user "${user.firstName} ${user.lastName}"?`)
+      window.confirm(`Are you sure you want to delete user "${user.first_name} ${user.last_name}"?`)
     ) {
       await deleteUser(userId);
     }
@@ -893,8 +893,8 @@ const CompanyLocationManager: React.FC = () => {
 
   const handleSaveUser = async () => {
     if (
-      !userForm.firstName.trim() ||
-      !userForm.lastName.trim() ||
+      !userForm.first_name.trim() ||
+      !userForm.last_name.trim() ||
       !userForm.email.trim() ||
       !userForm.role.trim() ||
       !selectedCompany
@@ -1556,7 +1556,7 @@ const CompanyLocationManager: React.FC = () => {
                                             {getUsersForLocation(company.id, location.id).slice(0, 2).map((user) => (
                                               <Chip
                                                 key={user.id}
-                                                label={`${user.firstName} ${user.lastName}`.trim()}
+                                                label={`${user.first_name} ${user.last_name}`.trim()}
                                                 size="small"
                                                 sx={{
                                                   background: "linear-gradient(45deg, #4facfe 30%, #00f2fe 90%)",
@@ -1731,7 +1731,7 @@ const CompanyLocationManager: React.FC = () => {
                                             </Avatar>
                                             <Box>
                                               <Typography variant="subtitle2" fontWeight="bold">
-                                                {user.firstName} {user.lastName}
+                                                {user.first_name} {user.last_name}
                                               </Typography>
                                               <Chip
                                                 label={`ID: ${user.id}`}
@@ -2269,16 +2269,16 @@ const CompanyLocationManager: React.FC = () => {
                 <TextField
                   fullWidth
                   label="👤 First Name *"
-                  value={userForm.firstName}
-                  onChange={(e) => setUserForm({ ...userForm, firstName: e.target.value })}
+                  value={userForm.first_name}
+                  onChange={(e) => setUserForm({ ...userForm, first_name: e.target.value })}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="👤 Last Name *"
-                  value={userForm.lastName}
-                  onChange={(e) => setUserForm({ ...userForm, lastName: e.target.value })}
+                  value={userForm.last_name}
+                  onChange={(e) => setUserForm({ ...userForm, last_name: e.target.value })}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>

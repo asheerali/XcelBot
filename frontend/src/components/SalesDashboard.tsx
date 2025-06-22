@@ -588,7 +588,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
                 fontSize: "10px",
                 color: "#666"
               }}>
-                Top 3 categories: {((breakdown.slice(0, 3).reduce((sum, cat) => sum + cat.value, 0) / total) * 100)}% of total
+                Top 3 categories: {((breakdown.slice(0, 3).reduce((sum, cat) => sum + cat.value, 0) / total) * 100).toFixed(1)}% of total
               </div>
             )}
           </div>
@@ -650,10 +650,10 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
     );
   };
 
-  // Get categories data for the new separate section
+  // UPDATED: Get categories data using ONLY table11 - showing exact table11 fields
   const getCategoriesData = () => {
-    // Get ALL categories from table11 first, then fallback to table10 or table13
-    let allCategories = (productMixData?.table11 || [])
+    // PRIORITY: Use ONLY table11 data (no fallbacks to table10 or table13)
+    const table11Categories = (productMixData?.table11 || [])
       .filter(
         (item) =>
           item["Sales Category"] &&
@@ -665,35 +665,11 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
           (b["This_4_Weeks_Sales"] || 0) - (a["This_4_Weeks_Sales"] || 0)
       );
 
-    // If no table11 data, use table10
-    if (allCategories.length === 0) {
-      allCategories = (productMixData?.table10 || [])
-        .filter(
-          (item) =>
-            item["Sales Category"] &&
-            item["Sales Category"].trim() !== "" &&
-            item["Sales Category"] !== "Grand Total"
-        )
-        .sort((a, b) => (b["Grand Total"] || 0) - (a["Grand Total"] || 0));
-    }
-
-    // If still no data, fallback to table13
-    if (allCategories.length === 0) {
-      allCategories = (productMixData?.table13 || [])
-        .filter(
-          (item) =>
-            item["Sales Category"] &&
-            item["Sales Category"].trim() !== "" &&
-            item["Sales Category"] !== "Grand Total"
-        )
-        .sort((a, b) => (b["Grand Total"] || 0) - (a["Grand Total"] || 0));
-    }
-
     // Generate colors for all categories
     const generateColors = (count) => {
       const baseColors = [
         "#4285f4",
-        "#8bc34a",
+        "#8bc34a", 
         "#ff9800",
         "#9c27b0",
         "#f44336",
@@ -716,44 +692,30 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
       return colors;
     };
 
-    const colors = generateColors(allCategories.length);
+    const colors = generateColors(table11Categories.length);
 
-    // Get the latest week key dynamically for current sales
-    const sampleTable10Entry = (productMixData?.table10 || [])[0];
-    const weekKeys = sampleTable10Entry
-      ? Object.keys(sampleTable10Entry)
-          .filter(
-            (key) =>
-              key.startsWith("Week ") && !isNaN(parseInt(key.split(" ")[1]))
-          )
-          .sort((a, b) => {
-            const weekA = parseInt(a.split(" ")[1]);
-            const weekB = parseInt(b.split(" ")[1]);
-            return weekB - weekA; // Sort descending to get latest week first
-          })
-      : [];
-
-    const latestWeekKey = weekKeys[0]; // Get the most recent week
-
-    return allCategories.map((category, index) => {
-      // Get current week sales from table10
-      const table10Entry = (productMixData?.table10 || []).find(
-        (item) => item["Sales Category"] === category["Sales Category"]
-      );
-      const currentSales = table10Entry
-        ? table10Entry[latestWeekKey] || table10Entry["Grand Total"] || 0
-        : category["Grand Total"] || 0;
-
-      const lastWeeksSales =
-        category["This_4_Weeks_Sales"] || category["Grand Total"] || 0;
+    // UPDATED: Return table11 data with exact field mappings
+    return table11Categories.map((category, index) => {
+      // Extract exact table11 fields
+      const salesCategory = category["Sales Category"] || "";
+      const this4WeeksSales = category["This_4_Weeks_Sales"] || 0;
+      const last4WeeksSales = category["Last_4_Weeks_Sales"] || 0;
       const percentChange = category["Percent_Change"] || 0;
 
       return {
+        // Keep all original table11 fields
         ...category,
-        currentSales,
-        lastWeeksSales,
+        
+        // Add convenience fields for display
+        salesCategory,
+        this4WeeksSales,
+        last4WeeksSales, 
         percentChange,
         color: colors[index],
+        
+        // Calculate additional metrics
+        salesDifference: this4WeeksSales - last4WeeksSales,
+        isIncrease: percentChange >= 0,
       };
     });
   };
@@ -851,7 +813,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
         </div>
       </div>
 
-      {/* Third section: Category Cards in separate rows - 2 items per row */}
+      {/* UPDATED: Sales Categories Performance section - showing table11 fields */}
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         <div
           style={{
@@ -859,69 +821,94 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
             fontWeight: "bold",
             marginBottom: "8px",
             color: "#333",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px"
           }}
         >
           Sales Categories Performance
+          <span style={{
+            fontSize: "12px",
+            backgroundColor: "#e3f2fd",
+            color: "#1976d2",
+            padding: "2px 8px",
+            borderRadius: "12px",
+            fontWeight: "normal"
+          }}>
+            Table11 Data
+          </span>
         </div>
 
-        {/* Split categories into rows of 2 */}
-        {Array.from(
-          { length: Math.ceil(categoriesData.length / 2) },
-          (_, rowIndex) => (
-            <div
-              key={rowIndex}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, 1fr)",
-                gap: "16px",
-              }}
-            >
-              {categoriesData
-                .slice(rowIndex * 2, rowIndex * 2 + 2)
-                .map((category, index) => (
-                  <div
-                    key={category["Sales Category"]}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      padding: "12px 16px",
-                      backgroundColor: "white",
-                      borderRadius: "8px",
-                      borderLeft: `6px solid ${category.color}`,
-                      minHeight: "65px",
-                      boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
-                      transition: "transform 0.3s ease, box-shadow 0.3s ease",
-                      cursor: "pointer",
-                    }}
-                    className="category-card"
-                  >
+        {/* Show table11 categories with same UI as image but table11 field names */}
+        {categoriesData.length === 0 ? (
+          <div style={{
+            padding: "40px",
+            textAlign: "center",
+            backgroundColor: "white",
+            borderRadius: "8px",
+            color: "#666",
+            border: "1px dashed #ddd"
+          }}>
+            No table11 data available. Please ensure your backend is providing table11 with Sales Category, This_4_Weeks_Sales, Last_4_Weeks_Sales, and Percent_Change fields.
+          </div>
+        ) : (
+          Array.from(
+            { length: Math.ceil(categoriesData.length / 2) },
+            (_, rowIndex) => (
+              <div
+                key={rowIndex}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, 1fr)",
+                  gap: "16px",
+                }}
+              >
+                {categoriesData
+                  .slice(rowIndex * 2, rowIndex * 2 + 2)
+                  .map((category, index) => (
                     <div
+                      key={category["Sales Category"]}
                       style={{
-                        width: "16px",
-                        height: "16px",
-                        borderRadius: "50%",
-                        backgroundColor: category.color,
-                        marginRight: "16px",
-                        flexShrink: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        padding: "12px 16px",
+                        backgroundColor: "white",
+                        borderRadius: "8px",
+                        borderLeft: `6px solid ${category.color}`,
+                        minHeight: "65px",
+                        boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+                        transition: "transform 0.3s ease, box-shadow 0.3s ease",
+                        cursor: "pointer",
                       }}
-                    />
-                    <div style={{ flex: 1 }}>
+                      className="category-card"
+                    >
                       <div
                         style={{
-                          fontWeight: "700",
-                          fontSize: "15px",
-                          color: "#333",
-                          marginBottom: "4px",
+                          width: "16px",
+                          height: "16px",
+                          borderRadius: "50%",
+                          backgroundColor: category.color,
+                          marginRight: "16px",
+                          flexShrink: 0,
                         }}
-                      >
-                        {category["Sales Category"]}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div
+                          style={{
+                            fontWeight: "700",
+                            fontSize: "15px",
+                            color: "#333",
+                            marginBottom: "4px",
+                          }}
+                        >
+                          {category["Sales Category"]}
+                        </div>
+                        <div style={{ fontSize: "13px", color: "#666" }}>
+                          {/* This 4 Weeks Sales: ${category["This_4_Weeks_Sales"].toLocaleString()} */}
+                           Last 4 Weeks Sales: ${category["Last_4_Weeks_Sales"].toLocaleString()}
+                        </div>
                       </div>
-                      <div style={{ fontSize: "13px", color: "#666" }}>
-                        Total Sales: ${category.lastWeeksSales}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      {category["Percent_Change"] !== undefined && (
+                      <div style={{ textAlign: "right" }}>
                         <div
                           style={{
                             fontSize: "16px",
@@ -943,20 +930,21 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
                           {category.percentChange >= 0 ? "+" : ""}
                           {category.percentChange}%
                         </div>
-                      )}
-                      <div
-                        style={{
-                          fontSize: "13px",
-                          fontWeight: "600",
-                          color: "#333",
-                        }}
-                      >
-                        Current: ${category.currentSales}
+                        <div
+                          style={{
+                            fontSize: "13px",
+                            fontWeight: "600",
+                            color: "#333",
+                          }}
+                        >
+                           This 4 Weeks Sales: ${category["This_4_Weeks_Sales"].toLocaleString()}
+                          {/* Last 4 Weeks Sales: ${category["Last_4_Weeks_Sales"].toLocaleString()} */}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-            </div>
+                  ))}
+              </div>
+            )
           )
         )}
       </div>

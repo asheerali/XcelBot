@@ -158,13 +158,13 @@ const cleanAndParseValue = (value: any): number => {
 };
 
 /**
- * FIXED: Specific formatter for SalesDashboard component data
- * Now properly handles both table1 (KPI cards) and table2 (Sales Categories)
+ * UPDATED: Specific formatter for SalesDashboard component data
+ * Now handles table11 instead of table2 for Sales Categories Performance
  */
 const prepareSalesDashboardData = (data: any): any => {
   if (!data) return data;
   
-  console.log('🎯 Preparing SalesDashboard data (PRESERVING TABLE1):', data);
+  console.log('🎯 Preparing SalesDashboard data (PRESERVING TABLE1, USING TABLE11):', data);
   
   // Clone the data
   const preparedData = { ...data };
@@ -180,46 +180,79 @@ const prepareSalesDashboardData = (data: any): any => {
     console.log('✅ Table1 preserved for KPI cards:', preparedData.table1);
   }
   
-  // CRITICAL: Special handling for table2 which powers the Sales Categories Performance section
-  if (preparedData.table2) {
-    preparedData.table2 = preparedData.table2.map((item: any) => {
-      // Get the raw numeric values
-      const rawSales = item.SalesRaw || item.Sales;
-      const rawPercentage = item.PercentageRaw || item.Percentage;
+  // UPDATED: Special handling for table11 which powers the Sales Categories Performance section
+  if (preparedData.table11) {
+    console.log('🎯 Processing table11 (Sales Categories from backend) before formatting:', preparedData.table11);
+    
+    // Transform table11 to match the expected table2 format for the dashboard
+    preparedData.table2 = preparedData.table11.map((item: any, index: number) => {
+      const thisPeriodSales = item.This_4_Weeks_Sales || 0;
+      const lastPeriodSales = item.Last_4_Weeks_Sales || 0;
+      const percentChange = item.Percent_Change || 0;
+      const category = item['Sales Category'] || `Category ${index + 1}`;
       
-      const processedItem = {
+      // Calculate percentage of total if needed (you might want to calculate this based on total sales)
+      // For now, we'll use the sales value as is
+      const salesPercentage = percentChange; // Using the percent change from backend
+      
+      const formatted = {
+        // Original table11 fields preserved
         ...item,
         
-        // MAIN VALUES: Format with commas but preserve exact values
-        Sales: typeof rawSales === 'number' ? formatNumber(rawSales) : String(rawSales || 0),
-        Percentage: typeof rawPercentage === 'number' ? rawPercentage : (rawPercentage || 0),
+        // Transformed fields for dashboard compatibility
+        Category: category,
+        'Sales Category': category,
         
-        // RAW VALUES: Keep for calculations
-        SalesRaw: typeof rawSales === 'number' ? rawSales : 0,
-        PercentageRaw: typeof rawPercentage === 'number' ? rawPercentage : 0,
+        // Sales data - use This_4_Weeks_Sales as primary sales value
+        Sales: thisPeriodSales,
+        SalesRaw: thisPeriodSales,
         
-        // DISPLAY VALUES: Multiple formats for different components
-        FormattedSales: typeof rawSales === 'number' ? formatNumber(rawSales) : '0',
-        FormattedSalesWithCurrency: typeof rawSales === 'number' ? formatCurrency(rawSales, false) : '$0',
-        FormattedPercentage: typeof rawPercentage === 'number' ? `${rawPercentage}%` : '0%',
+        // Percentage data - use Percent_Change from backend
+        Percentage: percentChange,
+        PercentageRaw: percentChange,
+        
+        // Additional comparison data
+        ThisPeriodSales: thisPeriodSales,
+        LastPeriodSales: lastPeriodSales,
+        SalesChange: thisPeriodSales - lastPeriodSales,
+        
+        // ENHANCED: Multiple formats for different components
+        FormattedSales: formatNumber(thisPeriodSales),
+        FormattedSalesWithCurrency: formatCurrency(thisPeriodSales, false),
+        FormattedPercentage: `${percentChange}%`,
         
         // NUMERIC VALUES: For charts and calculations
-        NumericSales: typeof rawSales === 'number' ? rawSales : 0,
-        NumericPercentage: typeof rawPercentage === 'number' ? rawPercentage : 0,
+        NumericSales: thisPeriodSales,
+        NumericPercentage: percentChange,
+        
+        // Display values for different contexts
+        DisplaySales: formatNumber(thisPeriodSales),
+        DisplaySalesWithCurrency: formatCurrency(thisPeriodSales, false),
+        DisplayPercentage: `${percentChange}%`,
       };
       
-      console.log('📊 SalesDashboard item prepared (EXACT VALUES):', {
-        original: { Sales: rawSales, Percentage: rawPercentage },
-        prepared: {
-          Sales: processedItem.Sales,
-          FormattedSales: processedItem.FormattedSales,
-          FormattedSalesWithCurrency: processedItem.FormattedSalesWithCurrency,
-          NumericSales: processedItem.NumericSales
+      console.log(`📊 Table11->Table2 item ${index} transformed:`, {
+        original: { 
+          'Sales Category': category,
+          This_4_Weeks_Sales: thisPeriodSales, 
+          Last_4_Weeks_Sales: lastPeriodSales,
+          Percent_Change: percentChange 
+        },
+        transformed: {
+          Category: formatted.Category,
+          Sales: formatted.Sales,
+          FormattedSales: formatted.FormattedSales,
+          FormattedSalesWithCurrency: formatted.FormattedSalesWithCurrency,
+          Percentage: formatted.Percentage,
+          FormattedPercentage: formatted.FormattedPercentage,
+          NumericSales: formatted.NumericSales
         }
       });
       
-      return processedItem;
+      return formatted;
     });
+    
+    console.log('✅ Table11 transformed to Table2 format for Sales Categories Performance:', preparedData.table2);
   }
   
   // ALSO: Apply same formatting to other relevant tables (but NOT table1!)
@@ -237,7 +270,7 @@ const prepareSalesDashboardData = (data: any): any => {
     }
   });
   
-  console.log('✅ SalesDashboard data prepared with TABLE1 PRESERVED:', preparedData);
+  console.log('✅ SalesDashboard data prepared with TABLE1 PRESERVED and TABLE11->TABLE2 TRANSFORMATION:', preparedData);
   return preparedData;
 };
 
@@ -251,8 +284,8 @@ const FormattingDebugInfo: React.FC<{ data: any }> = ({ data }) => {
 };
 
 /**
- * FIXED: Enhanced data transformation that correctly handles already-formatted values
- * This fixes both the Table1 array issue and Table12 T_Sales/$NaN issue
+ * UPDATED: Enhanced data transformation that now handles table11
+ * This fixes both the Table1 array issue and adds table11 support
  */
 const enhanceDataWithFormatting = (data: any): any => {
   if (!data) return data;
@@ -260,7 +293,7 @@ const enhanceDataWithFormatting = (data: any): any => {
   // Deep clone to avoid mutations
   const enhancedData = JSON.parse(JSON.stringify(data));
   
-  console.log('🔍 Raw data before formatting:', enhancedData);
+  console.log('🔍 Raw data before formatting (looking for table11):', enhancedData);
   
   // FIXED: Apply formatting to table1 - Handle pre-formatted values
   if (enhancedData.table1) {
@@ -458,9 +491,63 @@ const enhanceDataWithFormatting = (data: any): any => {
     console.log('✅ Table1 AFTER fix (should show cleaned values):', enhancedData.table1);
   }
   
-  // ENHANCED: Special handling for table2 - Sales Categories Performance
-  if (enhancedData.table2) {
-    console.log('🎯 Processing table2 (Sales Categories) before formatting:', enhancedData.table2);
+  // NEW: Process table11 (Sales Categories from backend)
+  if (enhancedData.table11) {
+    console.log('🎯 Processing table11 (Sales Categories from backend) before formatting:', enhancedData.table11);
+    
+    enhancedData.table11 = enhancedData.table11.map((item: any, index: number) => {
+      const originalThisPeriodSales = item.This_4_Weeks_Sales || 0;
+      const originalLastPeriodSales = item.Last_4_Weeks_Sales || 0;
+      const originalPercentChange = item.Percent_Change || 0;
+      const originalCategory = item['Sales Category'] || `Category ${index + 1}`;
+      
+      const formatted = {
+        ...item,
+        
+        // Keep original backend fields
+        'Sales Category': originalCategory,
+        This_4_Weeks_Sales: originalThisPeriodSales,
+        Last_4_Weeks_Sales: originalLastPeriodSales,
+        Percent_Change: originalPercentChange,
+        
+        // Add formatted versions for display
+        This_4_Weeks_Sales_Formatted: formatNumber(originalThisPeriodSales),
+        This_4_Weeks_Sales_Currency: formatCurrency(originalThisPeriodSales, false),
+        Last_4_Weeks_Sales_Formatted: formatNumber(originalLastPeriodSales),
+        Last_4_Weeks_Sales_Currency: formatCurrency(originalLastPeriodSales, false),
+        Percent_Change_Formatted: `${originalPercentChange}%`,
+        
+        // Additional fields for compatibility
+        Category: originalCategory,
+        CurrentSales: originalThisPeriodSales,
+        PreviousSales: originalLastPeriodSales,
+        ChangePercent: originalPercentChange,
+      };
+      
+      console.log(`📊 Table11 item ${index} formatted:`, {
+        original: {
+          'Sales Category': originalCategory,
+          This_4_Weeks_Sales: originalThisPeriodSales,
+          Last_4_Weeks_Sales: originalLastPeriodSales,
+          Percent_Change: originalPercentChange
+        },
+        formatted: {
+          Category: formatted.Category,
+          This_4_Weeks_Sales_Formatted: formatted.This_4_Weeks_Sales_Formatted,
+          This_4_Weeks_Sales_Currency: formatted.This_4_Weeks_Sales_Currency,
+          Percent_Change_Formatted: formatted.Percent_Change_Formatted
+        }
+      });
+      
+      return formatted;
+    });
+    
+    console.log('✅ Table11 after formatting (Sales Categories with enhanced display):', enhancedData.table11);
+  }
+  
+  // LEGACY: Keep table2 processing for backward compatibility (but table11 takes precedence)
+  if (enhancedData.table2 && !enhancedData.table11) {
+    console.log('🎯 Processing legacy table2 (fallback when no table11):', enhancedData.table2);
     
     enhancedData.table2 = enhancedData.table2.map((item: any, index: number) => {
       const originalSales = item.Sales;
@@ -491,7 +578,7 @@ const enhanceDataWithFormatting = (data: any): any => {
         NumericPercentage: originalPercentage,
       };
       
-      console.log(`📊 Table2 item ${index} formatted (NO ROUNDING):`, {
+      console.log(`📊 Table2 item ${index} formatted (LEGACY FALLBACK):`, {
         original: { Sales: originalSales, Percentage: originalPercentage },
         formatted: { 
           Sales: formatted.Sales, 
@@ -503,7 +590,7 @@ const enhanceDataWithFormatting = (data: any): any => {
       return formatted;
     });
     
-    console.log('✅ Table2 after formatting (EXACT VALUES WITH COMMAS):', enhancedData.table2);
+    console.log('✅ Table2 after formatting (LEGACY - prefer table11):', enhancedData.table2);
   }
   
   // ENHANCED: table3 - Menu Group Sales
@@ -665,19 +752,24 @@ const enhanceDataWithFormatting = (data: any): any => {
   enhancedData._formatting = {
     applied: true,
     timestamp: new Date().toISOString(),
-    tables_processed: ['table1', 'table2', 'table3', 'table4', 'table5', 'table6', 'table7', 'table8', 'table9', 'table12'],
+    tables_processed: ['table1', 'table11', 'table2', 'table3', 'table4', 'table5', 'table6', 'table7', 'table8', 'table9', 'table12'],
     formatting_functions: ['formatNumber', 'formatCurrency', 'formatPercentage'],
     fixes_applied: {
       table1: 'FIXED: Array extraction and pre-formatted value cleaning - now extracts single values from arrays for KPI cards',
+      table11: 'NEW: Sales Categories from backend - processes This_4_Weeks_Sales, Last_4_Weeks_Sales, Percent_Change',
       table12: 'FIXED: T_Sales and B_Sales formatting - now properly handles currency formatting'
     },
     special_handling: {
-      table2: 'Sales Categories Performance with enhanced display values',
+      table11: 'Primary Sales Categories Performance data from backend with enhanced display values',
+      table2: 'Legacy fallback for Sales Categories Performance (table11 takes precedence)',
       table12: 'Menu Items Table with comprehensive formatting including T_Sales/B_Sales fixes'
+    },
+    priority: {
+      sales_categories: 'table11 > table2 (backend data takes precedence over legacy format)'
     }
   };
   
-  console.log('📊 Enhanced data with ALL FIXES APPLIED:', enhancedData);
+  console.log('📊 Enhanced data with TABLE11 SUPPORT and ALL FIXES APPLIED:', enhancedData);
   return enhancedData;
 };
 
@@ -1465,17 +1557,7 @@ const formatSelectedLocationsDisplay = (locations: string[]) => {
           onClose={() => setDataUpdated(false)}
         >
           <Typography variant="body2">
-            <strong>✅ Filters Applied Successfully!</strong> Product Mix data has been updated with your selected filters and enhanced number formatting.
-            {formattedCurrentData?.filterApplied && (
-              <>
-                <br />
-                <strong>Applied on:</strong> {new Date(formattedCurrentData.filterTimestamp).toLocaleString()}
-                <br />
-                <strong>🔢 Number Formatting:</strong> All numerical values now display with proper comma separators for better readability.
-                <br />
-                <strong>📊 Sales Categories:</strong> Category performance data formatted for enhanced display.
-              </>
-            )}
+            <strong>✅ Filters Applied Successfully!</strong> 
           </Typography>
         </Alert>
       )}
@@ -1502,7 +1584,7 @@ const formatSelectedLocationsDisplay = (locations: string[]) => {
                 Filters
               </Typography>
               <Chip 
-                label="🔢 Enhanced Formatting" 
+                label="🔢 Enhanced Formatting + Table11" 
                 size="small" 
                 color="secondary" 
                 variant="outlined"
@@ -1808,24 +1890,14 @@ const formatSelectedLocationsDisplay = (locations: string[]) => {
                 {isLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                     <CircularProgress size={40} />
-                    <Typography sx={{ ml: 2 }}>Updating dashboard data with enhanced formatting...</Typography>
+                    <Typography sx={{ ml: 2 }}>Updating dashboard data with enhanced formatting and table11 support...</Typography>
                   </Box>
                 ) : (
                   <Box sx={{ width: "100%" }}>  {/* Add explicit width */}
-                    {/* TEMPORARY DEBUG - Add right before MenuAnalysisDashboard */}
-                    {/* {salesDashboardData?.table1 && (
-                      <Alert severity="info" sx={{ mb: 2 }}>
-                        <Typography variant="h6">🔍 DEBUG - Final SalesDashboard Data:</Typography>
-                        <Typography variant="body2" sx={{ mt: 1 }}>
-                          <strong>Table1 (KPI Cards):</strong>
-                        </Typography>
-                        <pre style={{ fontSize: '10px', marginTop: '8px', maxHeight: '200px', overflow: 'auto' }}>
-                          {JSON.stringify(salesDashboardData.table1[0], null, 2)}
-                        </pre>
-                      </Alert>
-                    )} */}
+                    {/* Debug info for table11 */}
+                   
                     
-                    {/* Sales Dashboard Component - Now receives specially formatted data */}
+                    {/* Sales Dashboard Component - Now receives table11-enhanced data */}
                     <MenuAnalysisDashboard 
                       key={`performance-${currentProductMixLocation}-${salesDashboardData?.filterTimestamp || 'original'}`}
                       productMixData={salesDashboardData} 
@@ -1851,7 +1923,7 @@ const formatSelectedLocationsDisplay = (locations: string[]) => {
                           textAlign: 'center'
                         }}
                       >
-                        📊 Menu Items Analysis (Enhanced with Comma Formatting - NO ROUNDING)
+                        📊 Menu Items Analysis 
                       </Typography>
                       <MenuItemsTable 
                         key={`menu-items-${currentProductMixLocation}-${formattedCurrentData?.filterTimestamp || 'original'}`}
@@ -1873,7 +1945,7 @@ const formatSelectedLocationsDisplay = (locations: string[]) => {
                 {isLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                     <CircularProgress size={40} />
-                    <Typography sx={{ ml: 2 }}>Updating dashboard data with enhanced formatting...</Typography>
+                    <Typography sx={{ ml: 2 }}>Updating dashboard data with enhanced formatting and table11 support...</Typography>
                   </Box>
                 ) : (
                   <MenuAnalysisDashboardtwo
