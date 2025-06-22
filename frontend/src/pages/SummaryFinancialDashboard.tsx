@@ -128,12 +128,7 @@ const SummaryFinancialDashboard = () => {
     <div style={{ padding: '24px', backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
       {/* Header */}
       <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '32px', fontWeight: 600, margin: '0 0 8px 0', color: '#333' }}>
-          Summary File
-        </h1>
-        <p style={{ fontSize: '16px', color: '#666', margin: 0 }}>
-          Financial summary containing all orders with cost calculations per day.
-        </p>
+        
       </div>
 
       {/* Filters Section */}

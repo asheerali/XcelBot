@@ -207,12 +207,12 @@ const AVAILABLE_PERMISSIONS: Permission[] = [
 ];
 
 const USER_ROLES = [
-  { value: "Superuser", label: "Super User", color: "#e91e63", bgColor: "#fce4ec" },
-  { value: "Administrator", label: "Administrator", color: "#9c27b0", bgColor: "#f3e5f5" },
-  { value: "Manager", label: "Manager", color: "#2196f3", bgColor: "#e3f2fd" },
-  { value: "Staff", label: "Staff", color: "#4caf50", bgColor: "#e8f5e8" },
-  { value: "Analyst", label: "Analyst", color: "#ff9800", bgColor: "#fff3e0" },
-  { value: "Viewer", label: "Viewer", color: "#607d8b", bgColor: "#eceff1" },
+
+  { value: "admin", label: "Admin", color: "#9c27b0", bgColor: "#f3e5f5" },
+  { value: "manager", label: "Manager", color: "#2196f3", bgColor: "#e3f2fd" },
+  { value: "user", label: "User", color: "#4caf50", bgColor: "#e8f5e8" },
+  { value: "trial", label: "Trial", color: "#ff9800", bgColor: "#fff3e0" },
+
 ];
 
 const CompanyLocationManager: React.FC = () => {
