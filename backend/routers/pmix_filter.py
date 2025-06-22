@@ -125,9 +125,6 @@ async def upload_excel(request: SalesSplitPmixUploadRequest = Body(...)):
             "dashboardName": "Product Mix",
             "data":  "Dashboard is not yet implemented."
             }
- 
-            
-        
           
         return pmix_dashboard
     
