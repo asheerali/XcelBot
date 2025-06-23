@@ -3,7 +3,7 @@ import io
 from typing import Union
 import pandas as pd
 # from pmix_dashboard.pmix_utils import overview_tables, detailed_analysis_tables
-from sales_split_dashboard.sales_split_utils import create_sales_pivot_tables, sales_analysis_tables, create_sales_overview_tables
+from sales_split_dashboard.sales_split_utils import create_sales_pivot_tables, sales_analysis_tables, create_sales_overview_tables, create_sales_by_day_table
 import numpy as np
 
 def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', start_date=None, end_date=None, category_filter='All'):
@@ -176,14 +176,19 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
     #     'total_quantity': total_quantity
     # }
 
+    sales_by_day = create_sales_by_day_table(df, location_filter=location, end_date=end_date, categories_filter=category_filter)
+    sales_by_day_table = sales_by_day['sales_by_day_table']
+
+
+    
     salesByWeek = analysis['sales_by_week']
     salesByDayOfWeek = analysis['sales_by_day']
     salesByTimeOfDay = analysis['sales_by_time'] #value
      
-    sales_by_day_table = sales_overview_analysis['sales_by_day_table']
+    # sales_by_day_table = sales_overview_analysis['sales_by_day_table']
     sales_by_category_table = sales_overview_analysis['sales_by_category_table']
     category_comparison_table = sales_overview_analysis['category_comparison_table']
     thirteen_week_category_table = sales_overview_analysis['thirteen_week_category_table']
     
-    print("sales_by_day_table i am here in sales split processor", "\n", sales_by_day_table.head())
+    print("sales_by_day_table i am here in sales split processor", "\n", sales_by_day_table)
     return sales_by_day_table, sales_by_category_table, category_comparison_table, thirteen_week_category_table, pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay, categories, locations
