@@ -490,7 +490,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
             width: "100%",
           }}
         >
-          Daily Sales Performance 
+          Latest Week Sales Performance
         </div>
 
         {/* Chart container */}

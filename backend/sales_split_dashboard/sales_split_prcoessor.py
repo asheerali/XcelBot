@@ -185,5 +185,5 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
     category_comparison_table = sales_overview_analysis['category_comparison_table']
     thirteen_week_category_table = sales_overview_analysis['thirteen_week_category_table']
     
- 
+    print("sales_by_day_table i am here in sales split processor", "\n", sales_by_day_table.head())
     return sales_by_day_table, sales_by_category_table, category_comparison_table, thirteen_week_category_table, pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay, categories, locations

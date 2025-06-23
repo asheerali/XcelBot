@@ -111,8 +111,8 @@ const isNumericValue = (value: any): boolean => {
   return false;
 };
 
-// Enhanced number formatting with comprehensive comma support
-const formatNumber = (value: any): string => {
+// Enhanced number formatting with comprehensive comma support and optional dollar sign
+const formatNumber = (value: any, forceDollarSign: boolean = false): string => {
   if (value === null || value === undefined || value === "") return "N/A";
 
   // Handle string values
@@ -130,16 +130,21 @@ const formatNumber = (value: any): string => {
 
     if (isNaN(numValue)) return trimmedValue;
 
-    // Check if it was a currency
+    // Check if it was a currency or if we should force dollar sign
     const wasCurrency = trimmedValue.includes("$");
+    const shouldAddDollarSign = wasCurrency || forceDollarSign;
+
+    // For dollar amounts, show .00 for zero values, otherwise follow normal rules
+    const minimumDecimals =
+      shouldAddDollarSign && numValue === 0 ? 2 : numValue % 1 === 0 ? 0 : 2;
 
     // Format with commas
     const formatted = numValue.toLocaleString("en-US", {
-      minimumFractionDigits: numValue % 1 === 0 ? 0 : 2,
+      minimumFractionDigits: minimumDecimals,
       maximumFractionDigits: 2,
     });
 
-    return wasCurrency ? `$${formatted}` : formatted;
+    return shouldAddDollarSign ? `$${formatted}` : formatted;
   }
 
   // Handle numeric values
@@ -147,11 +152,17 @@ const formatNumber = (value: any): string => {
 
   if (isNaN(numValue)) return String(value);
 
+  // For dollar amounts, show .00 for zero values, otherwise follow normal rules
+  const minimumDecimals =
+    forceDollarSign && numValue === 0 ? 2 : numValue % 1 === 0 ? 0 : 2;
+
   // Format with commas
-  return numValue.toLocaleString("en-US", {
-    minimumFractionDigits: numValue % 1 === 0 ? 0 : 2,
+  const formatted = numValue.toLocaleString("en-US", {
+    minimumFractionDigits: minimumDecimals,
     maximumFractionDigits: 2,
   });
+
+  return forceDollarSign ? `$${formatted}` : formatted;
 };
 
 // Enhanced percentage formatting with comma support for large percentages
@@ -439,12 +450,24 @@ const DataTable: React.FC<DataTableProps> = ({
                     displayValue = formatted;
                     numericValue = numValue;
                   } else if (columnType.isCurrency || columnType.isNumeric) {
-                    // Apply number formatting with commas
-                    displayValue = formatNumber(cellValue);
+                    // When excludePercentageFormatting is true, force dollar sign for numeric values
+                    const shouldForceDollarSign =
+                      excludePercentageFormatting &&
+                      !isFirstColumn &&
+                      isNumericValue(cellValue);
+                    displayValue = formatNumber(
+                      cellValue,
+                      shouldForceDollarSign
+                    );
                   } else {
                     // For non-numeric columns, still check if individual values are numeric
                     if (isNumericValue(cellValue) && !isFirstColumn) {
-                      displayValue = formatNumber(cellValue);
+                      // When excludePercentageFormatting is true, force dollar sign for numeric values
+                      const shouldForceDollarSign = excludePercentageFormatting;
+                      displayValue = formatNumber(
+                        cellValue,
+                        shouldForceDollarSign
+                      );
                     } else {
                       displayValue =
                         cellValue !== undefined ? String(cellValue) : "N/A";
