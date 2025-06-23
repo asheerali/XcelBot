@@ -77,7 +77,7 @@ const DebugPage: React.FC = () => {
                     onClick={() => localStorage.removeItem('debugTimestamp')}
                     style={{ margin: '5px' }}
                 >
-                    Clear Timestamp
+                    Clear Timestampp
                 </button>
             </div>
         </div>
