@@ -185,7 +185,7 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
     salesByDayOfWeek = analysis['sales_by_day']
     salesByTimeOfDay = analysis['sales_by_time'] #value
      
-    # sales_by_day_table = sales_overview_analysis['sales_by_day_table']
+    # sales_by_day_table = sales_overview_analysis['sales_by_day_table'] 
     sales_by_category_table = sales_overview_analysis['sales_by_category_table']
     category_comparison_table = sales_overview_analysis['category_comparison_table']
     thirteen_week_category_table = sales_overview_analysis['thirteen_week_category_table']
