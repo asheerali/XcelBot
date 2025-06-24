@@ -393,6 +393,252 @@ def sales_analysis_tables(df, location_filter='All', start_date=None, end_date=N
     }
 
 
+# def create_sales_overview_tables(df, location_filter='All', start_date=None, end_date=None):
+    
+#     # Make a copy of the dataframe
+#     df_copy = df.copy()
+    
+#     # Apply location filter to the entire dataset first
+#     if location_filter != 'All':
+#         if isinstance(location_filter, list):
+#             df_copy = df_copy[df_copy['Location'].isin(location_filter)]
+#         else:
+#             df_copy = df_copy[df_copy['Location'] == location_filter]
+    
+#     # Convert dates if they're strings
+#     if start_date is not None and isinstance(start_date, str):
+#         start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+#     if end_date is not None and isinstance(end_date, str):
+#         end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    
+#     # Calculate previous period dates (4 weeks before start_date)
+#     if start_date is not None:
+#         # Calculate 4 weeks (28 days) before start date
+#         previous_end_date = start_date - timedelta(days=1)  # Day before start_date
+#         previous_start_date = start_date - timedelta(days=28)  # 4 weeks before
+#     else:
+#         previous_start_date = None
+#         previous_end_date = None
+    
+#     # Calculate 13-week period dates
+#     if end_date is not None:
+#         # Calculate 13 weeks (91 days) before end_date
+#         thirteen_week_start_date = end_date - timedelta(days=90)  # 13 weeks = 91 days
+#     else:
+#         thirteen_week_start_date = None
+    
+#     # Filter current period data
+#     filtered_df = df_copy.copy()
+#     if start_date is not None:
+#         filtered_df = filtered_df[filtered_df['Date'] >= start_date]
+#     if end_date is not None:
+#         filtered_df = filtered_df[filtered_df['Date'] <= end_date]
+    
+#     # Filter previous period data for comparison
+#     previous_df = df_copy.copy()
+#     if previous_start_date is not None and previous_end_date is not None:
+#         previous_df = previous_df[
+#             (previous_df['Date'] >= previous_start_date) & 
+#             (previous_df['Date'] <= previous_end_date)
+#         ]
+#     else:
+#         previous_df = pd.DataFrame()  # Empty if no start date provided
+    
+#     # Filter 13-week period data
+#     thirteen_week_df = df_copy.copy()
+#     if thirteen_week_start_date is not None and end_date is not None:
+#         thirteen_week_df = thirteen_week_df[
+#             (thirteen_week_df['Date'] >= thirteen_week_start_date) & 
+#             (thirteen_week_df['Date'] <= end_date)
+#         ]
+#     else:
+#         thirteen_week_df = pd.DataFrame()  # Empty if no end date provided
+    
+#     # If the dataframe is empty after filtering, return empty tables
+#     if filtered_df.empty:
+#         return {
+#             'sales_by_day_table': pd.DataFrame(),
+#             'sales_by_category_table': pd.DataFrame(),
+#             'category_comparison_table': pd.DataFrame(),
+#             'thirteen_week_category_table': pd.DataFrame(),
+#         }
+    
+#     # Ensure Date column is datetime
+#     if not pd.api.types.is_datetime64_any_dtype(filtered_df['Date']):
+#         filtered_df['Date'] = pd.to_datetime(filtered_df['Date'])
+    
+#     # ===== MODIFIED SALES BY DAY TABLE CREATION =====
+#     # Determine the target week (latest week)
+#     if end_date is not None:
+#         target_date = end_date
+#     else:
+#         # Find the latest date in the dataframe
+#         target_date = filtered_df['Date'].max().date()
+    
+#     # Find the Monday of the target week
+#     days_since_monday = target_date.weekday()  # Monday = 0, Sunday = 6
+#     week_start = target_date - timedelta(days=days_since_monday)
+#     week_end = week_start + timedelta(days=6)  # Sunday
+    
+#     # Filter data for the target week only
+#     week_df = filtered_df[
+#         (filtered_df['Date'].dt.date >= week_start) & 
+#         (filtered_df['Date'].dt.date <= week_end)
+#     ].copy()
+    
+#     # Create a complete week template with all 7 days
+#     day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+#     week_dates = [week_start + timedelta(days=i) for i in range(7)]
+    
+#     # Create base template
+#     sales_by_day_template = pd.DataFrame({
+#         'Day_of_Week': day_order,
+#         'Date': week_dates,
+#         'Sales': 0.0
+#     })
+    
+#     # Aggregate sales by date from the filtered week data
+#     if not week_df.empty:
+#         daily_sales = week_df.groupby(week_df['Date'].dt.date)['Net_Price'].sum().reset_index()  # Updated column name
+#         daily_sales.columns = ['Date', 'Sales']
+        
+#         # Merge with template to ensure all days are included
+#         sales_by_day_table = sales_by_day_template.merge(
+#             daily_sales, 
+#             on='Date', 
+#             how='left', 
+#             suffixes=('', '_actual')
+#         )
+        
+#         # Use actual sales where available, otherwise keep 0
+#         sales_by_day_table['Sales'] = sales_by_day_table['Sales_actual'].fillna(sales_by_day_table['Sales'])
+#         sales_by_day_table = sales_by_day_table[['Day_of_Week', 'Date', 'Sales']]
+#     else:
+#         sales_by_day_table = sales_by_day_template
+    
+#     # Round sales to 2 decimal places
+#     sales_by_day_table['Sales'] = sales_by_day_table['Sales'].round(2)
+    
+#     # ===== END OF MODIFIED SECTION =====
+    
+#     # Create day of week and week number columns for other tables
+#     filtered_df['Day_of_Week'] = filtered_df['Date'].dt.day_name()
+#     filtered_df['Week_Number1'] = filtered_df['Date'].dt.isocalendar().week
+    
+#     # Create a more readable week identifier (e.g., "Week 16", "Week 17")
+#     filtered_df['Week_Label'] = 'Week ' + filtered_df['Week_Number1'].astype(str)
+    
+#     # Define day order for proper sorting
+#     day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+#     filtered_df['Day_of_Week'] = pd.Categorical(filtered_df['Day_of_Week'], categories=day_order, ordered=True)
+    
+#     # Create week number columns
+#     filtered_df['Week_Number'] = filtered_df['Date'].dt.isocalendar().week
+    
+#     # Create a more readable week identifier (e.g., "Week 16", "Week 17")
+#     filtered_df['Week_Label'] = 'Week ' + filtered_df['Week_Number'].astype(str)
+    
+#     # Sales by Category and Week pivot table
+#     sales_by_category_table = pd.pivot_table(
+#         filtered_df,
+#         values='Net_Price',  # Updated column name
+#         index='Category',
+#         columns='Week_Label',
+#         aggfunc='sum',
+#         fill_value=0,
+#         margins=True,
+#         margins_name='Grand Total'
+#     )
+    
+#     # Reset index and round to 2 decimal places
+#     sales_by_category_table = sales_by_category_table.round(2).fillna(0).reset_index()
+    
+#     # Create category comparison table (current 4 weeks vs previous 4 weeks)
+#     category_comparison_table = pd.DataFrame()
+    
+#     if not filtered_df.empty:
+#         # Calculate sales for current period by category
+#         current_sales = filtered_df.groupby('Category')['Net_Price'].sum().reset_index()  # Updated column name
+#         current_sales.columns = ['Category', 'Current_4_Weeks_Sales']
+        
+#         # Calculate sales for previous period by category
+#         if not previous_df.empty:
+#             previous_sales = previous_df.groupby('Category')['Net_Price'].sum().reset_index()  # Updated column name
+#             previous_sales.columns = ['Category', 'Previous_4_Weeks_Sales']
+#         else:
+#             # Create empty previous sales with same categories as current
+#             previous_sales = pd.DataFrame({
+#                 'Category': current_sales['Category'],
+#                 'Previous_4_Weeks_Sales': 0
+#             })
+        
+#         # Merge current and previous sales (outer join to include all categories)
+#         category_comparison_table = pd.merge(current_sales, previous_sales, on='Category', how='outer').fillna(0)
+        
+#         # Calculate percentage change
+#         category_comparison_table['Percent_Change'] = category_comparison_table.apply(
+#             lambda row: ((row['Current_4_Weeks_Sales'] - row['Previous_4_Weeks_Sales']) / row['Previous_4_Weeks_Sales'] * 100) 
+#             if row['Previous_4_Weeks_Sales'] != 0 
+#             else (100 if row['Current_4_Weeks_Sales'] > 0 else 0), 
+#             axis=1
+#         )
+        
+#         # Round values
+#         category_comparison_table['Current_4_Weeks_Sales'] = category_comparison_table['Current_4_Weeks_Sales'].round(2)
+#         category_comparison_table['Previous_4_Weeks_Sales'] = category_comparison_table['Previous_4_Weeks_Sales'].round(2)
+#         category_comparison_table['Percent_Change'] = category_comparison_table['Percent_Change'].round(2)
+        
+#         # Rename columns for better readability
+#         category_comparison_table.columns = ['Category', 'This_4_Weeks_Sales', 'Last_4_Weeks_Sales', 'Percent_Change']
+        
+#         # Sort by current sales descending
+#         category_comparison_table = category_comparison_table.sort_values('This_4_Weeks_Sales', ascending=False).reset_index(drop=True)
+
+#     # Create 13-week table with sales, orders, and average ticket by week
+#     thirteen_week_category_table = pd.DataFrame()
+    
+#     if not thirteen_week_df.empty:
+#         # Ensure Date column is datetime for 13-week data
+#         if not pd.api.types.is_datetime64_any_dtype(thirteen_week_df['Date']):
+#             thirteen_week_df['Date'] = pd.to_datetime(thirteen_week_df['Date'])
+        
+#         # Create week number and week label for 13-week data
+#         thirteen_week_df['Week_Number'] = thirteen_week_df['Date'].dt.isocalendar().week
+#         thirteen_week_df['Week_Label'] = 'Week ' + thirteen_week_df['Week_Number'].astype(str)
+        
+#         # Group by week and calculate metrics
+#         thirteen_week_summary = thirteen_week_df.groupby('Week_Label').agg({
+#             'Net_Price': ['sum', 'count'],  # Updated column name; sum for total sales, count for number of orders
+#         }).round(2)
+        
+#         # Flatten column names
+#         thirteen_week_summary.columns = ['Total_Sales', 'Total_Orders']
+        
+#         # Reset index to make Week_Label a column
+#         thirteen_week_category_table = thirteen_week_summary.reset_index()
+#         thirteen_week_category_table.columns = ['Week', 'Total_Sales', 'Total_Orders']
+        
+#         # Sort by week number (extract number from 'Week X' format for proper sorting)
+#         thirteen_week_category_table['Week_Num'] = thirteen_week_category_table['Week'].str.extract('(\d+)').astype(int)
+#         thirteen_week_category_table = thirteen_week_category_table.sort_values('Week_Num').drop('Week_Num', axis=1).reset_index(drop=True)
+        
+#         # Add a grand total row
+#         grand_total_row = pd.DataFrame({
+#             'Week': ['Grand Total'],
+#             'Total_Sales': [thirteen_week_category_table['Total_Sales'].sum()],
+#             'Total_Orders': [thirteen_week_category_table['Total_Orders'].sum()],
+#         })
+        
+#         thirteen_week_category_table = pd.concat([thirteen_week_category_table, grand_total_row], ignore_index=True)
+
+#     return {
+#         # 'sales_by_day_table': sales_by_day_table,
+#         'sales_by_category_table': sales_by_category_table,
+#         'category_comparison_table': category_comparison_table,
+#         'thirteen_week_category_table': thirteen_week_category_table,
+#     }
+
+
 def create_sales_overview_tables(df, location_filter='All', start_date=None, end_date=None):
     
     # Make a copy of the dataframe
@@ -575,11 +821,11 @@ def create_sales_overview_tables(df, location_filter='All', start_date=None, end
         # Merge current and previous sales (outer join to include all categories)
         category_comparison_table = pd.merge(current_sales, previous_sales, on='Category', how='outer').fillna(0)
         
-        # Calculate percentage change
+        # Calculate percentage change - FIXED: Show 0.00 when Previous_4_Weeks_Sales is zero
         category_comparison_table['Percent_Change'] = category_comparison_table.apply(
             lambda row: ((row['Current_4_Weeks_Sales'] - row['Previous_4_Weeks_Sales']) / row['Previous_4_Weeks_Sales'] * 100) 
             if row['Previous_4_Weeks_Sales'] != 0 
-            else (100 if row['Current_4_Weeks_Sales'] > 0 else 0), 
+            else 0,  # Changed: Always return 0 when Previous_4_Weeks_Sales is zero
             axis=1
         )
         
