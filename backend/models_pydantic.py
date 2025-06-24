@@ -7,6 +7,7 @@ class ExcelUploadRequest(BaseModel):
     fileContent: str  # base64 encoded file content
     startDate: Optional[str] = None  # Optional date filter start
     endDate: Optional[str] = None    # Optional date filter end
+    company_id: Optional[int] = None  # Optional company ID filter
     location: Optional[str] = None   # Optional location filter
     dashboard: Optional[str] = None  # Optional type of dashboard (e.g., "Sales", "Inventory")
     server: Optional[str] = None  # Optional server filter

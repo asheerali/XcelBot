@@ -22,6 +22,9 @@ def process_pmix_file(file_data: Union[io.BytesIO, str],start_date=None, end_dat
     print("Type of file_data:", type(file_data))
 
     try:
+            if isinstance(file_data, pd.DataFrame):
+                print("Received DataFrame directly.")
+                df = file_data
             if isinstance(file_data, io.BytesIO):
                 file_data.seek(0)
                 print("Reading Excel from BytesIO object.")
