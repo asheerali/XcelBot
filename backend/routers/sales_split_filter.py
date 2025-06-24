@@ -274,8 +274,8 @@ async def filter_excel_data(
              locations) = process_sales_split_data(
                     df,  # Pass DataFrame directly
                     location=location_filter,
-                    start_date=start_date_pd,  # Pass pandas datetime objects
-                    end_date=end_date_pd,      # Pass pandas datetime objects
+                    start_date=start_date_original,  # Pass pandas datetime objects
+                    end_date=start_date_original,      # Pass pandas datetime objects
                     category_filter=category_filter
                 )
             print("Successfully processed DataFrame through sales split processor")
