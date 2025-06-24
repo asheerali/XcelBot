@@ -187,6 +187,9 @@ async def upload_excel(
             
             if 'Avg_Price' not in df.columns:  # Updated column name
                 df['Avg_Price'] = df['Net_Price'] / df['Qty']  # Updated column names
+                
+                
+            # print("i am here in excel upload printing the columns of the dataframe", df.columns, "\n", df.dtypes , "\n", df.head())
 
             result = process_dashboard_data(request, df, file_name, request.company_id)
         else:

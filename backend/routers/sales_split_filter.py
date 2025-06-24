@@ -250,6 +250,23 @@ async def filter_excel_data(
                     print(f"WARNING: {col} is not datetime64[ns]: {df[col].dtype}")
                 else:
                     print(f"✓ {col} is properly datetime64[ns]: {df[col].dtype}")
+                    
+            date_cols = ['Sent_Date']
+            for col in date_cols:
+                df[col] = pd.to_datetime(df[col], errors='coerce')
+
+            df["Order_Date"] = pd.to_datetime(df["Order_Date"], dayfirst=False)
+            df['Date'] = df['Order_Date'].dt.date
+            df["Order_Date"] = df["Order_Date"].dt.strftime('%m-%d-%Y')
+
+            df['Date'] = df['Sent_Date'].dt.date
+            df['Time'] = df['Sent_Date'].dt.time
+            df['Day'] = df['Sent_Date'].dt.day_name()
+            df['Week'] = df['Sent_Date'].dt.isocalendar().week
+            df['Month'] = df['Sent_Date'].dt.month_name()
+            df['Quarter'] = df['Sent_Date'].dt.quarter
+            df['Year'] = df['Sent_Date'].dt.year
+            
         
         # ===== PROCESS THE DATA =====
         print("Processing data for dashboard...")
