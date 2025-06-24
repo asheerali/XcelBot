@@ -1,4 +1,4 @@
-// ExcelUploadPage.tsx - Updated with responsive location handling
+// ExcelUploadPage.tsx - Updated with company dropdown and responsive location handling
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
@@ -94,8 +94,22 @@ import {
 import { API_URL_Local } from "../constants";
 import apiClient from "../api/axiosConfig";
 
-// API URL for Excel upload
+// API URLs
 const API_URL = API_URL_Local + "/api/excel/upload";
+const COMPANIES_API_URL = API_URL_Local + "/companies/";
+
+// Company interface
+interface Company {
+  id: number;
+  name: string;
+  address?: string;
+  state?: string;
+  postcode?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  isActive?: boolean;
+}
 
 // Styled components (keeping existing ones)
 const fadeIn = keyframes`
@@ -142,6 +156,14 @@ const HeaderCard = styled(Card)(({ theme }) => ({
   position: "relative",
   border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
   boxShadow: "none",
+}));
+
+const CompanySelectionCard = styled(Card)(({ theme }) => ({
+  marginBottom: theme.spacing(4),
+  borderRadius: theme.spacing(3),
+  background: theme.palette.background.paper,
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+  boxShadow: "0 4px 20px rgba(0, 0, 0, 0.05)",
 }));
 
 const ModernDashboardCard = styled(Card, {
@@ -252,7 +274,6 @@ const DASHBOARD_OPTIONS = [
     value: "Sales Split and Product Mix",
     label: "Sales Split & Product Mix",
     icon: <AnalyticsIcon className="dashboard-icon" />,
-    // description: "Sales analysis & menu insights",
     color: "#e91e63",
     gradient: "linear-gradient(135deg, #e91e63 0%, #f06292 100%)",
   },
@@ -260,7 +281,6 @@ const DASHBOARD_OPTIONS = [
     value: "Financials and Sales Wide",
     label: "Financials & Companywide Sales",
     icon: <AssessmentIcon className="dashboard-icon" />,
-    // description: "In-depth insights ",
     color: "#00bcd4",
     gradient: "linear-gradient(135deg, #00bcd4 0%, #4dd0e1 100%)",
   },
@@ -268,7 +288,6 @@ const DASHBOARD_OPTIONS = [
     value: "Sales Split",
     label: "Sales Split",
     icon: <PieChartIcon className="dashboard-icon" />,
-    // description: "Sales category breakdown",
     color: "#4285f4",
     gradient: "linear-gradient(135deg, #4285f4 0%, #64b5f6 100%)",
   },
@@ -276,7 +295,6 @@ const DASHBOARD_OPTIONS = [
     value: "Product Mix",
     label: "Product Mix",
     icon: <RestaurantIcon className="dashboard-icon" />,
-    // description: "Menu performance analysis",
     color: "#689f38",
     gradient: "linear-gradient(135deg, #689f38 0%, #8bc34a 100%)",
   },
@@ -284,7 +302,6 @@ const DASHBOARD_OPTIONS = [
     value: "Financials",
     label: "Financials",
     icon: <AttachMoneyIcon className="dashboard-icon" />,
-    // description: "Financial performance",
     color: "#9c27b0",
     gradient: "linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%)",
   },
@@ -292,7 +309,6 @@ const DASHBOARD_OPTIONS = [
     value: "Sales Wide",
     label: "Companywide Sales",
     icon: <ShowChartIcon className="dashboard-icon" />,
-    // description: "Enterprise-wide insights",
     color: "#f57c00",
     gradient: "linear-gradient(135deg, #f57c00 0%, #ffb74d 100%)",
   },
@@ -484,9 +500,43 @@ const ExcelUploadPage: React.FC = () => {
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [selectedDashboard, setSelectedDashboard] = useState("Financials");
 
+  // NEW: Company state management
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [companiesLoading, setCompaniesLoading] = useState(false);
+  const [companiesError, setCompaniesError] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+
+  // NEW: Fetch companies on component mount
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
+
+  // NEW: Fetch companies function
+  const fetchCompanies = async () => {
+    try {
+      setCompaniesLoading(true);
+      setCompaniesError(null);
+      
+      console.log("🏢 Fetching companies from:", COMPANIES_API_URL);
+      const response = await apiClient.get("/companies/");
+      
+      if (response.data && Array.isArray(response.data)) {
+        setCompanies(response.data);
+        console.log("✅ Companies fetched successfully:", response.data);
+      } else {
+        throw new Error("Invalid response format");
+      }
+    } catch (error) {
+      console.error("❌ Error fetching companies:", error);
+      setCompaniesError("Failed to fetch companies");
+    } finally {
+      setCompaniesLoading(false);
+    }
+  };
 
   // Existing event handlers (keeping them the same)
   const handleDrop = useCallback(
@@ -564,6 +614,12 @@ const ExcelUploadPage: React.FC = () => {
     setSelectedDashboard(dashboardType);
   };
 
+  // NEW: Company selection handler
+  const handleCompanyChange = (event: any, newValue: Company | null) => {
+    setSelectedCompany(newValue);
+    console.log("🏢 Selected company:", newValue);
+  };
+
   const toBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -573,8 +629,22 @@ const ExcelUploadPage: React.FC = () => {
     });
   };
 
-  // UPDATED: Enhanced upload function with responsive location handling
+  // UPDATED: Enhanced upload function with company ID
   const uploadFile = async (fileInfo: FileInfo, index: number) => {
+    // Check if company is selected
+    if (!selectedCompany) {
+      setFiles((prevFiles) => {
+        const updatedFiles = [...prevFiles];
+        updatedFiles[index] = {
+          ...updatedFiles[index],
+          status: "error",
+          error: "Please select a company before uploading",
+        };
+        return updatedFiles;
+      });
+      return false;
+    }
+
     try {
       setFiles((prevFiles) => {
         const updatedFiles = [...prevFiles];
@@ -613,18 +683,21 @@ const ExcelUploadPage: React.FC = () => {
         }
       }, 300);
 
-      // const response = await axios.post(API_URL, {
-      //   fileName: fileInfo.file.name,
-      //   fileContent: base64Content,
-      //   dashboard: fileInfo.dashboard,
-      // });
-
-      // In your uploadFile function:
-      const response = await apiClient.post("/api/excel/upload", {
+      // UPDATED: Include company ID in upload payload
+      const uploadPayload = {
         fileName: fileInfo.file.name,
         fileContent: base64Content,
         dashboard: fileInfo.dashboard,
+        company_id: selectedCompany.id, // NEW: Add company ID
+      };
+
+      console.log("📤 Uploading with payload:", {
+        ...uploadPayload,
+        fileContent: "[BASE64_DATA]", // Don't log the full content
+        company: selectedCompany.name,
       });
+
+      const response = await apiClient.post("/api/excel/upload", uploadPayload);
 
       clearInterval(progressInterval);
 
@@ -672,6 +745,8 @@ const ExcelUploadPage: React.FC = () => {
             const enhancedDashboardData = {
               ...dashboardData,
               categories: extractedCategories,
+              company_id: selectedCompany.id, // Include company ID
+              company_name: selectedCompany.name, // Include company name
             };
 
             // Store data for all locations
@@ -748,6 +823,8 @@ const ExcelUploadPage: React.FC = () => {
           const enhancedDashboardData = {
             ...response.data,
             categories: extractedCategories,
+            company_id: selectedCompany.id, // Include company ID
+            company_name: selectedCompany.name, // Include company name
           };
 
           // Store data for all locations
@@ -880,6 +957,12 @@ const ExcelUploadPage: React.FC = () => {
 
   // Rest of the component logic remains the same...
   const uploadAllFiles = async () => {
+    // Check if company is selected
+    if (!selectedCompany) {
+      setGeneralError("Please select a company before uploading files.");
+      return;
+    }
+
     const pendingFiles = files.filter((file) => file.status === "pending");
 
     if (pendingFiles.length === 0) {
@@ -1003,6 +1086,87 @@ const ExcelUploadPage: React.FC = () => {
         </HeaderCard>
       </Fade>
 
+      {/* NEW: Company Selection */}
+      <Fade in timeout={900}>
+        <CompanySelectionCard>
+          <CardContent sx={{ p: 4 }}>
+            <Typography
+              variant="h5"
+              sx={{
+                mb: 3,
+                fontWeight: 600,
+                color: "text.primary",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+              }}
+            >
+              <BusinessIcon color="primary" />
+              Select Company
+            </Typography>
+
+            <Box sx={{ position: "relative" }}>
+              <Autocomplete
+                value={selectedCompany}
+                onChange={handleCompanyChange}
+                options={companies}
+                getOptionLabel={(option) => option.name}
+                loading={companiesLoading}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Select Company"
+                    variant="outlined"
+                    fullWidth
+                    error={!!companiesError}
+                    helperText={companiesError || "Choose a company to upload files for"}
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: <BusinessIcon sx={{ mr: 1, color: 'action.active' }} />,
+                      endAdornment: (
+                        <>
+                          {companiesLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+                renderOption={(props, option) => (
+                  <Box component="li" {...props} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <BusinessIcon fontSize="small" color="action" />
+                    <Box>
+                      <Typography variant="body1" fontWeight={500}>
+                        {option.name}
+                      </Typography>
+                      {option.address && (
+                        <Typography variant="body2" color="text.secondary">
+                          {option.address}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                )}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                  },
+                }}
+              />
+
+              {selectedCompany && (
+                <Box sx={{ mt: 2, p: 2, bgcolor: 'primary.light', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CheckCircleIcon color="primary" />
+                  <Typography variant="body2" color="primary.dark" fontWeight={500}>
+                    Selected: {selectedCompany.name}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </CardContent>
+        </CompanySelectionCard>
+      </Fade>
+
       {/* Dashboard Type Selection */}
       <Grow in timeout={1000}>
         <Card sx={{ mb: 4, borderRadius: 3, overflow: "hidden" }}>
@@ -1097,6 +1261,8 @@ const ExcelUploadPage: React.FC = () => {
                 borderColor: isDragging ? "primary.dark" : "primary.main",
                 transform: isDragging ? "scale(1.02)" : "scale(1)",
                 animation: isDragging ? `${pulse} 1s infinite` : "none",
+                opacity: !selectedCompany ? 0.5 : 1,
+                pointerEvents: !selectedCompany ? "none" : "auto",
               }}
             >
               <CloudUploadIcon
@@ -1109,21 +1275,23 @@ const ExcelUploadPage: React.FC = () => {
               />
 
               <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
-                Drag & Drop Excel Files Here
+                {!selectedCompany ? "Select a Company First" : "Drag & Drop Excel Files Here"}
               </Typography>
 
               <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                or click to browse files
+                {!selectedCompany ? "Choose a company before uploading files" : "or click to browse files"}
               </Typography>
 
-              <ProcessButton
-                variant="contained"
-                startIcon={<UploadFileIcon />}
-                endIcon={<ArrowForwardIcon />}
-                sx={{ mb: 1 }}
-              >
-                Browse Files
-              </ProcessButton>
+              {selectedCompany && (
+                <ProcessButton
+                  variant="contained"
+                  startIcon={<UploadFileIcon />}
+                  endIcon={<ArrowForwardIcon />}
+                  sx={{ mb: 1 }}
+                >
+                  Browse Files
+                </ProcessButton>
+              )}
 
               <input
                 ref={fileInputRef}
@@ -1132,6 +1300,7 @@ const ExcelUploadPage: React.FC = () => {
                 multiple
                 onChange={handleFileChange}
                 style={{ display: "none" }}
+                disabled={!selectedCompany}
               />
             </ModernDropZone>
           </CardContent>
@@ -1175,13 +1344,23 @@ const ExcelUploadPage: React.FC = () => {
                 <ProcessButton
                   variant="contained"
                   onClick={uploadAllFiles}
-                  disabled={files.every((f) => f.status !== "pending")}
+                  disabled={files.every((f) => f.status !== "pending") || !selectedCompany}
                   startIcon={<CloudUploadIcon />}
                   endIcon={<ArrowForwardIcon />}
                 >
                   Process All Files
                 </ProcessButton>
               </Box>
+
+              {/* Show selected company info */}
+              {selectedCompany && (
+                <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <BusinessIcon color="primary" />
+                  <Typography variant="body1" fontWeight={500}>
+                    Uploading for: {selectedCompany.name}
+                  </Typography>
+                </Box>
+              )}
 
               <Stack spacing={2}>
                 {files.map((fileInfo, index) => (
@@ -1208,8 +1387,6 @@ const ExcelUploadPage: React.FC = () => {
                                   {fileInfo.file.name}
                                 </Typography>
 
-                                {/* Show extracted filename from backend */}
-
                                 <Stack
                                   direction="row"
                                   spacing={1}
@@ -1231,7 +1408,7 @@ const ExcelUploadPage: React.FC = () => {
                                   />
                                 </Stack>
 
-                                {/* UPDATED: Enhanced location display with multiple location support */}
+                                {/* Enhanced location display with multiple location support */}
                                 <Box
                                   sx={{
                                     display: "flex",
@@ -1239,17 +1416,6 @@ const ExcelUploadPage: React.FC = () => {
                                     gap: 1,
                                   }}
                                 >
-                                  {/* Primary Location */}
-                                  {fileInfo.primaryLocation && (
-                                    <Box
-                                      sx={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 1,
-                                      }}
-                                    ></Box>
-                                  )}
-
                                   {/* All Locations */}
                                   {fileInfo.locations &&
                                     fileInfo.locations.length > 0 && (
@@ -1286,14 +1452,7 @@ const ExcelUploadPage: React.FC = () => {
                                                   ? "default"
                                                   : "default"
                                               }
-                                              icon={
-                                                location ===
-                                                fileInfo.primaryLocation ? (
-                                                  <LocationOnIcon />
-                                                ) : (
-                                                  <LocationOnIcon />
-                                                )
-                                              }
+                                              icon={<LocationOnIcon />}
                                             />
                                           )
                                         )}
@@ -1428,19 +1587,19 @@ const ExcelUploadPage: React.FC = () => {
                                 </>
                               )}
 
-                             <IconButton
-  color="error"
-  onClick={() => removeFile(index)}
-  disabled={fileInfo.status === "uploading"}
-  sx={{
-    borderRadius: 2,
-    "&:hover": {
-      backgroundColor: alpha(theme.palette.error.main, 0.1),
-    },
-  }}
->
-  <DeleteIcon />
-</IconButton>
+                              <IconButton
+                                color="error"
+                                onClick={() => removeFile(index)}
+                                disabled={fileInfo.status === "uploading"}
+                                sx={{
+                                  borderRadius: 2,
+                                  "&:hover": {
+                                    backgroundColor: alpha(theme.palette.error.main, 0.1),
+                                  },
+                                }}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
                             </Stack>
                           </Grid>
                         </Grid>

@@ -99,7 +99,6 @@ interface Permission {
   id: string;
   name: string;
   description: string;
-  category: string;
 }
 
 interface AssignedLocation {
@@ -155,64 +154,40 @@ interface Company {
 type DialogMode = "add" | "edit" | "view" | null;
 type EntityType = "company" | "location" | "user";
 
+// Simplified Permissions - only 5 permissions as requested
 const AVAILABLE_PERMISSIONS: Permission[] = [
-  {
-    id: "excel_upload",
-    name: "Excel Upload",
-    description: "Upload and manage Excel files",
-    category: "Data Management",
-  },
   {
     id: "sales_split",
     name: "Sales Split",
     description: "Access Sales Split dashboard",
-    category: "Analytics",
   },
   {
     id: "product_mix",
     name: "Product Mix",
     description: "Access Product Mix dashboard",
-    category: "Analytics",
   },
   {
     id: "finance",
     name: "Finance",
     description: "Access Finance dashboard",
-    category: "Financial",
   },
   {
     id: "sales_wide",
     name: "Sales Wide",
     description: "Access Sales Wide dashboard",
-    category: "Sales",
   },
   {
-    id: "user_management",
-    name: "User Management",
-    description: "Manage users and permissions",
-    category: "Administration",
-  },
-  {
-    id: "location_management",
-    name: "Location Management",
-    description: "Manage locations",
-    category: "Administration",
-  },
-  {
-    id: "reporting",
-    name: "Reporting",
-    description: "Generate and view reports",
-    category: "Analytics",
+    id: "orderiq",
+    name: "ORDERIQ",
+    description: "Access ORDERIQ system",
   },
 ];
 
 const USER_ROLES = [
-
   { value: "admin", label: "Admin", color: "#9c27b0", bgColor: "#f3e5f5" },
   { value: "manager", label: "Manager", color: "#2196f3", bgColor: "#e3f2fd" },
   { value: "user", label: "User", color: "#4caf50", bgColor: "#e8f5e8" },
   { value: "trial", label: "Trial", color: "#ff9800", bgColor: "#fff3e0" },
-
 ];
 
 const CompanyLocationManager: React.FC = () => {
@@ -628,6 +603,11 @@ const CompanyLocationManager: React.FC = () => {
       company_id: 0,
       isActive: true,
     });
+
+    // Reset selected entities
+    setSelectedCompany(null);
+    setSelectedLocation(null);
+    setSelectedUser(null);
   };
 
   // Get role color
@@ -845,6 +825,7 @@ const CompanyLocationManager: React.FC = () => {
     setDialogMode("add");
     setEntityType("user");
     setSelectedCompany(companies.find((c) => c.id === company_id) || null);
+    setSelectedUser(null); // Clear selected user
     setUserForm({ 
       first_name: "",
       last_name: "",
@@ -863,15 +844,15 @@ const CompanyLocationManager: React.FC = () => {
     setDialogMode("edit");
     setEntityType("user");
     setSelectedCompany(companies.find((c) => c.id === company_id) || null);
-    setSelectedUser(user);
+    setSelectedUser(user); // Set the selected user
     setUserForm({
       first_name: user.first_name,
       last_name: user.last_name,
       email: user.email,
       phone: user.phone || "",
       role: user.role,
-      permissions: user.permissions,
-      assignedLocations: user.assignedLocations,
+      permissions: user.permissions || [],
+      assignedLocations: user.assignedLocations || [],
       company_id: company_id,
       isActive: user.isActive,
     });
@@ -903,17 +884,28 @@ const CompanyLocationManager: React.FC = () => {
       return;
     }
 
+    // Transform assigned locations to just send location IDs to backend
+    const userDataForBackend = {
+      ...userForm,
+      assigned_location: userForm.assignedLocations.map(al => al.location_id), // Send only location IDs
+      assignedLocations: undefined // Remove the full objects
+    };
+
+    // Remove undefined fields
+    delete userDataForBackend.assignedLocations;
+
     console.log('📝 Preparing User Data for:', dialogMode === "add" ? "CREATE" : "UPDATE");
-    console.log('📋 User Form Data:', userForm);
+    console.log('📋 User Form Data (Original):', userForm);
+    console.log('📤 User Data for Backend:', userDataForBackend);
     console.log('🏢 Associated Company:', selectedCompany?.name, '(ID:', selectedCompany?.id, ')');
-    console.log('📍 Assigned Locations:', userForm.assignedLocations);
+    console.log('📍 Assigned Location IDs:', userDataForBackend.assigned_location);
     console.log('🔐 Permissions:', userForm.permissions);
 
     try {
       if (dialogMode === "add") {
-        await createUser(userForm);
+        await createUser(userDataForBackend);
       } else if (dialogMode === "edit" && selectedUser) {
-        await updateUser(selectedUser.id, userForm);
+        await updateUser(selectedUser.id, userDataForBackend);
       }
       
       setDialogOpen(false);
@@ -979,18 +971,6 @@ const CompanyLocationManager: React.FC = () => {
   };
 
   const stats = getStatsData();
-
-  // Group permissions by category
-  const groupedPermissions = useMemo(() => {
-    const grouped: { [key: string]: Permission[] } = {};
-    AVAILABLE_PERMISSIONS.forEach((permission) => {
-      if (!grouped[permission.category]) {
-        grouped[permission.category] = [];
-      }
-      grouped[permission.category].push(permission);
-    });
-    return grouped;
-  }, []);
 
   // Show loading state
   if (loading && companies.length === 0) {
@@ -1977,6 +1957,14 @@ const CompanyLocationManager: React.FC = () => {
               "👤 User"
             }
           </Typography>
+          {/* Show current edit context */}
+          {dialogMode === "edit" && (
+            <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
+              {entityType === "company" && selectedCompany && `Editing: ${selectedCompany.name}`}
+              {entityType === "location" && selectedLocation && `Editing: ${selectedLocation.name}`}
+              {entityType === "user" && selectedUser && `Editing: ${selectedUser.first_name} ${selectedUser.last_name}`}
+            </Typography>
+          )}
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           {entityType === "company" && (
@@ -2337,7 +2325,7 @@ const CompanyLocationManager: React.FC = () => {
                 </Typography>
               </Grid>
 
-              {/* Permissions */}
+              {/* Simplified Permissions */}
               <Grid item xs={12}>
                 <Typography variant="h6" sx={{ 
                   fontWeight: 700,
@@ -2346,59 +2334,44 @@ const CompanyLocationManager: React.FC = () => {
                   display: "flex",
                   alignItems: "center"
                 }}>
-                  🔐 Permissions
+                  🔐 Simple Permissions
                 </Typography>
                 <Box sx={{ 
-                  maxHeight: 300, 
-                  overflowY: "auto",
                   border: "2px solid rgba(25, 118, 210, 0.2)",
                   borderRadius: 2,
-                  p: 2,
+                  p: 3,
                   backgroundColor: "rgba(25, 118, 210, 0.05)"
                 }}>
-                  {Object.entries(groupedPermissions).map(([category, permissions]) => (
-                    <Box key={category} sx={{ mb: 2 }}>
-                      <Typography variant="subtitle1" sx={{ 
-                        fontWeight: 700, 
-                        color: "#1976d2",
-                        mb: 1,
-                        borderBottom: "1px solid rgba(25, 118, 210, 0.2)",
-                        pb: 0.5
-                      }}>
-                        {category}
-                      </Typography>
-                      <Grid container spacing={1}>
-                        {permissions.map((permission) => (
-                          <Grid item xs={12} sm={6} key={permission.id}>
-                            <FormControlLabel
-                              control={
-                                <Checkbox
-                                  checked={userForm.permissions.includes(permission.id)}
-                                  onChange={() => handlePermissionToggle(permission.id)}
-                                  sx={{
-                                    color: "#1976d2",
-                                    "&.Mui-checked": {
-                                      color: "#1976d2",
-                                    },
-                                  }}
-                                />
-                              }
-                              label={
-                                <Box>
-                                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    {permission.name}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    {permission.description}
-                                  </Typography>
-                                </Box>
-                              }
+                  <Grid container spacing={2}>
+                    {AVAILABLE_PERMISSIONS.map((permission) => (
+                      <Grid item xs={12} sm={6} md={4} key={permission.id}>
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={userForm.permissions.includes(permission.id)}
+                              onChange={() => handlePermissionToggle(permission.id)}
+                              sx={{
+                                color: "#1976d2",
+                                "&.Mui-checked": {
+                                  color: "#1976d2",
+                                },
+                              }}
                             />
-                          </Grid>
-                        ))}
+                          }
+                          label={
+                            <Box>
+                              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                {permission.name}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {permission.description}
+                              </Typography>
+                            </Box>
+                          }
+                        />
                       </Grid>
-                    </Box>
-                  ))}
+                    ))}
+                  </Grid>
                 </Box>
               </Grid>
 
