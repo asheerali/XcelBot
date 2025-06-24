@@ -158,7 +158,10 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
     end_date_str = end_date_sample.strftime('%Y-%m-%d')
     start_date_str = start_date_sample.strftime('%Y-%m-%d')
     
+    
     print("i am here in sales split processor start_date_str", start_date_str, "end_date_str", end_date_str, "current date", current_date)
+    
+    print("i am here in sales split processor printing dates and df", start_date, end_date, "\n", df.head())
     
     sales_overview_analysis = create_sales_overview_tables(df, location_filter='All', start_date=start_date_str, end_date=end_date_str)
 
