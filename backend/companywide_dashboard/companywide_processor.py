@@ -97,7 +97,10 @@ def process_companywide_file(file_data: Union[io.BytesIO, str], store_filter='Al
     print("Type of file_data:", type(file_data))
 
     try:
-            if isinstance(file_data, io.BytesIO):
+            if isinstance(file_data, pd.DataFrame):
+                print("Received DataFrame directly.")
+                df = file_data
+            elif isinstance(file_data, io.BytesIO):
                 file_data.seek(0)
                 print("Reading Excel from BytesIO object.")
                 df = pd.read_excel(file_data, sheet_name="Actuals")

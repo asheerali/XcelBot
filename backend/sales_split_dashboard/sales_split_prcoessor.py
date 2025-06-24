@@ -45,89 +45,10 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
     except ValueError as e:
         raise ValueError("Sheet named 'Database' not found in the uploaded Excel file.")
 
-    # Strip whitespace from column names
-    df.columns = df.columns.str.strip()
-    
 
-    # # Step 1: Check for any NaN values
-    # nan_summary = df.isna().sum()
-    # print("NaN values per column:\n", nan_summary[nan_summary > 0])
+    print("df i am here in sales_split_processor_file", "\n", df.head())
+    print( " i am here in sales_split_processor_file printing the dates", start_date, end_date, "and the location", location, "and the category_filter", category_filter)
 
-    # Step 2: Define specific column types and fill logic
-    int_cols = ['Qty']
-    float_cols = ['Net Price']
-    date_cols = ['Sent Date']
-    text_cols = ['Location', 'Dining Option']
-
-    # Fill integers with 0
-    df[int_cols] = df[int_cols].fillna(0).astype(int)
-
-    # Fill floats with 0.0
-    df[float_cols] = df[float_cols].fillna(0.0)
-
-    # Convert date columns with error coercion
-    for col in date_cols:
-        df[col] = pd.to_datetime(df[col], errors='coerce')
-
-    # Fill text columns with empty strings
-    df[text_cols] = df[text_cols].fillna('')
-
-    # Create derived columns
-    df['Date'] = df['Sent Date'].dt.date
-    df['Time'] = df['Sent Date'].dt.time
-    df['Day'] = df['Sent Date'].dt.day_name()          # e.g., Monday
-    df['Week'] = df['Sent Date'].dt.isocalendar().week
-    df['Month'] = df['Sent Date'].dt.month_name()      # e.g., April
-    df['Quarter'] = df['Sent Date'].dt.quarter
-    df['Year'] = df['Sent Date'].dt.year
-    
-     # Define groups
-    in_house = [
-        "Kiosk - Dine In", "Kiosk - Take Out", "Take Out - Cashier",
-        "Take Out  - Cashier", "Pick Up - Phone", "Inkind - Take Out",
-        "Dine In", "Take Out"
-    ]
-    one_p = [
-        "Delivery - Phone", "ChowNow: Pick Up", "Lunchbox Delivery",
-        "Lunchbox Pick Up", "ChowNow: Delivery", "Online Ordering - Takeout"
-    ]
-    dd = [
-        "DoorDash Pick Up", "DoorDash Self-Delivery", "DoorDash - Takeout",
-        "DoorDash - Delivery", "DoorDash - Pick Up", "DoorDash - Self-Delivery",
-    ]
-    catering = [
-        "EZ Cater - Pick Up", "LB Catering Delivery", "Catering Delivery - Phone",
-        "LB Catering Pick Up", "Ez Cater - Delivery", "Catering Pick Up - Phone",
-        "CaterCow - Delivery", "Fooda Pick up", "Sharebite - Pick Up"
-    ]
-    gh = [
-        "Grubhub Pick Up", "Grubhub Self - Delivery", "Grubhub - Takeout",
-        "Grubhub - Delivery", "Grubhub - Pick Up", "Grubhub - Self-Delivery",
-    ]
-    ub = [
-        "UberEats Pick Up", "UberEats Self-Delivery", "UberEats - Takeout",
-        "UberEats - Delivery", "UberEats - Pick Up", "UberEats - Self-Delivery",
-        "Uber Eats - Delivery", "Uber Eats - Takeout", "Uber Eats - Pick Up",
-        "Uber Eats - Self-Delivery", "Uber Eats - Delivery",
-        "Uber Eats - Takeout", "Uber Eats - Pick Up", "Uber Eats - Self-Delivery"
-    ]
-
-    # Create conditions and corresponding values
-    conditions = [
-        df["Dining Option"].isin(in_house),
-        df["Dining Option"].isin(one_p),
-        df["Dining Option"].isin(dd),
-        df["Dining Option"].isin(catering),
-        df["Dining Option"].isin(gh),
-        df["Dining Option"].isin(ub)
-    ]
-
-    choices = ["In-House", "1P", "DD", "Catering", "GH", "UB"]
-
-    # Apply the mapping
-    df["Category"] = np.select(conditions, choices, default="")
-    df["Category"] = df["Category"].replace({"": "Others"})
-    
     categories = df["Category"].unique().tolist()
     locations = df["Location"].unique().tolist()
 

@@ -39,9 +39,9 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     
     # if order_date_filter is not None:
     #     if isinstance(order_date_filter, list):
-    #         filtered_df = filtered_df[filtered_df['Order Date'].isin(order_date_filter)]
+    #         filtered_df = filtered_df[filtered_df['Order_Date'].isin(order_date_filter)]  # Updated column name
     #     else:
-    #         filtered_df = filtered_df[filtered_df['Order Date'] == order_date_filter]
+    #         filtered_df = filtered_df[filtered_df['Order_Date'] == order_date_filter]  # Updated column name
         
     if server_filter != 'All':
         if isinstance(server_filter, list):
@@ -51,9 +51,9 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
         
     if dining_option_filter != 'All':
         if isinstance(dining_option_filter, list):
-            filtered_df = filtered_df[filtered_df['Dining Option'].isin(dining_option_filter)]
+            filtered_df = filtered_df[filtered_df['Dining_Option'].isin(dining_option_filter)]  # Updated column name
         else:
-            filtered_df = filtered_df[filtered_df['Dining Option'] == dining_option_filter]
+            filtered_df = filtered_df[filtered_df['Dining_Option'] == dining_option_filter]  # Updated column name
     
     # Add category filter
     if category_filter != 'All':
@@ -116,10 +116,10 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     # -------------------------------------------------------
     # 1. Overview Metrics Tables
     # -------------------------------------------------------
-    net_sales = round(filtered_df['Net Price'].sum(), 2)
-    net_sales_change =  (round(change_filtered_df['Net Price'].sum(), 2) - net_sales)/  net_sales  if net_sales != 0 else 0
-    unique_orders = filtered_df['Order #'].nunique()
-    orders_change = round(change_filtered_df['Order #'].nunique(), 2) - unique_orders / unique_orders  if unique_orders != 0 else 0
+    net_sales = round(filtered_df['Net_Price'].sum(), 2)  # Updated column name
+    net_sales_change =  (round(change_filtered_df['Net_Price'].sum(), 2) - net_sales)/  net_sales  if net_sales != 0 else 0  # Updated column name
+    unique_orders = filtered_df['Order_number'].nunique()  # Updated column name
+    orders_change = round(change_filtered_df['Order_number'].nunique(), 2) - unique_orders / unique_orders  if unique_orders != 0 else 0  # Updated column name
     qty_sold = filtered_df['Qty'].sum() 
     qty_sold_change = round(change_filtered_df['Qty'].sum(), 2) - qty_sold / qty_sold  if qty_sold != 0 else 0
     
@@ -130,9 +130,9 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     # -------------------------------------------------------
     # 2. Sales by Category
     # -------------------------------------------------------
-    # Use 'Sales Category' from your columns
-    sales_by_category = filtered_df.groupby('Sales Category').agg({
-        'Net Price': 'sum'
+    # Use 'Sales_Category' from your columns
+    sales_by_category = filtered_df.groupby('Sales_Category').agg({  # Updated column name
+        'Net_Price': 'sum'  # Updated column name
     }).reset_index()
     sales_by_category.columns = ['Category', 'Sales']
     
@@ -153,8 +153,8 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     # -------------------------------------------------------
     # 3. Sales by Menu Group
     # -------------------------------------------------------
-    # Use 'Menu Group' from your columns
-    sales_by_menu_group = filtered_df.groupby('Menu Group')['Net Price'].sum().reset_index()
+    # Use 'Menu_Group' from your columns
+    sales_by_menu_group = filtered_df.groupby('Menu_Group')['Net_Price'].sum().reset_index()  # Updated column names
     sales_by_menu_group.columns = ['Menu Group', 'Sales']
     
     # Round sales values to 2 decimal places
@@ -163,7 +163,7 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     # -------------------------------------------------------
     # 4. Sales by Server
     # -------------------------------------------------------
-    sales_by_server = filtered_df.groupby('Server')['Net Price'].sum().reset_index()
+    sales_by_server = filtered_df.groupby('Server')['Net_Price'].sum().reset_index()  # Updated column name
     sales_by_server.columns = ['Server', 'Sales']
     
     # Round sales values to 2 decimal places
@@ -176,9 +176,9 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     # 5. Top Selling Items
     # -------------------------------------------------------
     # Grouping by menu item and server
-    top_selling_items = filtered_df.groupby(['Menu Item', 'Server']).agg({
+    top_selling_items = filtered_df.groupby(['Menu_Item', 'Server']).agg({  # Updated column name
         'Qty': 'sum',
-        'Net Price': 'sum'
+        'Net_Price': 'sum'  # Updated column name
     }).reset_index()
     
     # Add standard items that might not be in the filtered data
@@ -196,13 +196,13 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     additional_items = []
     for item in standard_items:
         for server in standard_servers:
-            if not ((top_selling_items['Menu Item'] == item) & 
+            if not ((top_selling_items['Menu_Item'] == item) &   # Updated column name
                    (top_selling_items['Server'] == server)).any():
                 additional_items.append({
-                    'Menu Item': item,
+                    'Menu_Item': item,  # Updated column name
                     'Server': server,
                     'Qty': 0,
-                    'Net Price': 0.00
+                    'Net_Price': 0.00  # Updated column name
                 })
     
     if additional_items:
@@ -236,182 +236,6 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
 
     }
 
-
-
-# def detailed_analysis_tables(df, location_filter='All', order_date_filter=None, dining_option_filter='All', menu_item_filter='All'):
-#     """
-#     Create dashboard tables for restaurant visualization with optional filters.
-    
-#     Parameters:
-#     -----------
-#     df : pd.DataFrame
-#         The raw data containing order information
-#     location_filter : str or list, optional
-#         Filter by specific location(s)
-#     order_date_filter : str or list, optional
-#         Filter by specific order date(s)
-#     dining_option_filter : str or list, optional
-#         Filter by specific dining option(s)
-#     menu_item_filter : str or list, optional
-#         Filter by specific menu item(s)
-    
-#     Returns:
-#     --------
-#     Dict[str, pd.DataFrame or float]
-#         Dictionary containing all tables and metrics needed for the dashboard
-#     """
-#     # Make a copy of the dataframe
-#     filtered_df = df.copy()
-    
-#     # Apply filters
-#     if location_filter != 'All':
-#         if isinstance(location_filter, list):
-#             filtered_df = filtered_df[filtered_df['Location'].isin(location_filter)]
-#         else:
-#             filtered_df = filtered_df[filtered_df['Location'] == location_filter]
-    
-#     if order_date_filter is not None:
-#         if isinstance(order_date_filter, list):
-#             filtered_df = filtered_df[filtered_df['Order Date'].isin(order_date_filter)]
-#         else:
-#             filtered_df = filtered_df[filtered_df['Order Date'] == order_date_filter]
-        
-#     if dining_option_filter != 'All':
-#         if isinstance(dining_option_filter, list):
-#             filtered_df = filtered_df[filtered_df['Dining Option'].isin(dining_option_filter)]
-#         else:
-#             filtered_df = filtered_df[filtered_df['Dining Option'] == dining_option_filter]
-    
-#     if menu_item_filter != 'All':
-#         if isinstance(menu_item_filter, list):
-#             filtered_df = filtered_df[filtered_df['Menu Item'].isin(menu_item_filter)]
-#         else:
-#             filtered_df = filtered_df[filtered_df['Menu Item'] == menu_item_filter]
-    
-#     # If the dataframe is empty after filtering, return empty tables
-#     if filtered_df.empty:
-#         return {
-#             'sales_by_location': pd.DataFrame(columns=['Location', 'Sales']),
-#             'average_price_by_item': pd.DataFrame(columns=['Menu Item', 'Price']),
-#             'average_order_value': 0,
-#             'average_items_per_order': 0,
-#             'price_changes': pd.DataFrame(columns=['Item', 'Change', 'Direction', 'Category']),
-#             'top_items': pd.DataFrame(columns=['Item', 'Price'])
-#         }
-    
-#     # -------------------------------------------------------
-#     # 1. Sales per Location
-#     # -------------------------------------------------------
-#     sales_by_location = filtered_df.groupby('Location')['Net Price'].sum().reset_index()
-#     sales_by_location.columns = ['Location', 'Sales']
-    
-#     # -------------------------------------------------------
-#     # 2. Average Price by Menu Item
-#     # -------------------------------------------------------
-#     # Calculate average price for each menu item
-#     average_price_by_item = filtered_df.groupby('Menu Item')['Avg Price'].mean().reset_index()
-#     average_price_by_item.columns = ['Menu Item', 'Price']
-    
-#     # Sort by price descending and get top items
-#     average_price_by_item = average_price_by_item.sort_values('Price', ascending=False).head(5).reset_index(drop=True)
-    
-#     # -------------------------------------------------------
-#     # 3. Average Order Value & Items per Order
-#     # -------------------------------------------------------
-#     # Calculate total sales per order
-#     order_totals = filtered_df.groupby('Order #')['Net Price'].sum()
-#     average_order_value = round(order_totals.mean(), 2)
-    
-#     # Calculate items per order
-#     items_per_order = filtered_df.groupby('Order #')['Qty'].sum()
-#     average_items_per_order = round(items_per_order.mean(), 1)
-    
-#     # -------------------------------------------------------
-#     # 4. Price Changes (for the arrows in the dashboard)
-#     # -------------------------------------------------------
-#     # Calculate price changes compared to historical or baseline data
-#     # This would need a time comparison - using a simple approach here
-#     # This assumes df has some historical data for comparison
-    
-#     # Get unique items for price change calculation
-#     unique_items = filtered_df['Menu Item'].unique()
-    
-#     # Initialize empty dataframe for price changes
-#     price_changes = pd.DataFrame(columns=['Item', 'Change', 'Direction', 'Category'])
-    
-#     # For NET PRICE change, calculate the relative change in average net price
-#     # (This is just an example calculation - adjust based on your actual requirements)
-#     if 'Net Price' in filtered_df.columns:
-#         current_avg_net_price = filtered_df['Net Price'].mean()
-        
-#         # Calculate change from previous period if you have that data
-#         # For now, just use a random small value as placeholder
-#         net_price_change = round(np.random.uniform(-2, 2), 2)  # Replace with actual calculation
-        
-#         # Determine direction
-#         direction = 'up' if net_price_change > 0 else ('down' if net_price_change < 0 else 'neutral')
-        
-#         # Add to price changes
-#         price_change_row = {
-#             'Item': 'NET PRICE',
-#             'Change': abs(net_price_change),
-#             'Direction': direction,
-#             'Category': 'PRICE'
-#         }
-#         price_changes = pd.concat([price_changes, pd.DataFrame([price_change_row])], ignore_index=True)
-    
-#     # Get a few sample menu items for price change display
-#     sample_items = filtered_df.groupby('Menu Item')['Net Price'].mean().nlargest(3).index.tolist()
-    
-#     # Add sample menu items with price changes
-#     for item in sample_items:
-#         if item in filtered_df['Menu Item'].unique():
-#             # Get sales category for this item
-#             category = filtered_df[filtered_df['Menu Item'] == item]['Sales Category'].iloc[0] \
-#                 if 'Sales Category' in filtered_df.columns else 'N/A'
-            
-#             # Calculate or simulate price change
-#             # Replace with actual calculation if you have historical data
-#             item_price_change = round(np.random.uniform(-3, 3), 2)  # Replace with actual calculation
-            
-#             # Determine direction
-#             direction = 'up' if item_price_change > 0 else ('down' if item_price_change < 0 else 'neutral')
-            
-#             # Add to price changes
-#             price_change_row = {
-#                 'Item': item,
-#                 'Change': abs(item_price_change),
-#                 'Direction': direction,
-#                 'Category': category
-#             }
-#             price_changes = pd.concat([price_changes, pd.DataFrame([price_change_row])], ignore_index=True)
-    
-#     # -------------------------------------------------------
-#     # 5. Top Items (shown in the dashboard)
-#     # -------------------------------------------------------
-#     # Extract top items by sales volume or price
-#     top_items = filtered_df.groupby('Menu Item')['Net Price'].sum().reset_index()
-#     top_items.columns = ['Item', 'Price']
-#     top_items = top_items.sort_values('Price', ascending=False).head(5).reset_index(drop=True)
-    
-#     # -------------------------------------------------------
-#     # 6. Additional Metrics
-#     # -------------------------------------------------------
-#     # Calculate the key metrics shown in the dashboard
-#     unique_orders = filtered_df['Order #'].nunique()
-#     total_quantity = filtered_df['Qty'].sum()
-    
-#     # Return all tables and metrics in a dictionary
-#     return {
-#         'sales_by_location': sales_by_location,
-#         'average_price_by_item': average_price_by_item,
-#         'average_order_value': average_order_value, #value
-#         'average_items_per_order': average_items_per_order,
-#         'price_changes': price_changes,
-#         'top_items': top_items,
-#         'unique_orders': unique_orders,
-#         'total_quantity': total_quantity
-#     }
 
 
 def detailed_analysis_tables(df, location_filter='All', dining_option_filter='All', menu_item_filter='All',category_filter='All', start_date=None, end_date=None):
@@ -448,9 +272,9 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
     
     # if order_date_filter is not None:
     #     if isinstance(order_date_filter, list):
-    #         filtered_df = filtered_df[filtered_df['Order Date'].isin(order_date_filter)]
+    #         filtered_df = filtered_df[filtered_df['Order_Date'].isin(order_date_filter)]  # Updated column name
     #     else:
-    #         filtered_df = filtered_df[filtered_df['Order Date'] == order_date_filter]
+    #         filtered_df = filtered_df[filtered_df['Order_Date'] == order_date_filter]  # Updated column name
     
     # Apply date range filter - convert string dates to datetime.date objects
     if start_date is not None:
@@ -472,15 +296,15 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
         
     if dining_option_filter != 'All':
         if isinstance(dining_option_filter, list):
-            filtered_df = filtered_df[filtered_df['Dining Option'].isin(dining_option_filter)]
+            filtered_df = filtered_df[filtered_df['Dining_Option'].isin(dining_option_filter)]  # Updated column name
         else:
-            filtered_df = filtered_df[filtered_df['Dining Option'] == dining_option_filter]
+            filtered_df = filtered_df[filtered_df['Dining_Option'] == dining_option_filter]  # Updated column name
     
     if menu_item_filter != 'All':
         if isinstance(menu_item_filter, list):
-            filtered_df = filtered_df[filtered_df['Menu Item'].isin(menu_item_filter)]
+            filtered_df = filtered_df[filtered_df['Menu_Item'].isin(menu_item_filter)]  # Updated column name
         else:
-            filtered_df = filtered_df[filtered_df['Menu Item'] == menu_item_filter]
+            filtered_df = filtered_df[filtered_df['Menu_Item'] == menu_item_filter]  # Updated column name
     
     
     change_filtered_df = df.copy()
@@ -528,17 +352,17 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
     # -------------------------------------------------------
     # 1. Sales per Location
     # -------------------------------------------------------
-    sales_by_location = filtered_df.groupby('Location')['Net Price'].sum().reset_index()
+    sales_by_location = filtered_df.groupby('Location')['Net_Price'].sum().reset_index()  # Updated column name
     sales_by_location.columns = ['Location', 'Sales']
     
     # -------------------------------------------------------
     # 2. Average Price by Menu Item
     # -------------------------------------------------------
     # Calculate average price for each menu item
-    if 'Avg Price' not in filtered_df.columns:
-        filtered_df['Avg Price'] = filtered_df['Net Price'] / filtered_df['Qty']
+    if 'Avg_Price' not in filtered_df.columns:  # Updated column name
+        filtered_df['Avg_Price'] = filtered_df['Net_Price'] / filtered_df['Qty']  # Updated column names
 
-    average_price_by_item = filtered_df.groupby('Menu Item')['Avg Price'].mean().reset_index()
+    average_price_by_item = filtered_df.groupby('Menu_Item')['Avg_Price'].mean().reset_index()  # Updated column names
     average_price_by_item.columns = ['Menu Item', 'Price']
     
     # Sort by price descending and get top items
@@ -548,14 +372,14 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
     # 3. Average Order Value & Items per Order
     # -------------------------------------------------------
     # Calculate total sales per order
-    order_totals = filtered_df.groupby('Order #')['Net Price'].sum()
+    order_totals = filtered_df.groupby('Order_number')['Net_Price'].sum()  # Updated column names
     average_order_value = round(order_totals.mean(), 2)
-    average_order_value_change = round(change_filtered_df.groupby('Order #')['Net Price'].sum().mean(), 2) - average_order_value / average_order_value if average_order_value != 0 else 0
+    average_order_value_change = round(change_filtered_df.groupby('Order_number')['Net_Price'].sum().mean(), 2) - average_order_value / average_order_value if average_order_value != 0 else 0  # Updated column names
     
     # Calculate items per order
-    items_per_order = filtered_df.groupby('Order #')['Qty'].sum()
+    items_per_order = filtered_df.groupby('Order_number')['Qty'].sum()  # Updated column name
     average_items_per_order = round(items_per_order.mean(), 1)
-    average_items_per_order_change = round(change_filtered_df.groupby('Order #')['Qty'].sum().mean(), 1) - average_items_per_order / average_items_per_order if average_items_per_order != 0 else 0
+    average_items_per_order_change = round(change_filtered_df.groupby('Order_number')['Qty'].sum().mean(), 1) - average_items_per_order / average_items_per_order if average_items_per_order != 0 else 0  # Updated column name
     
     
     # -------------------------------------------------------
@@ -566,15 +390,15 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
     # This assumes df has some historical data for comparison
     
     # Get unique items for price change calculation
-    unique_items = filtered_df['Menu Item'].unique()
+    unique_items = filtered_df['Menu_Item'].unique()  # Updated column name
     
     # Initialize empty dataframe for price changes
     price_changes = pd.DataFrame(columns=['Item', 'Change', 'Direction', 'Category'])
     
     # For NET PRICE change, calculate the relative change in average net price
     # (This is just an example calculation - adjust based on your actual requirements)
-    if 'Net Price' in filtered_df.columns:
-        current_avg_net_price = filtered_df['Net Price'].mean()
+    if 'Net_Price' in filtered_df.columns:  # Updated column name
+        current_avg_net_price = filtered_df['Net_Price'].mean()  # Updated column name
         
         # Calculate change from previous period if you have that data
         # For now, just use a random small value as placeholder
@@ -593,14 +417,14 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
         price_changes = pd.concat([price_changes, pd.DataFrame([price_change_row])], ignore_index=True)
     
     # Get a few sample menu items for price change display
-    sample_items = filtered_df.groupby('Menu Item')['Net Price'].mean().nlargest(3).index.tolist()
+    sample_items = filtered_df.groupby('Menu_Item')['Net_Price'].mean().nlargest(3).index.tolist()  # Updated column names
     
     # Add sample menu items with price changes
     for item in sample_items:
-        if item in filtered_df['Menu Item'].unique():
+        if item in filtered_df['Menu_Item'].unique():  # Updated column name
             # Get sales category for this item
-            category = filtered_df[filtered_df['Menu Item'] == item]['Sales Category'].iloc[0] \
-                if 'Sales Category' in filtered_df.columns else 'N/A'
+            category = filtered_df[filtered_df['Menu_Item'] == item]['Sales_Category'].iloc[0] \
+                if 'Sales_Category' in filtered_df.columns else 'N/A'  # Updated column names
             
             # Calculate or simulate price change
             # Replace with actual calculation if you have historical data
@@ -622,7 +446,7 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
     # 5. Top Items (shown in the dashboard)
     # -------------------------------------------------------
     # Extract top items by sales volume or price
-    top_items = filtered_df.groupby('Menu Item')['Net Price'].sum().reset_index()
+    top_items = filtered_df.groupby('Menu_Item')['Net_Price'].sum().reset_index()  # Updated column names
     top_items.columns = ['Item', 'Price']
     top_items = top_items.sort_values('Price', ascending=False).head(5).reset_index(drop=True)
     
@@ -630,9 +454,9 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
     # 6. Additional Metrics
     # -------------------------------------------------------
     # Calculate the key metrics shown in the dashboard
-    unique_orders = filtered_df['Order #'].nunique()
+    unique_orders = filtered_df['Order_number'].nunique()  # Updated column name
     total_quantity = filtered_df['Qty'].sum()
-    unique_orders_change = round(change_filtered_df['Order #'].nunique(), 2) - unique_orders / unique_orders if unique_orders != 0 else 0
+    unique_orders_change = round(change_filtered_df['Order_number'].nunique(), 2) - unique_orders / unique_orders if unique_orders != 0 else 0  # Updated column name
     total_quantity_change = round(change_filtered_df['Qty'].sum(), 2) - total_quantity / total_quantity if total_quantity != 0 else 0
     
     # Return all tables and metrics in a dictionary
@@ -655,13 +479,6 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
         "unique_orders_change": unique_orders_change,
         "total_quantity_change": total_quantity_change
     }
-
-
-# # Example usage (commented out since actual dataframe is not provided):
-# result = detailed_analysis_tables(df, location_filter='Lenox Hill')
-# result = overview_tables(df, location_filter='Lenox Hill', order_date_filter='04-21-2025')
-
-
 
 
 def create_sales_by_category_tables(df, location_filter='All', start_date=None, end_date=None, category_filter='All', server_filter='All'):
@@ -776,8 +593,8 @@ def create_sales_by_category_tables(df, location_filter='All', start_date=None, 
     # Sales by Category and Week pivot table
     sales_by_category_table = pd.pivot_table(
         filtered_df,
-        values='Net Price',
-        index='Sales Category',
+        values='Net_Price',  # Updated column name
+        index='Sales_Category',  # Updated column name
         columns='Week_Label',
         aggfunc='sum',
         fill_value=0,
@@ -794,8 +611,8 @@ def create_sales_by_category_tables(df, location_filter='All', start_date=None, 
         # Sales by Category and Day of Week pivot table
     sales_by_category_by_day_table = pd.pivot_table(
         filtered_df,
-        values='Net Price',
-        index='Sales Category',
+        values='Net_Price',  # Updated column name
+        index='Sales_Category',  # Updated column name
         columns='Day_of_Week',
         aggfunc='sum',
         fill_value=0,
@@ -809,12 +626,12 @@ def create_sales_by_category_tables(df, location_filter='All', start_date=None, 
     
     if not filtered_df.empty:
         # Calculate sales for current period by category
-        current_sales = filtered_df.groupby('Sales Category')['Net Price'].sum().reset_index()
+        current_sales = filtered_df.groupby('Sales_Category')['Net_Price'].sum().reset_index()  # Updated column names
         current_sales.columns = ['Sales Category', 'Current_4_Weeks_Sales']
         
         # Calculate sales for previous period by category
         if not previous_df.empty:
-            previous_sales = previous_df.groupby('Sales Category')['Net Price'].sum().reset_index()
+            previous_sales = previous_df.groupby('Sales_Category')['Net_Price'].sum().reset_index()  # Updated column names
             previous_sales.columns = ['Sales Category', 'Previous_4_Weeks_Sales']
         else:
             # Create empty previous sales with same categories as current
@@ -858,87 +675,6 @@ def create_sales_by_category_tables(df, location_filter='All', start_date=None, 
   
 from datetime import datetime, timedelta
 import pandas as pd
-
-# def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, end_date=None):
-#     """
-#     Create a comparison table of top 10 vs bottom 10 items by sales.
-    
-#     Parameters:
-#     df: DataFrame with sales data
-#     location_filter: 'All' or specific location(s)
-#     start_date: Start date as string 'YYYY-MM-DD'
-#     end_date: End date as string 'YYYY-MM-DD'
-    
-#     Returns:
-#     DataFrame with side-by-side comparison
-#     """
-    
-#     # Make a copy of the dataframe
-#     df_copy = df.copy()
-    
-#     # Apply location filter to the entire dataset first
-#     if location_filter != 'All':
-#         if isinstance(location_filter, list):
-#             df_copy = df_copy[df_copy['Location'].isin(location_filter)]
-#         else:
-#             df_copy = df_copy[df_copy['Location'] == location_filter]
-    
-#     # Convert dates if they're strings
-#     if start_date is not None and isinstance(start_date, str):
-#         start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-#     if end_date is not None and isinstance(end_date, str):
-#         end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-    
-#     # Filter current period data
-#     filtered_df = df_copy.copy()
-#     if start_date is not None:
-#         filtered_df = filtered_df[filtered_df['Date'] >= start_date]
-#     if end_date is not None:
-#         filtered_df = filtered_df[filtered_df['Date'] <= end_date]
-    
-#     # If the dataframe is empty after filtering, return empty table
-#     if filtered_df.empty:
-#         return pd.DataFrame(columns=['Rank', 'Top_10_Items', 'T_Sales', 'T_Quantity', 
-#                                    'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])
-    
-#     # Your actual column names:
-#     item_column = 'Menu Item'
-#     quantity_column = 'Qty'
-#     sales_column = 'Net Price'
-    
-#     # Group by item and sum quantity and sales
-#     all_items = filtered_df.groupby(item_column).agg({
-#         quantity_column: 'sum',
-#         sales_column: 'sum'
-#     }).reset_index()
-    
-#     # Rename columns
-#     all_items.columns = ['Item', 'Quantity', 'Sales']
-    
-#     # Round values
-#     all_items['Sales'] = all_items['Sales'].round(2)
-#     all_items['Quantity'] = all_items['Quantity'].round(0).astype(int)
-    
-#     # Get top 10 items (highest sales)
-#     top_items = all_items.sort_values('Sales', ascending=False).head(10).reset_index(drop=True)
-    
-#     # Get bottom 10 items (lowest sales)
-#     bottom_items = all_items.sort_values('Sales', ascending=True).head(10).reset_index(drop=True)
-    
-#     # Create comparison table
-#     comparison_table = pd.DataFrame()
-#     comparison_table['Rank'] = range(1, 11)
-#     comparison_table['Top_10_Items'] = top_items['Item'].values
-#     comparison_table['T_Sales'] = top_items['Sales'].values
-#     comparison_table['T_Quantity'] = top_items['Quantity'].values
-#     comparison_table['Bottom_10_Items'] = bottom_items['Item'].values
-#     comparison_table['B_Sales'] = bottom_items['Sales'].values
-#     comparison_table['B_Quantity'] = bottom_items['Quantity'].values
-    
-#     # Calculate difference in sales (Top - Bottom)
-#     comparison_table['Difference_Sales'] = ((comparison_table['T_Sales'] - comparison_table['B_Sales']) / 100).round(2)
-    
-#     return comparison_table
 
 
 
@@ -1001,9 +737,9 @@ def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, 
                                    'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])
     
     # Your actual column names:
-    item_column = 'Menu Item'
+    item_column = 'Menu_Item'  # Updated column name
     quantity_column = 'Qty'
-    sales_column = 'Net Price'
+    sales_column = 'Net_Price'  # Updated column name
     
     # Group by item and sum quantity and sales
     all_items = filtered_df.groupby(item_column).agg({
