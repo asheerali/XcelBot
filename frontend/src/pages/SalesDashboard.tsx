@@ -737,6 +737,7 @@ const BaseChart: React.FC<BaseChartProps> = ({ title, children, height = 450 }) 
 };
 
 // UPDATED: Custom Tooltip Component for Recharts
+// UPDATED: Custom Tooltip Component for Recharts - Better handling for multiple bars
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
@@ -745,7 +746,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         border: '1px solid #ccc',
         borderRadius: 1,
         padding: 1.5,
-        boxShadow: 2
+        boxShadow: 2,
+        minWidth: '150px'
       }}>
         <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
           {label}
@@ -754,7 +756,13 @@ const CustomTooltip = ({ active, payload, label }: any) => {
           <Typography
             key={index}
             variant="body2"
-            sx={{ color: entry.color, display: 'flex', alignItems: 'center', gap: 1 }}
+            sx={{ 
+              color: entry.color, 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1,
+              mb: 0.5
+            }}
           >
             <Box
               sx={{
@@ -764,47 +772,16 @@ const CustomTooltip = ({ active, payload, label }: any) => {
                 borderRadius: 0.5
               }}
             />
-            {entry.dataKey}: {entry.value.toFixed(2)}%
+            {entry.name || entry.dataKey}: {
+              // Format based on value type
+              typeof entry.value === 'number' 
+                ? entry.value % 1 !== 0 
+                  ? entry.value.toFixed(2) + (entry.dataKey.includes('vs.') ? '%' : '')
+                  : entry.value.toLocaleString()
+                : entry.value
+            }
           </Typography>
         ))}
-        
-        {/* For single bar charts, show both Tw vs. Lw and Tw vs. Ly values */}
-        {payload.length === 1 && payload[0].payload && (
-          <>
-            {payload[0].payload['Tw vs. Lw'] !== undefined && (
-              <Typography
-                variant="body2"
-                sx={{ color: '#4285f4', display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}
-              >
-                <Box
-                  sx={{
-                    width: 12,
-                    height: 12,
-                    backgroundColor: '#4285f4',
-                    borderRadius: 0.5
-                  }}
-                />
-                Tw vs. Lw: {payload[0].payload['Tw vs. Lw'].toFixed(2)}%
-              </Typography>
-            )}
-            {payload[0].payload['Tw vs. Ly'] !== undefined && payload[0].dataKey !== 'Tw vs. Ly' && (
-              <Typography
-                variant="body2"
-                sx={{ color: '#ea4335', display: 'flex', alignItems: 'center', gap: 1 }}
-              >
-                <Box
-                  sx={{
-                    width: 12,
-                    height: 12,
-                    backgroundColor: '#ea4335',
-                    borderRadius: 0.5
-                  }}
-                />
-                Tw vs. Ly: {payload[0].payload['Tw vs. Ly'].toFixed(2)}%
-              </Typography>
-            )}
-          </>
-        )}
       </Box>
     );
   }
@@ -1081,82 +1058,89 @@ export default function SalesDashboard() {
   };
 
   // UPDATED: Function to create charts (Recharts for some, Nivo for others)
-  const createNivoBarChart = (
-    data: any[], 
-    keys: string[], 
-    colors: string[], 
-    chartType: string,
-    labelFormat: (value: number) => string = formatPercentage,
-    enableLabels: boolean = false,
-    customLabelFormat?: (d: any) => string
-  ) => {
-    console.log('🎯 createNivoBarChart called with:', chartType);
-    
-    if (!data || data.length === 0) {
-      return (
-        <Box sx={{ 
-          height: '100%', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          color: 'text.secondary'
-        }}>
-          <Typography>No data available</Typography>
-        </Box>
-      );
-    }
+ // UPDATED: Function to create charts - Fixed to show both bars for Sales/Orders/Avg Ticket
+const createNivoBarChart = (
+  data: any[], 
+  keys: string[], 
+  colors: string[], 
+  chartType: string,
+  labelFormat: (value: number) => string = formatPercentage,
+  enableLabels: boolean = false,
+  customLabelFormat?: (d: any) => string
+) => {
+  console.log('🎯 createNivoBarChart called with:', chartType);
+  
+  if (!data || data.length === 0) {
+    return (
+      <Box sx={{ 
+        height: '100%', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        color: 'text.secondary'
+      }}>
+        <Typography>No data available</Typography>
+      </Box>
+    );
+  }
 
-    // Sales/Orders/Avg Ticket: Use Recharts with single bars
-    const isSingleBarChart = chartType === 'salesPercentage' || chartType === 'ordersPercentage' || chartType === 'avgTicket';
-    
-    if (isSingleBarChart) {
-      const primaryKey = keys[1] || keys[0]; // Use "Tw vs. Ly" as primary
-      
-      return (
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={data}
-            margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
-            barCategoryGap="25%"
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis 
-              dataKey="store" 
-              tick={{ fontSize: 12, fontWeight: 'bold' }}
-              height={60}
-              interval={0}
-            />
-            <YAxis 
-              tick={{ fontSize: 12, fontWeight: 'bold' }}
-              tickFormatter={labelFormat}
-            />
-            <RechartsTooltip content={<CustomTooltip />} />
-            <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '14px', fontWeight: 'bold' }} />
-            
-            <Bar
-              dataKey={primaryKey}
-              fill={colors[1] || colors[0] || '#ea4335'}
-              name={`${chartType === 'salesPercentage' ? 'Sales' : chartType === 'ordersPercentage' ? 'Orders' : 'Avg Ticket'} Performance`}
-              radius={[2, 2, 0, 0]}
-              maxBarSize={80}
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      );
-    }
+  // FIXED: For Sales/Orders/Avg Ticket, show both bars using Recharts
+  const isSingleBarChart = chartType === 'salesPercentage' || chartType === 'ordersPercentage' || chartType === 'avgTicket';
+  
+  if (isSingleBarChart) {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={data}
+          margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
+          barCategoryGap="25%"
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <XAxis 
+            dataKey="store" 
+            tick={{ fontSize: 12, fontWeight: 'bold' }}
+            height={60}
+            interval={0}
+          />
+          <YAxis 
+            tick={{ fontSize: 12, fontWeight: 'bold' }}
+            tickFormatter={labelFormat}
+          />
+          <RechartsTooltip content={<CustomTooltip />} />
+          <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '14px', fontWeight: 'bold' }} />
+          
+          {/* FIXED: Show both bars instead of just one */}
+          <Bar
+            dataKey={keys[0]} // "Tw vs. Lw"
+            fill={colors[0] || '#4285f4'}
+            name="Tw vs. Lw"
+            radius={[2, 2, 0, 0]}
+            maxBarSize={60}
+          />
+          <Bar
+            dataKey={keys[1]} // "Tw vs. Ly"
+            fill={colors[1] || '#ea4335'}
+            name="Tw vs. Ly"
+            radius={[2, 2, 0, 0]}
+            maxBarSize={60}
+          />
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  }
 
-    // Labor $ Spent, Labor %, Labor Hrs, SPMH, COGS $, COGS %: Use Nivo with STACKED bars
-    const isStackedChart = chartType === 'laborCost' || chartType === 'laborPercentage' || 
-                          chartType === 'laborHrs' || chartType === 'spmh' || 
-                          chartType === 'cogs' || chartType === 'cogsPercentage';
-    
-    if (isStackedChart) {
-      return createNivoChart(data, keys, colors, chartType, labelFormat, true); // true = stacked
-    }
+  // Labor $ Spent, Labor %, Labor Hrs, SPMH, COGS $, COGS %: Use Nivo with STACKED bars
+  const isStackedChart = chartType === 'laborCost' || chartType === 'laborPercentage' || 
+                        chartType === 'laborHrs' || chartType === 'spmh' || 
+                        chartType === 'cogs' || chartType === 'cogsPercentage';
+  
+  if (isStackedChart) {
+    return createNivoChart(data, keys, colors, chartType, labelFormat, true); // true = stacked
+  }
 
-    // Any remaining charts: Use Nivo with GROUPED bars (fallback)
-    return createNivoChart(data, keys, colors, chartType, labelFormat, false); // false = grouped
-  };
+  // Any remaining charts: Use Nivo with GROUPED bars (fallback)
+  return createNivoChart(data, keys, colors, chartType, labelFormat, false); // false = grouped
+};
 
   return (
     <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
@@ -1455,7 +1439,9 @@ export default function SalesDashboard() {
                           salesData,
                           ['Tw vs. Lw', 'Tw vs. Ly'],
                           ['#4285f4', '#ea4335'],
-                          'salesPercentage'
+                          'salesPercentage',
+                          formatPercentage,
+                          false
                         )}
                       </BaseChart>
                     </Grid>

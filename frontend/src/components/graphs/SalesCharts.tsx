@@ -21,8 +21,8 @@ import CardContent from "@mui/material/CardContent";
 // Interface for props
 interface SalesChartsProps {
   tableData?: {
-    table5?: Array<{ Week: string; Sales: number; Orders: number }>;
-    table6?: Array<{ Day: string; Sales: number; Orders: number }>;
+    table5?: Array<{ Week: string; Sales: number; Orders: number; Moving_Avg: number }>;
+    table6?: Array<{ Day: string; Sales: number; Orders: number; Moving_Avg: number }>;
     table7?: Array<{ [key: string]: string | number }>;
   };
   selectedLocation?: string;
@@ -36,30 +36,9 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
   dateRangeType,
   height = 250,
 }) => {
-  // Calculate moving average for data
-  const calculateMovingAverage = (
-    data: any[],
-    valueKey: string,
-    windowSize: number = 1
-  ) => {
-    if (!Array.isArray(data) || data.length === 0) return data;
+  // REMOVED: calculateMovingAverage function since moving average now comes from backend
 
-    return data.map((item, index) => {
-      const start = Math.max(0, index - windowSize + 1);
-      const end = index + 1;
-      const window = data.slice(start, end);
-
-      const sum = window.reduce((acc, curr) => acc + (curr[valueKey] || 0), 0);
-      const avg = sum / window.length;
-
-      return {
-        ...item,
-        [`${valueKey}MovingAvg`]: avg,
-      };
-    });
-  };
-
-  // UPDATED: Custom tooltip that shows sales, orders, and moving average
+  // UPDATED: Custom tooltip that shows sales, orders, and backend moving average
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const dataPoint = payload[0]?.payload;
@@ -84,11 +63,11 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
               maximumFractionDigits: 2,
             })}`}
           </p>
-          {/* Show moving average if available */}
-          {dataPoint?.SalesMovingAvg !== undefined && (
+          {/* Show backend moving average if available */}
+          {dataPoint?.Moving_Avg !== undefined && (
             <p style={{ margin: 0, color: "#ff0000" }}>
               {`Moving Avg: $${parseFloat(
-                dataPoint.SalesMovingAvg
+                dataPoint.Moving_Avg
               ).toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
@@ -123,19 +102,19 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
     return `${value}`;
   };
 
-  // UPDATED: ComposedChart with bars and line for moving average
+  // UPDATED: ComposedChart with bars and line using backend moving average
   const renderComposedChart = (
     data: any[],
     dataKey: string,
     chartHeight = 250
   ) => {
     const safeData = Array.isArray(data) ? data : [];
-    const dataWithMovingAvg = calculateMovingAverage(safeData, "Sales", 1);
+    // No need to calculate moving average since it comes from backend
 
     return (
       <ResponsiveContainer width="100%" height={chartHeight}>
         <ComposedChart
-          data={dataWithMovingAvg}
+          data={safeData}
           margin={{
             top: 20,
             right: 30,
@@ -166,10 +145,10 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
             name="Sales"
             radius={[4, 4, 0, 0]}
           />
-          {/* Moving average line - UPDATED COLOR */}
+          {/* Moving average line using backend data - UPDATED COLOR */}
           <Line
             type="monotone"
-            dataKey="SalesMovingAvg"
+            dataKey="Moving_Avg"
             stroke="#ff0000"
             strokeWidth={3}
             dot={{ fill: "#ff0000", strokeWidth: 2, r: 4 }}
@@ -180,7 +159,7 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
     );
   };
 
-  // Process table7 data for time ranges
+  // Process table7 data for time ranges (now includes Moving_Avg from backend)
   const processTimeRangeData = (data: any[]) => {
     if (!Array.isArray(data)) return [];
 
@@ -189,6 +168,7 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
         TimeRange: item["Time Range"] || item.timeRange || item.TimeRange,
         Sales: item.Sales || 0,
         Orders: item.Orders || 0,
+        Moving_Avg: item.Moving_Avg || 0, // Include backend moving average
       }))
       .filter((item) => item.TimeRange);
   };
@@ -292,7 +272,7 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
   // Render the charts with data
   return (
     <Box sx={chartContainerStyle} className="sales-charts-root">
-      {/* Sales by Week Chart with Moving Average */}
+      {/* Sales by Week Chart with Backend Moving Average */}
       {hasWeeklyData && (
         <Card sx={chartCardStyle}>
           <Box sx={chartHeaderStyle}>
@@ -308,7 +288,7 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
 
       {/* Two-column layout for day of week and time of day */}
       <Box sx={chartRowStyle}>
-        {/* Day of Week Chart with Moving Average */}
+        {/* Day of Week Chart with Backend Moving Average */}
         {hasDayOfWeekData && (
           <Box sx={{ ...chartColumnStyle, flex: "1 1 50%" }}>
             <Card sx={chartCardStyle}>
@@ -324,13 +304,13 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
           </Box>
         )}
 
-        {/* Time of Day Chart with Moving Average */}
+        {/* Time of Day Chart with Backend Moving Average */}
         {hasTimeRangeData && timeRangeData.length > 0 && (
           <Box sx={{ ...chartColumnStyle, flex: "1 1 50%" }}>
             <Card sx={chartCardStyle}>
               <Box sx={chartHeaderStyle}>
                 <Typography variant="h6" fontWeight={600} color="#333">
-                  Sales by Time Range
+                  Sales by Time Range with Moving Average
                 </Typography>
               </Box>
               <CardContent sx={chartContentStyle}>

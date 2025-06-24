@@ -1,4 +1,5 @@
-// Updated SalesSplitDashboard.tsx - Changed Line Graph Colors
+// Updated SalesSplitDashboard.tsx - Full Values Display with Decimals Preserved
+// IMPORTANT: All decimal values (like 4150.77) are now preserved and displayed as "4,150.77" or "$4,150.77"
 import React from "react";
 import {
   BarChart,
@@ -44,6 +45,26 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
     );
   }
 
+  // Helper function to format numbers with commas (preserving decimals)
+  const formatNumber = (value: number) => {
+    if (isNaN(value) || value === null || value === undefined) return "0";
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }).format(value);
+  };
+
+  // Helper function to format currency (preserving decimals)
+  const formatCurrency = (value: number) => {
+    if (isNaN(value) || value === null || value === undefined) return "$0.00";
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
+
   // Dynamic helper functions to extract table structure
   const getTableColumns = (table: any[]) => {
     if (!table || table.length === 0) return [];
@@ -65,7 +86,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
     });
   };
 
-  // Process Daily Sales data from table8 (Day of Week data)
+  // Process Daily Sales data from table8 (Day of Week data) - FULL VALUES
   const processDailySalesData = () => {
     if (
       !tableData.table8 ||
@@ -76,53 +97,42 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
       // Fallback to table1 data if table8 is not available
       return tableData.table1.map((row: any) => ({
         day: `Week ${row.Week}`,
-        sales: Math.round(
-          (row["Grand Total"] ||
-            row[
-              Object.keys(row).find((key) =>
-                key.toLowerCase().includes("total")
-              ) || ""
-            ] ||
-            0) / 1000
+        sales: parseFloat(
+          row["Grand Total"] ||
+          row[
+            Object.keys(row).find((key) =>
+              key.toLowerCase().includes("total")
+            ) || ""
+          ] ||
+          0
         ),
+        movingAverage: 0, // No moving average for fallback data
       }));
     }
 
     console.log("Processing table8 data:", tableData.table8);
 
-    // Define all 7 days of the week in order
-    const daysOfWeek = [
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
-      "Sunday",
-    ];
     // Define abbreviated days for display
-    const daysOfWeek1 = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const daysOfWeekMap = {
+      "Monday": "Mon",
+      "Tuesday": "Tue", 
+      "Wednesday": "Wed",
+      "Thursday": "Thu",
+      "Friday": "Fri",
+      "Saturday": "Sat",
+      "Sunday": "Sun"
+    };
 
-    // Create a map of existing data
-    const dataMap = new Map();
-    tableData.table8
-      .filter(
-        (row: any) => row.Day_of_Week && row.Day_of_Week !== "Grand Total"
-      )
-      .forEach((row: any) => {
-        const salesValue =
-          parseFloat(String(row["Grand Total"] || 0).replace(/[$,]/g, "")) || 0;
-        dataMap.set(row.Day_of_Week, Math.round(salesValue / 1000));
-      });
-
-    // Ensure all 7 days are included, with 0 for missing days
-    return daysOfWeek.map((day, index) => ({
-      day: daysOfWeek1[index],
-      sales: dataMap.get(day) || 0, // Use 0 if no data for that day
+    // Process the data directly from table8 - FULL VALUES (preserving decimals)
+    return tableData.table8.map((row: any) => ({
+      day: daysOfWeekMap[row.Day_of_Week] || row.Day_of_Week,
+      sales: parseFloat(String(row.Sales || 0).replace(/[$,]/g, "")) || 0,
+      movingAverage: parseFloat(String(row.Moving_Avg || 0).replace(/[$,]/g, "")) || 0,
+      date: row.Date, // Keep the date for reference
     }));
   };
 
-  // Process Sales Category Line Chart data from table9 (Category data)
+  // ENHANCED: Process Sales Category Line Chart data from table9 - FULL VALUES
   const processSalesCategoryData = () => {
     if (
       !tableData.table9 ||
@@ -152,9 +162,9 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
       tableData.table9
         .filter((row: any) => row.Category && row.Category !== "Grand Total")
         .forEach((row: any) => {
-          const value =
-            parseFloat(String(row[weekCol] || 0).replace(/[$,]/g, "")) || 0;
-          weekData[row.Category] = Math.round(value / 1000); // Convert to thousands
+          const rawValue = parseFloat(String(row[weekCol] || 0).replace(/[$,]/g, "")) || 0;
+          // FULL VALUES: Preserve decimals, no rounding
+          weekData[row.Category] = rawValue;
         });
 
       weeklyData.push(weekData);
@@ -164,7 +174,18 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
     return weeklyData;
   };
 
-  // Process Categories List from table10
+  // ENHANCED: Get categories with better validation
+  const getCategoriesFromTable9 = () => {
+    if (!tableData.table9 || !Array.isArray(tableData.table9)) {
+      return [];
+    }
+    
+    return tableData.table9
+      .filter((row: any) => row.Category && row.Category !== "Grand Total")
+      .map((row: any) => row.Category);
+  };
+
+  // Process Categories List from table10 - FULL VALUES
   const processCategoriesList = () => {
     if (
       !tableData.table10 ||
@@ -179,9 +200,9 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
           .map((row: any, index: number) => ({
             name: row.Category,
             color: getCategoryColor(index),
-            lastWeeksSales: `$${Math.round((row["Grand Total"] || 0) / 1000)}k`,
+            lastWeeksSales: formatCurrency(parseFloat(row["Grand Total"]) || 0),
             percentChange: "N/A",
-            thisWeeksSales: `$${Math.round((row["Grand Total"] || 0) / 1000)}k`,
+            thisWeeksSales: formatCurrency(parseFloat(row["Grand Total"]) || 0),
           }));
       }
       return [];
@@ -192,13 +213,13 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
     return tableData.table10.map((row: any, index: number) => ({
       name: row.Category || `Category ${index + 1}`,
       color: getCategoryColor(index),
-      lastWeeksSales: `$${Math.round((row.Last_4_Weeks_Sales || 0) / 1000)}k`,
+      lastWeeksSales: formatCurrency(parseFloat(row.Last_4_Weeks_Sales) || 0),
       percentChange: `${row.Percent_Change || 0}%`,
-      thisWeeksSales: `$${Math.round((row.This_4_Weeks_Sales || 0) / 1000)}k`,
+      thisWeeksSales: formatCurrency(parseFloat(row.This_4_Weeks_Sales) || 0),
     }));
   };
 
-  // Process Weekly Sales Trend data from table11
+  // Process Weekly Sales Trend data from table11 - FULL VALUES
   const processWeeklySalesData = () => {
     if (
       !tableData.table11 ||
@@ -216,19 +237,14 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
       .filter((row: any) => row.Week && row.Week !== "Grand Total")
       .map((row: any) => ({
         week: row.Week,
-        totalSales:
-          parseFloat(String(row.Total_Sales || 0).replace(/[$,]/g, "")) || 0,
-        totalOrders:
-          parseFloat(String(row.Total_Orders || 0).replace(/[$,]/g, "")) || 0,
-        // Convert sales to thousands for display
-        salesDisplay: Math.round(
-          (parseFloat(String(row.Total_Sales || 0).replace(/[$,]/g, "")) || 0) /
-            1000
-        ),
+        totalSales: parseFloat(String(row.Total_Sales || 0).replace(/[$,]/g, "")) || 0,
+        totalOrders: parseFloat(String(row.Total_Orders || 0).replace(/[$,]/g, "")) || 0,
+        // FULL VALUES: Keep original sales values with decimals
+        salesDisplay: parseFloat(String(row.Total_Sales || 0).replace(/[$,]/g, "")) || 0,
       }));
   };
 
-  // ENHANCED: Calculate moving average for weekly sales data with multiple periods
+  // ENHANCED: Calculate moving average for weekly sales data - FULL VALUES
   const calculateMovingAverage = (data: any[], periods: { [key: string]: number } = { '3week': 3, '5week': 5 }) => {
     if (data.length < 2) return data;
 
@@ -243,14 +259,14 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
           const endIndex = index + 1;
           const subset = data.slice(startIndex, endIndex);
           const average = subset.reduce((sum, d) => sum + d.salesDisplay, 0) / subset.length;
-          enhanced[`movingAverage${period}Week`] = Math.round(average);
+          enhanced[`movingAverage${period}Week`] = average;
         } else {
           // Calculate moving average for the specified period
           const startIndex = index - period + 1;
           const endIndex = index + 1;
           const subset = data.slice(startIndex, endIndex);
           const average = subset.reduce((sum, d) => sum + d.salesDisplay, 0) / period;
-          enhanced[`movingAverage${period}Week`] = Math.round(average);
+          enhanced[`movingAverage${period}Week`] = average;
         }
       });
       
@@ -258,10 +274,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
     });
   };
 
-  // REMOVED: calculateDailyTrendline function (linear trend removal)
-  // Instead, we'll focus on moving averages for trend analysis
-
-  // Enhanced daily sales processing with moving average
+  // Enhanced daily sales processing with moving average - FULL VALUES
   const processDailySalesWithMovingAverage = () => {
     const dailyData = processDailySalesData();
     
@@ -273,7 +286,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
         const average = subset.reduce((sum, d) => sum + d.sales, 0) / subset.length;
         return {
           ...item,
-          movingAverage: Math.round(average),
+          movingAverage: average,
         };
       } else {
         // Calculate 3-day moving average
@@ -281,7 +294,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
         const average = subset.reduce((sum, d) => sum + d.sales, 0) / 3;
         return {
           ...item,
-          movingAverage: Math.round(average),
+          movingAverage: average,
         };
       }
     });
@@ -412,15 +425,17 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
     </div>
   );
 
-  // Render lines for sales category chart based on table9 categories
+  // ENHANCED: Render lines for sales category chart with better error handling and tooltips
   const renderCategoryLines = () => {
-    if (salesCategoryData.length === 0) return null;
+    if (salesCategoryData.length === 0) {
+      console.log("No sales category data to render");
+      return null;
+    }
 
     // Get categories from table9 (excluding Grand Total)
-    const categories =
-      tableData.table9
-        ?.filter((row: any) => row.Category && row.Category !== "Grand Total")
-        ?.map((row: any) => row.Category) || [];
+    const categories = getCategoriesFromTable9();
+    
+    console.log("Rendering lines for categories:", categories);
 
     return categories.map((category: string, index: number) => (
       <Line
@@ -437,8 +452,40 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
           fill: "white",
         }}
         name={category}
+        connectNulls={false} // Don't connect null/undefined values
       />
     ));
+  };
+
+  // DEBUGGING: Table9 Debug Component (remove in production)
+  const Table9DebugInfo = () => {
+    if (!tableData.table9) return null;
+    
+    return (
+      <div style={{ 
+        padding: "10px", 
+        backgroundColor: "#f0f9ff", 
+        borderRadius: "4px",
+        margin: "10px 0",
+        fontSize: "12px",
+        fontFamily: "monospace",
+        border: "1px solid #0ea5e9"
+      }}>
+        <strong>📊 Table9 Debug Info:</strong>
+        <div style={{ marginTop: "8px" }}>
+          <strong>Categories:</strong> {getCategoriesFromTable9().join(", ")}
+        </div>
+        <div>
+          <strong>Weeks:</strong> {Object.keys(tableData.table9[0] || {}).filter(k => k.startsWith("Week")).join(", ")}
+        </div>
+        <details style={{ marginTop: "8px" }}>
+          <summary style={{ cursor: "pointer", fontWeight: "bold" }}>Raw Data (First 2 rows)</summary>
+          <pre style={{ marginTop: "8px", fontSize: "10px" }}>
+            {JSON.stringify(tableData.table9.slice(0, 2), null, 2)}
+          </pre>
+        </details>
+      </div>
+    );
   };
 
   return (
@@ -464,7 +511,10 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
         </Typography>
       )}
 
-      {/* UPDATED: Daily Sales Performance with Moving Average (Changed line color to green) */}
+      {/* DEBUG: Uncomment to see table9 structure */}
+      {/* <Table9DebugInfo /> */}
+
+      {/* Daily Sales Performance with Moving Average - FULL VALUES */}
       <div
         style={{
           width: "100%",
@@ -529,7 +579,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 12 }}
-                tickFormatter={(value) => `${value}k`}
+                tickFormatter={(value) => formatNumber(value)}
               />
               <Tooltip
                 content={({ active, payload, label }) => {
@@ -550,10 +600,10 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                           Day: {label}
                         </div>
                         <div style={{ color: "#4D8D8D", marginBottom: "4px" }}>
-                          Sales: ${(data.sales * 1000).toLocaleString()}
+                          Sales: {formatCurrency(data.sales)}
                         </div>
                         <div style={{ color: "#ff0000", marginBottom: "4px" }}>
-                          Moving Avg: ${(data.movingAverage * 1000).toLocaleString()}
+                          Moving Avg: {formatCurrency(data.movingAverage)}
                         </div>
                         <div style={{ color: "#666", marginBottom: "4px" }}>
                           Orders: 1,000
@@ -576,9 +626,9 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                 barSize={50}
                 radius={[4, 4, 0, 0]}
                 animationDuration={1500}
-                name="Daily Sales ($k)"
+                name="Daily Sales"
               />
-              {/* UPDATED: Moving Average Line (Changed color to red #ff0000) */}
+              {/* Moving Average Line (red color) */}
               <Line
                 type="monotone"
                 dataKey="movingAverage"
@@ -591,12 +641,11 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
             </ComposedChart>
           </ResponsiveContainer> 
         </div>
-    
       </div>
 
       {/* Second row - Category Performance Trends and Summary side by side */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
-        {/* Sales Category Line Chart from Table9 */}
+        {/* ENHANCED: Sales Category Line Chart from Table9 - FULL VALUES */}
         <div
           style={{
             width: "calc(60% - 12px)",
@@ -621,6 +670,11 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
             }}
           >
             Category Performance Trends
+          </div>
+
+          {/* ENHANCED: Data validation and debug info */}
+          <div style={{ fontSize: "12px", color: "#666", marginBottom: "10px", textAlign: "center" }}>
+            Showing {salesCategoryData.length} weeks • {getCategoriesFromTable9().length} categories
           </div>
 
           <div
@@ -652,7 +706,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                     axisLine={false}
                     tickLine={false}
                     tick={{ fontSize: 12 }}
-                    tickFormatter={(value) => `${value}k`}
+                    tickFormatter={(value) => formatNumber(value)}
                   />
                   <Tooltip
                     contentStyle={{
@@ -660,6 +714,41 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                       borderRadius: "8px",
                       boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
                       border: "none",
+                      minWidth: "250px"
+                    }}
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div
+                            style={{
+                              backgroundColor: "white",
+                              padding: "16px",
+                              border: "2px solid #4D8D8D",
+                              borderRadius: "8px",
+                              boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+                              minWidth: "200px"
+                            }}
+                          >
+                            <div style={{ fontWeight: "bold", marginBottom: "8px", color: "#333" }}>
+                              {label}
+                            </div>
+                            {payload.map((entry, index) => (
+                              <div key={index} style={{ 
+                                color: entry.color, 
+                                marginBottom: "4px",
+                                display: "flex",
+                                justifyContent: "space-between"
+                              }}>
+                                <span>{entry.name}:</span>
+                                <span style={{ fontWeight: "bold" }}>
+                                  {formatCurrency(entry.value)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }
+                      return null;
                     }}
                   />
                   <Legend
@@ -675,6 +764,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
               <div
                 style={{
                   display: "flex",
+                  flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
                   height: "100%",
@@ -682,7 +772,10 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                   fontSize: "16px",
                 }}
               >
-                No category trend data available
+                <div>No category trend data available</div>
+                <div style={{ fontSize: "14px", marginTop: "8px" }}>
+                  Expected table9 structure: Category, Week 14, Week 15, Week 16, Week 17
+                </div>
               </div>
             )}
           </div>
@@ -708,7 +801,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
         </div>
       </div>
 
-      {/* ENHANCED: Weekly Sales Trend with Multiple Moving Averages (Changed line color to blue) */}
+      {/* Weekly Sales Trend with Multiple Moving Averages - FULL VALUES */}
       {weeklySalesWithMovingAvg.length > 0 && (
         <div
           style={{
@@ -750,7 +843,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                   tick={{ fontSize: 12 }}
                 />
                 <YAxis
-                  tickFormatter={(value) => `${value}k`}
+                  tickFormatter={(value) => formatNumber(value)}
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 12 }}
@@ -774,17 +867,14 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                             style={{ margin: "0 0 8px 0", fontWeight: "bold", fontSize: "14px" }}
                           >{`${label}`}</p>
                           <p style={{ margin: "0 0 4px 0", color: "#4D8D8D", fontSize: "13px" }}>
-                            {`Total Sales: $${(data.totalSales / 1000).toFixed(1)}k`}
+                            {`Total Sales: ${formatCurrency(data.totalSales)}`}
                           </p>
                           <p style={{ margin: "0 0 4px 0", color: "#666", fontSize: "13px" }}>
-                            {`Total Orders: ${data.totalOrders}`}
+                            {`Total Orders: ${formatNumber(data.totalOrders)}`}
                           </p>
                           <p style={{ margin: "0 0 4px 0", color: "#ff0000", fontSize: "13px" }}>
-                            {`Moving Avg: ${data.movingAverage3Week}k`}
+                            {`Moving Avg: ${formatCurrency(data.movingAverage3Week)}`}
                           </p>
-                          {/* <p style={{ margin: "0", color: "#FF9800", fontSize: "13px" }}>
-                            {`5-Week Moving Avg: $${data.movingAverage5Week}k`}
-                          </p> */}
                         </div>
                       );
                     }
@@ -803,10 +893,10 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                   barSize={40}
                   radius={[4, 4, 0, 0]}
                   animationDuration={1500}
-                  name="Weekly Sales ($k)"
+                  name="Weekly Sales"
                 />
                 
-                {/* ENHANCED: Week Moving Average Line (Changed color to red #ff0000) */}
+                {/* 3-Week Moving Average Line (red color) */}
                 <Line
                   type="monotone"
                   dataKey="movingAverage3Week"
@@ -816,13 +906,9 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                   activeDot={{ r: 6, fill: "#ff0000", strokeWidth: 2 }}
                   name="Moving Average"
                 />
-                
-               
               </ComposedChart>
             </ResponsiveContainer>
           </div>
-          
-         
         </div>
       )}
 

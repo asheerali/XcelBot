@@ -406,10 +406,10 @@ const ModernBarChart = ({
               data[hoveredBar.index].label}
           </div>
           <div style={{ marginBottom: "4px" }}>
-            Total: {processedData[hoveredBar.index].total }
+            Total: {processedData[hoveredBar.index].total.toFixed(2) }
           </div>
           <div style={{ marginBottom: "4px" }}>
-            Moving Avg: {processedData[hoveredBar.index].movingAverage }
+            Moving Avg: {processedData[hoveredBar.index].movingAverage.toFixed(2) }
           </div>
           {dataKeys.map((key: string, idx: number) => (
             <div
@@ -628,38 +628,32 @@ const ModernSingleBarChart = ({
 }: any) => {
   const [hoveredBar, setHoveredBar] = React.useState<number | null>(null);
 
-  if (!data || data.length === 0) {
-    return (
-      <div
-        style={{
-          padding: "32px",
-          background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
-          borderRadius: "24px",
-          boxShadow:
-            "0 20px 40px rgba(0,0,0,0.08), 0 8px 25px rgba(0,0,0,0.04)",
-          border: "1px solid #e2e8f0",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: height,
-          width: "100%",
-        }}
-      >
-        <span style={{ color: "#64748b", fontSize: "16px", fontWeight: "500" }}>
-          No data available for {title}
-        </span>
-      </div>
-    );
-  }
+  // Helper function to format numbers properly
+  const formatNumber = (value: number): string => {
+    if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(0)}M`;
+    } else if (value >= 1000) {
+      return `${(value / 1000).toFixed(0)}K`;
+    } else {
+      return value.toFixed(0);
+    }
+  };
+
 
   // Calculate total for each day
-  const processedData = data.map((d: any) => ({
-    ...d,
-    total: dataKeys.reduce(
-      (sum: number, key: string) => sum + (d[key] || 0),
-      0
-    ),
-  }));
+    const processedData = data.map((d: any) => {
+    const total = dataKeys.reduce((sum: number, key: string) => {
+      const value = d[key] || 0;
+      // Ensure we're working with clean numbers
+      const cleanValue = typeof value === 'string' ? parseFloat(value) || 0 : Number(value) || 0;
+      return sum + cleanValue;
+    }, 0);
+    
+    return {
+      ...d,
+      total: Number(total.toFixed(0)), // Clean the total
+    };
+  });
 
   // Calculate 1-day moving average (current day)
   const movingAverageData = processedData.map((d: any, index: number) => ({
@@ -733,10 +727,10 @@ const ModernSingleBarChart = ({
               data[hoveredBar].label}
           </div>
           <div style={{ marginBottom: "4px" }}>
-            Total: {processedData[hoveredBar].total }
+            Total: {processedData[hoveredBar].total.toFixed(2)}
           </div>
           <div style={{ marginBottom: "4px" }}>
-            Moving Avg: {movingAverageData[hoveredBar].movingAverage }
+            Moving Avg: {movingAverageData[hoveredBar].movingAverage.toFixed(2)}
           </div>
           {dataKeys.map((key: string, idx: number) => (
             <div

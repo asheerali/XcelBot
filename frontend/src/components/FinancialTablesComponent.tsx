@@ -205,9 +205,9 @@ const FinancialTablesComponent: React.FC<FinancialTablesComponentProps> = ({ fin
         data: financialTables.table2 || [],
         columns: [
           { key: 'Store', label: 'Store Location', align: 'left' as const },
-          { key: 'Tw Orders', label: 'This Week', align: 'center' as const, format: 'numberWithDollar' }, // UPDATED
-          { key: 'Lw Orders', label: 'Last Week', align: 'center' as const, format: 'numberWithDollar' }, // UPDATED
-          { key: 'Ly Orders', label: 'Last Year', align: 'center' as const, format: 'numberWithDollar' }, // UPDATED
+          { key: 'Tw Orders', label: 'This Week', align: 'center' as const,  }, // UPDATED
+          { key: 'Lw Orders', label: 'Last Week', align: 'center' as const,  }, // UPDATED
+          { key: 'Ly Orders', label: 'Last Year', align: 'center' as const,  }, // UPDATED
           { key: 'Tw vs. Lw', label: 'TW vs LW', align: 'center' as const, format: 'percentage' },
           { key: 'Tw vs. Ly', label: 'TW vs LY', align: 'center' as const, format: 'percentage' }
         ]
