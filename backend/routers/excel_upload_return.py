@@ -150,9 +150,11 @@ def process_financials_and_sales_wide(request, file_content, file_name):
 def process_sales_split_and_product_mix(request, file_content, file_name):
     """Process Sales Split and Product Mix dashboard data."""
     
-    print("Dashboard type: Sales Split / Product Mix Dashboard")
+    print("Dashboard type: Sales Split / Product Mix Dashboard", request.company_id)
     
     excel_data_copy = io.BytesIO(file_content)
+
+    df = pd.read_excel(excel_data_copy)
     
     # Handle location filter
     if request.location == "Multiple Locations":
@@ -186,7 +188,8 @@ def process_sales_split_and_product_mix(request, file_content, file_name):
      unique_orders_change, total_quantity_change, sales_by_category_tables_df, 
      category_comparison_table_df, sales_by_category_by_day_table_df,
      top_vs_bottom_comparison_df) = process_pmix_file(
-        excel_data_copy, 
+        # excel_data_copy,
+        df, 
         start_date=start_date, 
         end_date=end_date,
         category_filter=category_filter,
@@ -238,7 +241,8 @@ def process_sales_split_and_product_mix(request, file_content, file_name):
      thirteen_week_category_table, pivot_table, in_house_table,
      week_over_week_table, category_summary_table, salesByWeek, 
      salesByDayOfWeek, salesByTimeOfDay, categories, locations) = process_sales_split_file(
-        excel_data_copy2, 
+        # excel_data_copy2,
+        df, 
         start_date=start_date,
         end_date=end_date,
         location=location_filter

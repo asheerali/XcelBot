@@ -23,7 +23,10 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
     print("Type of file_data: i am here", type(file_data))
     
     try:
-            if isinstance(file_data, io.BytesIO):
+            if isinstance(file_data, pd.DataFrame):
+                print("Received DataFrame directly.")
+                df = file_data
+            elif isinstance(file_data, io.BytesIO):
                 print("i am here in io.BytesIO")
                 file_data.seek(0)
                 print("Reading Excel from BytesIO object.")
