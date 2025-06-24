@@ -116,7 +116,6 @@ interface User {
   role: string;
   permissions: string[];
   assignedLocations: AssignedLocation[];
-  isActive: boolean;
   createdAt: Date;
 }
 
@@ -129,7 +128,6 @@ interface Location {
   postcode: string;
   phone?: string;
   email?: string;
-  isActive: boolean;
   manager?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -144,7 +142,6 @@ interface Company {
   phone: string;
   email?: string;
   website?: string;
-  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
   locations: Location[];
@@ -205,7 +202,6 @@ const CompanyLocationManager: React.FC = () => {
 
   // UI States
   const [selectedRole, setSelectedRole] = useState<string>("");
-  const [showInactiveOnly, setShowInactiveOnly] = useState(false);
 
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -224,7 +220,6 @@ const CompanyLocationManager: React.FC = () => {
     phone: "",
     email: "",
     website: "",
-    isActive: true,
   });
 
   const [locationForm, setLocationForm] = useState({
@@ -236,7 +231,6 @@ const CompanyLocationManager: React.FC = () => {
     phone: "",
     email: "",
     company_id: 0,
-    isActive: true,
   });
 
   const [userForm, setUserForm] = useState({
@@ -248,7 +242,6 @@ const CompanyLocationManager: React.FC = () => {
     permissions: [] as string[],
     assignedLocations: [] as AssignedLocation[],
     company_id: 0,
-    isActive: true,
   });
 
   // UI states
@@ -277,6 +270,19 @@ const CompanyLocationManager: React.FC = () => {
       const response = await axios.get(COMPANY_OVERVIEW_API_URL);
       
       if (response.status === 200) {
+        console.log('📊 Raw API Response:', response.data);
+        
+        // Debug the structure of users in the response
+        if (response.data && response.data.length > 0) {
+          const firstCompany = response.data[0];
+          console.log('🏢 First company structure:', firstCompany);
+          
+          if (firstCompany.users && firstCompany.users.length > 0) {
+            console.log('👤 First user structure:', firstCompany.users[0]);
+            console.log('👤 User properties:', Object.keys(firstCompany.users[0]));
+          }
+        }
+        
         setCompanies(response.data);
       } else {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -548,13 +554,8 @@ const CompanyLocationManager: React.FC = () => {
       );
     }
 
-    // Apply active/inactive filter
-    if (showInactiveOnly) {
-      filtered = filtered.filter((company) => !company.isActive);
-    }
-
     return filtered.sort((a, b) => a.name.localeCompare(b.name));
-  }, [companies, searchTerm, selectedRole, showInactiveOnly]);
+  }, [companies, searchTerm, selectedRole]);
 
   useEffect(() => {
     setFilteredCompanies(filteredAndSortedCompanies);
@@ -577,7 +578,6 @@ const CompanyLocationManager: React.FC = () => {
       phone: "",
       email: "",
       website: "",
-      isActive: true,
     });
 
     setLocationForm({
@@ -589,7 +589,6 @@ const CompanyLocationManager: React.FC = () => {
       phone: "",
       email: "",
       company_id: 0,
-      isActive: true,
     });
 
     setUserForm({
@@ -601,7 +600,6 @@ const CompanyLocationManager: React.FC = () => {
       permissions: [],
       assignedLocations: [],
       company_id: 0,
-      isActive: true,
     });
 
     // Reset selected entities
@@ -623,8 +621,7 @@ const CompanyLocationManager: React.FC = () => {
 
     return company.users.filter(
       (user) => 
-        user.assignedLocations.some(al => al.location_id === locationId) && 
-        user.isActive
+        user.assignedLocations.some(al => al.location_id === locationId)
     );
   };
 
@@ -691,7 +688,6 @@ const CompanyLocationManager: React.FC = () => {
       phone: company.phone,
       email: company.email || "",
       website: company.website || "",
-      isActive: company.isActive,
     });
     setDialogOpen(true);
   };
@@ -752,7 +748,6 @@ const CompanyLocationManager: React.FC = () => {
       phone: "",
       email: "",
       company_id: company_id,
-      isActive: true,
     });
     setDialogOpen(true);
   };
@@ -771,7 +766,6 @@ const CompanyLocationManager: React.FC = () => {
       phone: location.phone || "",
       email: location.email || "",
       company_id: company_id,
-      isActive: location.isActive,
     });
     setDialogOpen(true);
   };
@@ -835,27 +829,33 @@ const CompanyLocationManager: React.FC = () => {
       permissions: [],
       assignedLocations: [],
       company_id: company_id,
-      isActive: true,
     });
     setDialogOpen(true);
   };
 
   const handleEditUser = (company_id: number, user: User) => {
+    console.log('✏️ Editing User - Raw user data from API:', user);
+    console.log('📊 User properties available:', Object.keys(user));
+    
     setDialogMode("edit");
     setEntityType("user");
     setSelectedCompany(companies.find((c) => c.id === company_id) || null);
     setSelectedUser(user); // Set the selected user
-    setUserForm({
-      first_name: user.first_name,
-      last_name: user.last_name,
-      email: user.email,
+    
+    // More robust form population with fallbacks
+    const formData = {
+      first_name: user.first_name || "",
+      last_name: user.last_name || "",
+      email: user.email || "",
       phone: user.phone || "",
-      role: user.role,
-      permissions: user.permissions || [],
-      assignedLocations: user.assignedLocations || [],
+      role: user.role || "",
+      permissions: Array.isArray(user.permissions) ? user.permissions : [],
+      assignedLocations: Array.isArray(user.assignedLocations) ? user.assignedLocations : [],
       company_id: company_id,
-      isActive: user.isActive,
-    });
+    };
+    
+    console.log('📝 Setting form data for edit:', formData);
+    setUserForm(formData);
     setDialogOpen(true);
   };
 
@@ -887,7 +887,7 @@ const CompanyLocationManager: React.FC = () => {
     // Transform assigned locations to just send location IDs to backend
     const userDataForBackend = {
       ...userForm,
-      assigned_location: userForm.assignedLocations.map(al => al.location_id), // Send only location IDs
+      assigned_location_ids: userForm.assignedLocations.map(al => al.location_id), // Send only location IDs
       assignedLocations: undefined // Remove the full objects
     };
 
@@ -898,7 +898,7 @@ const CompanyLocationManager: React.FC = () => {
     console.log('📋 User Form Data (Original):', userForm);
     console.log('📤 User Data for Backend:', userDataForBackend);
     console.log('🏢 Associated Company:', selectedCompany?.name, '(ID:', selectedCompany?.id, ')');
-    console.log('📍 Assigned Location IDs:', userDataForBackend.assigned_location);
+    console.log('📍 Assigned Location IDs:', userDataForBackend.assigned_location_ids);
     console.log('🔐 Permissions:', userForm.permissions);
 
     try {
@@ -941,32 +941,19 @@ const CompanyLocationManager: React.FC = () => {
 
   const getStatsData = () => {
     const totalCompanies = companies.length;
-    const activeCompanies = companies.filter((c) => c.isActive).length;
     const totalLocations = companies.reduce(
       (acc, company) => acc + company.locations.length,
-      0
-    );
-    const activeLocations = companies.reduce(
-      (acc, company) =>
-        acc + company.locations.filter((l) => l.isActive).length,
       0
     );
     const totalUsers = companies.reduce(
       (acc, company) => acc + company.users.length,
       0
     );
-    const activeUsers = companies.reduce(
-      (acc, company) => acc + company.users.filter((u) => u.isActive).length,
-      0
-    );
 
     return {
       totalCompanies,
-      activeCompanies,
       totalLocations,
-      activeLocations,
       totalUsers,
-      activeUsers,
     };
   };
 
@@ -1055,18 +1042,9 @@ const CompanyLocationManager: React.FC = () => {
                   <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
                     {stats.totalCompanies}
                   </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
                     Companies
                   </Typography>
-                  <Chip 
-                    label={`${stats.activeCompanies} active`}
-                    size="small"
-                    sx={{ 
-                      backgroundColor: "rgba(76, 175, 80, 0.9)", 
-                      color: "white",
-                      fontWeight: 600
-                    }}
-                  />
                 </CardContent>
               </Card>
             </Grid>
@@ -1092,18 +1070,9 @@ const CompanyLocationManager: React.FC = () => {
                   <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
                     {stats.totalLocations}
                   </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
                     Locations
                   </Typography>
-                  <Chip 
-                    label={`${stats.activeLocations} active`}
-                    size="small"
-                    sx={{ 
-                      backgroundColor: "rgba(76, 175, 80, 0.9)", 
-                      color: "white",
-                      fontWeight: 600
-                    }}
-                  />
                 </CardContent>
               </Card>
             </Grid>
@@ -1129,18 +1098,9 @@ const CompanyLocationManager: React.FC = () => {
                   <Typography variant="h4" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
                     {stats.totalUsers}
                   </Typography>
-                  <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
                     Users
                   </Typography>
-                  <Chip 
-                    label={`${stats.activeUsers} active`}
-                    size="small"
-                    sx={{ 
-                      backgroundColor: "rgba(76, 175, 80, 0.9)", 
-                      color: "white",
-                      fontWeight: 600
-                    }}
-                  />
                 </CardContent>
               </Card>
             </Grid>
@@ -1192,7 +1152,7 @@ const CompanyLocationManager: React.FC = () => {
         <Card sx={{ mb: 3, borderRadius: 2 }}>
           <CardContent>
             <Grid container spacing={3} alignItems="center">
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={8}>
                 <TextField
                   fullWidth
                   variant="outlined"
@@ -1204,7 +1164,7 @@ const CompanyLocationManager: React.FC = () => {
                   }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} md={4}>
                 <FormControl fullWidth>
                   <InputLabel>👔 Filter by Role</InputLabel>
                   <Select
@@ -1228,17 +1188,6 @@ const CompanyLocationManager: React.FC = () => {
                     ))}
                   </Select>
                 </FormControl>
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={showInactiveOnly}
-                      onChange={(e) => setShowInactiveOnly(e.target.checked)}
-                    />
-                  }
-                  label="🚫 Show Inactive Only"
-                />
               </Grid>
             </Grid>
           </CardContent>
@@ -1269,7 +1218,6 @@ const CompanyLocationManager: React.FC = () => {
                 <TableCell sx={{ fontWeight: 700, fontSize: "1rem" }}>Contact</TableCell>
                 <TableCell sx={{ fontWeight: 700, fontSize: "1rem" }}>Locations</TableCell>
                 <TableCell sx={{ fontWeight: 700, fontSize: "1rem" }}>Users</TableCell>
-                <TableCell sx={{ fontWeight: 700, fontSize: "1rem" }}>Status</TableCell>
                 <TableCell sx={{ fontWeight: 700, fontSize: "1rem" }}>Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -1281,15 +1229,14 @@ const CompanyLocationManager: React.FC = () => {
                     sx={{ 
                       '&:hover': { 
                         backgroundColor: '#f8f9fa',
-                      },
-                      borderLeft: company.isActive ? '4px solid #4caf50' : '4px solid #f44336'
+                      }
                     }}
                   >
                     <TableCell>
                       <Box sx={{ display: "flex", alignItems: "center" }}>
                         <Avatar
                           sx={{
-                            bgcolor: company.isActive ? "#1a237e" : "grey.500",
+                            bgcolor: "#1a237e",
                             mr: 2,
                             width: 40,
                             height: 40,
@@ -1347,14 +1294,6 @@ const CompanyLocationManager: React.FC = () => {
                         size="small"
                         color="info"
                         variant="outlined"
-                      />
-                    </TableCell>
-                    
-                    <TableCell>
-                      <Chip
-                        label={company.isActive ? "✅ Active" : "❌ Inactive"}
-                        color={company.isActive ? "success" : "error"}
-                        size="small"
                       />
                     </TableCell>
                     
@@ -1456,7 +1395,6 @@ const CompanyLocationManager: React.FC = () => {
                                       <TableCell sx={{ fontWeight: 700, color: "white" }}>City & State</TableCell>
                                       <TableCell sx={{ fontWeight: 700, color: "white" }}>Contact</TableCell>
                                       <TableCell sx={{ fontWeight: 700, color: "white" }}>Assigned Users</TableCell>
-                                      <TableCell sx={{ fontWeight: 700, color: "white" }}>Status</TableCell>
                                       <TableCell sx={{ fontWeight: 700, color: "white" }}>Actions</TableCell>
                                     </TableRow>
                                   </TableHead>
@@ -1474,9 +1412,7 @@ const CompanyLocationManager: React.FC = () => {
                                           <Box sx={{ display: "flex", alignItems: "center" }}>
                                             <Avatar
                                               sx={{
-                                                background: location.isActive 
-                                                  ? "linear-gradient(45deg, #f093fb 30%, #f5576c 90%)" 
-                                                  : "linear-gradient(45deg, #bdbdbd 30%, #757575 90%)",
+                                                background: "linear-gradient(45deg, #f093fb 30%, #f5576c 90%)",
                                                 mr: 2,
                                                 width: 36,
                                                 height: 36,
@@ -1557,17 +1493,6 @@ const CompanyLocationManager: React.FC = () => {
                                               />
                                             )}
                                           </Box>
-                                        </TableCell>
-                                        
-                                        <TableCell>
-                                          <Chip
-                                            label={location.isActive ? "✅ Active" : "❌ Inactive"}
-                                            sx={{
-                                              backgroundColor: location.isActive ? "#4caf50" : "#f44336",
-                                              color: "white",
-                                              fontWeight: 700
-                                            }}
-                                          />
                                         </TableCell>
                                         
                                         <TableCell>
@@ -1683,7 +1608,6 @@ const CompanyLocationManager: React.FC = () => {
                                       <TableCell sx={{ fontWeight: 700, color: "white" }}>Role</TableCell>
                                       <TableCell sx={{ fontWeight: 700, color: "white" }}>Assigned Locations</TableCell>
                                       <TableCell sx={{ fontWeight: 700, color: "white" }}>Permissions</TableCell>
-                                      <TableCell sx={{ fontWeight: 700, color: "white" }}>Status</TableCell>
                                       <TableCell sx={{ fontWeight: 700, color: "white" }}>Actions</TableCell>
                                     </TableRow>
                                   </TableHead>
@@ -1711,7 +1635,10 @@ const CompanyLocationManager: React.FC = () => {
                                             </Avatar>
                                             <Box>
                                               <Typography variant="subtitle2" fontWeight="bold">
-                                                {user.first_name} {user.last_name}
+                                                {user.first_name && user.last_name 
+                                                  ? `${user.first_name} ${user.last_name}`.trim()
+                                                  : user.email || 'Unknown User'
+                                                }
                                               </Typography>
                                               <Chip
                                                 label={`ID: ${user.id}`}
@@ -1787,17 +1714,6 @@ const CompanyLocationManager: React.FC = () => {
                                               color: "white",
                                               fontWeight: 700,
                                               boxShadow: "0 2px 4px rgba(156, 39, 176, 0.3)"
-                                            }}
-                                          />
-                                        </TableCell>
-                                        
-                                        <TableCell>
-                                          <Chip
-                                            label={user.isActive ? "✅ Active" : "❌ Inactive"}
-                                            sx={{
-                                              backgroundColor: user.isActive ? "#4caf50" : "#f44336",
-                                              color: "white",
-                                              fontWeight: 700
                                             }}
                                           />
                                         </TableCell>
@@ -2132,29 +2048,6 @@ const CompanyLocationManager: React.FC = () => {
                   }}
                 />
               </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={companyForm.isActive}
-                      onChange={(e) => setCompanyForm({ ...companyForm, isActive: e.target.checked })}
-                      sx={{
-                        "& .MuiSwitch-switchBase.Mui-checked": {
-                          color: "#667eea",
-                        },
-                        "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                          backgroundColor: "#667eea",
-                        },
-                      }}
-                    />
-                  }
-                  label={
-                    <Typography sx={{ fontWeight: 600, color: "#667eea" }}>
-                      ✅ Active Company
-                    </Typography>
-                  }
-                />
-              </Grid>
             </Grid>
           )}
 
@@ -2223,17 +2116,6 @@ const CompanyLocationManager: React.FC = () => {
                   label="📧 Email"
                   value={locationForm.email}
                   onChange={(e) => setLocationForm({ ...locationForm, email: e.target.value })}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={locationForm.isActive}
-                      onChange={(e) => setLocationForm({ ...locationForm, isActive: e.target.checked })}
-                    />
-                  }
-                  label="✅ Active Location"
                 />
               </Grid>
               <Grid item xs={12}>
