@@ -109,8 +109,9 @@ interface AssignedLocation {
 
 interface User {
   id: number;
-  first_name: string;
-  last_name: string;
+  first_name?: string; // Made optional to handle API inconsistencies
+  last_name?: string;  // Made optional to handle API inconsistencies
+  name?: string;       // API sometimes returns this instead
   email: string;
   phone?: string;
   role: string;
@@ -540,8 +541,9 @@ const CompanyLocationManager: React.FC = () => {
           ) ||
           company.users.some(
             (user) =>
-              user.first_name.toLowerCase().includes(searchLower) ||
-              user.last_name.toLowerCase().includes(searchLower) ||
+              (user.first_name && user.first_name.toLowerCase().includes(searchLower)) ||
+              (user.last_name && user.last_name.toLowerCase().includes(searchLower)) ||
+              (user.name && user.name.toLowerCase().includes(searchLower)) || // Handle API's name field
               user.email.toLowerCase().includes(searchLower)
           )
       );
@@ -634,13 +636,22 @@ const CompanyLocationManager: React.FC = () => {
     return location ? location.name : "Unknown Location";
   };
 
-  // Get user name by ID
+  // Get user name by ID - handle both API structures
   const getUserName = (company_id: number, userId: number) => {
     const company = companies.find((c) => c.id === company_id);
     if (!company) return "Unknown User";
 
     const user = company.users.find((u) => u.id === userId);
-    return user ? `${user.first_name} ${user.last_name}`.trim() : "Unknown User";
+    if (!user) return "Unknown User";
+    
+    // Handle both API structures: name field OR first_name + last_name
+    if (user.name) {
+      return user.name;
+    } else if (user.first_name || user.last_name) {
+      return `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    } else {
+      return user.email || "Unknown User";
+    }
   };
 
   // Toggle functions
@@ -842,10 +853,25 @@ const CompanyLocationManager: React.FC = () => {
     setSelectedCompany(companies.find((c) => c.id === company_id) || null);
     setSelectedUser(user); // Set the selected user
     
+    // Handle both API structures - when API returns 'name' field, try to split it
+    let firstName = "";
+    let lastName = "";
+    
+    if (user.first_name && user.last_name) {
+      // API returns separate first_name and last_name
+      firstName = user.first_name;
+      lastName = user.last_name;
+    } else if (user.name) {
+      // API returns single 'name' field - try to split it
+      const nameParts = user.name.trim().split(' ');
+      firstName = nameParts[0] || "";
+      lastName = nameParts.slice(1).join(' ') || "";
+    }
+    
     // More robust form population with fallbacks
     const formData = {
-      first_name: user.first_name || "",
-      last_name: user.last_name || "",
+      first_name: firstName,
+      last_name: lastName,
       email: user.email || "",
       phone: user.phone || "",
       role: user.role || "",
@@ -864,10 +890,15 @@ const CompanyLocationManager: React.FC = () => {
       .flatMap(c => c.users)
       .find(u => u.id === userId);
       
-    if (
-      user &&
-      window.confirm(`Are you sure you want to delete user "${user.first_name} ${user.last_name}"?`)
-    ) {
+    if (!user) return;
+    
+    // Handle both API structures for display name
+    const displayName = user.name ? user.name :
+                       user.first_name && user.last_name 
+                         ? `${user.first_name} ${user.last_name}`.trim()
+                         : user.email || 'Unknown User';
+      
+    if (window.confirm(`Are you sure you want to delete user "${displayName}"?`)) {
       await deleteUser(userId);
     }
   };
@@ -1472,7 +1503,12 @@ const CompanyLocationManager: React.FC = () => {
                                             {getUsersForLocation(company.id, location.id).slice(0, 2).map((user) => (
                                               <Chip
                                                 key={user.id}
-                                                label={`${user.first_name} ${user.last_name}`.trim()}
+                                                label={
+                                                  user.name ? user.name :
+                                                  user.first_name && user.last_name 
+                                                    ? `${user.first_name} ${user.last_name}`.trim()
+                                                    : user.email || 'Unknown User'
+                                                }
                                                 size="small"
                                                 sx={{
                                                   background: "linear-gradient(45deg, #4facfe 30%, #00f2fe 90%)",
@@ -1635,7 +1671,9 @@ const CompanyLocationManager: React.FC = () => {
                                             </Avatar>
                                             <Box>
                                               <Typography variant="subtitle2" fontWeight="bold">
-                                                {user.first_name && user.last_name 
+                                                {/* Handle both API structures */}
+                                                {user.name ? user.name :
+                                                 user.first_name && user.last_name 
                                                   ? `${user.first_name} ${user.last_name}`.trim()
                                                   : user.email || 'Unknown User'
                                                 }
@@ -1878,7 +1916,12 @@ const CompanyLocationManager: React.FC = () => {
             <Typography variant="body2" sx={{ opacity: 0.9, mt: 1 }}>
               {entityType === "company" && selectedCompany && `Editing: ${selectedCompany.name}`}
               {entityType === "location" && selectedLocation && `Editing: ${selectedLocation.name}`}
-              {entityType === "user" && selectedUser && `Editing: ${selectedUser.first_name} ${selectedUser.last_name}`}
+              {entityType === "user" && selectedUser && `Editing: ${
+                selectedUser.name ? selectedUser.name :
+                selectedUser.first_name && selectedUser.last_name 
+                  ? `${selectedUser.first_name} ${selectedUser.last_name}`.trim()
+                  : selectedUser.email || 'Unknown User'
+              }`}
             </Typography>
           )}
         </DialogTitle>
@@ -2128,6 +2171,29 @@ const CompanyLocationManager: React.FC = () => {
 
           {entityType === "user" && (
             <Grid container spacing={3} sx={{ mt: 1 }}>
+              {/* Debug info for troubleshooting API structure */}
+              {dialogMode === "edit" && selectedUser && (
+                <Grid item xs={12}>
+                  <Box sx={{ 
+                    p: 2, 
+                    backgroundColor: "rgba(255, 193, 7, 0.1)", 
+                    borderRadius: 1,
+                    border: "1px solid rgba(255, 193, 7, 0.3)",
+                    mb: 2
+                  }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: "#f57c00" }}>
+                      🐛 Debug Info - API Structure
+                    </Typography>
+                    <Typography variant="caption" sx={{ display: "block", mt: 1 }}>
+                      Raw User: {JSON.stringify(selectedUser, null, 2)}
+                    </Typography>
+                    <Typography variant="caption" sx={{ display: "block", mt: 1 }}>
+                      Form Data: {JSON.stringify(userForm, null, 2)}
+                    </Typography>
+                  </Box>
+                </Grid>
+              )}
+              
               {/* Hidden Company ID field */}
               <input
                 type="hidden"
