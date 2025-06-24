@@ -12,7 +12,7 @@ from sales_split_dashboard.sales_split_prcoessor import process_sales_split_file
 from constants import *
 
 
-def process_dashboard_data(request, file_content, file_name):
+def process_dashboard_data(request, df, file_name, company_id=None):
     """
     Process dashboard data based on the dashboard type specified in the request.
     
@@ -26,10 +26,10 @@ def process_dashboard_data(request, file_content, file_name):
     """
     
     if request.dashboard in ["Financials and Sales Wide", "Financials", "Sales Wide", "Companywide"]:
-        return process_financials_and_sales_wide(request, file_content, file_name)
+        return process_financials_and_sales_wide(request, df, file_name, company_id)
     
     elif request.dashboard in ["Sales Split and Product Mix", "Sales Split", "Product Mix"]:
-        return process_sales_split_and_product_mix(request, file_content, file_name)
+        return process_sales_split_and_product_mix(request, df, file_name, company_id)
     
     else:
         # Default case for unsupported dashboards
@@ -52,17 +52,17 @@ def process_dashboard_data(request, file_content, file_name):
         }]
 
 
-def process_financials_and_sales_wide(request, file_content, file_name):
+def process_financials_and_sales_wide(request, df, file_name, company_id=None):
     """Process Financials and Sales Wide dashboard data."""
     
     print("Dashboard type:", request.dashboard)
-    excel_data_copy = io.BytesIO(file_content)
+    # excel_data_copy = io.BytesIO(file_content)
 
     # Process financials data
     (financials_weeks, financials_years, financials_stores, financials_sales_table, 
      financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table, 
      years, dates, stores) = process_financials_file(
-        excel_data_copy,  
+        df,  
         year="All", 
         week_range="All", 
         location="All" 
@@ -95,6 +95,7 @@ def process_financials_and_sales_wide(request, file_content, file_name):
         "table14": financials_orders_by_day_df.to_dict(orient='records'),
         "table15": financials_average_ticket_df.to_dict(orient='records'),
         "table16": financials_kpi_vs_budget_df.to_dict(orient='records'),
+        "company_id": company_id,
         "fileName": file_name,
         "locations": stores,
         "years": years,
@@ -107,10 +108,10 @@ def process_financials_and_sales_wide(request, file_content, file_name):
     startDate='2025-03-17' 
     endDate='2025-06-15'
     # Process companywide/sales wide data
-    excel_data_copy2 = io.BytesIO(file_content)
+    # excel_data_copy2 = io.BytesIO(file_content)
     (sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, 
      spmh_df, years, dates, stores) = process_companywide_file(
-        excel_data_copy2, 
+        df, 
         store_filter='All', 
         year_filter=None, 
         quarter_filter='All', 
@@ -127,6 +128,7 @@ def process_financials_and_sales_wide(request, file_content, file_name):
         "table5": reg_pay_df.to_dict(orient='records'),
         "table6": lb_hrs_df.to_dict(orient='records'),
         "table7": spmh_df.to_dict(orient='records'),
+        "company_id": company_id,
         "locations": stores,
         "years": years,
         "dates": dates,
@@ -147,14 +149,11 @@ def process_financials_and_sales_wide(request, file_content, file_name):
         return [sales_wide_result]
 
 
-def process_sales_split_and_product_mix(request, file_content, file_name):
+def process_sales_split_and_product_mix(request, df, file_name, company_id=None):
     """Process Sales Split and Product Mix dashboard data."""
     
     print("Dashboard type: Sales Split / Product Mix Dashboard", request.company_id)
-    
-    excel_data_copy = io.BytesIO(file_content)
 
-    df = pd.read_excel(excel_data_copy)
     
     # Handle location filter
     if request.location == "Multiple Locations":
@@ -226,6 +225,7 @@ def process_sales_split_and_product_mix(request, file_content, file_name):
         "table11": category_comparison_table_df.to_dict(orient='records'),
         "table12": top_vs_bottom_comparison_df.to_dict(orient='records'),
         "table13": sales_by_category_by_day_table_df.to_dict(orient='records'),
+        "company_id": company_id,
         "locations": locations,
         "servers": server,
         "categories": category,
@@ -236,7 +236,7 @@ def process_sales_split_and_product_mix(request, file_content, file_name):
     }
 
     # Process Sales Split data
-    excel_data_copy2 = io.BytesIO(file_content)
+    # excel_data_copy2 = io.BytesIO(file_content)
     (sales_by_day_table, sales_by_category_table, category_comparison_table, 
      thirteen_week_category_table, pivot_table, in_house_table,
      week_over_week_table, category_summary_table, salesByWeek, 
@@ -260,6 +260,7 @@ def process_sales_split_and_product_mix(request, file_content, file_name):
         "table9": sales_by_category_table.to_dict(orient='records'),
         "table10": category_comparison_table.to_dict(orient='records'),
         "table11": thirteen_week_category_table.to_dict(orient='records'),
+        "company_id": company_id,
         "locations": locations,
         "categories": categories,
         "dashboardName": "Sales Split",

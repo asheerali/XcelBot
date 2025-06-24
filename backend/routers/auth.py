@@ -27,7 +27,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 SECRET_KEY = os.getenv("SECRET_KEY", "secret")  # Replace in prod
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 2000
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 
@@ -145,7 +145,7 @@ dummy_dashboard_data = [sales_wide_dummy, financials_dummy, pmix_dummy,sales_spl
 # ---------------------- AUTH UTILS ----------------------
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=2000))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -302,7 +302,8 @@ def signin(credentials: SignInInput, db: Session = Depends(get_db)):
     print(f"User {user.email} signed in with role: {user.role}")
 
     # Generate token
-    token = create_access_token(data={"sub": user.email})
+    token = create_access_token(data={"sub": user.email},
+                                 expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
 
     # Determine accessible file based on user role
     file_record = None

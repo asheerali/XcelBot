@@ -17,6 +17,7 @@ class ExcelUploadRequest(BaseModel):
 
 class SalesSplitPmixUploadRequest(BaseModel):
     fileName: str
+    company_id: Optional[int] = None  # Optional company ID filter
     dashboard: Optional[str] = None
     dashboardName: Optional[str] = None
     startDate: Optional[str] = None
@@ -30,6 +31,7 @@ class SalesSplitPmixUploadRequest(BaseModel):
 class FinancialCompanyWideUploadRequest(BaseModel):
     fileName: str
     dashboardName: Optional[str] = None
+    company_id: Optional[int] = None  # Optional company ID filter
     dashboard: Optional[str] = None
     location: Optional[Union[str, List[str]]] = None
     locations: Optional[List[str]] = None
@@ -67,6 +69,7 @@ class DashboardResponse(BaseModel):
     table15: Optional[List[Dict[str, Any]]] = None
     table16: Optional[List[Dict[str, Any]]] = None
     table17: Optional[List[Dict[str, Any]]] = None
+    company_id: Optional[int] = None  # Optional company ID filter
     locations: Optional[List[Any]] = None
     servers: Optional[List[Any]] = None
     categories: Optional[List[Any]] = None
