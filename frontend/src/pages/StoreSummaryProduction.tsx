@@ -761,70 +761,7 @@ const StoreSummaryProduction = () => {
         </CardContent>
       </Card>
 
-      {/* Store Locations Grid */}
-      <Card sx={{ mb: 3, borderRadius: 2 }}>
-        <CardContent>
-          <Grid container spacing={3}>
-            {storeLocations.map((store, index) => (
-              <Grid item xs={12} md={6} key={index}>
-                <Paper 
-                  variant="outlined" 
-                  sx={{ 
-                    p: 2, 
-                    borderRadius: 2,
-                    '&:hover': { boxShadow: 2 },
-                    transition: 'box-shadow 0.2s'
-                  }}
-                >
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <StoreIcon color="primary" />
-                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                        {store.name}
-                      </Typography>
-                      <Chip 
-                        icon={<CheckCircleIcon />}
-                        label={store.status} 
-                        color="success" 
-                        size="small"
-                      />
-                    </Box>
-                  </Box>
-                  
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    {store.lastUpdated}
-                  </Typography>
-                  
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary">Items Ordered:</Typography>
-                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                        {store.itemsOrdered}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ textAlign: 'right' }}>
-                      <Typography variant="body2" color="text.secondary">Total Value:</Typography>
-                      <Typography variant="h6" sx={{ fontWeight: 600, color: 'success.main' }}>
-                        ${store.totalValue.toFixed(2)}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  
-                  <Button 
-                    variant="outlined" 
-                    size="small" 
-                    fullWidth
-                    onClick={() => handleViewDetails(store.name)}
-                  >
-                    View Details
-                  </Button>
-                </Paper>
-              </Grid>
-            ))}
-          </Grid>
-        </CardContent>
-      </Card>
-
+  
       {/* Consolidated Production Requirements */}
       <Card sx={{ borderRadius: 2 }}>
         <CardContent>
