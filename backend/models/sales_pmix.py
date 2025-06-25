@@ -55,10 +55,3 @@ class SalesPMix(Base):
     Year = Column(Integer, nullable=True)
     Category = Column(String(100), nullable=True)
     
-    # # Define unique constraint to prevent duplicates
-    # __table_args__ = (
-    #     UniqueConstraint(
-    #         'company_id', 'Order_Id', 'Item_Selection_Id', 'Sent_Date', "Net_Price",
-    #         name='unique_sales_record'
-    #     ),
-    # )
