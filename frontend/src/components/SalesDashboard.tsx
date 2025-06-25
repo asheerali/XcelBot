@@ -88,7 +88,7 @@ interface ProductMixData {
     [key: string]: any; // This allows for different time periods
   }>;
   table13?: Array<{
-    "Sales Category": string;
+    Sales_Category: string; // FIXED: Updated to use Sales_Category with underscore
     "Grand Total": number;
     Monday?: number;
     Tuesday?: number;
@@ -115,79 +115,11 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
     data: any;
   } | null>(null);
 
-  // Sample data for demonstration
-  const sampleData = {
-    table1: [{
-      net_sales: [125000],
-      net_sales_change: [15.2],
-      orders: [1250],
-      orders_change: [8.5],
-      qty_sold: [3500],
-      qty_sold_change: [12.1],
-      average_order_value: [100],
-      average_order_value_change: [6.2],
-      average_items_per_order: [2.8],
-      average_items_per_order_change: [3.8],
-    }],
-    table13: [
-      {
-        "Sales Category": "Food",
-        "Grand Total": 85000,
-        Monday: 12000,
-        Tuesday: 11500,
-        Wednesday: 13000,
-        Thursday: 14500,
-        Friday: 16000,
-        Saturday: 18000,
-        Sunday: 15000,
-      },
-      {
-        "Sales Category": "Beverages",
-        "Grand Total": 35000,
-        Monday: 5000,
-        Tuesday: 4800,
-        Wednesday: 5200,
-        Thursday: 5800,
-        Friday: 6200,
-        Saturday: 7000,
-        Sunday: 6000,
-      },
-      {
-        "Sales Category": "Desserts",
-        "Grand Total": 15000,
-        Monday: 2100,
-        Tuesday: 2000,
-        Wednesday: 2300,
-        Thursday: 2400,
-        Friday: 2600,
-        Saturday: 2800,
-        Sunday: 2500,
-      },
-    ],
-    table11: [
-      {
-        "Sales Category": "Food",
-        This_4_Weeks_Sales: 85000,
-        Last_4_Weeks_Sales: 78000,
-        Percent_Change: 9.0,
-      },
-      {
-        "Sales Category": "Beverages",
-        This_4_Weeks_Sales: 35000,
-        Last_4_Weeks_Sales: 32000,
-        Percent_Change: 9.4,
-      },
-      {
-        "Sales Category": "Desserts",
-        This_4_Weeks_Sales: 15000,
-        Last_4_Weeks_Sales: 16000,
-        Percent_Change: -6.3,
-      },
-    ]
-  };
+  // Use ONLY backend data - no fallback to dummy data
+  const data = productMixData;
 
-  // Use sample data if no productMixData is provided
-  const data = productMixData || sampleData;
+  // Debug log to see what data is being received from backend
+  console.log("ProductMixData received from backend:", data);
 
   // Extract summary data from table1 with proper handling
   const summaryData = data?.table1?.[0] || {};
@@ -351,16 +283,26 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
     );
   };
 
-  // NEW: Enhanced Sales Trend Bar Chart Component using table13 data with Recharts
+  // FIXED: Enhanced Sales Trend Bar Chart Component using table13 data with correct field name
   const SalesTrendChart = () => {
-    // Get all categories from table13 (dynamic data from backend)
-    // Filter out empty sales categories and Grand Total
-    const allCategories = (productMixData?.table13 || []).filter(
-      (item) =>
-        item["Sales Category"] &&
-        item["Sales Category"].trim() !== "" &&
-        item["Sales Category"] !== "Grand Total"
+    // FIXED: Get all categories from table13 using Sales_Category (with underscore)
+    // Include empty Sales_Category if it has sales data, but exclude "Grand Total"
+    const allCategories = (data?.table13 || []).filter(
+      (item) => {
+        const isGrandTotal = item["Sales_Category"] === "Grand Total";
+        const hasValidCategory = item["Sales_Category"] !== undefined && item["Sales_Category"] !== null;
+        console.log(`Filtering item: "${item["Sales_Category"]}" - isGrandTotal: ${isGrandTotal}, hasValidCategory: ${hasValidCategory}, Monday: ${item.Monday}`);
+        return !isGrandTotal && hasValidCategory;
+      }
     );
+
+    console.log("All categories found:", allCategories); // Debug log
+    console.log("Categories with sales data:", allCategories.map(cat => ({
+      category: cat["Sales_Category"] || "(empty)",
+      monday: cat.Monday,
+      tuesday: cat.Tuesday,
+      wednesday: cat.Wednesday
+    }))); // Debug log
 
     if (allCategories.length === 0) {
       return (
@@ -372,9 +314,14 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
             height: "400px",
             color: "#666",
             fontSize: "16px",
+            flexDirection: "column",
+            gap: "10px"
           }}
         >
-          No category data available
+          <div>No category data available</div>
+          <div style={{ fontSize: "12px", color: "#999" }}>
+            Found {(data?.table13 || []).length} total items in table13
+          </div>
         </div>
       );
     }
@@ -442,7 +389,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
       const categoryBreakdown = [];
       
       allCategories.forEach((category, index) => {
-        const categoryName = category["Sales Category"];
+        const categoryName = category["Sales_Category"] || "Other Items"; // FIXED: Handle empty category names
         const categoryValue = category[day] || 0;
         totalSales += categoryValue;
         
@@ -460,6 +407,13 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
       
       dataPoint.totalSales = totalSales;
       dataPoint.categoryBreakdown = categoryBreakdown;
+      
+      // Debug log to verify totals
+      if (day === "Monday") {
+        console.log(`📊 Monday total calculated: ${totalSales}`);
+        console.log(`📊 Monday categories included:`, categoryBreakdown);
+        console.log(`📊 Expected Monday total: $119,925`);
+      }
       
       return dataPoint;
     });
@@ -523,7 +477,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
             >
               <span>{label}</span>
               <span style={{ color: "#4caf50", fontWeight: "bold" }}>
-                Total: ${total}
+                Total: ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             
@@ -573,7 +527,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
                     flexShrink: 0,
                     fontSize: "11px"
                   }}>
-                    ${entry.value}
+                    ${entry.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               ))}
@@ -618,7 +572,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
             <YAxis 
               tick={{ fontSize: 12 }}
               stroke="#666"
-              tickFormatter={(value) => String(value)}
+              tickFormatter={(value) => `${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend 
@@ -653,7 +607,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
   // UPDATED: Get categories data using ONLY table11 - showing exact table11 fields
   const getCategoriesData = () => {
     // PRIORITY: Use ONLY table11 data (no fallbacks to table10 or table13)
-    const table11Categories = (productMixData?.table11 || [])
+    const table11Categories = (data?.table11 || [])
       .filter(
         (item) =>
           item["Sales Category"] &&
@@ -734,84 +688,112 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
           '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
       }}
     >
-      {/* First row - ALL 5 Stats Cards in one row */}
-      <div style={{ width: "100%" }}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(5, 1fr)",
-            gap: "16px",
-            marginBottom: "24px",
-          }}
-        >
-          <StatCard
-            title="Net Sales"
-            value={netSales}
-            change={netSalesChange}
-            color="#1e88e5"
-            formatValue={(v) => `$${v}`}
-          />
-
-          <StatCard
-            title="Orders"
-            value={orders}
-            change={ordersChange}
-            color="#7cb342"
-            formatValue={(v) => String(v)}
-          />
-
-          <StatCard
-            title="Qty Sold"
-            value={qtySold}
-            change={qtySoldChange}
-            color="#fb8c00"
-            formatValue={(v) => String(v)}
-          />
-
-          <StatCard
-            title="Avg Order Value"
-            value={averageOrderValue}
-            change={averageOrderValueChange}
-            color="#9c27b0"
-            formatValue={(v) => `${v}`}
-          />
-
-          <StatCard
-            title="Average items per order"
-            value={averageItemsPerOrder}
-            change={averageItemsPerOrderChange}
-            color="#f44336"
-            formatValue={(v) => String(v)}
-          />
-        </div>
-      </div>
-
-      {/* Second row - Sales Trend Bar Chart using table13 data */}
-      <div style={{ width: "100%" }}>
-        <div
-          style={{
-            padding: "12px",
-            borderRadius: "8px",
-            height: "100%",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-            backgroundColor: "white",
-            minHeight: "500px",
-          }}
-        >
+      {/* First row - ALL 5 Stats Cards in one row - Only show if table1 data exists */}
+      {data?.table1?.[0] ? (
+        <div style={{ width: "100%" }}>
           <div
             style={{
-              fontSize: "18px",
-              fontWeight: "bold",
-              marginBottom: "12px",
+              display: "grid",
+              gridTemplateColumns: "repeat(5, 1fr)",
+              gap: "16px",
+              marginBottom: "24px",
             }}
           >
-            Daily Sales Overview
-          </div>
+            <StatCard
+              title="Net Sales"
+              value={netSales}
+              change={netSalesChange}
+              color="#1e88e5"
+              formatValue={(v) => `${v.toLocaleString('en-US')}`}
+            />
 
-          {/* Enhanced Bar Chart using table13 data */}
-          <SalesTrendChart />
+            <StatCard
+              title="Orders"
+              value={orders}
+              change={ordersChange}
+              color="#7cb342"
+              formatValue={(v) => v.toLocaleString('en-US')}
+            />
+
+            <StatCard
+              title="Qty Sold"
+              value={qtySold}
+              change={qtySoldChange}
+              color="#fb8c00"
+              formatValue={(v) => v.toLocaleString('en-US')}
+            />
+
+            <StatCard
+              title="Avg Order Value"
+              value={averageOrderValue}
+              change={averageOrderValueChange}
+              color="#9c27b0"
+              formatValue={(v) => `${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            />
+
+            <StatCard
+              title="Average items per order"
+              value={averageItemsPerOrder}
+              change={averageItemsPerOrderChange}
+              color="#f44336"
+              formatValue={(v) => v.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+            />
+          </div>
         </div>
-      </div>
+      ) : (
+        <div style={{
+          padding: "40px",
+          textAlign: "center",
+          backgroundColor: "white",
+          borderRadius: "8px",
+          color: "#666",
+          border: "1px dashed #ddd",
+          marginBottom: "24px"
+        }}>
+          No summary statistics available. Please ensure your backend is providing table1 data with the required fields.
+        </div>
+      )}
+
+      {/* Second row - Sales Trend Bar Chart using table13 data - Only show if table13 data exists */}
+      {data?.table13 && data.table13.length > 0 ? (
+        <div style={{ width: "100%" }}>
+          <div
+            style={{
+              padding: "12px",
+              borderRadius: "8px",
+              height: "100%",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+              backgroundColor: "white",
+              minHeight: "500px",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "18px",
+                fontWeight: "bold",
+                marginBottom: "12px",
+              }}
+            >
+              Daily Sales Overview
+            </div>
+
+            {/* Enhanced Bar Chart using table13 data */}
+            <SalesTrendChart />
+          </div>
+        </div>
+      ) : (
+        <div style={{
+          padding: "40px",
+          textAlign: "center",
+          backgroundColor: "white",
+          borderRadius: "8px",
+          color: "#666",
+          border: "1px dashed #ddd",
+          marginBottom: "24px"
+        }}>
+          No table13 data available. Please ensure your backend is providing table13 with Sales_Category and daily sales data (Monday, Tuesday, etc.).
+        </div>
+      )}
 
       {/* UPDATED: Sales Categories Performance section - showing table11 fields */}
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -904,8 +886,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
                           {category["Sales Category"]}
                         </div>
                         <div style={{ fontSize: "13px", color: "#666" }}>
-                          {/* This 4 Weeks Sales: ${category["This_4_Weeks_Sales"].toLocaleString()} */}
-                           Last 4 Weeks Sales: ${category["Last_4_Weeks_Sales"].toLocaleString()}
+                          Last 4 Weeks Sales: ${category["Last_4_Weeks_Sales"].toLocaleString()}
                         </div>
                       </div>
                       <div style={{ textAlign: "right" }}>
@@ -937,8 +918,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
                             color: "#333",
                           }}
                         >
-                           This 4 Weeks Sales: ${category["This_4_Weeks_Sales"].toLocaleString()}
-                          {/* Last 4 Weeks Sales: ${category["Last_4_Weeks_Sales"].toLocaleString()} */}
+                          This 4 Weeks Sales: ${category["This_4_Weeks_Sales"].toLocaleString()}
                         </div>
                       </div>
                     </div>

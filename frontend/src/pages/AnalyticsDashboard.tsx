@@ -1,21 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Container,
   Typography,
   Card,
-  CardContent,
   Grid,
-  TextField,
-  InputAdornment,
   Button,
   Chip,
-  Tabs,
-  Tab,
   Paper,
   useTheme,
   alpha,
-  IconButton,
   FormControl,
   InputLabel,
   Select,
@@ -27,18 +21,8 @@ import {
 import { styled } from '@mui/material/styles';
 
 // Material-UI Icons
-import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import CloseIcon from '@mui/icons-material/Close';
-import DollarSignIcon from '@mui/icons-material/AttachMoney';
-import FileTextIcon from '@mui/icons-material/Description';
-import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import BarChart3Icon from '@mui/icons-material/BarChart';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import FileBarChartIcon from '@mui/icons-material/Assessment';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
-import BusinessIcon from '@mui/icons-material/Business';
-import MasterFile from './MasterFile';
 import AnalyticsComponenet from '../components/AnalyticsComponenet';
 
 // Styled components matching your Material-UI theme structure
@@ -64,44 +48,6 @@ const FilterSection = styled(Box)(({ theme }) => ({
   overflow: 'visible'
 }));
 
-const StyledTabs = styled(Tabs)(({ theme }) => ({
-  background: 'transparent',
-  '& .MuiTabs-indicator': {
-    backgroundColor: theme.palette.primary.main,
-    height: 3,
-    borderRadius: '3px 3px 0 0'
-  },
-  '& .MuiTabs-flexContainer': {
-    paddingLeft: theme.spacing(1),
-    paddingRight: theme.spacing(1)
-  }
-}));
-
-const StyledTab = styled(Tab)(({ theme }) => ({
-  minHeight: 64,
-  textTransform: 'none',
-  fontWeight: 500,
-  fontSize: '0.875rem',
-  color: theme.palette.text.secondary,
-  transition: 'all 0.3s ease',
-  '&.Mui-selected': {
-    color: theme.palette.primary.main,
-    fontWeight: 600
-  },
-  '&:hover': {
-    color: theme.palette.primary.main,
-    background: alpha(theme.palette.primary.main, 0.04)
-  },
-  [theme.breakpoints.down('sm')]: {
-    minWidth: 'auto',
-    padding: theme.spacing(1, 1),
-    '& .MuiTab-iconWrapper': {
-      marginBottom: 0,
-      marginRight: 0
-    }
-  }
-}));
-
 const ContentCard = styled(Card)(({ theme }) => ({
   marginTop: theme.spacing(3),
   borderRadius: 16,
@@ -123,49 +69,14 @@ const ActiveFilterChip = styled(Chip)(({ theme }) => ({
   }
 }));
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  value: number;
-  index: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`analytics-tabpanel-${index}`}
-      aria-labelledby={`analytics-tab-${index}`}
-      {...other}
-    >
-      {value === index && children}
-    </div>
-  );
-}
-
 const AnalyticsDashboard = () => {
   const theme = useTheme();
-  const [activeTab, setActiveTab] = useState(0);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
 
   // Sample data - replace with your actual data
   const availableLocations = ['Midtown East', 'Lenox Hill', 'Upper West Side', 'Downtown', 'Brooklyn Heights'];
   const availableCompanies = ['TechCorp', 'BuildCorp', 'ZTech', 'InnovateCo', 'GlobalTech'];
-
-  const tabs = [
-    { id: 0, label: 'Sales Analytics', icon: <DollarSignIcon /> },
-    { id: 1, label: 'Master File', icon: <FileTextIcon /> },
-    { id: 2, label: 'Store Orders', icon: <ShoppingCartIcon /> },
-    { id: 3, label: 'Store Summary', icon: <BarChart3Icon /> },
-    { id: 4, label: 'Financial Summary', icon: <TrendingUpIcon /> },
-    { id: 5, label: 'Reports', icon: <FileBarChartIcon /> }
-  ];
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue);
-  };
 
   const clearAllFilters = () => {
     setSelectedLocations([]);
@@ -180,122 +91,6 @@ const AnalyticsDashboard = () => {
   const handleCompanyChange = (event: any) => {
     const value = event.target.value;
     setSelectedCompanies(typeof value === 'string' ? value.split(',') : value);
-  };
-
-  const renderTabContent = (tabIndex: number) => {
-    const tabInfo = [
-      { 
-        title: 'Sales Analytics', 
-        description: 'Comprehensive sales data analysis and performance metrics', 
-        icon: <DollarSignIcon sx={{ fontSize: 48, color: alpha(theme.palette.primary.main, 0.3) }} />,
-        color: theme.palette.primary.main
-      },
-      { 
-        title: 'Master File', 
-        description: 'Central repository for all business data and records', 
-        icon: <FileTextIcon sx={{ fontSize: 48, color: alpha(theme.palette.secondary.main, 0.3) }} />,
-        color: theme.palette.secondary.main
-      },
-      { 
-        title: 'Store Orders', 
-        description: 'Order management and tracking system', 
-        icon: <ShoppingCartIcon sx={{ fontSize: 48, color: alpha(theme.palette.info.main, 0.3) }} />,
-        color: theme.palette.info.main
-      },
-      { 
-        title: 'Store Summary', 
-        description: 'Overview of store performance and key metrics', 
-        icon: <BarChart3Icon sx={{ fontSize: 48, color: alpha(theme.palette.success.main, 0.3) }} />,
-        color: theme.palette.success.main
-      },
-      { 
-        title: 'Financial Summary', 
-        description: 'Financial performance and analytics dashboard', 
-        icon: <TrendingUpIcon sx={{ fontSize: 48, color: alpha(theme.palette.warning.main, 0.3) }} />,
-        color: theme.palette.warning.main
-      },
-      { 
-        title: 'Reports', 
-        description: 'Generate and manage business reports', 
-        icon: <FileBarChartIcon sx={{ fontSize: 48, color: alpha(theme.palette.error.main, 0.3) }} />,
-        color: theme.palette.error.main
-      }
-    ];
-
-    const currentTab = tabInfo[tabIndex];
-
-    return (
-      <Box 
-        sx={{ 
-          p: 6, 
-          textAlign: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 400,
-          background: `linear-gradient(135deg, ${alpha(currentTab.color, 0.02)} 0%, transparent 100%)`
-        }}
-      >
-        <Box sx={{ 
-          mb: 4,
-          p: 3,
-          borderRadius: '50%',
-          background: `linear-gradient(135deg, ${alpha(currentTab.color, 0.1)} 0%, ${alpha(currentTab.color, 0.05)} 100%)`,
-          border: `2px solid ${alpha(currentTab.color, 0.1)}`
-        }}>
-          {currentTab.icon}
-        </Box>
-        <Typography 
-          variant="h4" 
-          sx={{ 
-            fontWeight: 600, 
-            mb: 2, 
-            color: currentTab.color,
-            background: `linear-gradient(135deg, ${currentTab.color} 0%, ${alpha(currentTab.color, 0.7)} 100%)`,
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent'
-          }}
-        >
-          {currentTab.title}
-        </Typography>
-        <Typography 
-          variant="body1" 
-          sx={{ 
-            color: theme.palette.text.secondary,
-            maxWidth: 500,
-            lineHeight: 1.6,
-            fontSize: '1.1rem'
-          }}
-        >
-          {currentTab.description}
-        </Typography>
-        
-        {/* Add sample content preview for Financial Summary */}
-        {tabIndex === 4 && (
-          <Box sx={{ mt: 4, width: '100%', maxWidth: 600 }}>
-            <Card sx={{ 
-              p: 3, 
-              background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, transparent 100%)`,
-              border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
-            }}>
-              <Typography variant="h6" sx={{ color: theme.palette.primary.main, mb: 2, textAlign: 'left' }}>
-                Quick Preview
-              </Typography>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="body2" color="text.secondary">
-                  Total Sales
-                </Typography>
-                <Typography variant="h6" sx={{ color: theme.palette.primary.main, fontWeight: 600 }}>
-                  $3,496,791.38
-                </Typography>
-              </Box>
-            </Card>
-          </Box>
-        )}
-      </Box>
-    );
   };
 
   return (
@@ -319,7 +114,7 @@ const AnalyticsDashboard = () => {
               mb: 1
             }}
           >
-            Analytics Dashboard
+            Sales Analytics Dashboard
           </Typography>
           <Typography 
             variant="subtitle1" 
@@ -328,7 +123,7 @@ const AnalyticsDashboard = () => {
               textAlign: 'center'
             }}
           >
-            Comprehensive business intelligence and reporting platform
+            Comprehensive sales data analysis and performance metrics
           </Typography>
         </Container>
       </Box>
@@ -564,68 +359,13 @@ const AnalyticsDashboard = () => {
         </Container>
       </FilterSection>
 
-      {/* Tab Content with Integrated Navigation */}
+      {/* Analytics Content */}
       <Container maxWidth="xl">
         <ContentCard>
-          {/* Navigation Tabs Inside Card */}
-          <Box sx={{ borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
-            <StyledTabs
-              value={activeTab}
-              onChange={handleTabChange}
-              variant="scrollable"
-              scrollButtons="auto"
-              allowScrollButtonsMobile
-              sx={{
-                '& .MuiTabs-flexContainer': {
-                  borderBottom: 'none'
-                },
-                '& .MuiTabs-indicator': {
-                  bottom: 0
-                }
-              }}
-            >
-              {tabs.map((tab) => (
-                <StyledTab
-                  key={tab.id}
-                  icon={tab.icon}
-                  label={<Box sx={{ display: { xs: 'none', sm: 'block' } }}>{tab.label}</Box>}
-                  iconPosition="start"
-                  sx={{
-                    mx: 1,
-                    minHeight: 56,
-                    '&:first-of-type': { ml: 2 },
-                    '&:last-of-type': { mr: 2 }
-                  }}
-                />
-              ))}
-            </StyledTabs>
-          </Box>
-
-          {/* Tab Content */}
-          {tabs.map((tab) => (
-            <TabPanel key={tab.id} value={activeTab} index={tab.id}>
-              {tab.id === 0 ? (
-                // Sales Analytics Tab - Use AnalyticsComponenet
-                <Box sx={{ p: 0 }}>
-                  <AnalyticsComponenet 
-                    selectedLocations={selectedLocations}
-                    selectedCompanies={selectedCompanies}
-                  />
-                </Box>
-              ) : tab.id === 1 ? (
-                // Master File Tab - Use MasterFile
-                <Box sx={{ p: 0 }}>
-                  <MasterFile
-                    selectedLocations={selectedLocations}
-                    selectedCompanies={selectedCompanies}
-                  />
-                </Box>
-              ) : (
-                // Other tabs - Show placeholder content
-                renderTabContent(tab.id)
-              )}
-            </TabPanel>
-          ))}
+          <AnalyticsComponenet 
+            selectedLocations={selectedLocations}
+            selectedCompanies={selectedCompanies}
+          />
         </ContentCard>
       </Container>
     </Box>

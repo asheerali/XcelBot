@@ -326,7 +326,7 @@ export function SalesAnalyticsDashboard({ tableData = null }) {
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="h4" gutterBottom sx={{ color: '#1976d2', fontWeight: 'bold' }}>
-        Sales Analytics Dashboard
+        Sales Analytics Dashboardss
       </Typography>
       <Divider sx={{ mb: 4 }} />
       

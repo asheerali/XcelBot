@@ -94,6 +94,11 @@ const CustomSidebar = ({ onSignOut }) => {
 
   // OrderIQ dropdown items
   const orderiqItems = [
+    {
+      title: "AnalyticsDashboard",
+      path: "/AnalyticsDashboard",
+      icon: <PieChartIcon />,
+    },
     { title: "Master File", path: "/MasterFile", icon: <InventoryIcon /> },
     {
       title: "Store Orders",
@@ -110,6 +115,8 @@ const CustomSidebar = ({ onSignOut }) => {
       path: "/SummaryFinancialDashboard",
       icon: <TrendingUpIcon />,
     },
+    
+ 
   ];
 
   // Other navigation items (removed items that are now in OrderIQ dropdown)
