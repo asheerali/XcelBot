@@ -1,167 +1,273 @@
-# Add this code BEFORE the database insertion in your excel_upload.py
+# Updated section for excel_upload.py
+# Replace the existing duplicate check logic with this improved version
 
-def analyze_duplicate_patterns(df, company_id):
+import pandas as pd
+from sqlalchemy.orm import Session
+from sqlalchemy import and_, or_
+from models.sales_pmix import SalesPMix
+from typing import List, Tuple
+
+def check_and_filter_duplicates(
+    db: Session, 
+    df_clean: pd.DataFrame, 
+    company_id: int
+) -> Tuple[pd.DataFrame, int, int]:
     """
-    Provide detailed analysis of duplicate patterns in the data
+    Check for duplicate records and filter them out before database insertion.
+    
+    Args:
+        db: Database session
+        df_clean: Cleaned DataFrame to check for duplicates
+        company_id: Company ID for filtering
+    
+    Returns:
+        Tuple of (filtered_dataframe, new_records_count, duplicates_count)
     """
-    print("\n" + "="*50)
-    print("DUPLICATE ANALYSIS REPORT")
-    print("="*50)
     
-    df_temp = df.copy()
-    df_temp['company_id'] = company_id
+    if df_clean.empty:
+        return df_clean, 0, 0
     
-    # 1. Database constraint duplicates (ACTUAL constraint that will cause errors)
-    db_columns = ['company_id', 'Order_Id', 'Item_Selection_Id', 'Sent_Date']
-    db_dups = df_temp[df_temp.duplicated(subset=db_columns, keep=False)]
+    print(f"Starting duplicate check for {len(df_clean)} records...")
     
-    print(f"📊 Total records: {len(df)}")
-    print(f"🚫 Database constraint violations: {len(db_dups)} records")
-    print(f"🎯 Database constraint: (company_id, Order_Id, Item_Selection_Id, Sent_Date)")
+    # Define the columns that make up a unique record
+    # You can adjust these based on your business logic
+    unique_identifier_columns = [
+        'Sent_Date', 'Order_Date', 'Net_Price', 'Location', 
+        'Qty', 'Menu_Item', 'Order_Id'
+    ]
     
-    if not db_dups.empty:
-        print("\n⚠️  CRITICAL: Database constraint violations found!")
-        print("These records have the same Order_Id + Item_Selection_Id + Sent_Date:")
+    # Get the date range from the new data to optimize the query
+    min_sent_date = df_clean['Sent_Date'].min()
+    max_sent_date = df_clean['Sent_Date'].max()
+    
+    print(f"Checking for duplicates in date range: {min_sent_date} to {max_sent_date}")
+    
+    try:
+        # Query existing records from database using SQLAlchemy ORM
+        # This is more efficient than loading all records
+        existing_records_query = db.query(SalesPMix).filter(
+            and_(
+                SalesPMix.company_id == company_id,
+                or_(
+                    and_(
+                        SalesPMix.Sent_Date >= min_sent_date,
+                        SalesPMix.Sent_Date <= max_sent_date
+                    ),
+                    and_(
+                        SalesPMix.Order_Date >= min_sent_date.strftime('%m-%d-%Y') if min_sent_date else None,
+                        SalesPMix.Order_Date <= max_sent_date.strftime('%m-%d-%Y') if max_sent_date else None
+                    )
+                )
+            )
+        )
         
-        violation_analysis = db_dups.groupby(db_columns).agg({
-            'Menu_Item': ['unique', 'count'],
-            'Net_Price': ['unique', 'min', 'max'],
-            'Qty': 'sum'
-        }).reset_index()
+        # Convert to DataFrame for easier comparison
+        existing_records = []
+        for record in existing_records_query:
+            record_dict = {}
+            for col in unique_identifier_columns:
+                record_dict[col] = getattr(record, col, None)
+            existing_records.append(record_dict)
         
-        # Flatten column names
-        violation_analysis.columns = [
-            'company_id', 'Order_Id', 'Item_Selection_Id', 'Sent_Date',
-            'Unique_Items', 'Item_Count', 'Unique_Prices', 'Min_Price', 'Max_Price', 'Total_Qty'
+        existing_df = pd.DataFrame(existing_records)
+        print(f"Found {len(existing_df)} existing records in database for comparison")
+        
+        if existing_df.empty:
+            print("No existing records found. All records will be inserted.")
+            return df_clean, len(df_clean), 0
+        
+        # Normalize data types for comparison
+        df_comparison = df_clean.copy()
+        
+        # Handle datetime columns
+        for col in ['Sent_Date']:
+            if col in existing_df.columns and col in df_comparison.columns:
+                existing_df[col] = pd.to_datetime(existing_df[col], errors='coerce')
+                df_comparison[col] = pd.to_datetime(df_comparison[col], errors='coerce')
+        
+        # Handle string date columns
+        for col in ['Order_Date']:
+            if col in existing_df.columns and col in df_comparison.columns:
+                existing_df[col] = existing_df[col].astype(str).replace('None', '').replace('nan', '')
+                df_comparison[col] = df_comparison[col].astype(str).replace('None', '').replace('nan', '')
+        
+        # Handle numeric columns
+        for col in ['Net_Price', 'Qty', 'Order_Id']:
+            if col in existing_df.columns and col in df_comparison.columns:
+                existing_df[col] = pd.to_numeric(existing_df[col], errors='coerce').fillna(0)
+                df_comparison[col] = pd.to_numeric(df_comparison[col], errors='coerce').fillna(0)
+        
+        # Handle string columns
+        for col in ['Location', 'Menu_Item']:
+            if col in existing_df.columns and col in df_comparison.columns:
+                existing_df[col] = existing_df[col].astype(str).fillna('').str.strip()
+                df_comparison[col] = df_comparison[col].astype(str).fillna('').str.strip()
+        
+        # Create composite keys for comparison
+        def create_composite_key(row, columns):
+            """Create a composite key from specified columns"""
+            key_parts = []
+            for col in columns:
+                if col in row.index:
+                    val = row[col]
+                    if pd.isna(val) or val is None:
+                        key_parts.append('NULL')
+                    else:
+                        key_parts.append(str(val))
+                else:
+                    key_parts.append('NULL')
+            return '|'.join(key_parts)
+        
+        # Create composite keys
+        existing_df['composite_key'] = existing_df.apply(
+            lambda row: create_composite_key(row, unique_identifier_columns), axis=1
+        )
+        
+        df_comparison['composite_key'] = df_comparison.apply(
+            lambda row: create_composite_key(row, unique_identifier_columns), axis=1
+        )
+        
+        # Find duplicates
+        existing_keys = set(existing_df['composite_key'].tolist())
+        duplicate_mask = df_comparison['composite_key'].isin(existing_keys)
+        
+        duplicates_count = duplicate_mask.sum()
+        new_records_count = len(df_comparison) - duplicates_count
+        
+        print(f"Duplicate analysis complete:")
+        print(f"  - Total records in upload: {len(df_comparison)}")
+        print(f"  - Duplicate records found: {duplicates_count}")
+        print(f"  - New records to insert: {new_records_count}")
+        
+        if duplicates_count > 0:
+            print("Sample duplicate records:")
+            duplicate_samples = df_comparison[duplicate_mask][unique_identifier_columns].head(3)
+            print(duplicate_samples.to_string())
+        
+        # Filter out duplicates
+        df_filtered = df_comparison[~duplicate_mask].copy()
+        
+        # Remove the temporary composite_key column
+        if 'composite_key' in df_filtered.columns:
+            df_filtered = df_filtered.drop('composite_key', axis=1)
+        
+        return df_filtered, new_records_count, duplicates_count
+        
+    except Exception as e:
+        print(f"Error during duplicate check: {str(e)}")
+        print("Proceeding without duplicate check...")
+        return df_clean, len(df_clean), 0
+
+
+def insert_sales_pmix_with_duplicate_check(
+    db: Session, 
+    df: pd.DataFrame, 
+    company_id: int
+) -> dict:
+    """
+    Insert sales data with comprehensive duplicate checking.
+    
+    Args:
+        db: Database session
+        df: DataFrame to insert
+        company_id: Company ID
+    
+    Returns:
+        Dictionary with insertion results
+    """
+    
+    try:
+        print(f"Starting insertion process for {len(df)} records...")
+        
+        # Validate DataFrame structure
+        required_columns = [
+            'Location', 'Order_Id', 'Order_number', 'Sent_Date', 'Order_Date',
+            'Check_Id', 'Server', 'Table', 'Dining_Area', 'Service', 'Dining_Option',
+            'Item_Selection_Id', 'Item_Id', 'Master_Id', 'SKU', 'PLU', 'Menu_Item',
+            'Menu_Subgroups', 'Menu_Group', 'Menu', 'Sales_Category', 'Gross_Price',
+            'Discount', 'Net_Price', 'Qty', 'Avg_Price', 'Tax', 'Void', 'Deferred',
+            'Tax_Exempt', 'Tax_Inclusion_Option', 'Dining_Option_Tax', 'Tab_Name',
+            'Date', 'Time', 'Day', 'Week', 'Month', 'Quarter', 'Year', 'Category'
         ]
         
-        critical_violations = violation_analysis[violation_analysis['Item_Count'] > 1]
-        if not critical_violations.empty:
-            print("Detailed violation breakdown:")
-            for _, row in critical_violations.iterrows():
-                print(f"  Order_Id: {row['Order_Id']}")
-                print(f"  Item_Selection_Id: {row['Item_Selection_Id']} ({'SAME AS ORDER_ID' if row['Item_Selection_Id'] == row['Order_Id'] else 'DIFFERENT'})")
-                print(f"  Items: {row['Unique_Items']}")
-                print(f"  Prices: ${row['Min_Price']:.2f} - ${row['Max_Price']:.2f}")
-                print(f"  Count: {row['Item_Count']} records")
-                print("  ---")
-    
-    # 2. Business logic duplicates (including Net_Price)
-    business_columns = ['company_id', 'Order_Id', 'Item_Selection_Id', 'Sent_Date', 'Net_Price']
-    business_dups = df_temp[df_temp.duplicated(subset=business_columns, keep=False)]
-    
-    print(f"\n💼 Business logic duplicates (exact matches): {len(business_dups)} records")
-    
-    if not business_dups.empty:
-        print("Exact duplicate combinations (these are safe to remove):")
-        exact_dups = business_dups.groupby(business_columns).size().reset_index(name='count')
-        print(exact_dups[exact_dups['count'] > 1].head().to_string(index=False))
-    
-    # 3. Data quality insights
-    print(f"\n🔍 DATA QUALITY INSIGHTS:")
-    same_order_item_ids = (df['Order_Id'] == df['Item_Selection_Id']).sum()
-    print(f"Records where Order_Id = Item_Selection_Id: {same_order_item_ids}/{len(df)} ({same_order_item_ids/len(df)*100:.1f}%)")
-    
-    if same_order_item_ids > len(df) * 0.5:
-        print("⚠️  WARNING: Most Item_Selection_Id values are identical to Order_Id")
-        print("   This suggests a data structure issue that may cause constraint violations")
-    
-    print("="*50 + "\n")
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            raise ValueError(f"Missing required columns: {missing_columns}")
+        
+        # Clean and prepare data
+        df_clean = df.copy()
+        
+        # Handle Week column properly
+        if 'Week' in df_clean.columns:
+            df_clean['Week'] = pd.to_numeric(df_clean['Week'], errors='coerce').astype('Int64')
+        
+        # Convert datetime columns
+        datetime_columns = ['Sent_Date']
+        for col in datetime_columns:
+            if col in df_clean.columns:
+                df_clean[col] = pd.to_datetime(df_clean[col], errors='coerce')
+        
+        # Convert string columns
+        string_columns = ['Date', 'Time', 'Order_Date']
+        for col in string_columns:
+            if col in df_clean.columns:
+                df_clean[col] = df_clean[col].astype(str).replace('nan', None).replace('NaT', None)
+        
+        # Check for duplicates
+        df_filtered, new_records_count, duplicates_count = check_and_filter_duplicates(
+            db, df_clean, company_id
+        )
+        
+        if len(df_filtered) == 0:
+            print("No new records to insert after duplicate check.")
+            return {
+                'inserted_count': 0,
+                'duplicate_count': duplicates_count,
+                'total_processed': len(df),
+                'status': 'success'
+            }
+        
+        # Insert records in batches for better performance
+        batch_size = 1000
+        inserted_count = 0
+        
+        for i in range(0, len(df_filtered), batch_size):
+            batch_df = df_filtered.iloc[i:i + batch_size]
+            
+            # Convert DataFrame to list of dictionaries
+            records_to_insert = []
+            for _, row in batch_df.iterrows():
+                record_dict = row.to_dict()
+                record_dict['company_id'] = company_id
+                
+                # Handle NaN values
+                for key, value in record_dict.items():
+                    if pd.isna(value):
+                        record_dict[key] = None
+                
+                records_to_insert.append(record_dict)
+            
+            # Bulk insert using SQLAlchemy
+            db.bulk_insert_mappings(SalesPMix, records_to_insert)
+            inserted_count += len(records_to_insert)
+            
+            print(f"Inserted batch {i//batch_size + 1}: {len(records_to_insert)} records")
+        
+        # Commit the transaction
+        db.commit()
+        print(f"Successfully inserted {inserted_count} new records into sales_pmix table")
+        
+        return {
+            'inserted_count': inserted_count,
+            'duplicate_count': duplicates_count,
+            'total_processed': len(df),
+            'status': 'success'
+        }
+        
+    except Exception as e:
+        db.rollback()
+        print(f"Error during insertion: {str(e)}")
+        raise e
 
-def remove_database_constraint_duplicates(df, db_constraint_columns=['Order_Id', 'Item_Selection_Id', 'Sent_Date']):
-    """
-    Remove duplicates that would violate the actual database constraint
-    This is more aggressive - keeps only the first occurrence when database constraint fields match
-    """
-    print(f"\nChecking database constraint violations...")
-    print(f"Database constraint: {db_constraint_columns}")
-    
-    # Check for duplicates based on database constraint only
-    db_duplicate_mask = df.duplicated(subset=db_constraint_columns, keep='first')
-    db_duplicate_count = db_duplicate_mask.sum()
-    
-    if db_duplicate_count > 0:
-        print(f"Found {db_duplicate_count} records that violate database constraint")
-        
-        # Show detailed analysis of what's being removed
-        duplicates = df[db_duplicate_mask]
-        if not duplicates.empty:
-            print("Records being removed due to database constraint:")
-            constraint_analysis = df[df.duplicated(subset=db_constraint_columns, keep=False)].groupby(db_constraint_columns).agg({
-                'Menu_Item': 'unique',
-                'Net_Price': 'unique', 
-                'Menu_Item': 'count'
-            }).reset_index()
-            constraint_analysis.columns = db_constraint_columns + ['Unique_Items', 'Unique_Prices', 'Total_Records']
-            print(constraint_analysis[constraint_analysis['Total_Records'] > 1].to_string(index=False))
-        
-        # Remove duplicates, keeping the first occurrence
-        df_clean = df[~db_duplicate_mask].copy()
-        print(f"After removing database constraint violations: {len(df_clean)} records")
-        
-        return df_clean, db_duplicate_count
-    else:
-        print("No database constraint violations found")
-        return df, 0
 
-def remove_internal_duplicates(df, unique_columns=['Order_Id', 'Item_Selection_Id', 'Sent_Date', 'Net_Price']):
-    """
-    Remove internal duplicates from DataFrame based on business logic (including Net_Price)
-    """
-    print(f"Checking business logic duplicates...")
-    print(f"Business constraint: {unique_columns}")
-    print(f"Dataset size: {len(df)} records")
-    
-    # Check for internal duplicates
-    duplicate_mask = df.duplicated(subset=unique_columns, keep='first')
-    duplicate_count = duplicate_mask.sum()
-    
-    if duplicate_count > 0:
-        print(f"Found {duplicate_count} exact duplicate records")
-        
-        # Show sample duplicates for debugging
-        duplicates = df[duplicate_mask]
-        if not duplicates.empty:
-            print("Sample duplicate records:")
-            print(duplicates[unique_columns + ['Menu_Item']].head())
-        
-        # Remove duplicates, keeping the first occurrence
-        df_clean = df[~duplicate_mask].copy()
-        print(f"After removing exact duplicates: {len(df_clean)} records")
-        
-        return df_clean, duplicate_count
-    else:
-        print("No exact duplicates found")
-        return df, 0
-
-def validate_unique_constraints(df, company_id, unique_columns=['Order_Id', 'Item_Selection_Id', 'Sent_Date']):
-    """
-    Validate that the DataFrame doesn't contain combinations that would violate the actual database constraint
-    """
-    # Add company_id to the check (it's always the same for a single upload)
-    df_with_company = df.copy()
-    df_with_company['company_id'] = company_id
-    
-    constraint_columns = ['company_id'] + unique_columns
-    
-    # Check for duplicates in the constraint columns
-    duplicates = df_with_company[df_with_company.duplicated(subset=constraint_columns, keep=False)]
-    
-    if not duplicates.empty:
-        print(f"❌ FINAL VALIDATION FAILED: Found {len(duplicates)} rows that would still violate database constraint!")
-        print("These records WILL cause insertion errors:")
-        
-        problem_combinations = duplicates.groupby(constraint_columns).agg({
-            'Menu_Item': ['unique', 'count'],
-            'Net_Price': 'unique'
-        }).reset_index()
-        problem_combinations.columns = constraint_columns + ['Unique_Items', 'Record_Count', 'Unique_Prices']
-        print(problem_combinations[problem_combinations['Record_Count'] > 1].to_string(index=False))
-        
-        return False, duplicates
-    else:
-        print("✅ Final database constraint validation passed!")
-        return True, None
-
-# REPLACE the database insertion section in your code with this enhanced version:
-        
+# Updated section to replace in your excel_upload.py main function
