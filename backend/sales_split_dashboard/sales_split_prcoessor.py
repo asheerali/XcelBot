@@ -114,7 +114,8 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str, pd.DataFrame],loc
     category_comparison_table = sales_overview_analysis['category_comparison_table']
     # thirteen_week_category_table = sales_overview_analysis['thirteen_week_category_table']
     
-    thirteen_week_category_table = thirteen_week_category(df, location_filter=location, end_date=end_date, category_filter=category_filter)
+    thirteen_week_category_df = thirteen_week_category(df, location_filter=location, end_date=end_date, category_filter=category_filter)
+    thirteen_week_category_table = thirteen_week_category_df['thirteen_week_category_table']
     
     print("thirteen week  i am here in sales split processor", "\n", thirteen_week_category_table)
     return sales_by_day_table, sales_by_category_table, category_comparison_table, thirteen_week_category_table, pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay, categories, locations

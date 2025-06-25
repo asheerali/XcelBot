@@ -679,6 +679,8 @@ def thirteen_week_category(df, location_filter='All', end_date=None, category_fi
         else:
             df_copy = df_copy[df_copy['Location'] == location_filter]
     
+    end_date = pd.Timestamp(end_date)
+
     # Convert end_date if it's a string
     if end_date is not None and isinstance(end_date, str):
         end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
@@ -686,11 +688,13 @@ def thirteen_week_category(df, location_filter='All', end_date=None, category_fi
     # Calculate 13-week period dates
     if end_date is not None:
         # Calculate 13 weeks (91 days) before end_date
-        thirteen_week_start_date = end_date - timedelta(days=90)  # 13 weeks = 91 days
+        # thirteen_week_start_date = end_date - timedelta(days=90)  # 13 weeks = 91 days
+        thirteen_week_start_date = pd.Timestamp(end_date - timedelta(days=90))
+
     else:
         thirteen_week_start_date = None  # Return empty if no end date provided
     
-    print("i am here in sales split utils printing the thirteen week function printing the filters", df.head(), location_filter, end_date, category_filter)
+    print("i am here in sales split utils printing the thirteen week function printing the filters", df.head(), location_filter, end_date, category_filter, thirteen_week_start_date, "thirteen_week_start_date type, ", type(thirteen_week_start_date), "thirteen_week_df['Date'] type ", type(df_copy['Date'][0]))
     
     # Filter 13-week period data
     thirteen_week_df = df_copy.copy()
