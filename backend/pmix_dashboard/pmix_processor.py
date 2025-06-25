@@ -25,104 +25,13 @@ def process_pmix_file(file_data: Union[io.BytesIO, str],start_date=None, end_dat
             if isinstance(file_data, pd.DataFrame):
                 print("Received DataFrame directly.")
                 df = file_data
-            elif isinstance(file_data, io.BytesIO):
-                file_data.seek(0)
-                print("Reading Excel from BytesIO object.")
-                df = pd.read_excel(file_data)
-            elif isinstance(file_data, str):
-                print("Reading Excel from file path.")
-                df = pd.read_excel(file_data)
           
             if df.empty:
                 raise ValueError("The sheet 'Database' is empty or missing.")
     except ValueError as e:
         raise ValueError("Sheet named 'Database' not found in the uploaded Excel file.")
-
     
-    # # Strip whitespace from column names
-    # df.columns = df.columns.str.strip()
-
-    # # Define special columns with specific fill values
-    # int_cols = ['Qty']
-    # bool_cols = ['Void?', 'Deferred', 'Tax Exempt']
-
-    # # Fill 'Qty' with 0 and convert to int
-    # df[int_cols] = df[int_cols].fillna(0).astype(int)
-
-    # # Fill boolean columns with False and convert to bool
-    # df[bool_cols] = df[bool_cols].fillna(False).astype(bool)
-
-    # # Define columns to exclude from general filling
-    # exclude_cols = ['Location', 'Order Id', 'Sent Date', 'Order Date',
-    #     'Check Id', 'Server', 'Table', 'Dining Area', 'Service',
-    #     'Dining Option', 'Item Selection Id', 'Item Id', 'Master Id', 'SKU',
-    #     'PLU', 'Menu Item', 'Menu Subgroup(s)', 'Menu Group', 'Menu',
-    #     'Sales Category', 'Tax Inclusion Option', 'Dining Option Tax', 'Tab Name']
-
-    # # Columns eligible for generic fill (excluding specific fills above)
-    # fill_cols = [col for col in df.columns if col not in exclude_cols + int_cols + bool_cols]
-
-    # # Replace NaN with 0 only in selected columns
-    # df[fill_cols] = df[fill_cols].fillna(0)
-
-    # # Fill excluded (metadata/helper) columns with empty string
-    # df[exclude_cols] = df[exclude_cols].fillna('')
     
-        
-    # df["Order Date"] = pd.to_datetime(df["Order Date"], dayfirst=False)
-    # # Create derived columns
-    # df['Date'] = df['Order Date'].dt.date
-
-
-    # df["Order Date"] = pd.to_datetime(df["Order Date"], dayfirst=False).dt.strftime('%m-%d-%Y')
-
-    # # Define groups
-    # in_house = [
-    #     "Kiosk - Dine In", "Kiosk - Take Out", "Take Out - Cashier",
-    #     "Take Out  - Cashier", "Pick Up - Phone", "Inkind - Take Out",
-    #     "Dine In", "Take Out"
-    # ]
-    # one_p = [
-    #     "Delivery - Phone", "ChowNow: Pick Up", "Lunchbox Delivery",
-    #     "Lunchbox Pick Up", "ChowNow: Delivery", "Online Ordering - Takeout"
-    # ]
-    # dd = [
-    #     "DoorDash Pick Up", "DoorDash Self-Delivery", "DoorDash - Takeout",
-    #     "DoorDash - Delivery", "DoorDash - Pick Up", "DoorDash - Self-Delivery",
-    # ]
-    # catering = [
-    #     "EZ Cater - Pick Up", "LB Catering Delivery", "Catering Delivery - Phone",
-    #     "LB Catering Pick Up", "Ez Cater - Delivery", "Catering Pick Up - Phone",
-    #     "CaterCow - Delivery", "Fooda Pick up", "Sharebite - Pick Up"
-    # ]
-    # gh = [
-    #     "Grubhub Pick Up", "Grubhub Self - Delivery", "Grubhub - Takeout",
-    #     "Grubhub - Delivery", "Grubhub - Pick Up", "Grubhub - Self-Delivery",
-    # ]
-    # ub = [
-    #     "UberEats Pick Up", "UberEats Self-Delivery", "UberEats - Takeout",
-    #     "UberEats - Delivery", "UberEats - Pick Up", "UberEats - Self-Delivery",
-    #     "Uber Eats - Delivery", "Uber Eats - Takeout", "Uber Eats - Pick Up",
-    #     "Uber Eats - Self-Delivery", "Uber Eats - Delivery",
-    #     "Uber Eats - Takeout", "Uber Eats - Pick Up", "Uber Eats - Self-Delivery"
-    # ]
-
-    # # Create conditions and corresponding values
-    # conditions = [
-    #     df["Dining Option"].isin(in_house),
-    #     df["Dining Option"].isin(one_p),
-    #     df["Dining Option"].isin(dd),
-    #     df["Dining Option"].isin(catering),
-    #     df["Dining Option"].isin(gh),
-    #     df["Dining Option"].isin(ub)
-    # ]
-
-    # choices = ["In-House", "1P", "DD", "Catering", "GH", "UB"]
-
-    # # Apply the mapping
-    # df["Category"] = np.select(conditions, choices, default="")
-    # df["Category"] = df["Category"].replace({"": "Others"})
-
     # locations = df["Location"].unique()
     locations = df["Location"].unique().tolist()
     server = df["Server"].unique().tolist()
