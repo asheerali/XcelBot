@@ -13,7 +13,8 @@ class UploadedFile(Base):
     file_name = Column(String(255), nullable=False)
     dashboard_name = Column(String(100), nullable=False)
     uploader_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=True)
+    # company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)  # Changed to Integer for consistency
     uploaded_at = Column(DateTime, default=datetime.utcnow)
 
     uploader = relationship("User", back_populates="uploaded_files")

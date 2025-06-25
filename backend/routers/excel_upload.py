@@ -32,7 +32,6 @@ from database import Base, get_db
 from crud.sales_pmix import insert_sales_pmix_df
 
 
-
 # Import the return processor
 from .excel_upload_return import process_dashboard_data
 
@@ -73,8 +72,8 @@ async def upload_excel(
         # file_name = f"{timestamp}_{request.fileName}"
         file_path = os.path.join(UPLOAD_DIR, file_name)
         
-        with open(file_path, "wb") as f:
-            f.write(file_content)
+        # with open(file_path, "wb") as f:
+        #     f.write(file_content)
         
         print('Processing uploaded file:', request.fileName)
         if request.location:
@@ -199,19 +198,14 @@ async def upload_excel(
         file_record = UploadedFileCreate(
             file_name=file_name,
             dashboard_name=request.dashboard,
-            uploader_id=current_user.id
+            uploader_id=current_user.id,
+            company_id=request.company_id,
         )
         upload_file_record(db, file_record)
         
         print("i am here in excel uplaod printing the columns of the dataframe", df.columns, "\n", df.dtypes , "\n", df.head())
         
-        # if request.dashboard == "Sales Split and Product Mix" or request.dashboard == "Product Mix" or request.dashboard == "Sales Split":
-        #     # Insert the processed DataFrame into the database
-                        
-        #     # Assuming insert_sales_pmix_df is a function that handles the insertion
-        #     insert_sales_pmix_df(db, df, request.company_id)
-
-
+        
         # if request.dashboard == "Sales Split and Product Mix" or request.dashboard == "Product Mix" or request.dashboard == "Sales Split":
         #     try:
         #         print(f"Starting database insertion for {len(df)} records...")
@@ -231,16 +225,14 @@ async def upload_excel(
         #         if missing_columns:
         #             raise ValueError(f"Missing required columns: {missing_columns}")
                 
+        #         print(" i am here in excel upload printing the columns of the dataframe and checkng if something is wrong", df.columns, "\n", df.dtypes , "\n", df.head())
         #         # Clean and validate data before insertion
         #         df_clean = df.copy()
-                
-        #         # Handle None/NaN values that could cause issues
-        #         df_clean = df_clean.where(pd.notnull(df_clean), None)
-                
-        #         # Ensure proper data types for problematic fields
-        #         if 'Order_Id' in df_clean.columns:
-        #             # Convert to int64 to handle large numbers, replace NaN with None
-        #             df_clean['Order_Id'] = df_clean['Order_Id'].astype('Int64').replace({pd.NA: None})
+
+        #         # # Ensure proper data types for problematic fields
+        #         # if 'Order_Id' in df_clean.columns:
+        #         #     # Convert to int64 to handle large numbers, replace NaN with None
+        #         #     df_clean['Order_Id'] = df_clean['Order_Id'].astype('Int64').replace({pd.NA: None})
                 
         #         if 'Week' in df_clean.columns:
         #             # Convert Week to regular int, handle NaN
@@ -258,7 +250,7 @@ async def upload_excel(
         #             if col in df_clean.columns:
         #                 df_clean[col] = df_clean[col].astype(str).replace('nan', None).replace('NaT', None)
                 
-        #         print(f"Data validation completed. Inserting {len(df_clean)} records...")
+        #         print(f"Data validation completed. Checking for existing records...")
                 
         #         # Insert the processed DataFrame into the database with error handling
         #         inserted_count = insert_sales_pmix_df(db, df_clean, request.company_id)
@@ -282,7 +274,6 @@ async def upload_excel(
                 
         #         # Optionally, you can choose to raise the error or continue
         #         # For now, let's log it but continue (file is still processed successfully)
-        #         # If you want to fail completely, uncomment the next line:
         #         # raise HTTPException(status_code=500, detail=f"Database insertion failed: {str(db_error)}")
                 
         #     except ValueError as validation_error:
@@ -291,8 +282,8 @@ async def upload_excel(
         #             status_code=400, 
         #             detail=f"Data validation failed: {str(validation_error)}"
         #         )
-
-
+                
+        
         if request.dashboard == "Sales Split and Product Mix" or request.dashboard == "Product Mix" or request.dashboard == "Sales Split":
             try:
                 print(f"Starting database insertion for {len(df)} records...")
@@ -312,17 +303,12 @@ async def upload_excel(
                 if missing_columns:
                     raise ValueError(f"Missing required columns: {missing_columns}")
                 
+                print("I am here in excel upload printing the columns of the dataframe and checking if something is wrong", df.columns, "\n", df.dtypes, "\n", df.head())
+                
                 # Clean and validate data before insertion
                 df_clean = df.copy()
-                
-                # Handle None/NaN values that could cause issues
-                df_clean = df_clean.where(pd.notnull(df_clean), None)
-                
+
                 # Ensure proper data types for problematic fields
-                if 'Order_Id' in df_clean.columns:
-                    # Convert to int64 to handle large numbers, replace NaN with None
-                    df_clean['Order_Id'] = df_clean['Order_Id'].astype('Int64').replace({pd.NA: None})
-                
                 if 'Week' in df_clean.columns:
                     # Convert Week to regular int, handle NaN
                     df_clean['Week'] = df_clean['Week'].astype('Int64').replace({pd.NA: None})
@@ -341,94 +327,132 @@ async def upload_excel(
                 
                 print(f"Data validation completed. Checking for existing records...")
                 
-                # ===== DUPLICATE DETECTION LOGIC =====
+                # ===== DUPLICATE CHECK LOGIC =====
+                # Define the columns that make up the unique combination
+                duplicate_check_columns = ['Sent_Date', 'Order_Date', 'Net_Price', 'Location', 'Qty']
                 
-                # Option 1: Check for existing records by date range and location
-                if not df_clean.empty and 'Sent_Date' in df_clean.columns:
-                    date_min = df_clean['Sent_Date'].min()
-                    date_max = df_clean['Sent_Date'].max()
-                    location = df_clean['Location'].iloc[0] if 'Location' in df_clean.columns else None
-                    
-                    # Query for existing records in the same date range
-                    existing_query = db.query(SalesPMix).filter(
-                        SalesPMix.company_id == request.company_id,
-                        SalesPMix.Sent_Date >= date_min,
-                        SalesPMix.Sent_Date <= date_max
+                # Get the date range from the new data to limit the query scope
+                min_sent_date = df_clean['Sent_Date'].min()
+                max_sent_date = df_clean['Sent_Date'].max()
+                min_order_date = df_clean['Order_Date'].min()
+                max_order_date = df_clean['Order_Date'].max()
+                
+                print(f"Checking for duplicates in date range: {min_sent_date} to {max_sent_date}")
+                
+                # Query existing records from database for the company and date range
+                # Note: You'll need to adjust the table name and query structure based on your database setup
+                existing_records_query = """
+                SELECT company_id, sent_date, order_date, net_price, location, qty
+                FROM sales_pmix 
+                WHERE company_id = %(company_id)s 
+                AND (sent_date BETWEEN %(min_sent_date)s AND %(max_sent_date)s
+                    OR order_date BETWEEN %(min_order_date)s AND %(max_order_date)s)
+                """
+                
+                # Execute the query to get existing records
+                try:
+                    existing_df = pd.read_sql(
+                        existing_records_query, 
+                        con=db.connection(),  # Adjust based on your DB connection method
+                        params={
+                            'company_id': request.company_id,
+                            'min_sent_date': min_sent_date,
+                            'max_sent_date': max_sent_date,
+                            'min_order_date': min_order_date,
+                            'max_order_date': max_order_date
+                        }
                     )
                     
-                    if location:
-                        existing_query = existing_query.filter(SalesPMix.Location == location)
+                    print(f"Found {len(existing_df)} existing records in the database for comparison")
                     
-                    existing_count = existing_query.count()
+                except Exception as query_error:
+                    print(f"Error querying existing records: {str(query_error)}")
+                    # If we can't query existing records, proceed with insertion (you may want to handle this differently)
+                    existing_df = pd.DataFrame()
+                
+                # Add company_id to the new data for comparison
+                df_clean['company_id'] = request.company_id
+                
+                # Prepare comparison columns (convert to same data types)
+                comparison_columns = ['company_id'] + duplicate_check_columns
+                
+                if not existing_df.empty:
+                    # Normalize column names for comparison (handle case sensitivity)
+                    existing_df.columns = [col.lower() if col.lower() in [c.lower() for c in comparison_columns] 
+                                        else col for col in existing_df.columns]
+                    df_clean_comparison = df_clean.copy()
                     
-                    if existing_count > 0:
-                        print(f"Found {existing_count} existing records in database for date range {date_min} to {date_max}")
-                        
-                        # Give user options for handling duplicates
-                        user_choice = "replace"  # You can make this configurable via request parameter
-                        
-                        if user_choice == "replace":
-                            print("Deleting existing records before inserting new ones...")
-                            deleted_count = existing_query.delete(synchronize_session=False)
-                            print(f"Deleted {deleted_count} existing records")
-                            
-                        elif user_choice == "skip":
-                            print("Skipping insertion due to existing records")
-                            return result
-                            
-                        elif user_choice == "append":
-                            print("Proceeding with insertion (may create duplicates)")
-                            # Continue with insertion without deleting
+                    # Convert data types to match for proper comparison
+                    for col in duplicate_check_columns:
+                        if col in existing_df.columns and col in df_clean_comparison.columns:
+                            # Handle datetime columns
+                            if col in ['Sent_Date', 'Order_Date']:
+                                existing_df[col] = pd.to_datetime(existing_df[col], errors='coerce')
+                                df_clean_comparison[col] = pd.to_datetime(df_clean_comparison[col], errors='coerce')
+                            # Handle numeric columns
+                            elif col in ['Net_Price', 'Qty']:
+                                existing_df[col] = pd.to_numeric(existing_df[col], errors='coerce')
+                                df_clean_comparison[col] = pd.to_numeric(df_clean_comparison[col], errors='coerce')
+                            # Handle string columns
+                            else:
+                                existing_df[col] = existing_df[col].astype(str)
+                                df_clean_comparison[col] = df_clean_comparison[col].astype(str)
                     
-                    else:
-                        print("No existing records found for this date range")
-                
-                # Option 2: Filter out individual duplicate records (more precise)
-                # Uncomment this section if you prefer record-level duplicate checking
-                """
-                if not df_clean.empty:
-                    # Create a list of unique identifiers for existing records
-                    order_ids = df_clean['Order_Id'].dropna().unique().tolist()
-                    check_ids = df_clean['Check_Id'].dropna().unique().tolist()
+                    # Create a composite key for comparison
+                    existing_df['composite_key'] = existing_df[comparison_columns].apply(
+                        lambda row: '|'.join([str(val) for val in row]), axis=1
+                    )
                     
-                    if order_ids or check_ids:
-                        existing_records = db.query(SalesPMix).filter(
-                            SalesPMix.company_id == request.company_id,
-                            or_(
-                                SalesPMix.Order_Id.in_(order_ids) if order_ids else False,
-                                SalesPMix.Check_Id.in_(check_ids) if check_ids else False
-                            )
-                        ).all()
-                        
-                        if existing_records:
-                            existing_order_ids = {r.Order_Id for r in existing_records if r.Order_Id}
-                            existing_check_ids = {r.Check_Id for r in existing_records if r.Check_Id}
-                            
-                            # Filter out rows that already exist
-                            original_len = len(df_clean)
-                            df_clean = df_clean[
-                                ~((df_clean['Order_Id'].isin(existing_order_ids)) | 
-                                  (df_clean['Check_Id'].isin(existing_check_ids)))
-                            ]
-                            filtered_len = len(df_clean)
-                            
-                            print(f"Filtered out {original_len - filtered_len} duplicate records")
-                            
-                            if df_clean.empty:
-                                print("All records already exist in database. Skipping insertion.")
-                                return result
-                """
+                    df_clean_comparison['composite_key'] = df_clean_comparison[comparison_columns].apply(
+                        lambda row: '|'.join([str(val) for val in row]), axis=1
+                    )
+                    
+                    # Find duplicates
+                    existing_keys = set(existing_df['composite_key'].tolist())
+                    duplicate_mask = df_clean_comparison['composite_key'].isin(existing_keys)
+                    
+                    duplicates_count = duplicate_mask.sum()
+                    new_records_count = len(df_clean_comparison) - duplicates_count
+                    
+                    print(f"Duplicate analysis complete:")
+                    print(f"  - Total records in upload: {len(df_clean_comparison)}")
+                    print(f"  - Duplicate records found: {duplicates_count}")
+                    print(f"  - New records to insert: {new_records_count}")
+                    
+                    if duplicates_count > 0:
+                        print("Sample duplicate records:")
+                        duplicate_samples = df_clean_comparison[duplicate_mask][comparison_columns].head(3)
+                        print(duplicate_samples.to_string())
+                    
+                    # Filter out duplicates
+                    df_clean = df_clean_comparison[~duplicate_mask].copy()
+                    
+                    # Remove the temporary composite_key and company_id columns if they weren't in original data
+                    if 'composite_key' in df_clean.columns:
+                        df_clean = df_clean.drop('composite_key', axis=1)
+                    if 'company_id' in df_clean.columns and 'company_id' not in df.columns:
+                        df_clean = df_clean.drop('company_id', axis=1)
+                    
+                else:
+                    new_records_count = len(df_clean)
+                    duplicates_count = 0
+                    print(f"No existing records found for comparison. All {new_records_count} records will be inserted.")
                 
-                print(f"Proceeding with insertion of {len(df_clean)} records...")
+                # ===== END DUPLICATE CHECK LOGIC =====
                 
-                # Insert the processed DataFrame into the database with error handling
-                inserted_count = insert_sales_pmix_df(db, df_clean, request.company_id)
-                
-                print(f"Successfully inserted {inserted_count} records into sales_pmix table")
+                if len(df_clean) == 0:
+                    print("No new records to insert after duplicate check.")
+                    inserted_count = 0
+                else:
+                    # Insert the processed DataFrame into the database with error handling
+                    inserted_count = insert_sales_pmix_df(db, df_clean, request.company_id)
+                    print(f"Successfully inserted {inserted_count} new records into sales_pmix table")
                 
                 # Optional: Add to result for user feedback
                 if hasattr(result, '__dict__'):
                     result.database_records_inserted = inserted_count
+                    result.duplicate_records_skipped = duplicates_count
+                    result.total_records_processed = len(df)
                 
             except Exception as db_error:
                 print(f"Database insertion error: {str(db_error)}")
@@ -451,7 +475,8 @@ async def upload_excel(
                     status_code=400, 
                     detail=f"Data validation failed: {str(validation_error)}"
                 )
-
+        
+        
         return result
 
     except Exception as e:

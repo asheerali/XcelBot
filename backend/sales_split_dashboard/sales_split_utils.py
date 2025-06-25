@@ -694,7 +694,7 @@ def thirteen_week_category(df, location_filter='All', end_date=None, category_fi
     else:
         thirteen_week_start_date = None  # Return empty if no end date provided
     
-    print("i am here in sales split utils printing the thirteen week function printing the filters", df.head(), location_filter, end_date, category_filter, thirteen_week_start_date, "thirteen_week_start_date type, ", type(thirteen_week_start_date), "thirteen_week_df['Date'] type ", type(df_copy['Date'][0]))
+    # print("i am here in sales split utils printing the thirteen week function printing the filters", df.head(), location_filter, end_date, category_filter, thirteen_week_start_date, "thirteen_week_start_date type, ", type(thirteen_week_start_date), "thirteen_week_df['Date'] type ", type(df_copy['Date'][0]))
     
     # Filter 13-week period data
     thirteen_week_df = df_copy.copy()
@@ -742,9 +742,9 @@ def thirteen_week_category(df, location_filter='All', end_date=None, category_fi
     
     thirteen_week_category_table = pd.concat([thirteen_week_category_table, grand_total_row], ignore_index=True)
     
-    print("--------------------new-----------------------------------")
-    print("i am here in sales split utils printing thirteen_week_category_table and the dates",  
-          thirteen_week_category_table, "end_date", end_date, "thirteen_week_start_date", thirteen_week_start_date)
+    # print("--------------------new-----------------------------------")
+    # print("i am here in sales split utils printing thirteen_week_category_table and the dates",  
+    #       thirteen_week_category_table, "end_date", end_date, "thirteen_week_start_date", thirteen_week_start_date)
     
     return {'thirteen_week_category_table': thirteen_week_category_table}
 
