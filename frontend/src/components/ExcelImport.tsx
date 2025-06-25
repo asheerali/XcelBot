@@ -831,6 +831,7 @@ const handleApplyFiltersWithDates = (
         location: locationName
       });
       
+      console.log('📥 Received upload response for the sales split:', response.data);
       setLoadingMessage('Generating insights...');
       
       if (response.data) {

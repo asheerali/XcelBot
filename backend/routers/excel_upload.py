@@ -190,7 +190,7 @@ async def upload_excel(
                 
                 
             # print("i am here in excel upload printing the columns of the dataframe", df.columns, "\n", df.dtypes , "\n", df.head())
-
+            print("i am here in excel upload printing the filename dashboard and company id and df head", file_name, request.dashboard, request.company_id, "\n", df.head())
             result = process_dashboard_data(request, df, file_name, request.company_id)
         else:
             result = process_dashboard_data(request, df, file_name, request.company_id)

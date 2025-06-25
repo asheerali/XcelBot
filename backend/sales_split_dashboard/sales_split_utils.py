@@ -460,7 +460,7 @@ def create_sales_overview_tables(df, location_filter='All', start_date=None, end
             'sales_by_day_table': pd.DataFrame(),
             'sales_by_category_table': pd.DataFrame(),
             'category_comparison_table': pd.DataFrame(),
-            'thirteen_week_category_table': pd.DataFrame(),
+            # 'thirteen_week_category_table': pd.DataFrame(),
         }
     
     # Ensure Date column is datetime
@@ -630,13 +630,120 @@ def create_sales_overview_tables(df, location_filter='All', start_date=None, end
         })
         
         thirteen_week_category_table = pd.concat([thirteen_week_category_table, grand_total_row], ignore_index=True)
-
+        # print("----------------------old---------------------------------")
+        # print("i am here in sales split utils printing old thirteen_week_category_table and the dates",  
+        #   thirteen_week_category_table, "end_date", end_date, "thirteen_week_start_date", thirteen_week_start_date)
+    
     return {
         # 'sales_by_day_table': sales_by_day_table,
         'sales_by_category_table': sales_by_category_table,
         'category_comparison_table': category_comparison_table,
-        'thirteen_week_category_table': thirteen_week_category_table,
+        # 'thirteen_week_category_table': thirteen_week_category_table,
     }
+
+
+def thirteen_week_category(df, location_filter='All', end_date=None, category_filter='All'):
+    """
+    Create a thirteen-week summary table with total sales and orders by week.
+    
+    Parameters:
+    df (pandas.DataFrame): The main dataframe containing sales data
+    location_filter (str or list): Location filter ('All' for no filter, or specific location(s))
+    end_date (str or datetime.date): End date for the 13-week period
+    
+    Returns:
+    pandas.DataFrame: Thirteen week summary table with Week, Total_Sales, Total_Orders columns
+    """
+
+    # Make a copy of the dataframe
+    df_copy = df.copy()
+    
+    # if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
+    #     df_copy['Date'] = pd.to_datetime(df_copy['Date'])
+    
+    if end_date is None:
+        df_copy['Date'] = pd.to_datetime(df_copy['Date'])
+        end_date = df_copy['Date'].max().date()
+    
+    # category_filter
+    if category_filter != 'All':
+        if isinstance(category_filter, list):
+            df_copy = df_copy[df_copy['Category'].isin(category_filter)]
+        else:
+            df_copy = df_copy[df_copy['Category'] == category_filter]
+    
+    # Apply location filter to the entire dataset first
+    if location_filter != 'All':
+        if isinstance(location_filter, list):
+            df_copy = df_copy[df_copy['Location'].isin(location_filter)]
+        else:
+            df_copy = df_copy[df_copy['Location'] == location_filter]
+    
+    # Convert end_date if it's a string
+    if end_date is not None and isinstance(end_date, str):
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    
+    # Calculate 13-week period dates
+    if end_date is not None:
+        # Calculate 13 weeks (91 days) before end_date
+        thirteen_week_start_date = end_date - timedelta(days=90)  # 13 weeks = 91 days
+    else:
+        thirteen_week_start_date = None  # Return empty if no end date provided
+    
+    print("i am here in sales split utils printing the thirteen week function printing the filters", df.head(), location_filter, end_date, category_filter)
+    
+    # Filter 13-week period data
+    thirteen_week_df = df_copy.copy()
+    thirteen_week_df = thirteen_week_df[
+        (thirteen_week_df['Date'] >= thirteen_week_start_date) & 
+        (thirteen_week_df['Date'] <= end_date)
+    ]
+    
+    # If the dataframe is empty after filtering, return empty table
+    if thirteen_week_df.empty:
+        return pd.DataFrame()
+    
+    # Ensure Date column is datetime for 13-week data
+    if not pd.api.types.is_datetime64_any_dtype(thirteen_week_df['Date']):
+        thirteen_week_df['Date'] = pd.to_datetime(thirteen_week_df['Date'])
+    
+    # Create week number and week label for 13-week data
+    thirteen_week_df['Week_Number'] = thirteen_week_df['Date'].dt.isocalendar().week
+    thirteen_week_df['Week_Label'] = 'Week ' + thirteen_week_df['Week_Number'].astype(str)
+    
+    # Group by week and calculate metrics
+    thirteen_week_summary = thirteen_week_df.groupby('Week_Label').agg({
+        'Net_Price': ['sum', 'count'],  # sum for total sales, count for number of orders
+    }).round(2)
+    
+    
+    
+    # Flatten column names
+    thirteen_week_summary.columns = ['Total_Sales', 'Total_Orders']
+    
+    # Reset index to make Week_Label a column
+    thirteen_week_category_table = thirteen_week_summary.reset_index()
+    thirteen_week_category_table.columns = ['Week', 'Total_Sales', 'Total_Orders']
+    
+    # Sort by week number (extract number from 'Week X' format for proper sorting)
+    thirteen_week_category_table['Week_Num'] = thirteen_week_category_table['Week'].str.extract('(\d+)').astype(int)
+    thirteen_week_category_table = thirteen_week_category_table.sort_values('Week_Num').drop('Week_Num', axis=1).reset_index(drop=True)
+    
+    # Add a grand total row
+    grand_total_row = pd.DataFrame({
+        'Week': ['Grand Total'],
+        'Total_Sales': [thirteen_week_category_table['Total_Sales'].sum()],
+        'Total_Orders': [thirteen_week_category_table['Total_Orders'].sum()],
+    })
+    
+    thirteen_week_category_table = pd.concat([thirteen_week_category_table, grand_total_row], ignore_index=True)
+    
+    print("--------------------new-----------------------------------")
+    print("i am here in sales split utils printing thirteen_week_category_table and the dates",  
+          thirteen_week_category_table, "end_date", end_date, "thirteen_week_start_date", thirteen_week_start_date)
+    
+    return {'thirteen_week_category_table': thirteen_week_category_table}
+
 
 
 def create_sales_by_day_table(df, location_filter='All', end_date=None, categories_filter='All', moving_avg_days=7):
@@ -647,6 +754,9 @@ def create_sales_by_day_table(df, location_filter='All', end_date=None, categori
 
     if end_date is not None and isinstance(end_date, str):
         end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+    elif end_date is None:
+        end_date = df_copy['Date'].max().date()
 
     target_date = end_date if end_date else df_copy['Date'].max().date()
     days_since_monday = target_date.weekday()
@@ -664,6 +774,7 @@ def create_sales_by_day_table(df, location_filter='All', end_date=None, categori
     if df_copy.empty:
         return pd.DataFrame(columns=['Day_of_Week', 'Date', 'Sales', 'Moving_Avg'])
 
+    # print("i am here in the function create_sales_by_day_table priting the end date", end_date, "target_date", target_date, "week_start", week_start, "week_end", week_end)
     # Get only current week data (no historical data beyond current week)
     historical_df = df_copy[(df_copy['Date'].dt.date >= historical_start) & (df_copy['Date'].dt.date <= week_end)].copy()
 

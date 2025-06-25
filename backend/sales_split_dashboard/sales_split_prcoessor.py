@@ -3,10 +3,10 @@ import io
 from typing import Union
 import pandas as pd
 # from pmix_dashboard.pmix_utils import overview_tables, detailed_analysis_tables
-from sales_split_dashboard.sales_split_utils import create_sales_pivot_tables, sales_analysis_tables, create_sales_overview_tables, create_sales_by_day_table
+from sales_split_dashboard.sales_split_utils import create_sales_pivot_tables, sales_analysis_tables, create_sales_overview_tables, create_sales_by_day_table, thirteen_week_category
 import numpy as np
 
-def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', start_date=None, end_date=None, category_filter='All'):
+def process_sales_split_file(file_data: Union[io.BytesIO, str, pd.DataFrame],location='All', start_date=None, end_date=None, category_filter='All'):
     """
     Process the uploaded Excel file and transform the data.
     Returns data tables for the frontend including the 1P column.
@@ -26,19 +26,19 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
             if isinstance(file_data, pd.DataFrame):
                 print("Received DataFrame directly.")
                 df = file_data
-            elif isinstance(file_data, io.BytesIO):
-                print("i am here in io.BytesIO")
-                file_data.seek(0)
-                print("Reading Excel from BytesIO object.")
-                needed_columns = ["Location", "Sent Date", "Dining Option", "Net Price", "Qty"]
-                df = pd.read_excel(file_data, usecols=needed_columns)
-                print("df im here prnting df in sales_split_processor_file", "\n", df.head())
-                # df = pd.read_excel(file_data)
-            elif isinstance(file_data, str):
-                print("Reading Excel from file path.")
-                needed_columns = ["Location", "Sent Date", "Dining Option", "Net Price", "Qty"]
-                df = pd.read_excel(file_data, usecols=needed_columns)
-                # df = pd.read_excel(file_data)
+            # elif isinstance(file_data, io.BytesIO):
+            #     print("i am here in io.BytesIO")
+            #     file_data.seek(0)
+            #     print("Reading Excel from BytesIO object.")
+            #     needed_columns = ["Location", "Sent Date", "Dining Option", "Net Price", "Qty"]
+            #     df = pd.read_excel(file_data, usecols=needed_columns)
+            #     print("df im here prnting df in sales_split_processor_file", "\n", df.head())
+            #     # df = pd.read_excel(file_data)
+            # elif isinstance(file_data, str):
+            #     print("Reading Excel from file path.")
+            #     needed_columns = ["Location", "Sent Date", "Dining Option", "Net Price", "Qty"]
+            #     df = pd.read_excel(file_data, usecols=needed_columns)
+            #     # df = pd.read_excel(file_data)
           
             if df.empty:
                 raise ValueError("The sheet 'Database' is empty or missing.")
@@ -103,7 +103,7 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
     sales_by_day = create_sales_by_day_table(df, location_filter=location, end_date=end_date, categories_filter=category_filter)
     sales_by_day_table = sales_by_day['sales_by_day_table']
 
-
+    print("sales_by_day_table i am here in sales split processor", "\n", sales_by_day_table.head())
     
     salesByWeek = analysis['sales_by_week']
     salesByDayOfWeek = analysis['sales_by_day']
@@ -112,7 +112,9 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str],location='All', s
     # sales_by_day_table = sales_overview_analysis['sales_by_day_table'] 
     sales_by_category_table = sales_overview_analysis['sales_by_category_table']
     category_comparison_table = sales_overview_analysis['category_comparison_table']
-    thirteen_week_category_table = sales_overview_analysis['thirteen_week_category_table']
+    # thirteen_week_category_table = sales_overview_analysis['thirteen_week_category_table']
     
-    print("sales_by_day_table i am here in sales split processor", "\n", salesByWeek)
+    thirteen_week_category_table = thirteen_week_category(df, location_filter=location, end_date=end_date, category_filter=category_filter)
+    
+    print("thirteen week  i am here in sales split processor", "\n", thirteen_week_category_table)
     return sales_by_day_table, sales_by_category_table, category_comparison_table, thirteen_week_category_table, pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay, categories, locations

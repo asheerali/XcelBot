@@ -173,8 +173,8 @@ def process_sales_split_and_product_mix(request, df, file_name, company_id=None)
     default_start_date = "2025-01-01"
     default_end_date = "2025-05-31"
 
-    start_date = request.startDate if request.startDate else default_start_date
-    end_date = request.endDate if request.endDate else default_end_date
+    start_date = request.startDate if request.startDate else None
+    end_date = request.endDate if request.endDate else None
     category_filter = request.category if request.category else 'All'
     
     # Process Product Mix data

@@ -520,10 +520,10 @@ const ExcelUploadPage: React.FC = () => {
     try {
       setCompaniesLoading(true);
       setCompaniesError(null);
-      
+
       console.log("🏢 Fetching companies from:", COMPANIES_API_URL);
       const response = await apiClient.get("/companies/");
-      
+
       if (response.data && Array.isArray(response.data)) {
         setCompanies(response.data);
         console.log("✅ Companies fetched successfully:", response.data);
@@ -700,6 +700,8 @@ const ExcelUploadPage: React.FC = () => {
       const response = await apiClient.post("/api/excel/upload", uploadPayload);
 
       clearInterval(progressInterval);
+
+      console.log("✅ Upload response for the sales split:", response);
 
       if (response.data) {
         console.log("📨 Received response data:", response.data);
@@ -1119,13 +1121,19 @@ const ExcelUploadPage: React.FC = () => {
                     variant="outlined"
                     fullWidth
                     error={!!companiesError}
-                    helperText={companiesError || "Choose a company to upload files for"}
+                    helperText={
+                      companiesError || "Choose a company to upload files for"
+                    }
                     InputProps={{
                       ...params.InputProps,
-                      startAdornment: <BusinessIcon sx={{ mr: 1, color: 'action.active' }} />,
+                      startAdornment: (
+                        <BusinessIcon sx={{ mr: 1, color: "action.active" }} />
+                      ),
                       endAdornment: (
                         <>
-                          {companiesLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                          {companiesLoading ? (
+                            <CircularProgress color="inherit" size={20} />
+                          ) : null}
                           {params.InputProps.endAdornment}
                         </>
                       ),
@@ -1133,7 +1141,11 @@ const ExcelUploadPage: React.FC = () => {
                   />
                 )}
                 renderOption={(props, option) => (
-                  <Box component="li" {...props} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box
+                    component="li"
+                    {...props}
+                    sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                  >
                     <BusinessIcon fontSize="small" color="action" />
                     <Box>
                       <Typography variant="body1" fontWeight={500}>
@@ -1155,9 +1167,23 @@ const ExcelUploadPage: React.FC = () => {
               />
 
               {selectedCompany && (
-                <Box sx={{ mt: 2, p: 2, bgcolor: 'primary.light', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box
+                  sx={{
+                    mt: 2,
+                    p: 2,
+                    bgcolor: "primary.light",
+                    borderRadius: 2,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
                   <CheckCircleIcon color="primary" />
-                  <Typography variant="body2" color="primary.dark" fontWeight={500}>
+                  <Typography
+                    variant="body2"
+                    color="primary.dark"
+                    fontWeight={500}
+                  >
                     Selected: {selectedCompany.name}
                   </Typography>
                 </Box>
@@ -1275,11 +1301,15 @@ const ExcelUploadPage: React.FC = () => {
               />
 
               <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
-                {!selectedCompany ? "Select a Company First" : "Drag & Drop Excel Files Here"}
+                {!selectedCompany
+                  ? "Select a Company First"
+                  : "Drag & Drop Excel Files Here"}
               </Typography>
 
               <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                {!selectedCompany ? "Choose a company before uploading files" : "or click to browse files"}
+                {!selectedCompany
+                  ? "Choose a company before uploading files"
+                  : "or click to browse files"}
               </Typography>
 
               {selectedCompany && (
@@ -1344,7 +1374,10 @@ const ExcelUploadPage: React.FC = () => {
                 <ProcessButton
                   variant="contained"
                   onClick={uploadAllFiles}
-                  disabled={files.every((f) => f.status !== "pending") || !selectedCompany}
+                  disabled={
+                    files.every((f) => f.status !== "pending") ||
+                    !selectedCompany
+                  }
                   startIcon={<CloudUploadIcon />}
                   endIcon={<ArrowForwardIcon />}
                 >
@@ -1354,7 +1387,17 @@ const ExcelUploadPage: React.FC = () => {
 
               {/* Show selected company info */}
               {selectedCompany && (
-                <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box
+                  sx={{
+                    mb: 3,
+                    p: 2,
+                    bgcolor: "grey.50",
+                    borderRadius: 2,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
                   <BusinessIcon color="primary" />
                   <Typography variant="body1" fontWeight={500}>
                     Uploading for: {selectedCompany.name}
@@ -1594,7 +1637,10 @@ const ExcelUploadPage: React.FC = () => {
                                 sx={{
                                   borderRadius: 2,
                                   "&:hover": {
-                                    backgroundColor: alpha(theme.palette.error.main, 0.1),
+                                    backgroundColor: alpha(
+                                      theme.palette.error.main,
+                                      0.1
+                                    ),
                                   },
                                 }}
                               >
