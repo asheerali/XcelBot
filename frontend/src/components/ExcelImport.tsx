@@ -1,4 +1,4 @@
-// Fixed ExcelImport.tsx - Resolves location selection and data loading issues
+// Updated ExcelImport.tsx with Company Selection Dropdown
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -27,6 +27,11 @@ import Grow from '@mui/material/Grow';
 import Chip from '@mui/material/Chip';
 import Paper from '@mui/material/Paper';
 import Backdrop from '@mui/material/Backdrop';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import CardContent from '@mui/material/CardContent';
 import { styled, alpha, keyframes } from '@mui/material/styles';
 
 // Icons
@@ -39,6 +44,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import BusinessIcon from '@mui/icons-material/Business'; // Company icon
 
 // Import components
 import FilterSection from './FilterSection';
@@ -68,11 +74,19 @@ import {
   selectSalesWideLocation,
   selectCategoriesByLocation,
   selectSalesFilters,
-  updateSalesFilters
+  updateSalesFilters,
+  selectCompanyId, // Import company ID selector
 } from '../store/excelSlice';
 
 // Extract actions from the slice
 const { setLoading, setError } = excelSlice.actions;
+
+// Company interface
+interface Company {
+  id: string;
+  name: string;
+  [key: string]: any; // Allow for additional company properties
+}
 
 // Styled components (keeping existing styles)
 const slideIn = keyframes`
@@ -206,6 +220,19 @@ const LoadingOverlay = styled(Backdrop)(({ theme }) => ({
   backdropFilter: 'blur(8px)',
 }));
 
+// Company info display component
+const CompanyInfoChip = styled(Chip)(({ theme }) => ({
+  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+  '& .MuiChip-icon': {
+    color: theme.palette.primary.main,
+  },
+  '& .MuiChip-label': {
+    color: theme.palette.primary.main,
+    fontWeight: 600,
+  },
+}));
+
 const ModernLoader = () => (
   <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
     <Box sx={{ position: 'relative' }}>
@@ -237,6 +264,7 @@ const ModernLoader = () => (
 // API URLs
 const API_URL = API_URL_Local + '/api/excel/upload';
 const FILTER_API_URL = API_URL_Local + '/api/salessplit/filter';
+const COMPANIES_API_URL = API_URL_Local + '/companies'; // NEW: Companies API endpoint
 
 // Tab Panel Component
 interface TabPanelProps {
@@ -324,7 +352,17 @@ export function ExcelImport() {
   } = useAppSelector((state) => state.excel);
   
   const salesFilters = useAppSelector(selectSalesFilters);
+  
+  // Get company_id from Redux (might come from uploaded files)
+  const currentCompanyId = useAppSelector(selectCompanyId);
+  
   const dispatch = useAppDispatch();
+  
+  // NEW: Company-related state
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
+  const [companiesLoading, setCompaniesLoading] = useState(false);
+  const [companiesError, setCompaniesError] = useState<string>("");
   
   // Local state
   const [file, setFile] = useState<File | null>(null);
@@ -358,6 +396,75 @@ export function ExcelImport() {
   const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
   const [loadingProgress, setLoadingProgress] = useState<number>(0);
   const [loadingMessage, setLoadingMessage] = useState<string>('');
+
+  // NEW: Fetch companies on component mount
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      setCompaniesLoading(true);
+      setCompaniesError("");
+      
+      try {
+        console.log('🏢 ExcelImport: Fetching companies from:', COMPANIES_API_URL);
+        const response = await axios.get(COMPANIES_API_URL);
+        
+        console.log('📥 ExcelImport: Companies response:', response.data);
+        setCompanies(response.data || []);
+        
+        // Optionally auto-select the first company if there's only one
+        if (response.data && response.data.length === 1) {
+          setSelectedCompanyId(response.data[0].id);
+          console.log('🎯 ExcelImport: Auto-selected single company:', response.data[0]);
+        }
+        
+      } catch (error) {
+        console.error('❌ ExcelImport: Error fetching companies:', error);
+        
+        let errorMessage = "Error loading companies";
+        if (axios.isAxiosError(error)) {
+          if (error.response) {
+            errorMessage = `Server error: ${error.response.status}`;
+          } else if (error.request) {
+            errorMessage = 'Cannot connect to companies API. Please check server status.';
+          }
+        }
+        
+        setCompaniesError(errorMessage);
+      } finally {
+        setCompaniesLoading(false);
+      }
+    };
+
+    fetchCompanies();
+  }, []);
+
+  // NEW: Sync selectedCompanyId with Redux currentCompanyId if it exists (from uploaded files)
+  useEffect(() => {
+    if (currentCompanyId && !selectedCompanyId) {
+      console.log('🏢 ExcelImport: Syncing company ID from Redux files:', currentCompanyId);
+      setSelectedCompanyId(currentCompanyId);
+    }
+  }, [currentCompanyId, selectedCompanyId]);
+
+  // NEW: Handle company selection
+  const handleCompanyChange = (event: SelectChangeEvent) => {
+    const companyId = event.target.value;
+    setSelectedCompanyId(companyId);
+    console.log('🏢 ExcelImport: Company selected:', companyId);
+  };
+
+  // Get selected company name for display
+  const selectedCompanyName = companies.find(c => c.id === selectedCompanyId)?.name || 
+                               (selectedCompanyId ? `Company ID: ${selectedCompanyId}` : 'No Company Selected');
+
+  // Get active company ID (prioritize selectedCompanyId, fallback to Redux currentCompanyId)
+  const activeCompanyId = selectedCompanyId || currentCompanyId;
+
+  // Log company_id changes for debugging
+  useEffect(() => {
+    if (activeCompanyId) {
+      console.log('🏢 ExcelImport: Active company ID:', activeCompanyId);
+    }
+  }, [activeCompanyId]);
 
   // FIXED: Only update selected location when Redux location changes AND we have valid data
   useEffect(() => {
@@ -444,183 +551,186 @@ export function ExcelImport() {
     setChartKey(prevKey => prevKey + 1);
   };
 
-  // FIXED: New method that accepts explicit date values to avoid timing issues
- // Fixed handleApplyFiltersWithDates function in ExcelImport.tsx
-const handleApplyFiltersWithDates = (
-  explicitStartDate: string, 
-  explicitEndDate: string, 
-  categories: string[],
-  selectedLocations: string[] // ✅ Now receives array of selected locations
-) => {
-  console.log('🎯 ExcelImport: Applying filters with explicit values:', {
-    startDate: explicitStartDate,
-    endDate: explicitEndDate,
-    categories,
-    selectedLocations // ✅ Log all selected locations
-  });
-
-  // Check if we have any files loaded
-  if (!files || files.length === 0) {
-    setLocalError('No files uploaded. Please upload Excel files first.');
-    return;
-  }
-
-  // ✅ FIXED: Handle multiple locations - find files for all selected locations
-  const filesForLocations = selectedLocations.map(location => {
-    const file = files.find(f => f.location === location);
-    if (!file) {
-      console.warn(`No file found for location: ${location}`);
-    }
-    return { location, file };
-  }).filter(item => item.file !== undefined);
-
-  if (filesForLocations.length === 0) {
-    setLocalError(`No files found for selected locations: ${selectedLocations.join(', ')}`);
-    return;
-  }
-
-  // Use the first file for the request (or you could send multiple files)
-  const primaryFile = filesForLocations[0].file!;
-
-  try {
-    console.log('🔄 Starting backend request...');
-    setIsWaitingForBackendResponse(true);
-    setHasValidData(false);
-    
-    if (setLoading && typeof setLoading === 'function') {
-      dispatch(setLoading(true));
-    }
-    
-    if (setError && typeof setError === 'function') {
-      dispatch(setError(null));
-    }
-    
-    setLocalError('');
-    
-    // ✅ Update Redux state with the first selected location for backward compatibility
-    dispatch(selectLocation(selectedLocations[0]));
-    
-    // Format dates correctly for API
-    let formattedStartDate: string | null = null;
-    let formattedEndDate: string | null = null;
-    
-    if (explicitStartDate) {
-      const dateParts = explicitStartDate.split('/');
-      if (dateParts.length === 3) {
-        formattedStartDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
-      }
-    }
-    
-    if (explicitEndDate) {
-      const dateParts = explicitEndDate.split('/');
-      if (dateParts.length === 3) {
-        formattedEndDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
-      }
-    }
-
-    console.log('📅 Formatted dates for API:', {
-      original: { start: explicitStartDate, end: explicitEndDate },
-      formatted: { start: formattedStartDate, end: formattedEndDate }
+  // UPDATED: Enhanced handleApplyFiltersWithDates with active company_id
+  const handleApplyFiltersWithDates = (
+    explicitStartDate: string, 
+    explicitEndDate: string, 
+    categories: string[],
+    selectedLocations: string[]
+  ) => {
+    console.log('🎯 ExcelImport: Applying filters with explicit values:', {
+      startDate: explicitStartDate,
+      endDate: explicitEndDate,
+      categories,
+      selectedLocations,
+      activeCompanyId // Use active company ID
     });
-    
-    // ✅ FIXED: Prepare filter data with ALL selected locations
-    const filterData = {
-      fileName: primaryFile.fileName,
-      startDate: formattedStartDate,
-      endDate: formattedEndDate,
-      // ✅ Send ALL selected locations as an array
-      locations: selectedLocations,
-      // Keep single location for backward compatibility
-      location: selectedLocations[0] || null,
-      dateRangeType: 'Custom Date Range',
-      selectedCategories: categories,
-      categories: categories.join(','),
-      // ✅ Additional metadata for multiple location handling
-      multipleLocations: selectedLocations.length > 1,
-      allFileNames: filesForLocations.map(item => item.file!.fileName)
-    };
-    
-    console.log('📤 Sending filter request with multiple locations:', filterData);
-    
-    // Call filter API
-    axios.post(FILTER_API_URL, filterData)
-      .then(response => {
-        console.log('📥 Received filter response:', response.data);
-        
-        if (response.data) {
-          // Update Redux state with new data
-          dispatch(setTableData(response.data));
-          
-          setLocalError('');
-          setChartKey(prevKey => prevKey + 1);
-          
-          // Update local state with the values that were actually sent
-          setStartDate(explicitStartDate);
-          setEndDate(explicitEndDate);
-          setDateRangeType('Custom Date Range');
-          
-          // Mark that we have valid data
-          setHasValidData(true);
-          setIsWaitingForBackendResponse(false);
-          
-          console.log('✅ Filter applied successfully with multiple locations:', selectedLocations);
-        } else {
-          throw new Error('Invalid response data');
+
+    // Check if we have any files loaded
+    if (!files || files.length === 0) {
+      setLocalError('No files uploaded. Please upload Excel files first.');
+      return;
+    }
+
+    // ✅ FIXED: Handle multiple locations - find files for all selected locations
+    const filesForLocations = selectedLocations.map(location => {
+      const file = files.find(f => f.location === location);
+      if (!file) {
+        console.warn(`No file found for location: ${location}`);
+      }
+      return { location, file };
+    }).filter(item => item.file !== undefined);
+
+    if (filesForLocations.length === 0) {
+      setLocalError(`No files found for selected locations: ${selectedLocations.join(', ')}`);
+      return;
+    }
+
+    // Use the first file for the request (or you could send multiple files)
+    const primaryFile = filesForLocations[0].file!;
+
+    try {
+      console.log('🔄 Starting backend request with active company_id:', activeCompanyId);
+      setIsWaitingForBackendResponse(true);
+      setHasValidData(false);
+      
+      if (setLoading && typeof setLoading === 'function') {
+        dispatch(setLoading(true));
+      }
+      
+      if (setError && typeof setError === 'function') {
+        dispatch(setError(null));
+      }
+      
+      setLocalError('');
+      
+      // ✅ Update Redux state with the first selected location for backward compatibility
+      dispatch(selectLocation(selectedLocations[0]));
+      
+      // Format dates correctly for API
+      let formattedStartDate: string | null = null;
+      let formattedEndDate: string | null = null;
+      
+      if (explicitStartDate) {
+        const dateParts = explicitStartDate.split('/');
+        if (dateParts.length === 3) {
+          formattedStartDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
         }
-      })
-      .catch(err => {
-        console.error('❌ Filter error:', err);
-        
-        setIsWaitingForBackendResponse(false);
-        setHasValidData(false);
-        
-        let errorMessage = 'Error filtering data';
-        if (axios.isAxiosError(err)) {
-          if (err.response) {
-            const detail = err.response.data?.detail;
-            errorMessage = `Server error: ${detail || err.response.status}`;
-            
-            if (detail && typeof detail === 'string' && detail.includes('isinf')) {
-              errorMessage = 'Backend error: Please update the backend code to use numpy.isinf instead of pandas.isinf';
-            } else if (err.response.status === 404) {
-              errorMessage = 'API endpoint not found. Is the server running?';
-            }
-          } else if (err.request) {
-            errorMessage = 'No response from server. Please check if the backend is running.';
-          }
+      }
+      
+      if (explicitEndDate) {
+        const dateParts = explicitEndDate.split('/');
+        if (dateParts.length === 3) {
+          formattedEndDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
         }
-        
-        setLocalError(errorMessage);
-        if (setError && typeof setError === 'function') {
-          dispatch(setError(errorMessage));
-        }
-      })
-      .finally(() => {
-        if (setLoading && typeof setLoading === 'function') {
-          dispatch(setLoading(false));
-        }
+      }
+
+      console.log('📅 Formatted dates for API:', {
+        original: { start: explicitStartDate, end: explicitEndDate },
+        formatted: { start: formattedStartDate, end: formattedEndDate }
       });
-    
-  } catch (err: any) {
-    console.error('Filter error:', err);
-    setIsWaitingForBackendResponse(false);
-    setHasValidData(false);
-    
-    const errorMessage = 'Error applying filters: ' + (err.message || 'Unknown error');
-    setLocalError(errorMessage);
-    
-    if (setError && typeof setError === 'function') {
-      dispatch(setError(errorMessage));
+      
+      // ✅ UPDATED: Prepare filter data with ALL selected locations AND active company_id
+      const filterData = {
+        fileName: primaryFile.fileName,
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+        // ✅ Send ALL selected locations as an array
+        locations: selectedLocations,
+        // Keep single location for backward compatibility
+        location: selectedLocations[0] || null,
+        dateRangeType: 'Custom Date Range',
+        selectedCategories: categories,
+        categories: categories.join(','),
+        // ✅ UPDATED: Use active company_id (selectedCompanyId or currentCompanyId)
+        company_id: activeCompanyId,
+        // ✅ Additional metadata for multiple location handling
+        multipleLocations: selectedLocations.length > 1,
+        allFileNames: filesForLocations.map(item => item.file!.fileName)
+      };
+      
+      console.log('📤 Sending filter request with active company_id and multiple locations:', filterData);
+      
+      // Call filter API
+      axios.post(FILTER_API_URL, filterData)
+        .then(response => {
+          console.log('📥 Received filter response:', response.data);
+          
+          if (response.data) {
+            // Update Redux state with new data
+            dispatch(setTableData(response.data));
+            
+            setLocalError('');
+            setChartKey(prevKey => prevKey + 1);
+            
+            // Update local state with the values that were actually sent
+            setStartDate(explicitStartDate);
+            setEndDate(explicitEndDate);
+            setDateRangeType('Custom Date Range');
+            
+            // Mark that we have valid data
+            setHasValidData(true);
+            setIsWaitingForBackendResponse(false);
+            
+            console.log('✅ Filter applied successfully with active company_id:', activeCompanyId, 'and locations:', selectedLocations);
+          } else {
+            throw new Error('Invalid response data');
+          }
+        })
+        .catch(err => {
+          console.error('❌ Filter error:', err);
+          
+          setIsWaitingForBackendResponse(false);
+          setHasValidData(false);
+          
+          let errorMessage = 'Error filtering data';
+          if (axios.isAxiosError(err)) {
+            if (err.response) {
+              const detail = err.response.data?.detail;
+              errorMessage = `Server error: ${detail || err.response.status}`;
+              
+              if (detail && typeof detail === 'string' && detail.includes('isinf')) {
+                errorMessage = 'Backend error: Please update the backend code to use numpy.isinf instead of pandas.isinf';
+              } else if (err.response.status === 404) {
+                errorMessage = 'API endpoint not found. Is the server running?';
+              }
+            } else if (err.request) {
+              errorMessage = 'No response from server. Please check if the backend is running.';
+            }
+          }
+          
+          setLocalError(errorMessage);
+          if (setError && typeof setError === 'function') {
+            dispatch(setError(errorMessage));
+          }
+        })
+        .finally(() => {
+          if (setLoading && typeof setLoading === 'function') {
+            dispatch(setLoading(false));
+          }
+        });
+      
+    } catch (err: any) {
+      console.error('Filter error:', err);
+      setIsWaitingForBackendResponse(false);
+      setHasValidData(false);
+      
+      const errorMessage = 'Error applying filters: ' + (err.message || 'Unknown error');
+      setLocalError(errorMessage);
+      
+      if (setError && typeof setError === 'function') {
+        dispatch(setError(errorMessage));
+      }
+      
+      if (setLoading && typeof setLoading === 'function') {
+        dispatch(setLoading(false));
+      }
     }
-    
-    if (setLoading && typeof setLoading === 'function') {
-      dispatch(setLoading(false));
-    }
-  }
-};
-  // LEGACY: Keep the original method for backward compatibility
+  };
+
+  // UPDATED: Legacy method with active company_id for backward compatibility
   const handleApplyFilters = (location = selectedLocation, dateRange = dateRangeType) => {
-    console.log('⚠️ ExcelImport: Using legacy handleApplyFilters - may have timing issues');
+    console.log('⚠️ ExcelImport: Using legacy handleApplyFilters with active company_id:', activeCompanyId);
     
     // Check if we have any files loaded
     if (!files || files.length === 0) {
@@ -673,6 +783,7 @@ const handleApplyFiltersWithDates = (
       
       const selectedCategories = salesFilters?.selectedCategories || [];
       
+      // UPDATED: Include active company_id in legacy filter data
       const filterData = {
         fileName: fileForLocation.fileName,
         startDate: formattedStartDate,
@@ -680,10 +791,11 @@ const handleApplyFiltersWithDates = (
         location: location || null,
         dateRangeType: dateRange,
         selectedCategories: selectedCategories,
-        categories: selectedCategories.join(',')
+        categories: selectedCategories.join(','),
+        company_id: activeCompanyId // UPDATED: Use active company_id
       };
       
-      console.log('📤 Sending filter request (legacy):', filterData);
+      console.log('📤 Sending filter request (legacy) with active company_id:', filterData);
       
       // Call filter API
       axios.post(FILTER_API_URL, filterData)
@@ -697,7 +809,7 @@ const handleApplyFiltersWithDates = (
             setHasValidData(true);
             setIsWaitingForBackendResponse(false);
             
-            console.log('✅ Filter applied successfully (legacy)');
+            console.log('✅ Filter applied successfully (legacy) with active company_id:', activeCompanyId);
           } else {
             throw new Error('Invalid response data');
           }
@@ -792,7 +904,7 @@ const handleApplyFiltersWithDates = (
     handleUpload(locationInput.trim());
   };
 
-  // Upload and process file with enhanced loading
+  // UPDATED: Upload function with active company_id
   const handleUpload = async (locationName?: string) => {
     if (!file) {
       setLocalError('Please select a file first');
@@ -819,17 +931,25 @@ const handleApplyFiltersWithDates = (
       
       setLoadingMessage('Processing Excel data...');
       
+      // UPDATED: Include active company_id in setExcelFile dispatch
       dispatch(setExcelFile({
         fileName: file.name,
         fileContent: base64Content,
-        location: locationName
+        location: locationName,
+        company_id: activeCompanyId // UPDATED: Use active company_id
       }));
       
-      const response = await axios.post(API_URL, {
+      // UPDATED: Include active company_id in upload payload
+      const uploadPayload = {
         fileName: file.name,
         fileContent: base64Content,
-        location: locationName
-      });
+        location: locationName,
+        company_id: activeCompanyId // UPDATED: Use active company_id
+      };
+      
+      console.log('📤 Uploading file with active company_id:', activeCompanyId);
+      
+      const response = await axios.post(API_URL, uploadPayload);
       
       console.log('📥 Received upload response for the sales split:', response.data);
       setLoadingMessage('Generating insights...');
@@ -840,7 +960,8 @@ const handleApplyFiltersWithDates = (
             fileName: file.name,
             fileContent: base64Content,
             location: locationName,
-            data: response.data
+            data: response.data,
+            company_id: activeCompanyId // UPDATED: Use active company_id
           }));
           
           dispatch(setLocations(locationName ? [locationName] : response.data.locations || []));
@@ -1056,7 +1177,7 @@ const handleApplyFiltersWithDates = (
         minHeight: '100vh',
         p: 3
       }}>
-        {/* Product Mix Dashboard Header */}
+        {/* Sales Split Dashboard Header */}
         <Box mb={4}>
            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
       <h1 
@@ -1099,9 +1220,110 @@ const handleApplyFiltersWithDates = (
         </span>
   Sales Split Dashboard
       </h1>
+
+      {/* Company Info Display */}
+      {activeCompanyId && (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          mt: 2,
+          mb: 1 
+        }}>
+          <CompanyInfoChip
+            icon={<BusinessIcon />}
+            label={`Company: ${selectedCompanyName}`}
+            variant="outlined"
+          />
+        </Box>
+      )}
     </div>
           
         </Box>
+
+        {/* NEW: Company Selection Section */}
+        {companies.length > 0 && (
+          <CleanCard elevation={3} sx={{ 
+            mb: 3, 
+            borderRadius: 2, 
+            overflow: "hidden",
+            border: '2px solid #e3f2fd'
+          }}>
+            <CardContent sx={{ p: { xs: 2, md: 3 }, bgcolor: '#f8f9fa' }}>
+              <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <BusinessIcon color="primary" />
+                <Typography variant="h6" sx={{ fontWeight: 600, color: '#1976d2' }}>
+                  Select Company
+                </Typography>
+                {companiesLoading && <CircularProgress size={20} />}
+              </Box>
+              
+              {companiesError && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {companiesError}
+                </Alert>
+              )}
+              
+              <FormControl fullWidth size="small" disabled={companiesLoading}>
+                <InputLabel id="company-select-label">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <BusinessIcon fontSize="small" />
+                    Choose a company for your data analysis
+                  </Box>
+                </InputLabel>
+                <Select
+                  labelId="company-select-label"
+                  value={selectedCompanyId}
+                  onChange={handleCompanyChange}
+                  displayEmpty
+                  sx={{ 
+                    '& .MuiSelect-select': {
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }
+                  }}
+                >
+                  <MenuItem value="">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
+                      <BusinessIcon fontSize="small" />
+                      Select Company
+                    </Box>
+                  </MenuItem>
+                  {companies.map((company) => (
+                    <MenuItem key={company.id} value={company.id}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <BusinessIcon fontSize="small" color="primary" />
+                        {company.name}
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              
+              {selectedCompanyId && (
+                <Box sx={{ mt: 2 }}>
+                  <Chip
+                    icon={<BusinessIcon />}
+                    label={`Selected: ${selectedCompanyName}`}
+                    color="primary"
+                    variant="outlined"
+                    sx={{ fontWeight: 500 }}
+                  />
+                </Box>
+              )}
+              
+              {/* Note about existing data */}
+              {currentCompanyId && currentCompanyId !== selectedCompanyId && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Note:</strong> Your uploaded files are associated with Company ID: {currentCompanyId}. 
+                    Select a different company above to override this for new operations.
+                  </Typography>
+                </Alert>
+              )}
+            </CardContent>
+          </CleanCard>
+        )}
 
         {/* Status Card */}
         <CleanCard sx={{ p: 3, mb: 4 }}>
@@ -1116,6 +1338,16 @@ const handleApplyFiltersWithDates = (
                   <Typography variant="body1" color="text.secondary" paragraph>
                     Upload your Excel files to get started with powerful sales insights
                   </Typography>
+                  {/* Show company selection status */}
+                  {selectedCompanyId && (
+                    <Box sx={{ mb: 2 }}>
+                      <CompanyInfoChip
+                        icon={<BusinessIcon />}
+                        label={`Ready for: ${selectedCompanyName}`}
+                        size="small"
+                      />
+                    </Box>
+                  )}
                   <Button 
                     variant="contained" 
                     size="large"
@@ -1140,6 +1372,15 @@ const handleApplyFiltersWithDates = (
                     <Box>
                       <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
                         Data Sources Active
+                        {/* Show active company info in data sources */}
+                        {activeCompanyId && (
+                          <CompanyInfoChip
+                            icon={<BusinessIcon />}
+                            label={`Company: ${selectedCompanyName}`}
+                            size="small"
+                            sx={{ ml: 2 }}
+                          />
+                        )}
                       </Typography>
                    
                     </Box>
@@ -1209,7 +1450,7 @@ const handleApplyFiltersWithDates = (
             </Fade>
           )}
 
-          {/* FIXED: Show loading state when waiting for backend response */}
+          {/* Show loading state when waiting for backend response */}
           {isWaitingForBackendResponse && (
             <Fade in>
               <Alert 
@@ -1224,7 +1465,7 @@ const handleApplyFiltersWithDates = (
                 icon={<CircularProgress size={20} />}
               >
                 <Typography variant="subtitle2" fontWeight={600}>
-                  Loading Data...
+                  Loading Data for {selectedCompanyName}...
                 </Typography>
                 Please wait while we fetch the latest data from the backend.
               </Alert>
@@ -1233,6 +1474,7 @@ const handleApplyFiltersWithDates = (
         </CleanCard>
 
         {/* Main Dashboard - Product Mix Style */}
+        {/* NOTE: Show data even without company selection initially (as requested) */}
         {files.length > 0 && (
           <CleanCard sx={{ borderRadius: 2, mb: 3, overflow: 'hidden' }}>
             {/* Product Mix Style Tabs */}
@@ -1257,7 +1499,7 @@ const handleApplyFiltersWithDates = (
             {/* Overview Tab */}
             <TabPanel value={salesSplitTab} index={0}>
               <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
-                {/* FIXED: Only show data when we have valid data and not waiting for response */}
+                {/* Show data even without company selection initially (as requested) */}
                 {shouldShowData() ? (
                   <Fade in timeout={600}>
                     <Box>
@@ -1274,7 +1516,7 @@ const handleApplyFiltersWithDates = (
                       Loading data for {selectedLocation}...
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Please wait while we fetch the latest data
+                      Company: {selectedCompanyName} | Please wait while we fetch the latest data
                     </Typography>
                   </Box>
                 ) : (
@@ -1290,7 +1532,7 @@ const handleApplyFiltersWithDates = (
             {/* Detailed Analysis Tab */}
             <TabPanel value={salesSplitTab} index={1}>
               <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
-                {/* FIXED: Only show data when we have valid data and not waiting for response */}
+                {/* Show data even without company selection initially (as requested) */}
                 {shouldShowData() && reduxTableData.table1 && reduxTableData.table1.length > 0 ? (
                   <Fade in timeout={600}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -1298,6 +1540,14 @@ const handleApplyFiltersWithDates = (
                         <InsightsIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
                         <Typography variant="h5" sx={{ fontWeight: 600 }}>
                           Detailed Analysis
+                          {activeCompanyId && (
+                            <CompanyInfoChip
+                              icon={<BusinessIcon />}
+                              label={`Company: ${selectedCompanyName}`}
+                              size="small"
+                              sx={{ ml: 2 }}
+                            />
+                          )}
                         </Typography>
                       </Box>
 
@@ -1307,7 +1557,6 @@ const handleApplyFiltersWithDates = (
                           <AnalyticsIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
                           <Typography variant="h6" sx={{ fontWeight: 600 }}>
                             Sales Analytics 
-                            {/* {selectedLocation ? `for ${selectedLocation}` : ''} */}
                           </Typography>
                         </Box>
                         <Divider sx={{ mb: 3 }} />
@@ -1397,7 +1646,7 @@ const handleApplyFiltersWithDates = (
                       Loading detailed analysis...
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Please wait while we process your data
+                      Company: {selectedCompanyName} | Please wait while we process your data
                     </Typography>
                   </Box>
                 ) : (
@@ -1424,7 +1673,6 @@ const handleApplyFiltersWithDates = (
       )}
 
       {renderTutorial()}
-      {/* {renderSuccessNotification()} */}
       {renderLocationDialog()}
     </>
   );

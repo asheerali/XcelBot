@@ -663,6 +663,7 @@ const ExcelUploadPage: React.FC = () => {
         setExcelFile({
           fileName: fileInfo.file.name,
           fileContent: base64Content,
+          company_id: selectedCompany.id.toString(),
         })
       );
 
@@ -768,6 +769,7 @@ const ExcelUploadPage: React.FC = () => {
                     location: location,
                     data: enhancedDashboardData,
                     categories: extractedCategories,
+                    company_id: selectedCompany.id.toString(),
                   })
                 );
 
@@ -778,6 +780,7 @@ const ExcelUploadPage: React.FC = () => {
                     location: location,
                     data: enhancedDashboardData,
                     categories: extractedCategories,
+                    company_id: selectedCompany.id.toString(),
                   })
                 );
               } else if (dashboardName === "Product Mix") {
@@ -788,6 +791,7 @@ const ExcelUploadPage: React.FC = () => {
                     location: location,
                     data: enhancedDashboardData,
                     categories: extractedCategories,
+                    company_id: selectedCompany.id.toString(),
                   })
                 );
               } else if (dashboardName === "Financials") {
@@ -798,6 +802,7 @@ const ExcelUploadPage: React.FC = () => {
                     location: location,
                     data: enhancedDashboardData,
                     categories: extractedCategories,
+                    company_id: selectedCompany.id.toString(),
                   })
                 );
               } else if (dashboardName === "Sales Wide") {
@@ -808,6 +813,7 @@ const ExcelUploadPage: React.FC = () => {
                     location: location,
                     data: enhancedDashboardData,
                     categories: extractedCategories,
+                    company_id: selectedCompany.id.toString(),
                   })
                 );
               }
@@ -846,6 +852,7 @@ const ExcelUploadPage: React.FC = () => {
                   location: location,
                   data: enhancedDashboardData,
                   categories: extractedCategories,
+                  company_id: selectedCompany.id.toString(),
                 })
               );
             } else if (dashboardName === "Sales Split") {
@@ -856,6 +863,7 @@ const ExcelUploadPage: React.FC = () => {
                   location: location,
                   data: enhancedDashboardData,
                   categories: extractedCategories,
+                  company_id: selectedCompany.id.toString(),
                 })
               );
 
@@ -866,6 +874,7 @@ const ExcelUploadPage: React.FC = () => {
                   location: location,
                   data: enhancedDashboardData,
                   categories: extractedCategories,
+                  company_id: selectedCompany.id.toString(),
                 })
               );
             } else if (dashboardName === "Sales Wide") {
@@ -876,6 +885,7 @@ const ExcelUploadPage: React.FC = () => {
                   location: location,
                   data: enhancedDashboardData,
                   categories: extractedCategories,
+                  company_id: selectedCompany.id.toString(),
                 })
               );
             } else if (dashboardName === "Product Mix") {
@@ -886,6 +896,7 @@ const ExcelUploadPage: React.FC = () => {
                   location: location,
                   data: enhancedDashboardData,
                   categories: extractedCategories,
+                  company_id: selectedCompany.id.toString(),
                 })
               );
             }
@@ -918,7 +929,9 @@ const ExcelUploadPage: React.FC = () => {
         });
 
         console.log(
-          "✅ File upload completed successfully with locations:",
+          "✅ File upload completed successfully with company_id:",
+          selectedCompany.id,
+          "and locations:",
           extractedLocations
         );
         return true;
@@ -1122,7 +1135,7 @@ const ExcelUploadPage: React.FC = () => {
                     fullWidth
                     error={!!companiesError}
                     helperText={
-                      companiesError || "Choose a company to upload files for"
+                      companiesError || ""
                     }
                     InputProps={{
                       ...params.InputProps,
@@ -1184,7 +1197,7 @@ const ExcelUploadPage: React.FC = () => {
                     color="primary.dark"
                     fontWeight={500}
                   >
-                    Selected: {selectedCompany.name}
+                    Selected: {selectedCompany.name} (ID: {selectedCompany.id})
                   </Typography>
                 </Box>
               )}
@@ -1400,7 +1413,7 @@ const ExcelUploadPage: React.FC = () => {
                 >
                   <BusinessIcon color="primary" />
                   <Typography variant="body1" fontWeight={500}>
-                    Uploading for: {selectedCompany.name}
+                    Uploading for: {selectedCompany.name} (ID: {selectedCompany.id})
                   </Typography>
                 </Box>
               )}
@@ -1449,6 +1462,15 @@ const ExcelUploadPage: React.FC = () => {
                                       getStatusColor(fileInfo.status) as any
                                     }
                                   />
+                                  {selectedCompany && (
+                                    <Chip
+                                      label={`Company: ${selectedCompany.id}`}
+                                      size="small"
+                                      color="secondary"
+                                      variant="outlined"
+                                      icon={<BusinessIcon />}
+                                    />
+                                  )}
                                 </Stack>
 
                                 {/* Enhanced location display with multiple location support */}

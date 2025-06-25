@@ -1,3 +1,94 @@
+// Updated SalesDashboard.tsx with company selection dropdown
+
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Grid,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  SelectChangeEvent,
+  Tabs,
+  Tab,
+  useTheme,
+  useMediaQuery,
+  IconButton,
+  Tooltip,
+  Chip,
+  Button,
+  Alert,
+  CircularProgress,
+  Dialog,
+  TextField,
+  Divider,
+  Popover,
+  MenuList,
+  Checkbox,
+  ListItemText
+} from '@mui/material';
+import axios from 'axios';
+import { alpha, styled } from '@mui/material/styles';
+
+// For charts - UPDATED TO USE BOTH RECHARTS AND NIVO
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
+import { ResponsiveBar } from '@nivo/bar';
+
+// Icons
+import FilterListIcon from '@mui/icons-material/FilterList';
+import PlaceIcon from '@mui/icons-material/Place';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import CloseIcon from '@mui/icons-material/Close';
+import SearchIcon from '@mui/icons-material/Search';
+import BusinessIcon from '@mui/icons-material/Business'; // NEW: Company icon
+
+// Components
+import FinancialTablesComponent from '../components/FinancialTablesComponent';
+import DateRangeSelector from '../components/DateRangeSelector';
+
+// Import Redux hooks and actions
+import { useAppDispatch, useAppSelector } from '../typedHooks';
+import { 
+  selectSalesWideLocation, 
+  updateSalesWideFilters,
+  setTableData,
+  setLoading,
+  setError,
+  selectCompanyId // NEW: Import company ID selector
+} from '../store/excelSlice';
+import { API_URL_Local } from '../constants';
+
+// Company interface
+interface Company {
+  id: string;
+  name: string;
+  [key: string]: any; // Allow for additional company properties
+}
+
+// API URLs
+const SALES_WIDE_FILTER_API_URL = `${API_URL_Local}/api/companywide/filter`;
+const COMPANIES_API_URL = `${API_URL_Local}/companies`; // NEW: Companies API endpoint
+
+// NEW: Company info display component
+const CompanyInfoChip = styled(Chip)(({ theme }) => ({
+  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+  '& .MuiChip-icon': {
+    color: theme.palette.primary.main,
+  },
+  '& .MuiChip-label': {
+    color: theme.palette.primary.main,
+    fontWeight: 600,
+  },
+}));
+
 // Custom theme for Nivo charts to fix label cutoff
 const getChartTheme = () => {
   return {
@@ -138,75 +229,7 @@ const createNivoChart = (
       />
     </Box>
   );
-};// Updated SalesDashboard.tsx with proper data formatting for FinancialTablesComponent
-import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  Card,
-  CardContent,
-  Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  SelectChangeEvent,
-  Tabs,
-  Tab,
-  useTheme,
-  useMediaQuery,
-  IconButton,
-  Tooltip,
-  Chip,
-  Button,
-  Alert,
-  CircularProgress,
-  Dialog,
-  TextField,
-  Divider,
-  Popover,
-  MenuList,
-  Checkbox,
-  ListItemText
-} from '@mui/material';
-import axios from 'axios';
-
-// For charts - UPDATED TO USE BOTH RECHARTS AND NIVO
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
-import { ResponsiveBar } from '@nivo/bar';
-
-// Icons
-import FilterListIcon from '@mui/icons-material/FilterList';
-import PlaceIcon from '@mui/icons-material/Place';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import CloseIcon from '@mui/icons-material/Close';
-import SearchIcon from '@mui/icons-material/Search';
-
-// Components
-import FinancialTablesComponent from '../components/FinancialTablesComponent';
-import DateRangeSelector from '../components/DateRangeSelector';
-
-// Import Redux hooks and actions
-import { useAppDispatch, useAppSelector } from '../typedHooks';
-import { 
-  selectSalesWideLocation, 
-  updateSalesWideFilters,
-  setTableData,
-  setLoading,
-  setError
-} from '../store/excelSlice';
-import { API_URL_Local } from '../constants';
-
-
-
-// API URL for Sales Wide filter
-// const SALES_WIDE_FILTER_API_URL = 'http://localhost:8000/api/companywide/filter';
-
-const SALES_WIDE_FILTER_API_URL = `${API_URL_Local}/api/companywide/filter`;
+};
 
 // TabPanel Component
 interface TabPanelProps {
@@ -592,114 +615,114 @@ const DateRangeSelectorComponent: React.FC<DateRangeSelectorComponentProps> = ({
       </Box>
 
       {/* Fixed Modal Dialog - Made even bigger with buttons at bottom right */}
-   <Dialog
-  open={open}
-  onClose={handleClose}
-  maxWidth={false}
-  PaperProps={{
-    sx: {
-      borderRadius: 2,
-      overflow: 'visible',
-      width: '1200px',
-      height: '700px',
-      maxWidth: '95vw',
-      maxHeight: '95vh'
-    }
-  }}
-  sx={{
-    '& .MuiDialog-container': {
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 2
-    },
-    '& .MuiBackdrop-root': {
-      backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    }
-  }}
->
-  <Box sx={{ 
-    p: 4, 
-    width: '100%', 
-    height: '100%', 
-    display: 'flex', 
-    flexDirection: 'column',
-    overflow: 'hidden'
-  }}>
-    <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-      Select Date Range
-    </Typography>
-    
-    {/* Container for DateRangeSelector with more space */}
-    <Box sx={{ 
-      flexGrow: 1,
-      display: 'flex',
-      justifyContent: 'flex-start',
-      alignItems: 'flex-start',
-      minHeight: '500px',
-      mb: 3,
-      overflow: 'auto',
-      pl: 0, // Remove any left padding
-      ml: 0  // Remove any left margin
-    }}>
-      <Box sx={{ 
-        width: '100%',
-        pl: 0, // Ensure DateRangeSelector starts from the left
-        ml: 0
-      }}>
-        <DateRangeSelector onSelect={handleTempDateRangeSelect} />
-      </Box>
-    </Box>
-    
-    {/* Action Buttons - Moved to bottom right */}
-    <Box sx={{ 
-      display: 'flex', 
-      justifyContent: 'flex-end', 
-      pt: 2, 
-      borderTop: '1px solid #e0e0e0',
-      gap: 2,
-      flexShrink: 0
-    }}>
-      <Button
-        variant="outlined"
-        onClick={handleCancel}
-        sx={{
-          borderColor: '#e0e0e0',
-          color: '#666',
-          minWidth: '100px',
-          textTransform: 'uppercase',
-          py: 1.5,
-          px: 3,
-          '&:hover': {
-            borderColor: '#999',
-            backgroundColor: '#f5f5f5',
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        maxWidth={false}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            overflow: 'visible',
+            width: '1200px',
+            height: '700px',
+            maxWidth: '95vw',
+            maxHeight: '95vh'
           }
         }}
-      >
-        CANCEL
-      </Button>
-      <Button
-        variant="contained"
-        onClick={handleSetDateRange}
-        disabled={!tempRange}
         sx={{
-          backgroundColor: '#1976d2',
-          minWidth: '160px',
-          textTransform: 'uppercase',
-          py: 1.5,
-          px: 3,
-          '&:hover': {
-            backgroundColor: '#1565c0',
+          '& .MuiDialog-container': {
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 2
           },
-          '&:disabled': {
-            backgroundColor: '#ccc'
+          '& .MuiBackdrop-root': {
+            backgroundColor: 'rgba(0, 0, 0, 0.3)',
           }
         }}
       >
-        SET DATE RANGE
-      </Button>
-    </Box>
-  </Box>
-</Dialog>
+        <Box sx={{ 
+          p: 4, 
+          width: '100%', 
+          height: '100%', 
+          display: 'flex', 
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}>
+          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+            Select Date Range
+          </Typography>
+          
+          {/* Container for DateRangeSelector with more space */}
+          <Box sx={{ 
+            flexGrow: 1,
+            display: 'flex',
+            justifyContent: 'flex-start',
+            alignItems: 'flex-start',
+            minHeight: '500px',
+            mb: 3,
+            overflow: 'auto',
+            pl: 0, // Remove any left padding
+            ml: 0  // Remove any left margin
+          }}>
+            <Box sx={{ 
+              width: '100%',
+              pl: 0, // Ensure DateRangeSelector starts from the left
+              ml: 0
+            }}>
+              <DateRangeSelector onSelect={handleTempDateRangeSelect} />
+            </Box>
+          </Box>
+          
+          {/* Action Buttons - Moved to bottom right */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'flex-end', 
+            pt: 2, 
+            borderTop: '1px solid #e0e0e0',
+            gap: 2,
+            flexShrink: 0
+          }}>
+            <Button
+              variant="outlined"
+              onClick={handleCancel}
+              sx={{
+                borderColor: '#e0e0e0',
+                color: '#666',
+                minWidth: '100px',
+                textTransform: 'uppercase',
+                py: 1.5,
+                px: 3,
+                '&:hover': {
+                  borderColor: '#999',
+                  backgroundColor: '#f5f5f5',
+                }
+              }}
+            >
+              CANCEL
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleSetDateRange}
+              disabled={!tempRange}
+              sx={{
+                backgroundColor: '#1976d2',
+                minWidth: '160px',
+                textTransform: 'uppercase',
+                py: 1.5,
+                px: 3,
+                '&:hover': {
+                  backgroundColor: '#1565c0',
+                },
+                '&:disabled': {
+                  backgroundColor: '#ccc'
+                }
+              }}
+            >
+              SET DATE RANGE
+            </Button>
+          </Box>
+        </Box>
+      </Dialog>
     </>
   );
 };
@@ -736,7 +759,6 @@ const BaseChart: React.FC<BaseChartProps> = ({ title, children, height = 450 }) 
   );
 };
 
-// UPDATED: Custom Tooltip Component for Recharts
 // UPDATED: Custom Tooltip Component for Recharts - Better handling for multiple bars
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -805,6 +827,15 @@ export default function SalesDashboard() {
     error
   } = useAppSelector((state) => state.excel);
 
+  // NEW: Get company_id from Redux (might come from uploaded files)
+  const currentCompanyId = useAppSelector(selectCompanyId);
+  
+  // NEW: Company-related state
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
+  const [companiesLoading, setCompaniesLoading] = useState(false);
+  const [companiesError, setCompaniesError] = useState<string>("");
+
   // Find current data for the selected location
   const currentSalesWideData = salesWideFiles.find(f => f.location === currentSalesWideLocation)?.data;
 
@@ -832,6 +863,68 @@ export default function SalesDashboard() {
   // Extract data arrays from backend response or use defaults
   const locations = currentSalesWideData?.locations || salesWideLocations || ['Midtown East', 'Downtown West', 'Uptown North', 'Southside'];
 
+  // NEW: Fetch companies on component mount
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      setCompaniesLoading(true);
+      setCompaniesError("");
+      
+      try {
+        console.log('🏢 SalesDashboard: Fetching companies from:', COMPANIES_API_URL);
+        const response = await axios.get(COMPANIES_API_URL);
+        
+        console.log('📥 SalesDashboard: Companies response:', response.data);
+        setCompanies(response.data || []);
+        
+        // Optionally auto-select the first company if there's only one
+        if (response.data && response.data.length === 1) {
+          setSelectedCompanyId(response.data[0].id);
+          console.log('🎯 SalesDashboard: Auto-selected single company:', response.data[0]);
+        }
+        
+      } catch (error) {
+        console.error('❌ SalesDashboard: Error fetching companies:', error);
+        
+        let errorMessage = "Error loading companies";
+        if (axios.isAxiosError(error)) {
+          if (error.response) {
+            errorMessage = `Server error: ${error.response.status}`;
+          } else if (error.request) {
+            errorMessage = 'Cannot connect to companies API. Please check server status.';
+          }
+        }
+        
+        setCompaniesError(errorMessage);
+      } finally {
+        setCompaniesLoading(false);
+      }
+    };
+
+    fetchCompanies();
+  }, []);
+
+  // NEW: Sync selectedCompanyId with Redux currentCompanyId if it exists (from uploaded files)
+  useEffect(() => {
+    if (currentCompanyId && !selectedCompanyId) {
+      console.log('🏢 SalesDashboard: Syncing company ID from Redux files:', currentCompanyId);
+      setSelectedCompanyId(currentCompanyId);
+    }
+  }, [currentCompanyId, selectedCompanyId]);
+
+  // NEW: Handle company selection
+  const handleCompanyChange = (event: SelectChangeEvent) => {
+    const companyId = event.target.value;
+    setSelectedCompanyId(companyId);
+    console.log('🏢 SalesDashboard: Company selected:', companyId);
+  };
+
+  // Get selected company name for display
+  const selectedCompanyName = companies.find(c => c.id === selectedCompanyId)?.name || 
+                               (selectedCompanyId ? `Company ID: ${selectedCompanyId}` : 'No Company Selected');
+
+  // Get active company ID (prioritize selectedCompanyId, fallback to Redux currentCompanyId)
+  const activeCompanyId = selectedCompanyId || currentCompanyId;
+
   // Initialize local state with current data
   useEffect(() => {
     if (currentSalesWideData) {
@@ -854,7 +947,7 @@ export default function SalesDashboard() {
     }
   }, [locations, selectedLocations]);
 
-  // Apply filters with backend API call
+  // UPDATED: Apply filters with backend API call including company_id
   const handleApplyFilters = async () => {
     setIsLoading(true);
     setFilterError('');
@@ -878,7 +971,7 @@ export default function SalesDashboard() {
         throw new Error('No Sales Wide data found for selected location(s)');
       }
 
-      // Prepare the request payload with multiple locations
+      // UPDATED: Prepare the request payload with multiple locations AND active company_id
       const payload = {
         fileName: currentFile.fileName,
         fileContent: currentFile.fileContent,
@@ -888,10 +981,11 @@ export default function SalesDashboard() {
         location: selectedLocations.length > 0 ? selectedLocations[0] : currentFile.location,
         startDate: selectedDateRange?.startDateStr || null,
         endDate: selectedDateRange?.endDateStr || null,
-        dashboard: 'Sales Wide'
+        dashboard: 'Sales Wide',
+        company_id: activeCompanyId // NEW: Include active company_id
       };
 
-      console.log('🚀 Sending Sales Wide filter request:', payload);
+      console.log('🚀 Sending Sales Wide filter request with company_id:', payload);
 
       // Make API call to sales wide filter endpoint
       const response = await axios.post(SALES_WIDE_FILTER_API_URL, payload);
@@ -913,16 +1007,19 @@ export default function SalesDashboard() {
         // Also update Redux state if needed
         dispatch(setTableData(response.data));
 
-        // Update Redux filters
+        // Update Redux filters with company_id
         dispatch(updateSalesWideFilters({ 
           location: selectedLocations.join(','), // Store all locations as comma-separated string
-          dateRange: selectedDateRange ? `${selectedDateRange.startDateStr} - ${selectedDateRange.endDateStr}` : ''
+          dateRange: selectedDateRange ? `${selectedDateRange.startDateStr} - ${selectedDateRange.endDateStr}` : '',
+          company_id: activeCompanyId // NEW: Include company_id in filters
         }));
 
         // Update current location if changed (use first selected location)
         if (selectedLocations.length > 0 && selectedLocations[0] !== currentSalesWideLocation) {
           dispatch(selectSalesWideLocation(selectedLocations[0]));
         }
+
+        console.log('✅ Sales Wide filters applied successfully with company_id:', activeCompanyId);
       }
 
     } catch (err: any) {
@@ -1057,90 +1154,89 @@ export default function SalesDashboard() {
     })}`;
   };
 
-  // UPDATED: Function to create charts (Recharts for some, Nivo for others)
- // UPDATED: Function to create charts - Fixed to show both bars for Sales/Orders/Avg Ticket
-const createNivoBarChart = (
-  data: any[], 
-  keys: string[], 
-  colors: string[], 
-  chartType: string,
-  labelFormat: (value: number) => string = formatPercentage,
-  enableLabels: boolean = false,
-  customLabelFormat?: (d: any) => string
-) => {
-  console.log('🎯 createNivoBarChart called with:', chartType);
-  
-  if (!data || data.length === 0) {
-    return (
-      <Box sx={{ 
-        height: '100%', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        color: 'text.secondary'
-      }}>
-        <Typography>No data available</Typography>
-      </Box>
-    );
-  }
+  // UPDATED: Function to create charts - Fixed to show both bars for Sales/Orders/Avg Ticket
+  const createNivoBarChart = (
+    data: any[], 
+    keys: string[], 
+    colors: string[], 
+    chartType: string,
+    labelFormat: (value: number) => string = formatPercentage,
+    enableLabels: boolean = false,
+    customLabelFormat?: (d: any) => string
+  ) => {
+    console.log('🎯 createNivoBarChart called with:', chartType);
+    
+    if (!data || data.length === 0) {
+      return (
+        <Box sx={{ 
+          height: '100%', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          color: 'text.secondary'
+        }}>
+          <Typography>No data available</Typography>
+        </Box>
+      );
+    }
 
-  // FIXED: For Sales/Orders/Avg Ticket, show both bars using Recharts
-  const isSingleBarChart = chartType === 'salesPercentage' || chartType === 'ordersPercentage' || chartType === 'avgTicket';
-  
-  if (isSingleBarChart) {
-    return (
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={data}
-          margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
-          barCategoryGap="25%"
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-          <XAxis 
-            dataKey="store" 
-            tick={{ fontSize: 12, fontWeight: 'bold' }}
-            height={60}
-            interval={0}
-          />
-          <YAxis 
-            tick={{ fontSize: 12, fontWeight: 'bold' }}
-            tickFormatter={labelFormat}
-          />
-          <RechartsTooltip content={<CustomTooltip />} />
-          <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '14px', fontWeight: 'bold' }} />
-          
-          {/* FIXED: Show both bars instead of just one */}
-          <Bar
-            dataKey={keys[0]} // "Tw vs. Lw"
-            fill={colors[0] || '#4285f4'}
-            name="Tw vs. Lw"
-            radius={[2, 2, 0, 0]}
-            maxBarSize={60}
-          />
-          <Bar
-            dataKey={keys[1]} // "Tw vs. Ly"
-            fill={colors[1] || '#ea4335'}
-            name="Tw vs. Ly"
-            radius={[2, 2, 0, 0]}
-            maxBarSize={60}
-          />
-        </BarChart>
-      </ResponsiveContainer>
-    );
-  }
+    // FIXED: For Sales/Orders/Avg Ticket, show both bars using Recharts
+    const isSingleBarChart = chartType === 'salesPercentage' || chartType === 'ordersPercentage' || chartType === 'avgTicket';
+    
+    if (isSingleBarChart) {
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={data}
+            margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
+            barCategoryGap="25%"
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis 
+              dataKey="store" 
+              tick={{ fontSize: 12, fontWeight: 'bold' }}
+              height={60}
+              interval={0}
+            />
+            <YAxis 
+              tick={{ fontSize: 12, fontWeight: 'bold' }}
+              tickFormatter={labelFormat}
+            />
+            <RechartsTooltip content={<CustomTooltip />} />
+            <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '14px', fontWeight: 'bold' }} />
+            
+            {/* FIXED: Show both bars instead of just one */}
+            <Bar
+              dataKey={keys[0]} // "Tw vs. Lw"
+              fill={colors[0] || '#4285f4'}
+              name="Tw vs. Lw"
+              radius={[2, 2, 0, 0]}
+              maxBarSize={60}
+            />
+            <Bar
+              dataKey={keys[1]} // "Tw vs. Ly"
+              fill={colors[1] || '#ea4335'}
+              name="Tw vs. Ly"
+              radius={[2, 2, 0, 0]}
+              maxBarSize={60}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      );
+    }
 
-  // Labor $ Spent, Labor %, Labor Hrs, SPMH, COGS $, COGS %: Use Nivo with STACKED bars
-  const isStackedChart = chartType === 'laborCost' || chartType === 'laborPercentage' || 
-                        chartType === 'laborHrs' || chartType === 'spmh' || 
-                        chartType === 'cogs' || chartType === 'cogsPercentage';
-  
-  if (isStackedChart) {
-    return createNivoChart(data, keys, colors, chartType, labelFormat, true); // true = stacked
-  }
+    // Labor $ Spent, Labor %, Labor Hrs, SPMH, COGS $, COGS %: Use Nivo with STACKED bars
+    const isStackedChart = chartType === 'laborCost' || chartType === 'laborPercentage' || 
+                          chartType === 'laborHrs' || chartType === 'spmh' || 
+                          chartType === 'cogs' || chartType === 'cogsPercentage';
+    
+    if (isStackedChart) {
+      return createNivoChart(data, keys, colors, chartType, labelFormat, true); // true = stacked
+    }
 
-  // Any remaining charts: Use Nivo with GROUPED bars (fallback)
-  return createNivoChart(data, keys, colors, chartType, labelFormat, false); // false = grouped
-};
+    // Any remaining charts: Use Nivo with GROUPED bars (fallback)
+    return createNivoChart(data, keys, colors, chartType, labelFormat, false); // false = grouped
+  };
 
   return (
     <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
@@ -1193,11 +1289,103 @@ const createNivoBarChart = (
                 </svg>
               </span>
             Companywide Sales Dashboard 
+            {/* Show company context in header */}
+            {activeCompanyId && (
+              <CompanyInfoChip
+                icon={<BusinessIcon />}
+                label={selectedCompanyName}
+                size="small"
+                sx={{ ml: 2, fontSize: '0.75rem' }}
+              />
+            )}
             </h1>
           </div>
-  
-
       </Box>
+
+      {/* NEW: Company Selection Section */}
+      {companies.length > 0 && (
+        <Card elevation={3} sx={{ 
+          mb: 3, 
+          borderRadius: 2, 
+          overflow: "hidden",
+          border: '2px solid #e3f2fd'
+        }}>
+          <CardContent sx={{ p: { xs: 2, md: 3 }, bgcolor: '#f8f9fa' }}>
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <BusinessIcon color="primary" />
+              <Typography variant="h6" sx={{ fontWeight: 600, color: '#1976d2' }}>
+                Select Company
+              </Typography>
+              {companiesLoading && <CircularProgress size={20} />}
+            </Box>
+            
+            {companiesError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {companiesError}
+              </Alert>
+            )}
+            
+            <FormControl fullWidth size="small" disabled={companiesLoading}>
+              <InputLabel id="company-select-label">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <BusinessIcon fontSize="small" />
+                  Choose a company for sales analysis
+                </Box>
+              </InputLabel>
+              <Select
+                labelId="company-select-label"
+                value={selectedCompanyId}
+                onChange={handleCompanyChange}
+                displayEmpty
+                sx={{ 
+                  '& .MuiSelect-select': {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }
+                }}
+              >
+                <MenuItem value="">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
+                    <BusinessIcon fontSize="small" />
+                    Select Company
+                  </Box>
+                </MenuItem>
+                {companies.map((company) => (
+                  <MenuItem key={company.id} value={company.id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <BusinessIcon fontSize="small" color="primary" />
+                      {company.name}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            {selectedCompanyId && (
+              <Box sx={{ mt: 2 }}>
+                <Chip
+                  icon={<BusinessIcon />}
+                  label={`Selected: ${selectedCompanyName}`}
+                  color="primary"
+                  variant="outlined"
+                  sx={{ fontWeight: 500 }}
+                />
+              </Box>
+            )}
+            
+            {/* Note about existing data */}
+            {currentCompanyId && currentCompanyId !== selectedCompanyId && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                <Typography variant="body2">
+                  <strong>Note:</strong> Your uploaded files are associated with Company ID: {currentCompanyId}. 
+                  Select a different company above to override this for new operations.
+                </Typography>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Alert message when no data is available */}
       {!currentSalesWideData && (
@@ -1207,6 +1395,9 @@ const createNivoBarChart = (
           </Typography>
           <Typography variant="body1">
             Please upload files with "Sales Wide" dashboard type from the Excel Upload page.
+            {activeCompanyId && (
+              <span><br />Current Company: {selectedCompanyName}</span>
+            )}
           </Typography>
           <Button 
             variant="contained" 
@@ -1264,12 +1455,32 @@ const createNivoBarChart = (
           {/* Active filters and Apply button */}
           <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {/* Active filter chips */}
-            {(selectedLocations.length > 0 || selectedDateRange) && (
+            {(activeCompanyId || selectedLocations.length > 0 || selectedDateRange) && (
               <>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                   Active Filters:
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                  {/* Company filter chip */}
+                  {activeCompanyId && (
+                    <Chip 
+                      label={`Company: ${selectedCompanyName}`}
+                      sx={{
+                        backgroundColor: '#e3f2fd',
+                        color: '#1976d2',
+                        border: '1px solid #90caf9',
+                        borderRadius: '20px',
+                        height: '32px',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        '& .MuiChip-icon': {
+                          color: '#1976d2',
+                        }
+                      }}
+                      icon={<BusinessIcon />}
+                    />
+                  )}
+
                   {selectedLocations.length > 0 && (
                     <Chip 
                       label={selectedLocations.length === 1 
@@ -1278,17 +1489,17 @@ const createNivoBarChart = (
                       }
                       onDelete={() => setSelectedLocations([])}
                       sx={{
-                        backgroundColor: '#e3f2fd',
-                        color: '#1976d2',
-                        border: '1px solid #90caf9',
+                        backgroundColor: '#e8f5e8',
+                        color: '#2e7d32',
+                        border: '1px solid #a5d6a7',
                         borderRadius: '20px',
                         height: '32px',
                         fontSize: '0.875rem',
                         '& .MuiChip-icon': {
-                          color: '#1976d2',
+                          color: '#2e7d32',
                         },
                         '& .MuiChip-deleteIcon': {
-                          color: '#1976d2',
+                          color: '#2e7d32',
                           fontSize: '18px'
                         }
                       }}
@@ -1359,7 +1570,7 @@ const createNivoBarChart = (
         </CardContent>
       </Card>
 
-      {/* Only render dashboard content if data is available */}
+      {/* Only render dashboard content if data is available (even without company selection initially) */}
       {currentSalesWideData && (
         <>
           {/* Tabs - Styled to match Image 2 */}
@@ -1392,6 +1603,16 @@ const createNivoBarChart = (
             {/* Financial Dashboard Tab - UPDATED to pass real backend data */}
             <TabPanel value={tabValue} index={0}>
               <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+                {/* Show company context in tables */}
+                {activeCompanyId && (
+                  <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+                    <CompanyInfoChip
+                      icon={<BusinessIcon />}
+                      label={`Data for: ${selectedCompanyName}`}
+                      variant="outlined"
+                    />
+                  </Box>
+                )}
                 {/* UPDATED: Pass the formatted backend data to FinancialTablesComponent */}
                 <FinancialTablesComponent financialTables={financialTablesData} />
               </Box>
@@ -1400,6 +1621,17 @@ const createNivoBarChart = (
             {/* Day of Week Analysis Tab */}
             <TabPanel value={tabValue} index={1}>
               <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+                {/* Show company context in graphs */}
+                {activeCompanyId && (
+                  <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+                    <CompanyInfoChip
+                      icon={<BusinessIcon />}
+                      label={`Charts for: ${selectedCompanyName}`}
+                      variant="outlined"
+                    />
+                  </Box>
+                )}
+                
                 {/* Chart Tabs */}
                 <Tabs
                   value={chartTab}

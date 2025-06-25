@@ -1,4 +1,4 @@
-// store/excelSlice.ts - Updated with Categories support and all improvements
+// store/excelSlice.ts - Updated with Categories support, all improvements, and Company ID support
 
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
@@ -23,6 +23,7 @@ interface TableData {
   dashboardName?: string;
   fileName?: string;
   data?: any;
+  company_id?: string; // Added company_id to TableData
 
   // Sales Wide specific data
   salesData?: any[];
@@ -46,6 +47,7 @@ interface AnalyticsData {
   salesByTimeOfDay: any[];
   salesByCategory: any[];
   fileLocation?: string;
+  company_id?: string; // Added company_id to AnalyticsData
 }
 
 interface FileData {
@@ -57,6 +59,7 @@ interface FileData {
   uploadDate?: string;
   dashboard?: string;
   categories?: string[]; // Added to store categories for each file
+  company_id?: string; // Added company_id to FileData
 }
 
 interface FinancialData {
@@ -66,6 +69,7 @@ interface FinancialData {
   data: TableData;
   uploadDate?: string;
   categories?: string[]; // Added categories support
+  company_id?: string; // Added company_id to FinancialData
 }
 
 interface SalesData {
@@ -76,6 +80,7 @@ interface SalesData {
   analyticsData?: AnalyticsData; // Added to store analytics with each sales file
   uploadDate?: string;
   categories?: string[]; // Added categories support
+  company_id?: string; // Added company_id to SalesData
 }
 
 interface SalesWideData {
@@ -85,6 +90,7 @@ interface SalesWideData {
   data: TableData;
   uploadDate?: string;
   categories?: string[]; // Added categories support
+  company_id?: string; // Added company_id to SalesWideData
 }
 
 interface ProductMixData {
@@ -94,6 +100,7 @@ interface ProductMixData {
   data: TableData;
   uploadDate?: string;
   categories?: string[]; // Added categories support
+  company_id?: string; // Added company_id to ProductMixData
 }
 
 interface ExcelState {
@@ -106,6 +113,7 @@ interface ExcelState {
   analyticsData: AnalyticsData | null; // Added to store current analytics
   loading: boolean;
   error: string | null;
+  company_id?: string; // Added company_id to main state
 
   // Global categories - aggregated from all files
   allCategories: string[];
@@ -143,6 +151,7 @@ interface ExcelState {
     endDate: string;
     location: string;
     selectedCategories: string[]; // Added for category filtering
+    company_id?: string; // Added company_id to sales filters
   };
 
   financialFilters: {
@@ -150,6 +159,7 @@ interface ExcelState {
     year: string;
     dateRange: string;
     selectedCategories: string[]; // Added for category filtering
+    company_id?: string; // Added company_id to financial filters
   };
 
   salesWideFilters: {
@@ -161,6 +171,7 @@ interface ExcelState {
     year: string;
     quarters: number;
     selectedCategories: string[]; // Added for category filtering
+    company_id?: string; // Added company_id to sales wide filters
   };
 
   productMixFilters: {
@@ -171,6 +182,7 @@ interface ExcelState {
     server: string;
     category: string;
     selectedCategories: string[]; // Added for category filtering
+    company_id?: string; // Added company_id to product mix filters
   };
 
   // Added to track the active file
@@ -322,6 +334,7 @@ export const excelSlice = createSlice({
         fileName: string;
         fileContent: string;
         location?: string;
+        company_id?: string; // Added company_id parameter
       }>
     ) => {
       state.fileName = action.payload.fileName;
@@ -329,6 +342,9 @@ export const excelSlice = createSlice({
       state.fileProcessed = false;
       if (action.payload.location) {
         state.location = action.payload.location;
+      }
+      if (action.payload.company_id) {
+        state.company_id = action.payload.company_id;
       }
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
@@ -350,6 +366,11 @@ export const excelSlice = createSlice({
         }
       }
 
+      // Update company_id from table data if present
+      if (action.payload.company_id) {
+        state.company_id = action.payload.company_id;
+      }
+
       // Update categories if present in table data
       if (action.payload.categories) {
         addCategoriesToState(state, action.payload.categories, action.payload.dashboardName);
@@ -362,18 +383,28 @@ export const excelSlice = createSlice({
         if (action.payload.categories) {
           state.files[state.activeFileIndex].categories = action.payload.categories;
         }
+        // Update company_id for the active file
+        if (action.payload.company_id) {
+          state.files[state.activeFileIndex].company_id = action.payload.company_id;
+        }
       }
     },
-    // New action to set analytics data
+    // Updated analytics action to include company_id
     setAnalyticsData: (
       state,
       action: PayloadAction<{
         fileName: string;
         location: string;
         data: AnalyticsData;
+        company_id?: string; // Added company_id parameter
       }>
     ) => {
       state.analyticsData = action.payload.data;
+
+      // Update company_id in analytics data if provided
+      if (action.payload.company_id && state.analyticsData) {
+        state.analyticsData.company_id = action.payload.company_id;
+      }
 
       // Find the matching file to store the analytics data with it
       const fileIndex = state.files.findIndex(
@@ -384,6 +415,9 @@ export const excelSlice = createSlice({
 
       if (fileIndex >= 0) {
         state.files[fileIndex].analyticsData = action.payload.data;
+        if (action.payload.company_id) {
+          state.files[fileIndex].company_id = action.payload.company_id;
+        }
       }
 
       // Also update sales files if needed
@@ -395,9 +429,12 @@ export const excelSlice = createSlice({
 
       if (salesFileIndex >= 0) {
         state.salesFiles[salesFileIndex].analyticsData = action.payload.data;
+        if (action.payload.company_id) {
+          state.salesFiles[salesFileIndex].company_id = action.payload.company_id;
+        }
       }
     },
-    // Modified to properly categorize locations by dashboard type and handle categories
+    // Updated to include company_id
     addFileData: (
       state,
       action: PayloadAction<{
@@ -406,6 +443,7 @@ export const excelSlice = createSlice({
         location: string;
         data: TableData;
         categories?: string[];
+        company_id?: string; // Added company_id parameter
       }>
     ) => {
       // Check if file already exists for this location
@@ -416,8 +454,9 @@ export const excelSlice = createSlice({
       // Get the dashboard type from the data
       const dashboardName = action.payload.data.dashboardName;
       const categories = action.payload.categories || action.payload.data.categories || [];
+      const company_id = action.payload.company_id || action.payload.data.company_id;
 
-      // Create file data with upload timestamp, file content, and categories
+      // Create file data with upload timestamp, file content, categories, and company_id
       const fileData: FileData = {
         fileName: action.payload.fileName,
         fileContent: action.payload.fileContent, // Store the file content
@@ -426,6 +465,7 @@ export const excelSlice = createSlice({
         uploadDate: new Date().toISOString(),
         dashboard: dashboardName,
         categories: categories, // Store categories with the file
+        company_id: company_id, // Store company_id with the file
       };
 
       if (existingFileIndex >= 0) {
@@ -454,9 +494,12 @@ export const excelSlice = createSlice({
         state.fileContent = action.payload.fileContent; // Update file content in main state
         state.fileProcessed = true;
         state.location = action.payload.location;
+        if (company_id) {
+          state.company_id = company_id;
+        }
       }
     },
-    // Fixed to only add location to financial locations and handle categories
+    // Updated to include company_id
     addFinancialData: (
       state,
       action: PayloadAction<{
@@ -465,6 +508,7 @@ export const excelSlice = createSlice({
         location: string;
         data: TableData;
         categories?: string[];
+        company_id?: string; // Added company_id parameter
       }>
     ) => {
       // Check if financial file already exists for this location
@@ -473,8 +517,9 @@ export const excelSlice = createSlice({
       );
 
       const categories = action.payload.categories || action.payload.data.categories || [];
+      const company_id = action.payload.company_id || action.payload.data.company_id;
 
-      // Create financial data with upload timestamp, file content, and categories
+      // Create financial data with upload timestamp, file content, categories, and company_id
       const financialData: FinancialData = {
         fileName: action.payload.fileName,
         fileContent: action.payload.fileContent, // Store file content
@@ -482,6 +527,7 @@ export const excelSlice = createSlice({
         data: action.payload.data,
         uploadDate: new Date().toISOString(),
         categories: categories, // Store categories
+        company_id: company_id, // Store company_id
       };
 
       if (existingIndex >= 0) {
@@ -511,9 +557,12 @@ export const excelSlice = createSlice({
       ) {
         state.currentFinancialLocation = action.payload.location;
         state.financialFilters.store = action.payload.location;
+        if (company_id) {
+          state.financialFilters.company_id = company_id;
+        }
       }
     },
-    // Fixed to only add location to sales locations and handle categories
+    // Updated to include company_id
     addSalesData: (
       state,
       action: PayloadAction<{
@@ -522,6 +571,7 @@ export const excelSlice = createSlice({
         location: string;
         data: TableData;
         categories?: string[];
+        company_id?: string; // Added company_id parameter
       }>
     ) => {
       // Check if sales file already exists for this location
@@ -530,8 +580,9 @@ export const excelSlice = createSlice({
       );
 
       const categories = action.payload.categories || action.payload.data.categories || [];
+      const company_id = action.payload.company_id || action.payload.data.company_id;
 
-      // Create sales data with upload timestamp, file content, and categories
+      // Create sales data with upload timestamp, file content, categories, and company_id
       const salesData: SalesData = {
         fileName: action.payload.fileName,
         fileContent: action.payload.fileContent, // Store file content
@@ -539,6 +590,7 @@ export const excelSlice = createSlice({
         data: action.payload.data,
         uploadDate: new Date().toISOString(),
         categories: categories, // Store categories
+        company_id: company_id, // Store company_id
       };
 
       if (existingIndex >= 0) {
@@ -565,9 +617,12 @@ export const excelSlice = createSlice({
       if (state.salesFiles.length === 1 || !state.currentSalesLocation) {
         state.currentSalesLocation = action.payload.location;
         state.salesFilters.location = action.payload.location;
+        if (company_id) {
+          state.salesFilters.company_id = company_id;
+        }
       }
     },
-    // Fixed to only add location to sales wide locations and handle categories
+    // Updated to include company_id
     addSalesWideData: (
       state,
       action: PayloadAction<{
@@ -576,6 +631,7 @@ export const excelSlice = createSlice({
         location: string;
         data: TableData;
         categories?: string[];
+        company_id?: string; // Added company_id parameter
       }>
     ) => {
       // Check if sales wide file already exists for this location
@@ -584,8 +640,9 @@ export const excelSlice = createSlice({
       );
 
       const categories = action.payload.categories || action.payload.data.categories || [];
+      const company_id = action.payload.company_id || action.payload.data.company_id;
 
-      // Create sales wide data with upload timestamp, file content, and categories
+      // Create sales wide data with upload timestamp, file content, categories, and company_id
       const salesWideData: SalesWideData = {
         fileName: action.payload.fileName,
         fileContent: action.payload.fileContent, // Store file content
@@ -593,6 +650,7 @@ export const excelSlice = createSlice({
         data: action.payload.data,
         uploadDate: new Date().toISOString(),
         categories: categories, // Store categories
+        company_id: company_id, // Store company_id
       };
 
       if (existingIndex >= 0) {
@@ -622,9 +680,12 @@ export const excelSlice = createSlice({
       ) {
         state.currentSalesWideLocation = action.payload.location;
         state.salesWideFilters.location = action.payload.location;
+        if (company_id) {
+          state.salesWideFilters.company_id = company_id;
+        }
       }
     },
-    // NEW: Add Product Mix data with categories support
+    // Updated to include company_id
     addProductMixData: (
       state,
       action: PayloadAction<{
@@ -633,6 +694,7 @@ export const excelSlice = createSlice({
         location: string;
         data: TableData;
         categories?: string[];
+        company_id?: string; // Added company_id parameter
       }>
     ) => {
       // console.log('🎯 addProductMixData action received:', action.payload);
@@ -645,9 +707,11 @@ export const excelSlice = createSlice({
       // console.log('Existing Product Mix file index:', existingIndex);
 
       const categories = action.payload.categories || action.payload.data.categories || [];
+      const company_id = action.payload.company_id || action.payload.data.company_id;
       // console.log('Categories for Product Mix:', categories);
+      // console.log('Company ID for Product Mix:', company_id);
 
-      // Create product mix data with upload timestamp, file content, and categories
+      // Create product mix data with upload timestamp, file content, categories, and company_id
       const productMixData: ProductMixData = {
         fileName: action.payload.fileName,
         fileContent: action.payload.fileContent, // Store file content
@@ -655,6 +719,7 @@ export const excelSlice = createSlice({
         data: action.payload.data,
         uploadDate: new Date().toISOString(),
         categories: categories, // Store categories
+        company_id: company_id, // Store company_id
       };
 
       // console.log('Creating Product Mix data object:', productMixData);
@@ -689,6 +754,9 @@ export const excelSlice = createSlice({
       ) {
         state.currentProductMixLocation = action.payload.location;
         state.productMixFilters.location = action.payload.location;
+        if (company_id) {
+          state.productMixFilters.company_id = company_id;
+        }
         console.log('Set current Product Mix location:', action.payload.location);
       }
 
@@ -696,7 +764,8 @@ export const excelSlice = createSlice({
         filesCount: state.productMixFiles.length,
         locations: state.productMixLocations,
         currentLocation: state.currentProductMixLocation,
-        categories: state.productMixCategories
+        categories: state.productMixCategories,
+        company_id: company_id
       });
     },
     // Now just maintains the allLocations list
@@ -717,6 +786,10 @@ export const excelSlice = createSlice({
       state.allCategories = [
         ...new Set([...state.allCategories, ...newCategories]),
       ];
+    },
+    // NEW: Set company_id
+    setCompanyId: (state, action: PayloadAction<string>) => {
+      state.company_id = action.payload;
     },
     // Below methods now just set their specific location lists
     setSalesLocations: (state, action: PayloadAction<string[]>) => {
@@ -764,6 +837,9 @@ export const excelSlice = createSlice({
         state.fileName = file.fileName;
         state.fileContent = file.fileContent; // Update file content
         state.fileProcessed = true;
+        if (file.company_id) {
+          state.company_id = file.company_id; // Update company_id
+        }
 
         // Update analytics data if available
         if (file.analyticsData) {
@@ -776,15 +852,27 @@ export const excelSlice = createSlice({
         if (file.dashboard === "Sales Split") {
           state.currentSalesLocation = location;
           state.salesFilters.location = location;
+          if (file.company_id) {
+            state.salesFilters.company_id = file.company_id;
+          }
         } else if (file.dashboard === "Financials") {
           state.currentFinancialLocation = location;
           state.financialFilters.store = location;
+          if (file.company_id) {
+            state.financialFilters.company_id = file.company_id;
+          }
         } else if (file.dashboard === "Sales Wide") {
           state.currentSalesWideLocation = location;
           state.salesWideFilters.location = location;
+          if (file.company_id) {
+            state.salesWideFilters.company_id = file.company_id;
+          }
         } else if (file.dashboard === "Product Mix" || file.dashboard === "Product Mix ") {
           state.currentProductMixLocation = location;
           state.productMixFilters.location = location;
+          if (file.company_id) {
+            state.productMixFilters.company_id = file.company_id;
+          }
         }
       } else {
         // If no matching file found, try to find in specialized files
@@ -808,6 +896,10 @@ export const excelSlice = createSlice({
           state.analyticsData = salesData.analyticsData || null;
           state.currentSalesLocation = location;
           state.salesFilters.location = location;
+          if (salesData.company_id) {
+            state.company_id = salesData.company_id;
+            state.salesFilters.company_id = salesData.company_id;
+          }
         } else if (financialData) {
           state.tableData = financialData.data;
           state.fileName = financialData.fileName;
@@ -816,6 +908,10 @@ export const excelSlice = createSlice({
           state.analyticsData = null; // Financial files don't have analytics
           state.currentFinancialLocation = location;
           state.financialFilters.store = location;
+          if (financialData.company_id) {
+            state.company_id = financialData.company_id;
+            state.financialFilters.company_id = financialData.company_id;
+          }
         } else if (salesWideData) {
           state.tableData = salesWideData.data;
           state.fileName = salesWideData.fileName;
@@ -824,6 +920,10 @@ export const excelSlice = createSlice({
           state.analyticsData = null; // Sales wide files don't have analytics
           state.currentSalesWideLocation = location;
           state.salesWideFilters.location = location;
+          if (salesWideData.company_id) {
+            state.company_id = salesWideData.company_id;
+            state.salesWideFilters.company_id = salesWideData.company_id;
+          }
         } else if (productMixData) {
           state.tableData = productMixData.data;
           state.fileName = productMixData.fileName;
@@ -832,6 +932,10 @@ export const excelSlice = createSlice({
           state.analyticsData = null; // Product mix files don't have analytics
           state.currentProductMixLocation = location;
           state.productMixFilters.location = location;
+          if (productMixData.company_id) {
+            state.company_id = productMixData.company_id;
+            state.productMixFilters.company_id = productMixData.company_id;
+          }
         } else {
           // If no matching file found, keep the current data but update location
           state.location = location;
@@ -854,6 +958,10 @@ export const excelSlice = createSlice({
         state.fileProcessed = true;
         state.location = location;
         state.analyticsData = salesData.analyticsData || null;
+        if (salesData.company_id) {
+          state.company_id = salesData.company_id;
+          state.salesFilters.company_id = salesData.company_id;
+        }
 
         // Update active file index in main files array
         const fileIndex = state.files.findIndex(
@@ -881,6 +989,10 @@ export const excelSlice = createSlice({
         state.fileContent = financialData.fileContent; // Update file content
         state.fileProcessed = true;
         state.location = location;
+        if (financialData.company_id) {
+          state.company_id = financialData.company_id;
+          state.financialFilters.company_id = financialData.company_id;
+        }
 
         // Update active file index in main files array
         const fileIndex = state.files.findIndex(
@@ -908,6 +1020,10 @@ export const excelSlice = createSlice({
         state.fileContent = salesWideData.fileContent; // Update file content
         state.fileProcessed = true;
         state.location = location;
+        if (salesWideData.company_id) {
+          state.company_id = salesWideData.company_id;
+          state.salesWideFilters.company_id = salesWideData.company_id;
+        }
 
         // Update active file index in main files array
         const fileIndex = state.files.findIndex(
@@ -935,6 +1051,10 @@ export const excelSlice = createSlice({
         state.fileContent = productMixData.fileContent; // Update file content
         state.fileProcessed = true;
         state.location = location;
+        if (productMixData.company_id) {
+          state.company_id = productMixData.company_id;
+          state.productMixFilters.company_id = productMixData.company_id;
+        }
 
         // Update active file index in main files array
         const fileIndex = state.files.findIndex(
@@ -990,6 +1110,7 @@ export const {
   addProductMixData,
   setLocations,
   setCategories,
+  setCompanyId, // NEW: Export setCompanyId action
   setSalesLocations,
   setFinancialLocations,
   setSalesWideLocations,
@@ -1010,9 +1131,9 @@ export const {
   resetExcelData,
 } = excelSlice.actions;
 
-// Thunk action creators (keeping existing ones)
+// Updated thunk action to include company_id
 export const fetchAnalytics =
-  (fileName: string, dateRangeType: string, location: string): AppThunk =>
+  (fileName: string, dateRangeType: string, location: string, company_id?: string): AppThunk =>
   async (dispatch, getState) => {
     try {
       dispatch(setLoading(true));
@@ -1020,6 +1141,7 @@ export const fetchAnalytics =
       // Get the file content from state
       const state = getState();
       let fileContent: string | null = null;
+      let fileCompanyId: string | undefined = company_id;
 
       // Check if the file exists in any of the file collections
       const file = state.excel.files.find(
@@ -1031,11 +1153,14 @@ export const fetchAnalytics =
 
       if (file) {
         fileContent = file.fileContent;
+        fileCompanyId = fileCompanyId || file.company_id;
       } else if (salesFile) {
         fileContent = salesFile.fileContent;
+        fileCompanyId = fileCompanyId || salesFile.company_id;
       } else {
         // If no file found, use the current fileContent from state
         fileContent = state.excel.fileContent;
+        fileCompanyId = fileCompanyId || state.excel.company_id;
       }
 
       if (!fileContent) {
@@ -1044,12 +1169,13 @@ export const fetchAnalytics =
         );
       }
 
-      // Create the payload
+      // Create the payload including company_id
       const payload = {
         fileName,
         fileContent,
         dateRangeType,
         location,
+        company_id: fileCompanyId, // Include company_id in the payload
         // Add any other necessary parameters for your API
         startDate: state.excel.salesFilters.startDate,
         endDate: state.excel.salesFilters.endDate,
@@ -1066,6 +1192,7 @@ export const fetchAnalytics =
             fileName,
             location,
             data: response.data,
+            company_id: fileCompanyId, // Include company_id in analytics data
           })
         );
       }
@@ -1113,13 +1240,14 @@ export const selectFileAndFetchData =
         dispatch(selectLocation(location));
       }
 
-      // Then fetch the analytics data if needed for Sales Split dashboard
+      // Then fetch the analytics data if needed for Sales Split dashboard including company_id
       if (file.dashboard === "Sales Split" && !file.analyticsData) {
         dispatch(
           fetchAnalytics(
             file.fileName,
             state.excel.salesFilters.dateRangeType,
-            location
+            location,
+            file.company_id // Pass company_id to fetchAnalytics
           )
         );
       }
@@ -1134,6 +1262,7 @@ export const selectLoading = (state: { excel: ExcelState }) => state.excel.loadi
 export const selectError = (state: { excel: ExcelState }) => state.excel.error;
 export const selectCurrentLocation = (state: { excel: ExcelState }) => state.excel.location;
 export const selectAllLocations = (state: { excel: ExcelState }) => state.excel.allLocations;
+export const selectCompanyId = (state: { excel: ExcelState }) => state.excel.company_id; // NEW: Company ID selector
 
 // Categories selectors
 export const selectAllCategories = (state: { excel: ExcelState }) => state.excel.allCategories;
@@ -1202,6 +1331,30 @@ export const selectCategoriesByLocation = (state: { excel: ExcelState }, locatio
   }
   
   return file?.categories || [];
+};
+
+// NEW: Company ID by location selectors
+export const selectCompanyIdByLocation = (state: { excel: ExcelState }, location: string, dashboardType?: string) => {
+  let file;
+  
+  switch (dashboardType) {
+    case 'Sales Split':
+      file = state.excel.salesFiles.find(f => f.location === location);
+      break;
+    case 'Financials':
+      file = state.excel.financialFiles.find(f => f.location === location);
+      break;
+    case 'Sales Wide':
+      file = state.excel.salesWideFiles.find(f => f.location === location);
+      break;
+    case 'Product Mix':
+      file = state.excel.productMixFiles.find(f => f.location === location);
+      break;
+    default:
+      file = state.excel.files.find(f => f.location === location);
+  }
+  
+  return file?.company_id;
 };
 
 export default excelSlice.reducer;

@@ -1,4 +1,4 @@
-// src/pages/Financials.tsx - Updated with table1 data and enhanced aesthetics
+// src/pages/Financials.tsx - Updated with company selection dropdown
 
 import React, { useState, useEffect } from 'react';
 import Box from '@mui/material/Box';
@@ -47,6 +47,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import BusinessIcon from '@mui/icons-material/Business'; // NEW: Company icon
 
 // Import components
 import FinancialTable from '../components/FinancialTable';
@@ -66,14 +67,21 @@ import {
   updateFinancialFilters,
   setTableData,
   setLoading,
-  setError
+  setError,
+  selectCompanyId // NEW: Import company ID selector
 } from '../store/excelSlice';
 import { API_URL_Local } from '../constants';
 
-// API URLs
-// const FINANCIAL_FILTER_API_URL = 'http://localhost:8000/api/financials/filter';
-const FINANCIAL_FILTER_API_URL = `${API_URL_Local}/api/financials/filter`;
+// Company interface
+interface Company {
+  id: string;
+  name: string;
+  [key: string]: any; // Allow for additional company properties
+}
 
+// API URLs
+const FINANCIAL_FILTER_API_URL = `${API_URL_Local}/api/financials/filter`;
+const COMPANIES_API_URL = `${API_URL_Local}/companies`; // NEW: Companies API endpoint
 
 // Enhanced styled components
 const StyledCard = styled(Card)(({ theme }) => ({
@@ -202,6 +210,19 @@ const AnimatedTabs = styled(Tabs)(({ theme }) => ({
     ${alpha(theme.palette.background.paper, 0.9)} 0%, 
     ${alpha(theme.palette.background.default, 0.4)} 100%)`,
   backdropFilter: 'blur(10px)',
+}));
+
+// NEW: Company info display component
+const CompanyInfoChip = styled(Chip)(({ theme }) => ({
+  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+  border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+  '& .MuiChip-icon': {
+    color: theme.palette.primary.main,
+  },
+  '& .MuiChip-label': {
+    color: theme.palette.primary.main,
+    fontWeight: 600,
+  },
 }));
 
 // TabPanel Component
@@ -684,8 +705,6 @@ const formatCurrency = (value: string | number): string => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-    // minimumFractionDigits: 2,
-    // maximumFractionDigits: 3
   }).format(numValue);
 };
 
@@ -705,6 +724,15 @@ export function Financials() {
     loading,
     error
   } = useAppSelector((state) => state.excel);
+  
+  // NEW: Get company_id from Redux (might come from uploaded files)
+  const currentCompanyId = useAppSelector(selectCompanyId);
+  
+  // NEW: Company-related state
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
+  const [companiesLoading, setCompaniesLoading] = useState(false);
+  const [companiesError, setCompaniesError] = useState<string>("");
   
   // Find current financial data for selected location
   const currentFinancialData = financialFiles.find(f => f.location === currentFinancialLocation);
@@ -749,6 +777,68 @@ export function Financials() {
   const table2Data = currentTableData.table2 || currentFinancialData?.data?.table2 || [];
   const table3Data = currentTableData.table3 || currentFinancialData?.data?.table3 || [];
   const table4Data = currentTableData.table4 || currentFinancialData?.data?.table4 || [];
+
+  // NEW: Fetch companies on component mount
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      setCompaniesLoading(true);
+      setCompaniesError("");
+      
+      try {
+        console.log('🏢 Financials: Fetching companies from:', COMPANIES_API_URL);
+        const response = await axios.get(COMPANIES_API_URL);
+        
+        console.log('📥 Financials: Companies response:', response.data);
+        setCompanies(response.data || []);
+        
+        // Optionally auto-select the first company if there's only one
+        if (response.data && response.data.length === 1) {
+          setSelectedCompanyId(response.data[0].id);
+          console.log('🎯 Financials: Auto-selected single company:', response.data[0]);
+        }
+        
+      } catch (error) {
+        console.error('❌ Financials: Error fetching companies:', error);
+        
+        let errorMessage = "Error loading companies";
+        if (axios.isAxiosError(error)) {
+          if (error.response) {
+            errorMessage = `Server error: ${error.response.status}`;
+          } else if (error.request) {
+            errorMessage = 'Cannot connect to companies API. Please check server status.';
+          }
+        }
+        
+        setCompaniesError(errorMessage);
+      } finally {
+        setCompaniesLoading(false);
+      }
+    };
+
+    fetchCompanies();
+  }, []);
+
+  // NEW: Sync selectedCompanyId with Redux currentCompanyId if it exists (from uploaded files)
+  useEffect(() => {
+    if (currentCompanyId && !selectedCompanyId) {
+      console.log('🏢 Financials: Syncing company ID from Redux files:', currentCompanyId);
+      setSelectedCompanyId(currentCompanyId);
+    }
+  }, [currentCompanyId, selectedCompanyId]);
+
+  // NEW: Handle company selection
+  const handleCompanyChange = (event: SelectChangeEvent) => {
+    const companyId = event.target.value;
+    setSelectedCompanyId(companyId);
+    console.log('🏢 Financials: Company selected:', companyId);
+  };
+
+  // Get selected company name for display
+  const selectedCompanyName = companies.find(c => c.id === selectedCompanyId)?.name || 
+                               (selectedCompanyId ? `Company ID: ${selectedCompanyId}` : 'No Company Selected');
+
+  // Get active company ID (prioritize selectedCompanyId, fallback to Redux currentCompanyId)
+  const activeCompanyId = selectedCompanyId || currentCompanyId;
 
   // Initialize selected locations and table data
   useEffect(() => {
@@ -802,7 +892,7 @@ export function Financials() {
     setSelectedDateRange(dateRange);
   };
 
-  // Apply filters with backend API call
+  // UPDATED: Apply filters with backend API call including company_id
   const handleApplyFilters = async () => {
     setIsLoading(true);
     setFilterError('');
@@ -815,16 +905,17 @@ export function Financials() {
         throw new Error('No financial data found for selected location');
       }
 
-      // Prepare the request payload with all selected locations
+      // UPDATED: Prepare the request payload with all selected locations AND active company_id
       const payload = {
         fileName: currentFile.fileName,
         locations: selectedLocations,
         startDate: selectedDateRange?.startDateStr || null,
         endDate: selectedDateRange?.endDateStr || null,
-        dashboard: 'Financials'
+        dashboard: 'Financials',
+        company_id: activeCompanyId // NEW: Include active company_id
       };
 
-      console.log('🚀 Sending financial filter request:', payload);
+      console.log('🚀 Sending financial filter request with company_id:', payload);
 
       // Make API call to financial filter endpoint
       const response = await axios.post(FINANCIAL_FILTER_API_URL, payload);
@@ -860,13 +951,11 @@ export function Financials() {
           setCurrentTableData(() => ({ ...newTableData }));
         }, 0);
 
-        // Also update Redux state if needed
-        // dispatch(setTableData(response.data));
-
-        // Update Redux filters
+        // Update Redux filters with company_id
         dispatch(updateFinancialFilters({ 
           store: selectedLocations[0],
-          dateRange: selectedDateRange ? `${selectedDateRange.startDateStr} - ${selectedDateRange.endDateStr}` : ''
+          dateRange: selectedDateRange ? `${selectedDateRange.startDateStr} - ${selectedDateRange.endDateStr}` : '',
+          company_id: activeCompanyId // NEW: Include company_id in filters
         }));
 
         // Update current location if changed
@@ -882,10 +971,10 @@ export function Financials() {
         // FIX: Additional force re-render after small delay
         setTimeout(() => {
           setLastUpdated(Date.now());
-          console.log('✅ Filters applied successfully - UI should be updated');
+          console.log('✅ Filters applied successfully with company_id:', activeCompanyId, '- UI should be updated');
         }, 100);
 
-        console.log('✅ Filters applied successfully - UI should be updated');
+        console.log('✅ Filters applied successfully with company_id:', activeCompanyId, '- UI should be updated');
       }
 
     } catch (err: any) {
@@ -1079,9 +1168,108 @@ export function Financials() {
             letterSpacing: '0.02em'
           }}
         >
-          {/* Comprehensive Financial Analytics & Performance Insights */}
+          {/* Company Info Display */}
+          {activeCompanyId && (
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              mt: 2,
+              mb: 1 
+            }}>
+              <CompanyInfoChip
+                icon={<BusinessIcon />}
+                label={`Company: ${selectedCompanyName}`}
+                variant="outlined"
+              />
+            </Box>
+          )}
         </Typography>
       </Box>
+
+      {/* NEW: Company Selection Section */}
+      {companies.length > 0 && (
+        <GradientCard elevation={3} sx={{ 
+          mb: 3, 
+          borderRadius: 2, 
+          overflow: "hidden",
+          border: '2px solid #e3f2fd'
+        }}>
+          <CardContent sx={{ p: { xs: 2, md: 3 }, bgcolor: '#f8f9fa' }}>
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <BusinessIcon color="primary" />
+              <Typography variant="h6" sx={{ fontWeight: 600, color: '#1976d2' }}>
+                Select Company
+              </Typography>
+              {companiesLoading && <CircularProgress size={20} />}
+            </Box>
+            
+            {companiesError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {companiesError}
+              </Alert>
+            )}
+            
+            <FormControl fullWidth size="small" disabled={companiesLoading}>
+              <InputLabel id="company-select-label">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <BusinessIcon fontSize="small" />
+                  Choose a company for financial analysis
+                </Box>
+              </InputLabel>
+              <Select
+                labelId="company-select-label"
+                value={selectedCompanyId}
+                onChange={handleCompanyChange}
+                displayEmpty
+                sx={{ 
+                  '& .MuiSelect-select': {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }
+                }}
+              >
+                <MenuItem value="">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
+                    <BusinessIcon fontSize="small" />
+                    Select Company
+                  </Box>
+                </MenuItem>
+                {companies.map((company) => (
+                  <MenuItem key={company.id} value={company.id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <BusinessIcon fontSize="small" color="primary" />
+                      {company.name}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            {selectedCompanyId && (
+              <Box sx={{ mt: 2 }}>
+                <Chip
+                  icon={<BusinessIcon />}
+                  label={`Selected: ${selectedCompanyName}`}
+                  color="primary"
+                  variant="outlined"
+                  sx={{ fontWeight: 500 }}
+                />
+              </Box>
+            )}
+            
+            {/* Note about existing data */}
+            {currentCompanyId && currentCompanyId !== selectedCompanyId && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                <Typography variant="body2">
+                  <strong>Note:</strong> Your uploaded files are associated with Company ID: {currentCompanyId}. 
+                  Select a different company above to override this for new operations.
+                </Typography>
+              </Alert>
+            )}
+          </CardContent>
+        </GradientCard>
+      )}
 
       {/* Error Alert */}
       {(filterError || error) && (
@@ -1165,6 +1353,35 @@ export function Financials() {
 
           {/* Enhanced Active Filters Pills */}
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 3 }}>
+            {/* Company filter chip */}
+            {activeCompanyId && (
+              <Chip
+                icon={<BusinessIcon sx={{ fontSize: '1rem' }} />}
+                label={`Company: ${selectedCompanyName}`}
+                color="primary"
+                variant="filled"
+                sx={{
+                  borderRadius: '24px',
+                  height: '36px',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                  color: theme.palette.primary.main,
+                  border: `2px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+                  backdropFilter: 'blur(10px)',
+                  '&:hover': {
+                    background: alpha(theme.palette.primary.main, 0.15),
+                    transform: 'translateY(-1px)',
+                    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`
+                  },
+                  '& .MuiChip-icon': {
+                    fontSize: '1rem',
+                    color: theme.palette.primary.main
+                  }
+                }}
+              />
+            )}
+
             {selectedLocations.length > 0 && (
               <Chip
                 icon={<PlaceIcon sx={{ fontSize: '1rem' }} />}
@@ -1173,7 +1390,7 @@ export function Financials() {
                   : `Location: Multiple Locations (${selectedLocations.length})`
                 }
                 onDelete={() => setSelectedLocations([])}
-                color="primary"
+                color="secondary"
                 variant="outlined"
                 deleteIcon={<CloseIcon sx={{ fontSize: '1rem' }} />}
                 sx={{
@@ -1181,13 +1398,13 @@ export function Financials() {
                   height: '36px',
                   fontSize: '0.875rem',
                   fontWeight: 600,
-                  border: `2px solid ${alpha(theme.palette.primary.main, 0.3)}`,
-                  background: alpha(theme.palette.primary.main, 0.05),
+                  border: `2px solid ${alpha(theme.palette.secondary.main, 0.3)}`,
+                  background: alpha(theme.palette.secondary.main, 0.05),
                   backdropFilter: 'blur(10px)',
                   '&:hover': {
-                    background: alpha(theme.palette.primary.main, 0.1),
+                    background: alpha(theme.palette.secondary.main, 0.1),
                     transform: 'translateY(-1px)',
-                    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`
+                    boxShadow: `0 4px 12px ${alpha(theme.palette.secondary.main, 0.2)}`
                   },
                   '& .MuiChip-icon': {
                     fontSize: '1rem'
@@ -1206,21 +1423,21 @@ export function Financials() {
                   height: '36px',
                   fontSize: '0.875rem',
                   fontWeight: 600,
-                  backgroundColor: alpha(theme.palette.secondary.main, 0.1),
-                  color: theme.palette.secondary.main,
-                  border: `2px solid ${alpha(theme.palette.secondary.main, 0.3)}`,
+                  backgroundColor: alpha(theme.palette.info.main, 0.1),
+                  color: theme.palette.info.main,
+                  border: `2px solid ${alpha(theme.palette.info.main, 0.3)}`,
                   backdropFilter: 'blur(10px)',
                   '&:hover': {
-                    background: alpha(theme.palette.secondary.main, 0.15),
+                    background: alpha(theme.palette.info.main, 0.15),
                     transform: 'translateY(-1px)',
-                    boxShadow: `0 4px 12px ${alpha(theme.palette.secondary.main, 0.2)}`
+                    boxShadow: `0 4px 12px ${alpha(theme.palette.info.main, 0.2)}`
                   },
                   '& .MuiChip-icon': {
-                    color: theme.palette.secondary.main,
+                    color: theme.palette.info.main,
                     fontSize: '1rem'
                   },
                   '& .MuiChip-deleteIcon': {
-                    color: theme.palette.secondary.main,
+                    color: theme.palette.info.main,
                     fontSize: '1rem'
                   }
                 }}
@@ -1337,6 +1554,15 @@ export function Financials() {
               filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
             }} />
             Week-Over-Week Analysis
+            {/* Show company context */}
+            {activeCompanyId && (
+              <CompanyInfoChip
+                icon={<BusinessIcon />}
+                label={selectedCompanyName}
+                size="small"
+                sx={{ ml: 2, fontSize: '0.75rem' }}
+              />
+            )}
           </Typography>
           
           {/* Loading State */}
@@ -1363,7 +1589,7 @@ export function Financials() {
                   color: theme.palette.text.secondary
                 }}
               >
-                Analyzing financial data...
+                Analyzing financial data for {selectedCompanyName}...
               </Typography>
             </Box>
           )}
@@ -1545,6 +1771,9 @@ export function Financials() {
                     }}
                   >
                     Please upload data and apply filters to view analytics
+                    {activeCompanyId && (
+                      <span><br />Company: {selectedCompanyName}</span>
+                    )}
                   </Typography>
                 </Box>
               )}
@@ -1629,6 +1858,15 @@ export function Financials() {
                   }}
                 >
                   Day of Week Trends
+                  {/* Show company context in detailed analysis */}
+                  {activeCompanyId && (
+                    <CompanyInfoChip
+                      icon={<BusinessIcon />}
+                      label={selectedCompanyName}
+                      size="small"
+                      sx={{ ml: 2, fontSize: '0.75rem' }}
+                    />
+                  )}
                 </Typography>
                 
                 {table2Data.length > 0 && (
