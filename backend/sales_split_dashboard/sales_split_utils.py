@@ -393,11 +393,34 @@ def sales_analysis_tables(df, location_filter='All', start_date=None, end_date=N
     }
 
 
-def create_sales_overview_tables(df, location_filter='All', start_date=None, end_date=None):
+def create_sales_overview_tables(df, location_filter='All', start_date=None, end_date=None, start_date_str=None, end_date_str=None):
     
     # Make a copy of the dataframe
     df_copy = df.copy()
     
+    if end_date is not None:
+        current_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+    else:
+    # Get the latest date from your dataframe
+        current_date = df['Date'].max()
+    
+    # Calculate start date as 28 days before the end date
+    start_date_sample = current_date - pd.Timedelta(days=21)
+
+    # Adjust start_date to the previous Monday (weekday 0 = Monday)
+    days_since_monday = start_date_sample.weekday()  # 0=Monday, 1=Tuesday, ..., 6=Sunday
+    start_date_sample = start_date_sample - pd.Timedelta(days=days_since_monday)
+
+    end_date_sample =  start_date_sample + pd.Timedelta(days=27)
+    # Convert to string format
+    end_date_str = end_date_sample.strftime('%Y-%m-%d')
+    start_date_str = start_date_sample.strftime('%Y-%m-%d')
+    
+    
+    print("---------------------sales split filters----------------------------------")
+    print("i am here in sales split utils printing df and filters", df_copy.head(), location_filter, start_date, end_date,"curret date", current_date,
+          "start_date_sample", start_date_sample, "end_date_sample", end_date_sample, "start_date_str", start_date_str, "end_date_str", end_date_str)
+    print("-------------------------------------------------------")
     # Apply location filter to the entire dataset first
     if location_filter != 'All':
         if isinstance(location_filter, list):
@@ -444,8 +467,12 @@ def create_sales_overview_tables(df, location_filter='All', start_date=None, end
     else:
         previous_df = pd.DataFrame()  # Empty if no start date provided
     
+    
     # Filter 13-week period data
     thirteen_week_df = df_copy.copy()
+    print("i am here in sales split utils printing filtered_df and previous_df", thirteen_week_start_date, "type ", type(thirteen_week_start_date),
+          "thirteen_week_df['Date']", thirteen_week_df['Date'][0], "type ", type(thirteen_week_df['Date'] [0]))
+ 
     if thirteen_week_start_date is not None and end_date is not None:
         thirteen_week_df = thirteen_week_df[
             (thirteen_week_df['Date'] >= thirteen_week_start_date) & 
@@ -658,12 +685,17 @@ def thirteen_week_category(df, location_filter='All', end_date=None, category_fi
     # Make a copy of the dataframe
     df_copy = df.copy()
     
-    # if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
-    #     df_copy['Date'] = pd.to_datetime(df_copy['Date'])
     
-    if end_date is None:
+    
+    if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
         df_copy['Date'] = pd.to_datetime(df_copy['Date'])
+
+    if end_date is not None and isinstance(end_date, str):
+        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+    elif end_date is None:
         end_date = df_copy['Date'].max().date()
+        
     
     # category_filter
     if category_filter != 'All':
@@ -761,6 +793,7 @@ def create_sales_by_day_table(df, location_filter='All', end_date=None, categori
         
     elif end_date is None:
         end_date = df_copy['Date'].max().date()
+        
 
     target_date = end_date if end_date else df_copy['Date'].max().date()
     days_since_monday = target_date.weekday()
@@ -814,5 +847,17 @@ def create_sales_by_day_table(df, location_filter='All', end_date=None, categori
 
     final_df['Sales'] = final_df['Sales'].round(2)
     final_df['Moving_Avg'] = final_df['Moving_Avg'].round(2)
+    
+    print("-------------------------------------------------------")
+    print("i am here in sales split utils printing final_df", final_df)
+    print("-------------------------------------------------------")
 
+
+    # # Option 2: More concise - check if all values in both columns are zero
+    # if final_df[["Sales", "Moving_Avg"]].eq(0.0).all().all():
+    #     return pd.DataFrame(columns=['Day_of_Week', 'Date', 'Sales', 'Moving_Avg'])
+        
     return {'sales_by_day_table': final_df}
+
+
+

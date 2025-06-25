@@ -302,6 +302,7 @@ async def filter_pmix_data(
             
             print("i am here in pmix_filter.py checking the category_filter", category_filter, "and the request", request)
             
+            print(" i am here in pmix_filter.py before calling process_pmix_file with DataFrame")
             # Process the data using existing pmix processor
             # NOTE: You may need to modify process_pmix_file to accept DataFrame or pickle file
             (net_sales, 

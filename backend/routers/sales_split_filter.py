@@ -136,6 +136,7 @@ async def filter_excel_data(
             }
             return empty_dashboard
         
+    
         # ===== CONVERT TO DATAFRAME =====
         print("Converting database records to DataFrame...")
         
@@ -274,40 +275,29 @@ async def filter_excel_data(
         print(f"Sample Sent_Date values: {df['Sent_Date'].head(3).tolist() if 'Sent_Date' in df.columns else 'N/A'}")
         print(f"Date column dtype: {df['Date'].dtype if 'Date' in df.columns else 'N/A'}")
         
-        try:
-            # FIXED: Pass pandas datetime objects to the processing function
-            (sales_by_day_table, 
-             sales_by_category_table, 
-             category_comparison_table, 
-             thirteen_week_category_table, 
-             pivot_table, 
-             in_house_table, 
-             week_over_week_table, 
-             category_summary_table, 
-             salesByWeek, 
-             salesByDayOfWeek, 
-             salesByTimeOfDay, 
-             categories, 
-             locations) = process_sales_split_data(
-                    df,  # Pass DataFrame directly
-                    location=location_filter,
-                    start_date=start_date_original,  # Pass pandas datetime objects
-                    end_date=start_date_original,      # Pass pandas datetime objects
-                    category_filter=category_filter
-                )
-            print("Successfully processed DataFrame through sales split processor")
-                    
-        except Exception as processing_error:
-            print(f"Error in process_sales_split_data: {str(processing_error)}")
-            print(f"DataFrame dtypes: {df.dtypes.to_dict()}")
-            print(f"DataFrame shape: {df.shape}")
-            print(f"Sample DataFrame head: {df.head(2).to_dict()}")
-            
-            raise HTTPException(
-                status_code=500, 
-                detail=f"Error processing dashboard data: {str(processing_error)}"
+        # print("i am here in the filter_excel_data checking the df", df)
+
+        # FIXED: Pass pandas datetime objects to the processing function
+        (sales_by_day_table, 
+        sales_by_category_table, 
+        category_comparison_table, 
+        thirteen_week_category_table, 
+        pivot_table, 
+        in_house_table, 
+        week_over_week_table, 
+        category_summary_table, 
+        salesByWeek, 
+        salesByDayOfWeek, 
+        salesByTimeOfDay, 
+        categories, 
+        locations) = process_sales_split_data(
+                df,  # Pass DataFrame directly
+                location=location_filter,
+                start_date=start_date_original,  # Pass pandas datetime objects
+                end_date=end_date_original,      # Pass pandas datetime objects
+                category_filter=category_filter
             )
-        
+        print("Successfully processed DataFrame through sales split processor")
         # ===== BUILD RESPONSE =====
         sales_split_dashboard = {
             "table1": pivot_table.to_dict(orient='records'),
