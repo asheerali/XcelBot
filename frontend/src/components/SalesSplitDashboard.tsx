@@ -581,10 +581,22 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                 tick={{ fontSize: 12 }}
                 tickFormatter={(value) => formatNumber(value)}
               />
-              <Tooltip
+       <Tooltip
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
                     const data = payload[0].payload;
+                    // Format date for display
+                    const formatDate = (dateStr: string) => {
+                      if (!dateStr) return "";
+                      const date = new Date(dateStr);
+                      return date.toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      });
+                    };
+                    
                     return (
                       <div
                         style={{
@@ -599,17 +611,14 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                         <div style={{ fontWeight: "bold", marginBottom: "8px", color: "#333" }}>
                           Day: {label}
                         </div>
+                        <div style={{ color: "#555", marginBottom: "8px", fontSize: "12px" }}>
+                          Date: {formatDate(data.date)}
+                        </div>
                         <div style={{ color: "#4D8D8D", marginBottom: "4px" }}>
                           Sales: {formatCurrency(data.sales)}
                         </div>
-                        <div style={{ color: "#ff0000", marginBottom: "4px" }}>
+                        <div style={{ color: "#ff0000" }}>
                           Moving Avg: {formatCurrency(data.movingAverage)}
-                        </div>
-                        <div style={{ color: "#666", marginBottom: "4px" }}>
-                          Orders: 1,000
-                        </div>
-                        <div style={{ color: "#666" }}>
-                          Avg. Ticket: $8.32
                         </div>
                       </div>
                     );
@@ -730,7 +739,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                             }}
                           >
                             <div style={{ fontWeight: "bold", marginBottom: "8px", color: "#333" }}>
-                              {label}
+                              {label}: Category Sales
                             </div>
                             {payload.map((entry, index) => (
                               <div key={index} style={{ 
