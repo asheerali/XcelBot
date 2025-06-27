@@ -811,17 +811,11 @@ const CustomTooltip = ({ active, payload, label }) => {
           }}
         >
           Sales Categories Performance
-          <span style={{
-            fontSize: "12px",
-            backgroundColor: "#e3f2fd",
-            color: "#1976d2",
-            padding: "2px 8px",
-            borderRadius: "12px",
-            fontWeight: "normal"
-          }}>
-            Table11 Data
-          </span>
+          
+
         </div>
+
+
 
         {/* Show table11 categories with same UI as image but table11 field names */}
         {categoriesData.length === 0 ? (
