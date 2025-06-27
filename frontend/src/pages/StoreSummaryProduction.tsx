@@ -35,11 +35,142 @@ import {
   Assessment as AssessmentIcon,
   Store as StoreIcon,
   CheckCircle as CheckCircleIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  CalendarToday as CalendarTodayIcon,
+  Clear as ClearIcon
 } from '@mui/icons-material';
 
-// Import your existing FiltersOrderIQ component
+// Import your existing FiltersOrderIQ component and DateRangeSelector
 import FiltersOrderIQ from '../components/FiltersOrderIQ'; // Adjust the import path as needed
+import DateRangeSelector from '../components/DateRangeSelector'; // Adjust the import path as needed
+
+// DateRangeSelector Button Component
+const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedRange, setSelectedRange] = useState('Select Date Range');
+  const [tempRange, setTempRange] = useState(null);
+
+  const handleOpen = () => setIsOpen(true);
+  const handleClose = () => {
+    setIsOpen(false);
+    setTempRange(null);
+  };
+
+  const handleDateRangeSelect = (range) => {
+    setTempRange(range);
+  };
+
+  const handleApply = () => {
+    if (tempRange) {
+      const startDate = tempRange.startDate.toLocaleDateString();
+      const endDate = tempRange.endDate.toLocaleDateString();
+      setSelectedRange(`${startDate} - ${endDate}`);
+      onDateRangeSelect(tempRange);
+    }
+    setIsOpen(false);
+  };
+
+  const handleClear = (event) => {
+    event.stopPropagation();
+    setSelectedRange('Select Date Range');
+    onDateRangeSelect(null);
+  };
+
+  return (
+    <>
+      <Button
+        variant="outlined"
+        startIcon={<CalendarTodayIcon />}
+        endIcon={selectedRange !== 'Select Date Range' && (
+          <IconButton 
+            size="small" 
+            onClick={handleClear}
+            style={{ padding: '2px', marginLeft: '4px' }}
+          >
+            <ClearIcon style={{ fontSize: '16px' }} />
+          </IconButton>
+        )}
+        onClick={handleOpen}
+        sx={{
+          borderRadius: 2,
+          textTransform: 'none',
+          minWidth: '200px',
+          justifyContent: 'flex-start',
+          borderColor: 'primary.main',
+          '&:hover': {
+            borderColor: 'primary.dark'
+          }
+        }}
+      >
+        {selectedRange}
+      </Button>
+
+      <Dialog
+        open={isOpen}
+        onClose={handleClose}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            maxHeight: '80vh'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          borderBottom: '1px solid #e0e0e0',
+          pb: 2,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.5
+        }}>
+          <CalendarTodayIcon color="primary" />
+          Select Date Range for Production Reports
+        </DialogTitle>
+        
+        <DialogContent sx={{ p: 0 }}>
+          <DateRangeSelector 
+            initialState={[
+              {
+                startDate: new Date(),
+                endDate: new Date(),
+                key: 'selection'
+              }
+            ]}
+            onSelect={handleDateRangeSelect} 
+          />
+        </DialogContent>
+        
+        <DialogActions sx={{ 
+          p: 3,
+          borderTop: '1px solid #e0e0e0',
+          justifyContent: 'space-between'
+        }}>
+          <Typography variant="body2" color="text.secondary">
+            {tempRange && `${tempRange.startDate?.toLocaleDateString()} - ${tempRange.endDate?.toLocaleDateString()}`}
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button 
+              onClick={handleClose}
+              color="secondary"
+              variant="outlined"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleApply} 
+              variant="contained" 
+              color="primary"
+              disabled={!tempRange}
+            >
+              Apply Range
+            </Button>
+          </Box>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+};
 
 // Mock data for orders by location with detailed items
 const ordersData = [
@@ -215,6 +346,9 @@ const StoreSummaryProduction = () => {
   const [printDialog, setPrintDialog] = useState({ open: false, order: null, type: 'print' });
   const [emailDialog, setEmailDialog] = useState({ open: false, order: null, email: '' });
   const [viewDetailsDialog, setViewDetailsDialog] = useState({ open: false, store: null, orders: [] });
+  
+  // Date range selector state
+  const [selectedDateRange, setSelectedDateRange] = useState(null);
 
   // Filter configuration for FiltersOrderIQ component
   const filterFields = [
@@ -251,6 +385,14 @@ const StoreSummaryProduction = () => {
   const handleApplyFilters = () => {
     console.log('Applying filters:', filters);
     // Add your filter logic here
+  };
+
+  // Date range handler
+  const handleDateRangeSelect = (range) => {
+    setSelectedDateRange(range);
+    console.log('Selected date range for production reports:', range);
+    // Here you would typically filter orders and production data based on the selected date range
+    // For example: filterProductionDataByDateRange(range);
   };
 
   const handlePrintOrder = (order) => {
@@ -330,6 +472,10 @@ const StoreSummaryProduction = () => {
       second: '2-digit'
     });
 
+    const dateRangeText = selectedDateRange 
+      ? `${selectedDateRange.startDate.toLocaleDateString()} to ${selectedDateRange.endDate.toLocaleDateString()}`
+      : '06/15/2025 to 06/22/2025';
+
     return `
       <!DOCTYPE html>
       <html>
@@ -353,6 +499,11 @@ const StoreSummaryProduction = () => {
           .location { 
             font-size: 16px; 
             color: #666; 
+            margin-bottom: 10px; 
+          }
+          .date-range { 
+            font-size: 14px; 
+            color: #888; 
             margin-bottom: 30px; 
           }
           .order-summary { 
@@ -401,6 +552,7 @@ const StoreSummaryProduction = () => {
         <div class="header">
           <div class="company-name">Company 2</div>
           <div class="location">Midtown East</div>
+          <div class="date-range">Report Period: ${dateRangeText}</div>
         </div>
         
         <div class="order-summary">
@@ -498,6 +650,10 @@ const StoreSummaryProduction = () => {
       second: '2-digit'
     });
 
+    const dateRangeText = selectedDateRange 
+      ? `${selectedDateRange.startDate.toLocaleDateString()} to ${selectedDateRange.endDate.toLocaleDateString()}`
+      : '06/15/2025 to 06/22/2025';
+
     return `
       <!DOCTYPE html>
       <html>
@@ -570,20 +726,34 @@ const StoreSummaryProduction = () => {
             margin-top: 0;
             color: #2c3e50;
           }
+          .date-filter {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #1976d2;
+          }
         </style>
       </head>
       <body>
         <div class="header">
           <div class="company-name">Company 2</div>
           <div class="report-title">Consolidated Production Requirements</div>
-          <div class="date-range">Total quantities needed for production • 06/15/2025 to 06/22/2025</div>
+          <div class="date-range">Total quantities needed for production • ${dateRangeText}</div>
         </div>
+        
+        ${selectedDateRange ? `
+        <div class="date-filter">
+          <strong>📅 Date Filter Applied:</strong> This report shows production requirements for the selected period: ${dateRangeText}
+        </div>
+        ` : ''}
         
         <div class="summary-section">
           <h3>Production Summary</h3>
           <p><strong>Total Unique Items:</strong> ${consolidatedData.length}</p>
           <p><strong>Total Quantity Required:</strong> ${consolidatedData.reduce((sum, item) => sum + item.totalRequired, 0)} units</p>
           <p><strong>Active Locations:</strong> ${Object.keys(consolidatedData[0]?.locations || {}).length}</p>
+          <p><strong>Report Period:</strong> ${dateRangeText}</p>
         </div>
         
         <table>
@@ -635,6 +805,7 @@ const StoreSummaryProduction = () => {
             <li>Highlighted locations (Midtown East) have active orders</li>
             <li>Contact production team for items requiring special handling</li>
             <li>Update inventory systems after production completion</li>
+            ${selectedDateRange ? '<li><strong>Note:</strong> This report is filtered by the selected date range</li>' : ''}
           </ul>
         </div>
         
@@ -649,20 +820,51 @@ const StoreSummaryProduction = () => {
   const totalOrdersFound = ordersData.length;
   const totalOrderValue = ordersData.reduce((sum, order) => sum + order.totalAmount, 0);
 
+  // Get date range display text
+  const getDateRangeText = () => {
+    if (selectedDateRange) {
+      return `${selectedDateRange.startDate.toLocaleDateString()} to ${selectedDateRange.endDate.toLocaleDateString()}`;
+    }
+    return '06/15/2025 to 06/22/2025';
+  };
+
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
-      {/* Filters Section using FiltersOrderIQ component */}
-      <FiltersOrderIQ
-        filterFields={filterFields}
-        filters={filters}
-        onFilterChange={handleFilterChange}
-        onApplyFilters={handleApplyFilters}
-        showApplyButton={true}
-      />
-
-      {/* Page Header */}
+      {/* Header Section with Filters and Date Range */}
       <Box sx={{ mb: 3 }}>
-       
+        {/* Title and Date Range Selector */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main', mb: 1 }}>
+              Store Summary & Production
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Comprehensive production planning and order management system
+            </Typography>
+          </Box>
+          
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {selectedDateRange && (
+              <Chip
+                label={`${selectedDateRange.startDate?.toLocaleDateString()} - ${selectedDateRange.endDate?.toLocaleDateString()}`}
+                color="primary"
+                size="small"
+                onDelete={() => setSelectedDateRange(null)}
+                sx={{ fontSize: '0.75rem' }}
+              />
+            )}
+            <DateRangeSelectorButton onDateRangeSelect={handleDateRangeSelect} />
+          </Box>
+        </Box>
+
+        {/* Filters Section using FiltersOrderIQ component */}
+        <FiltersOrderIQ
+          filterFields={filterFields}
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          onApplyFilters={handleApplyFilters}
+          showApplyButton={true}
+        />
       </Box>
 
       {/* All Orders/Invoices by Location */}
@@ -676,15 +878,25 @@ const StoreSummaryProduction = () => {
                   All Orders/Invoices by Location
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Complete listing of all orders with timestamps by store location (06/15/2025 to 06/22/2025)
+                  Complete listing of all orders with timestamps by store location ({getDateRangeText()})
                 </Typography>
               </Box>
             </Box>
-            <Chip 
-              label={`${totalOrdersFound} orders found`} 
-              color="primary" 
-              variant="outlined"
-            />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {selectedDateRange && (
+                <Chip 
+                  label="Date Filtered" 
+                  size="small" 
+                  variant="outlined" 
+                  color="primary"
+                />
+              )}
+              <Chip 
+                label={`${totalOrdersFound} orders found`} 
+                color="primary" 
+                variant="outlined"
+              />
+            </Box>
           </Box>
 
           {/* Midtown East Orders */}
@@ -695,12 +907,19 @@ const StoreSummaryProduction = () => {
                   Midtown East
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Company 2 • 7 orders
+                  Company 2 • 7 orders • {getDateRangeText()}
                 </Typography>
               </Box>
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Total: ${totalOrderValue.toFixed(2)}
-              </Typography>
+              <Box sx={{ textAlign: 'right' }}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Total: ${totalOrderValue.toFixed(2)}
+                </Typography>
+                {selectedDateRange && (
+                  <Typography variant="caption" color="text.secondary">
+                    Filtered by date range
+                  </Typography>
+                )}
+              </Box>
             </Box>
 
             <TableContainer component={Paper} variant="outlined">
@@ -761,7 +980,6 @@ const StoreSummaryProduction = () => {
         </CardContent>
       </Card>
 
-  
       {/* Consolidated Production Requirements */}
       <Card sx={{ borderRadius: 2 }}>
         <CardContent>
@@ -771,8 +989,17 @@ const StoreSummaryProduction = () => {
                 Consolidated Production Requirements
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Total quantities needed for production • 06/15/2025 to 06/22/2025
+                Total quantities needed for production • {getDateRangeText()}
               </Typography>
+              {selectedDateRange && (
+                <Chip 
+                  label="📅 Date range applied to production calculations" 
+                  size="small" 
+                  variant="outlined" 
+                  color="primary"
+                  sx={{ mt: 1 }}
+                />
+              )}
             </Box>
             <Button
               variant="contained"
@@ -853,6 +1080,9 @@ const StoreSummaryProduction = () => {
                 <Typography variant="body2"><strong>Date:</strong> {printDialog.order.orderDate}</Typography>
                 <Typography variant="body2"><strong>Items:</strong> {printDialog.order.itemsCount}</Typography>
                 <Typography variant="body2"><strong>Total:</strong> ${printDialog.order.totalAmount.toFixed(2)}</Typography>
+                {selectedDateRange && (
+                  <Typography variant="body2"><strong>Report Period:</strong> {getDateRangeText()}</Typography>
+                )}
               </Paper>
             </Box>
           )}
@@ -905,6 +1135,9 @@ const StoreSummaryProduction = () => {
                 <Typography variant="body2"><strong>Date:</strong> {emailDialog.order.orderDate}</Typography>
                 <Typography variant="body2"><strong>Items:</strong> {emailDialog.order.itemsCount}</Typography>
                 <Typography variant="body2"><strong>Total:</strong> ${emailDialog.order.totalAmount.toFixed(2)}</Typography>
+                {selectedDateRange && (
+                  <Typography variant="body2"><strong>Report Period:</strong> {getDateRangeText()}</Typography>
+                )}
               </Paper>
 
               <TextField
@@ -1005,6 +1238,14 @@ const StoreSummaryProduction = () => {
                 </Grid>
               </Grid>
 
+              {selectedDateRange && (
+                <Box sx={{ mb: 3, p: 2, backgroundColor: '#e3f2fd', borderRadius: 1 }}>
+                  <Typography variant="body2" color="primary.main" sx={{ fontWeight: 600 }}>
+                    📅 Date Filter: {getDateRangeText()}
+                  </Typography>
+                </Box>
+              )}
+
               {/* Orders Table */}
               {viewDetailsDialog.orders.length > 0 ? (
                 <TableContainer component={Paper} variant="outlined">
@@ -1041,7 +1282,10 @@ const StoreSummaryProduction = () => {
                     No orders found
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    This store has no order history.
+                    {selectedDateRange 
+                      ? `This store has no orders for the selected date range (${getDateRangeText()}).`
+                      : 'This store has no order history.'
+                    }
                   </Typography>
                 </Box>
               )}

@@ -32,11 +32,142 @@ import {
   Remove as RemoveIcon,
   Delete as DeleteIcon,
   Receipt as ReceiptIcon,
-  FilterList as FilterListIcon
+  FilterList as FilterListIcon,
+  CalendarToday as CalendarTodayIcon,
+  Clear as ClearIcon
 } from '@mui/icons-material';
 
-// Import your existing FiltersOrderIQ component
+// Import your existing FiltersOrderIQ component and DateRangeSelector
 import FiltersOrderIQ from '../components/FiltersOrderIQ'; // Adjust the import path as needed
+import DateRangeSelector from '../components/DateRangeSelector'; // Adjust the import path as needed
+
+// DateRangeSelector Button Component
+const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedRange, setSelectedRange] = useState('Date Range');
+  const [tempRange, setTempRange] = useState(null);
+
+  const handleOpen = () => setIsOpen(true);
+  const handleClose = () => {
+    setIsOpen(false);
+    setTempRange(null);
+  };
+
+  const handleDateRangeSelect = (range) => {
+    setTempRange(range);
+  };
+
+  const handleApply = () => {
+    if (tempRange) {
+      const startDate = tempRange.startDate.toLocaleDateString();
+      const endDate = tempRange.endDate.toLocaleDateString();
+      setSelectedRange(`${startDate} - ${endDate}`);
+      onDateRangeSelect(tempRange);
+    }
+    setIsOpen(false);
+  };
+
+  const handleClear = (event) => {
+    event.stopPropagation();
+    setSelectedRange('Date Range');
+    onDateRangeSelect(null);
+  };
+
+  return (
+    <>
+      <Button
+        variant="outlined"
+        startIcon={<CalendarTodayIcon />}
+        endIcon={selectedRange !== 'Date Range' && (
+          <IconButton 
+            size="small" 
+            onClick={handleClear}
+            style={{ padding: '2px', marginLeft: '4px' }}
+          >
+            <ClearIcon style={{ fontSize: '16px' }} />
+          </IconButton>
+        )}
+        onClick={handleOpen}
+        sx={{
+          borderRadius: 2,
+          textTransform: 'none',
+          minWidth: '180px',
+          justifyContent: 'flex-start',
+          borderColor: 'primary.main',
+          '&:hover': {
+            borderColor: 'primary.dark'
+          }
+        }}
+      >
+        {selectedRange}
+      </Button>
+
+      <Dialog
+        open={isOpen}
+        onClose={handleClose}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            maxHeight: '80vh'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          borderBottom: '1px solid #e0e0e0',
+          pb: 2,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.5
+        }}>
+          <CalendarTodayIcon color="primary" />
+          Select Date Range for Orders
+        </DialogTitle>
+        
+        <DialogContent sx={{ p: 0 }}>
+          <DateRangeSelector 
+            initialState={[
+              {
+                startDate: new Date(),
+                endDate: new Date(),
+                key: 'selection'
+              }
+            ]}
+            onSelect={handleDateRangeSelect} 
+          />
+        </DialogContent>
+        
+        <DialogActions sx={{ 
+          p: 3,
+          borderTop: '1px solid #e0e0e0',
+          justifyContent: 'space-between'
+        }}>
+          <Typography variant="body2" color="text.secondary">
+            {tempRange && `${tempRange.startDate?.toLocaleDateString()} - ${tempRange.endDate?.toLocaleDateString()}`}
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button 
+              onClick={handleClose}
+              color="secondary"
+              variant="outlined"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleApply} 
+              variant="contained" 
+              color="primary"
+              disabled={!tempRange}
+            >
+              Apply Range
+            </Button>
+          </Box>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+};
 
 // Mock data for available items
 const availableItems = [
@@ -219,6 +350,9 @@ const OrderIQDashboard = () => {
   const [currentOrder, setCurrentOrder] = useState([]);
   const [emailOrder, setEmailOrder] = useState(false);
   const [quantityDialog, setQuantityDialog] = useState({ open: false, item: null });
+  
+  // Date range selector state
+  const [selectedDateRange, setSelectedDateRange] = useState(null);
 
   // Filter configuration for FiltersOrderIQ component
   const filterFields = [
@@ -252,6 +386,14 @@ const OrderIQDashboard = () => {
   const handleApplyFilters = () => {
     console.log('Applying filters:', filters);
     // Add your filter logic here
+  };
+
+  // Date range handler
+  const handleDateRangeSelect = (range) => {
+    setSelectedDateRange(range);
+    console.log('Selected date range for orders:', range);
+    // Here you would typically filter orders based on the selected date range
+    // For example: filterOrdersByDateRange(range);
   };
 
   const handleAddToOrder = (item, quantity) => {
@@ -299,6 +441,7 @@ const OrderIQDashboard = () => {
   const handleSubmitOrder = () => {
     console.log('Submitting order:', currentOrder);
     console.log('Email order:', emailOrder);
+    console.log('Date range:', selectedDateRange);
     // Add your order submission logic here
     alert('Order submitted successfully!');
     setCurrentOrder([]);
@@ -312,14 +455,42 @@ const OrderIQDashboard = () => {
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
-      {/* Filters Section using your existing component */}
-      <FiltersOrderIQ
-        filterFields={filterFields}
-        filters={filters}
-        onFilterChange={handleFilterChange}
-        onApplyFilters={handleApplyFilters}
-        showApplyButton={true}
-      />
+      {/* Header Section with Filters and Date Range */}
+      <Box sx={{ mb: 3 }}>
+        {/* Title and Date Range Selector */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main', mb: 1 }}>
+              OrderIQ Dashboard
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Manage your orders and track analytics with intelligent insights
+            </Typography>
+          </Box>
+          
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {selectedDateRange && (
+              <Chip
+                label={`${selectedDateRange.startDate?.toLocaleDateString()} - ${selectedDateRange.endDate?.toLocaleDateString()}`}
+                color="primary"
+                size="small"
+                onDelete={() => setSelectedDateRange(null)}
+                sx={{ fontSize: '0.75rem' }}
+              />
+            )}
+            <DateRangeSelectorButton onDateRangeSelect={handleDateRangeSelect} />
+          </Box>
+        </Box>
+
+        {/* Filters Section using your existing component */}
+        <FiltersOrderIQ
+          filterFields={filterFields}
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          onApplyFilters={handleApplyFilters}
+          showApplyButton={true}
+        />
+      </Box>
 
       <Grid container spacing={3}>
         {/* Left Column */}
@@ -332,6 +503,14 @@ const OrderIQDashboard = () => {
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                   Store Analytics
                 </Typography>
+                {selectedDateRange && (
+                  <Chip 
+                    label="Filtered by date range" 
+                    size="small" 
+                    variant="outlined" 
+                    color="primary"
+                  />
+                )}
               </Box>
               
               <Grid container spacing={2}>
@@ -381,6 +560,14 @@ const OrderIQDashboard = () => {
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                   🏆 Top Items
                 </Typography>
+                {selectedDateRange && (
+                  <Chip 
+                    label="Date filtered" 
+                    size="small" 
+                    variant="outlined" 
+                    color="primary"
+                  />
+                )}
               </Box>
               
               <List>
@@ -406,14 +593,22 @@ const OrderIQDashboard = () => {
           {/* Recent Orders */}
           <Card sx={{ mb: 3, borderRadius: 2 }}>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
                 <ReceiptIcon color="primary" />
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                   Recent Orders
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Last 7 orders for this location (all)
+                  {selectedDateRange ? 'Filtered by selected date range' : 'Last 7 orders for this location (all)'}
                 </Typography>
+                {selectedDateRange && (
+                  <Chip 
+                    label="Date filtered" 
+                    size="small" 
+                    variant="outlined" 
+                    color="primary"
+                  />
+                )}
               </Box>
 
               <List>
@@ -662,6 +857,12 @@ const OrderIQDashboard = () => {
                       >
                         Submit Order
                       </Button>
+
+                      {selectedDateRange && (
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                          Order period: {selectedDateRange.startDate?.toLocaleDateString()} - {selectedDateRange.endDate?.toLocaleDateString()}
+                        </Typography>
+                      )}
                     </Box>
                   </>
                 )}

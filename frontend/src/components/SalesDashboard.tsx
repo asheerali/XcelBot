@@ -444,112 +444,114 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
     const chartDataWithMA = calculateMovingAverage(chartData);
 
     // Custom tooltip for better formatting
-    const CustomTooltip = ({ active, payload, label }) => {
-      if (active && payload && payload.length && payload[0].payload.categoryBreakdown) {
-        const breakdown = payload[0].payload.categoryBreakdown;
-        const total = payload[0].payload.totalSales;
+   // Updated CustomTooltip component - replace the existing one in your SalesTrendChart
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length && payload[0].payload.categoryBreakdown) {
+    const breakdown = payload[0].payload.categoryBreakdown;
+    const total = payload[0].payload.totalSales;
+    
+    return (
+      <div
+        style={{
+          background: "white",
+          color: "#333",
+          padding: "12px 16px",
+          borderRadius: "8px",
+          fontSize: "12px",
+          minWidth: "250px",
+          maxWidth: "350px", // Increased maxWidth to accommodate more content
+          boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+          border: "2px solid #4caf50",
+          // Removed any height constraints to allow natural expansion
+        }}
+      >
+        <div
+          style={{
+            fontWeight: "bold",
+            marginBottom: "8px",
+            fontSize: "14px",
+            borderBottom: "1px solid rgba(0,0,0,0.1)",
+            paddingBottom: "6px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span>{label}</span>
+          <span style={{ color: "#4caf50", fontWeight: "bold" }}>
+            Total: ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        </div>
         
-        return (
-          <div
-            style={{
-              background: "white",
-              color: "#333",
-              padding: "12px 16px",
-              borderRadius: "8px",
-              fontSize: "12px",
-              minWidth: "250px",
-              maxWidth: "300px",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
-              border: "2px solid #4caf50",
-            }}
-          >
+        {/* Category breakdown - REMOVED maxHeight and overflowY to prevent scrolling */}
+        <div>
+          {breakdown.map((entry, index) => (
             <div
+              key={index}
               style={{
-                fontWeight: "bold",
-                marginBottom: "8px",
-                fontSize: "14px",
-                borderBottom: "1px solid rgba(0,0,0,0.1)",
-                paddingBottom: "6px",
                 display: "flex",
                 justifyContent: "space-between",
+                marginBottom: "4px",
                 alignItems: "center",
+                padding: "2px 0",
               }}
             >
-              <span>{label}</span>
-              <span style={{ color: "#4caf50", fontWeight: "bold" }}>
-                Total: ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  flex: 1,
+                  minWidth: 0,
+                }}
+              >
+                <div
+                  style={{
+                    width: "12px",
+                    height: "12px",
+                    borderRadius: "2px",
+                    backgroundColor: entry.color,
+                    flexShrink: 0,
+                  }}
+                />
+                <span style={{ 
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  fontSize: "11px"
+                }}>
+                  {entry.name}
+                </span>
+              </span>
+              <span style={{ 
+                fontWeight: "bold",
+                marginLeft: "8px",
+                flexShrink: 0,
+                fontSize: "11px"
+              }}>
+                ${entry.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
-            
-            {/* Category breakdown */}
-            <div style={{ maxHeight: "200px", overflowY: "auto" }}>
-              {breakdown.map((entry, index) => (
-                <div
-                  key={index}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: "4px",
-                    alignItems: "center",
-                    padding: "2px 0",
-                  }}
-                >
-                  <span
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      flex: 1,
-                      minWidth: 0,
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "12px",
-                        height: "12px",
-                        borderRadius: "2px",
-                        backgroundColor: entry.color,
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span style={{ 
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                      fontSize: "11px"
-                    }}>
-                      {entry.name}
-                    </span>
-                  </span>
-                  <span style={{ 
-                    fontWeight: "bold",
-                    marginLeft: "8px",
-                    flexShrink: 0,
-                    fontSize: "11px"
-                  }}>
-                    ${entry.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </div>
-              ))}
-            </div>
-            
-            {/* Show percentage of top categories */}
-            {breakdown.length > 3 && (
-              <div style={{ 
-                marginTop: "8px", 
-                paddingTop: "6px", 
-                borderTop: "1px solid rgba(0,0,0,0.1)",
-                fontSize: "10px",
-                color: "#666"
-              }}>
-                Top 3 categories: {((breakdown.slice(0, 3).reduce((sum, cat) => sum + cat.value, 0) / total) * 100).toFixed(1)}% of total
-              </div>
-            )}
+          ))}
+        </div>
+        
+        {/* Show percentage of top categories */}
+        {breakdown.length > 3 && (
+          <div style={{ 
+            marginTop: "8px", 
+            paddingTop: "6px", 
+            borderTop: "1px solid rgba(0,0,0,0.1)",
+            fontSize: "10px",
+            color: "#666"
+          }}>
+            Top 3 categories: {((breakdown.slice(0, 3).reduce((sum, cat) => sum + cat.value, 0) / total) * 100).toFixed(1)}% of total
           </div>
-        );
-      }
-      return null;
-    };
+        )}
+      </div>
+    );
+  }
+  return null;
+};
 
     return (
       <div style={{ width: "100%", height: "400px" }}>

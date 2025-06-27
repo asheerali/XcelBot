@@ -16,14 +16,150 @@ import {
   MenuItem,
   Checkbox,
   ListItemText,
-  OutlinedInput
+  OutlinedInput,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
 // Material-UI Icons
 import FilterListIcon from '@mui/icons-material/FilterList';
 import CloseIcon from '@mui/icons-material/Close';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import ClearIcon from '@mui/icons-material/Clear';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import AnalyticsComponenet from '../components/AnalyticsComponenet';
+import DateRangeSelector from '../components/DateRangeSelector';
+
+// DateRangeSelector Button Component
+const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedRange, setSelectedRange] = useState('Select Date Range');
+  const [tempRange, setTempRange] = useState(null);
+
+  const handleOpen = () => setIsOpen(true);
+  const handleClose = () => {
+    setIsOpen(false);
+    setTempRange(null);
+  };
+
+  const handleDateRangeSelect = (range) => {
+    setTempRange(range);
+  };
+
+  const handleApply = () => {
+    if (tempRange) {
+      const startDate = tempRange.startDate.toLocaleDateString();
+      const endDate = tempRange.endDate.toLocaleDateString();
+      setSelectedRange(`${startDate} - ${endDate}`);
+      onDateRangeSelect(tempRange);
+    }
+    setIsOpen(false);
+  };
+
+  const handleClear = (event) => {
+    event.stopPropagation();
+    setSelectedRange('Select Date Range');
+    onDateRangeSelect(null);
+  };
+
+  return (
+    <>
+      <Button
+        variant="outlined"
+        startIcon={<CalendarTodayIcon />}
+        endIcon={selectedRange !== 'Select Date Range' && (
+          <IconButton 
+            size="small" 
+            onClick={handleClear}
+            style={{ padding: '2px', marginLeft: '4px' }}
+          >
+            <ClearIcon style={{ fontSize: '16px' }} />
+          </IconButton>
+        )}
+        onClick={handleOpen}
+        sx={{
+          textTransform: 'none',
+          borderRadius: 1,
+          px: 2,
+          py: 1,
+          borderColor: '#d1d5db',
+          color: '#6b7280',
+          '&:hover': {
+            borderColor: '#9ca3af',
+            backgroundColor: 'transparent'
+          }
+        }}
+      >
+        {selectedRange}
+      </Button>
+
+      <Dialog
+        open={isOpen}
+        onClose={handleClose}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 2 }
+        }}
+      >
+        <DialogTitle sx={{ 
+          borderBottom: '1px solid #e5e7eb',
+          pb: 2,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.5
+        }}>
+          <CalendarTodayIcon color="primary" />
+          Select Date Range
+        </DialogTitle>
+        
+        <DialogContent sx={{ p: 0 }}>
+          <DateRangeSelector 
+            initialState={[
+              {
+                startDate: new Date(),
+                endDate: new Date(),
+                key: 'selection'
+              }
+            ]}
+            onSelect={handleDateRangeSelect} 
+          />
+        </DialogContent>
+        
+        <DialogActions sx={{ 
+          p: 3,
+          borderTop: '1px solid #e5e7eb',
+          justifyContent: 'space-between'
+        }}>
+          <Typography variant="body2" color="text.secondary">
+            {tempRange && `${tempRange.startDate?.toLocaleDateString()} - ${tempRange.endDate?.toLocaleDateString()}`}
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button 
+              onClick={handleClose}
+              variant="outlined"
+              sx={{ textTransform: 'none' }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleApply} 
+              variant="contained" 
+              disabled={!tempRange}
+              sx={{ textTransform: 'none' }}
+            >
+              Apply Range
+            </Button>
+          </Box>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+};
 
 // Styled components matching your Material-UI theme structure
 const StyledCard = styled(Card)(({ theme }) => ({
@@ -36,16 +172,6 @@ const StyledCard = styled(Card)(({ theme }) => ({
     transform: 'translateY(-2px)',
     boxShadow: `0 16px 48px ${alpha(theme.palette.common.black, 0.12)}`
   }
-}));
-
-const FilterSection = styled(Box)(({ theme }) => ({
-  background: `linear-gradient(135deg, 
-    ${alpha(theme.palette.primary.main, 0.02)} 0%, 
-    ${alpha(theme.palette.secondary.main, 0.01)} 50%, 
-    ${alpha(theme.palette.primary.light, 0.01)} 100%)`,
-  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  padding: theme.spacing(3, 0),
-  overflow: 'visible'
 }));
 
 const ContentCard = styled(Card)(({ theme }) => ({
@@ -71,8 +197,9 @@ const ActiveFilterChip = styled(Chip)(({ theme }) => ({
 
 const AnalyticsDashboard = () => {
   const theme = useTheme();
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
+  const [selectedLocations, setSelectedLocations] = useState([]);
+  const [selectedCompanies, setSelectedCompanies] = useState([]);
+  const [selectedDateRange, setSelectedDateRange] = useState(null);
 
   // Sample data - replace with your actual data
   const availableLocations = ['Midtown East', 'Lenox Hill', 'Upper West Side', 'Downtown', 'Brooklyn Heights'];
@@ -83,55 +210,57 @@ const AnalyticsDashboard = () => {
     setSelectedCompanies([]);
   };
 
-  const handleLocationChange = (event: any) => {
+  const handleLocationChange = (event) => {
     const value = event.target.value;
     setSelectedLocations(typeof value === 'string' ? value.split(',') : value);
   };
 
-  const handleCompanyChange = (event: any) => {
+  const handleCompanyChange = (event) => {
     const value = event.target.value;
     setSelectedCompanies(typeof value === 'string' ? value.split(',') : value);
   };
 
+  const handleDateRangeSelect = (range) => {
+    setSelectedDateRange(range);
+    console.log('Selected date range:', range);
+  };
+
+  const handleRefresh = () => {
+    console.log('Refreshing data...');
+    // Add your refresh logic here
+  };
+
   return (
     <Box sx={{ minHeight: '100vh', background: 'linear-gradient(180deg, #fafafa 0%, #ffffff 100%)' }}>
-      {/* Page Header */}
-      <Box sx={{ 
-        background: `linear-gradient(135deg, 
-          ${alpha(theme.palette.primary.main, 0.1)} 0%, 
-          ${alpha(theme.palette.secondary.main, 0.05)} 50%, 
-          ${alpha(theme.palette.primary.light, 0.02)} 100%)`,
-        borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-        py: 4
-      }}>
-        <Container maxWidth="xl">
-          <Typography 
-            variant="h4" 
-            sx={{ 
-              fontWeight: 700, 
-              color: theme.palette.primary.main,
-              textAlign: 'center',
-              mb: 1
+      {/* Top Controls */}
+      <Container maxWidth="xl" sx={{ pt: 3, pb: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={handleRefresh}
+            sx={{
+              textTransform: 'none',
+              borderRadius: 1,
+              px: 2,
+              py: 1,
+              borderColor: '#d1d5db',
+              color: '#6b7280',
+              '&:hover': {
+                borderColor: '#9ca3af',
+                backgroundColor: 'transparent'
+              }
             }}
           >
-            Sales Analytics Dashboard
-          </Typography>
-          <Typography 
-            variant="subtitle1" 
-            sx={{ 
-              color: theme.palette.text.secondary,
-              textAlign: 'center'
-            }}
-          >
-            Comprehensive sales data analysis and performance metrics
-          </Typography>
-        </Container>
-      </Box>
+            Refresh
+          </Button>
+          <DateRangeSelectorButton onDateRangeSelect={handleDateRangeSelect} />
+        </Box>
+      </Container>
 
       {/* Filters Section */}
-      <FilterSection>
-        <Container maxWidth="xl">
-          <StyledCard sx={{ p: 4, overflow: 'visible' }}>
+      <Container maxWidth="xl">
+        <StyledCard sx={{ p: 4, overflow: 'visible' }}>
             {/* Filter Header */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
               <FilterListIcon sx={{ color: theme.palette.primary.main }} />
@@ -352,19 +481,26 @@ const AnalyticsDashboard = () => {
                   boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`
                 }
               }}
+              onClick={() => {
+                console.log('Applying filters:', {
+                  dateRange: selectedDateRange,
+                  locations: selectedLocations,
+                  companies: selectedCompanies
+                });
+              }}
             >
               Apply Filters
             </Button>
           </StyledCard>
         </Container>
-      </FilterSection>
 
-      {/* Analytics Content */}
-      <Container maxWidth="xl">
+        {/* Analytics Content */}
+        <Container maxWidth="xl">
         <ContentCard>
           <AnalyticsComponenet 
             selectedLocations={selectedLocations}
             selectedCompanies={selectedCompanies}
+            selectedDateRange={selectedDateRange}
           />
         </ContentCard>
       </Container>

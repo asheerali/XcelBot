@@ -49,7 +49,133 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ClearIcon from '@mui/icons-material/Clear';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import FiltersOrderIQ from '../components/FiltersOrderIQ';
+import DateRangeSelector from '../components/DateRangeSelector';
+
+// DateRangeSelector Button Component
+const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedRange, setSelectedRange] = useState('Date Range');
+  const [tempRange, setTempRange] = useState(null);
+
+  const handleOpen = () => setIsOpen(true);
+  const handleClose = () => {
+    setIsOpen(false);
+    setTempRange(null);
+  };
+
+  const handleDateRangeSelect = (range) => {
+    setTempRange(range);
+  };
+
+  const handleApply = () => {
+    if (tempRange) {
+      const startDate = tempRange.startDate.toLocaleDateString();
+      const endDate = tempRange.endDate.toLocaleDateString();
+      setSelectedRange(`${startDate} - ${endDate}`);
+      onDateRangeSelect(tempRange);
+    }
+    setIsOpen(false);
+  };
+
+  const handleClear = (event) => {
+    event.stopPropagation();
+    setSelectedRange('Date Range');
+    onDateRangeSelect(null);
+  };
+
+  return (
+    <>
+      <Button
+        variant="outlined"
+        startIcon={<CalendarTodayIcon />}
+        endIcon={selectedRange !== 'Date Range' && (
+          <IconButton 
+            size="small" 
+            onClick={handleClear}
+            style={{ padding: '2px', marginLeft: '4px' }}
+          >
+            <ClearIcon style={{ fontSize: '16px' }} />
+          </IconButton>
+        )}
+        onClick={handleOpen}
+        style={{
+          borderRadius: '8px',
+          textTransform: 'none',
+          minWidth: '180px',
+          justifyContent: 'flex-start'
+        }}
+      >
+        {selectedRange}
+      </Button>
+
+      <Dialog
+        open={isOpen}
+        onClose={handleClose}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          style: {
+            borderRadius: '12px',
+            maxHeight: '80vh'
+          }
+        }}
+      >
+        <DialogTitle style={{ 
+          borderBottom: '1px solid #e0e0e0',
+          paddingBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <CalendarTodayIcon color="primary" />
+          Select Date Range
+        </DialogTitle>
+        
+        <DialogContent style={{ padding: '0' }}>
+          <DateRangeSelector 
+            initialState={[
+              {
+                startDate: new Date(),
+                endDate: new Date(),
+                key: 'selection'
+              }
+            ]}
+            onSelect={handleDateRangeSelect} 
+          />
+        </DialogContent>
+        
+        <DialogActions style={{ 
+          padding: '16px 24px',
+          borderTop: '1px solid #e0e0e0',
+          justifyContent: 'space-between'
+        }}>
+          <Typography variant="body2" style={{ color: '#666' }}>
+            {tempRange && `${tempRange.startDate?.toLocaleDateString()} - ${tempRange.endDate?.toLocaleDateString()}`}
+          </Typography>
+          <Box style={{ display: 'flex', gap: '8px' }}>
+            <Button 
+              onClick={handleClose}
+              color="secondary"
+              variant="outlined"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleApply} 
+              variant="contained" 
+              color="primary"
+              disabled={!tempRange}
+            >
+              Apply Range
+            </Button>
+          </Box>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+};
 
 // FiltersOrderIQ2 Component
 const FiltersOrderIQ2 = ({ 
@@ -317,7 +443,7 @@ const MasterFile = () => {
   });
 
   // State for FiltersOrderIQ component
-  const [orderIQFilters, setOrderIQFilters] = useState<Record<string, string[]>>({
+  const [orderIQFilters, setOrderIQFilters] = useState({
     stockStatus: [],
     unit: [],
     priceChange: []
@@ -328,6 +454,9 @@ const MasterFile = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+
+  // Date range selector state
+  const [selectedDateRange, setSelectedDateRange] = useState(null);
 
   // Get unique units for filter options
   const uniqueUnits = [...new Set(items.map(item => item.unit))];
@@ -363,7 +492,7 @@ const MasterFile = () => {
   ];
 
   // Handler for FiltersOrderIQ filter changes
-  const handleOrderIQFilterChange = (fieldKey: string, values: string[]) => {
+  const handleOrderIQFilterChange = (fieldKey, values) => {
     setOrderIQFilters(prev => ({
       ...prev,
       [fieldKey]: values
@@ -569,6 +698,14 @@ const MasterFile = () => {
     setUploading(false);
   };
 
+  // Date range handler
+  const handleDateRangeSelect = (range) => {
+    setSelectedDateRange(range);
+    console.log('Selected date range:', range);
+    // Here you would typically filter items based on the selected date range
+    // For example: filterItemsByDateRange(range);
+  };
+
   return (
     <Container maxWidth="xl" style={{ paddingTop: 24, paddingBottom: 24 }}>
       <Paper 
@@ -587,15 +724,26 @@ const MasterFile = () => {
             borderBottom: '1px solid #e0e0e0'
           }}
         >
-         
-
           {/* Search and Actions */}
           <Box style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-            <Typography variant="h6" style={{ fontWeight: 600 }}>
-              {filteredItems.length} Items
-            </Typography>
+            <Box style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <Typography variant="h6" style={{ fontWeight: 600 }}>
+                {filteredItems.length} Items
+              </Typography>
+              {selectedDateRange && (
+                <Chip
+                  label={`${selectedDateRange.startDate?.toLocaleDateString()} - ${selectedDateRange.endDate?.toLocaleDateString()}`}
+                  color="primary"
+                  size="small"
+                  onDelete={() => setSelectedDateRange(null)}
+                  style={{ fontSize: '0.75rem' }}
+                />
+              )}
+            </Box>
             
             <Box style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+              <DateRangeSelectorButton onDateRangeSelect={handleDateRangeSelect} />
+              
               <TextField
                 placeholder="Search items..."
                 value={searchTerm}
