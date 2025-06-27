@@ -1723,13 +1723,7 @@ export default function ProductMixDashboard() {
               <Typography variant="h6" sx={{ fontWeight: 500 }}>
                 Filters
               </Typography>
-              <Chip 
-                label="🔢 Enhanced Formatting + Table11" 
-                size="small" 
-                color="secondary" 
-                variant="outlined"
-                sx={{ ml: 1 }}
-              />
+            
               {/* Company ID chip */}
               {selectedCompanyId && (
                 <Chip 

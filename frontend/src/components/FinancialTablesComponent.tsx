@@ -240,20 +240,20 @@ const FinancialTablesComponent: React.FC<FinancialTablesComponentProps> = ({ fin
           { key: 'Lw Fc %', label: 'LW %', align: 'center' as const, format: 'percentage' }
         ]
       },
-      {
-        id: 'labor',
-        title: 'Labor Cost',
-        icon: '👥',
-        data: financialTables.table5 || [],
-        columns: [
-          { key: 'Store', label: 'Store Location', align: 'left' as const },
-          { key: 'Tw Reg Pay', label: 'This Week', align: 'center' as const, format: 'currency' },
-          { key: 'Lw Reg Pay', label: 'Last Week', align: 'center' as const, format: 'currency' },
-          { key: 'Tw vs. Lw', label: 'Change', align: 'center' as const, format: 'percentage' },
-          { key: 'Tw Lc %', label: 'TW %', align: 'center' as const, format: 'percentage' },
-          { key: 'Lw Lc %', label: 'LW %', align: 'center' as const, format: 'percentage' }
-        ]
-      },
+    {
+  id: 'labor',
+  title: 'Labor Cost',
+  icon: '👥',
+  data: financialTables.table5 || [],
+  columns: [
+    { key: 'Store', label: 'Store Location', align: 'left' as const },
+    { key: 'Tw Reg Pay', label: 'This Week', align: 'center' as const, format: 'number' }, // UPDATED: Changed from 'currency' to 'number'
+    { key: 'Lw Reg Pay', label: 'Last Week', align: 'center' as const, format: 'number' }, // UPDATED: Changed from 'currency' to 'number'
+    { key: 'Tw vs. Lw', label: 'Change', align: 'center' as const, format: 'percentage' },
+    { key: 'Tw Lc %', label: 'TW %', align: 'center' as const, format: 'percentage' },
+    { key: 'Lw Lc %', label: 'LW %', align: 'center' as const, format: 'percentage' }
+  ]
+},
       {
         id: 'hours',
         title: 'Labor Hours',
@@ -430,6 +430,8 @@ const FinancialTablesComponent: React.FC<FinancialTablesComponentProps> = ({ fin
             }
           }}
         >
+
+          
           <Tab 
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
