@@ -179,37 +179,57 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
   };
 
   // Format percentage change with proper styling - show exact backend values
-  const formatPercentageChange = (value: any) => {
-    // If value is null or undefined, show as is
-    if (value === null || value === undefined) {
-      return { text: "null", color: "#666", arrow: "" };
+ // Updated formatPercentageChange function with comma formatting
+// Replace this function in your SalesDashboard component
+
+// Updated formatPercentageChange function with comma formatting
+// Replace this function in your SalesDashboard component
+
+const formatPercentageChange = (value: any) => {
+  // If value is null or undefined, show as is
+  if (value === null || value === undefined) {
+    return { text: "null", color: "#666", arrow: "" };
+  }
+
+  // If value is exactly -1, show it as -1%
+  if (value === -1) {
+    return { text: "-1%", color: "#d32f2f", arrow: "▼" };
+  }
+
+  // If it's a number, format it as percentage with commas and proper decimal places
+  if (typeof value === "number") {
+    const isPositive = value > 0;
+    const isZero = value === 0;
+
+    if (isZero) {
+      return { text: "0%", color: "#666", arrow: "" };
     }
 
-    // If value is exactly -1, show it as -1%
-    if (value === -1) {
-      return { text: "-1%", color: "#d32f2f", arrow: "▼" };
+    // Format the number with commas and exactly 2 decimal places for decimals
+    const absValue = Math.abs(value);
+    let formattedValue;
+    
+    if (absValue % 1 === 0) {
+      // Integer value - no decimal places needed
+      formattedValue = absValue.toLocaleString('en-US');
+    } else {
+      // Decimal value - format with exactly 2 decimal places
+      formattedValue = absValue.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
     }
+    
+    return {
+      text: `${isPositive ? "+" : "-"}${formattedValue}%`,
+      color: isPositive ? "#2e7d32" : "#d32f2f",
+      arrow: isPositive ? "▲" : "▼",
+    };
+  }
 
-    // If it's a number, format it as percentage
-    if (typeof value === "number") {
-      const isPositive = value > 0;
-      const isZero = value === 0;
-
-      if (isZero) {
-        return { text: "0%", color: "#666", arrow: "" };
-      }
-
-      return {
-        text: `${isPositive ? "+" : ""}${value}%`, // UPDATED: Removed .toFixed() to show exact value
-        color: isPositive ? "#2e7d32" : "#d32f2f",
-        arrow: isPositive ? "▲" : "▼",
-      };
-    }
-
-    // For any other type, convert to string
-    return { text: String(value), color: "#666", arrow: "" };
-  };
-
+  // For any other type, convert to string
+  return { text: String(value), color: "#666", arrow: "" };
+};
   // Stat card component with change indicator
   const StatCard = ({ title, value, change, color, formatValue }) => {
     const changeFormatted = formatPercentageChange(change);
