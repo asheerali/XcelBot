@@ -471,29 +471,17 @@ async def upload_excel(
             # print("i am here in main excel upload printig the dashboad--", request.dashboard)
             
             try:
-                    if isinstance(df1, pd.DataFrame):
-                        print("Received DataFrame directly.")
-                        df = df1
+                if isinstance(excel_data_copy, io.BytesIO):
+                    excel_data_copy.seek(0)
+                    print("Reading Excel from BytesIO object.")
+                    # df = pd.read_excel(file_data, sheet_name="Database")
+                    df = pd.read_excel(excel_data_copy, sheet_name="Actuals")
+                    excel_data_copy.seek(0)
+                    # df_budget = pd.read_excel(file_data, sheet_name="Budget")
+                    df_budget = pd.read_excel(excel_data_copy, sheet_name="Budget", header=1)
 
-                    if df.empty:
-                        raise ValueError("The sheet 'Database' is empty or missing.")
-            except ValueError as e:
-                raise ValueError("Sheet named 'Database' not found in the uploaded Excel file.")
-
-            
-            try:
-                    if isinstance(excel_data_copy, io.BytesIO):
-                        excel_data_copy.seek(0)
-                        print("Reading Excel from BytesIO object.")
-                        # df = pd.read_excel(file_data, sheet_name="Database")
-                        df = pd.read_excel(excel_data_copy, sheet_name="Actuals")
-                        excel_data_copy.seek(0)
-                        # df_budget = pd.read_excel(file_data, sheet_name="Budget")
-                        df_budget = pd.read_excel(excel_data_copy, sheet_name="Budget", header=1)
-
-                
-                    if df.empty:
-                        raise ValueError("The sheet 'Actuals' is empty or missing.")
+                if df.empty:
+                    raise ValueError("The sheet 'Actuals' is empty or missing.")
             except ValueError as e:
                 raise ValueError("Sheet named 'Actuals' not found in the uploaded Excel file.")            
             
