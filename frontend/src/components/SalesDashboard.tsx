@@ -832,7 +832,10 @@ const CustomTooltip = ({ active, payload, label }) => {
         >
           Sales Categories Performance
           
+
         </div>
+
+
 
         {/* Show table11 categories with same UI as image but table11 field names */}
         {categoriesData.length === 0 ? (

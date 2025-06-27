@@ -470,10 +470,34 @@ async def upload_excel(
         elif request.dashboard in ["Financials and Sales Wide", "Financials", "Sales Wide", "Companywide"]:
             # print("i am here in main excel upload printig the dashboad--", request.dashboard)
             
-            df1 = pd.read_excel(excel_data_copy, sheet_name='Sales Wide')
-            df2 = pd.read_excel(excel_data_copy, sheet_name='Financials')
+            try:
+                    if isinstance(df1, pd.DataFrame):
+                        print("Received DataFrame directly.")
+                        df = df1
+
+                    if df.empty:
+                        raise ValueError("The sheet 'Database' is empty or missing.")
+            except ValueError as e:
+                raise ValueError("Sheet named 'Database' not found in the uploaded Excel file.")
+
             
-            result = process_dashboard_data(request = request, df1 = df1, df2 = df2, company_id = request.company_id)
+            try:
+                    if isinstance(excel_data_copy, io.BytesIO):
+                        excel_data_copy.seek(0)
+                        print("Reading Excel from BytesIO object.")
+                        # df = pd.read_excel(file_data, sheet_name="Database")
+                        df = pd.read_excel(excel_data_copy, sheet_name="Actuals")
+                        excel_data_copy.seek(0)
+                        # df_budget = pd.read_excel(file_data, sheet_name="Budget")
+                        df_budget = pd.read_excel(excel_data_copy, sheet_name="Budget", header=1)
+
+                
+                    if df.empty:
+                        raise ValueError("The sheet 'Actuals' is empty or missing.")
+            except ValueError as e:
+                raise ValueError("Sheet named 'Actuals' not found in the uploaded Excel file.")            
+            
+            result = process_dashboard_data(request = request, df1 = df, df2 = df_budget, company_id = request.company_id)
 
         # Save file record to database *after* successful processing
         file_record = UploadedFileCreate(
