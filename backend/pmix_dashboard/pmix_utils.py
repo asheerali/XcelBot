@@ -1148,11 +1148,18 @@ def create_sales_by_category_tables(df, location_filter='All', start_date=None, 
         # Merge current and previous sales (outer join to include all categories)
         category_comparison_table = pd.merge(current_sales, previous_sales, on='Sales Category', how='outer').fillna(0)
         
-        # Calculate percentage change
+        # # Calculate percentage change
+        # category_comparison_table['Percent_Change'] = category_comparison_table.apply(
+        #     lambda row: ((row['Current_4_Weeks_Sales'] - row['Previous_4_Weeks_Sales']) / row['Previous_4_Weeks_Sales'] * 100) 
+        #     if row['Previous_4_Weeks_Sales'] != 0 
+        #     else (100 if row['Current_4_Weeks_Sales'] > 0 else 0), 
+        #     axis=1
+        # )
+        
         category_comparison_table['Percent_Change'] = category_comparison_table.apply(
             lambda row: ((row['Current_4_Weeks_Sales'] - row['Previous_4_Weeks_Sales']) / row['Previous_4_Weeks_Sales'] * 100) 
             if row['Previous_4_Weeks_Sales'] != 0 
-            else (100 if row['Current_4_Weeks_Sales'] > 0 else 0), 
+            else 0, 
             axis=1
         )
         
@@ -1302,9 +1309,157 @@ import pandas as pd
 
 
 
+# def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, end_date=None, category_filter='All', server_filter='All'):
+#     """
+#     Create a comparison table of top 10 vs bottom 10 items by sales.
+    
+#     Parameters:
+#     -----------
+#     df : pd.DataFrame
+#         DataFrame with sales data
+#     location_filter : str or list, optional
+#         'All' or specific location(s)
+#     start_date : str or datetime, optional
+#         Start date as string 'YYYY-MM-DD' or datetime object
+#     end_date : str or datetime, optional
+#         End date as string 'YYYY-MM-DD' or datetime object
+#     category_filter : str or list, optional
+#         Filter by specific category(s)
+#     server_filter : str or list, optional
+#         Filter by specific server(s)
+    
+#     Returns:
+#     --------
+#     pd.DataFrame
+#         DataFrame with side-by-side comparison of top vs bottom items
+#     """
+    
+#     # Make a copy of the dataframe
+#     df_copy = df.copy()
+    
+#     # Ensure Date column is datetime type
+#     if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
+#         df_copy['Date'] = pd.to_datetime(df_copy['Date'])
+
+#     # Apply location filter to the entire dataset first
+#     if location_filter != 'All':
+#         if isinstance(location_filter, list):
+#             df_copy = df_copy[df_copy['Location'].isin(location_filter)]
+#         else:
+#             df_copy = df_copy[df_copy['Location'] == location_filter]
+    
+#     # Convert dates using pandas datetime (not Python date objects)
+#     if start_date is not None:
+#         if isinstance(start_date, str):
+#             start_date = pd.to_datetime(start_date)
+    
+#     if end_date is not None:
+#         if isinstance(end_date, str):
+#             end_date = pd.to_datetime(end_date)
+        
+#     # Apply category filter
+#     if category_filter != 'All':
+#         if isinstance(category_filter, list):
+#             df_copy = df_copy[df_copy['Category'].isin(category_filter)]
+#         else:
+#             df_copy = df_copy[df_copy['Category'] == category_filter]
+            
+#     # Apply server filter
+#     if server_filter != 'All':
+#         if isinstance(server_filter, list):
+#             df_copy = df_copy[df_copy['Server'].isin(server_filter)]
+#         else:
+#             df_copy = df_copy[df_copy['Server'] == server_filter]
+    
+#     # Filter current period data
+#     filtered_df = df_copy.copy()
+#     if start_date is not None:
+#         filtered_df = filtered_df[filtered_df['Date'] >= start_date]
+#     if end_date is not None:
+#         filtered_df = filtered_df[filtered_df['Date'] <= end_date]
+    
+#     # If the dataframe is empty after filtering, return empty table
+#     if filtered_df.empty:
+#         return pd.DataFrame(columns=['Rank', 'Top_10_Items', 'T_Sales', 'T_Quantity', 
+#                                    'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])
+    
+#     # Column mapping for clarity
+#     item_column = 'Menu_Item'
+#     quantity_column = 'Qty'
+#     sales_column = 'Net_Price'
+    
+#     # Group by item and sum quantity and sales
+#     all_items = filtered_df.groupby(item_column).agg({
+#         quantity_column: 'sum',
+#         sales_column: 'sum'
+#     }).reset_index()
+    
+#     # Rename columns for clarity
+#     all_items.columns = ['Item', 'Quantity', 'Sales']
+    
+#     # Round values appropriately
+#     all_items['Sales'] = all_items['Sales'].round(2)
+#     all_items['Quantity'] = all_items['Quantity'].round(0).astype(int)
+    
+#     # Filter out items with zero or negative sales
+#     all_items = all_items[all_items['Sales'] > 0]
+    
+#     # Check if we have enough items after filtering
+#     if all_items.empty:
+#         return pd.DataFrame(columns=['Rank', 'Top_10_Items', 'T_Sales', 'T_Quantity', 
+#                                    'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])
+    
+#     # Get top 10 items (highest sales)
+#     top_items = all_items.sort_values('Sales', ascending=False).head(10).reset_index(drop=True)
+    
+#     # Get bottom 10 items (lowest sales) - but ensure we have at least 10 items total
+#     if len(all_items) >= 10:
+#         bottom_items = all_items.sort_values('Sales', ascending=True).head(10).reset_index(drop=True)
+#     else:
+#         # If we have fewer than 10 items total, take the bottom half
+#         bottom_count = max(1, len(all_items) // 2)
+#         bottom_items = all_items.sort_values('Sales', ascending=True).head(bottom_count).reset_index(drop=True)
+    
+#     # Create comparison table
+#     max_rows = max(len(top_items), len(bottom_items), 10)  # Ensure at least 10 rows for formatting
+#     comparison_table = pd.DataFrame()
+#     comparison_table['Rank'] = range(1, max_rows + 1)
+    
+#     # Helper function to pad lists with appropriate empty values
+#     def pad_list(original_list, target_length, fill_value):
+#         return list(original_list) + [fill_value] * (target_length - len(original_list))
+    
+#     # Pad shorter lists with empty values
+#     comparison_table['Top_10_Items'] = pad_list(top_items['Item'].values, max_rows, '')
+#     comparison_table['T_Sales'] = pad_list(top_items['Sales'].values, max_rows, 0.0)
+#     comparison_table['T_Quantity'] = pad_list(top_items['Quantity'].values, max_rows, 0)
+    
+#     comparison_table['Bottom_10_Items'] = pad_list(bottom_items['Item'].values, max_rows, '')
+#     comparison_table['B_Sales'] = pad_list(bottom_items['Sales'].values, max_rows, 0.0)
+#     comparison_table['B_Quantity'] = pad_list(bottom_items['Quantity'].values, max_rows, 0)
+    
+#     # Calculate difference in sales (Top - Bottom) - fixed calculation
+#     comparison_table['Difference_Sales'] = (comparison_table['T_Sales'] - comparison_table['B_Sales']).round(2)
+    
+#     # Clean up the table - remove rows where both top and bottom items are empty
+#     comparison_table = comparison_table[
+#         (comparison_table['Top_10_Items'] != '') | (comparison_table['Bottom_10_Items'] != '')
+#     ].reset_index(drop=True)
+    
+#     # Update rank to be sequential
+#     comparison_table['Rank'] = range(1, len(comparison_table) + 1)
+    
+#     return comparison_table
+
+# Usage:
+# result = create_top_vs_bottom_comparison(df, location_filter='All', start_date='2025-04-21', end_date='2025-04-21')
+# print(result)
+
+
 def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, end_date=None, category_filter='All', server_filter='All'):
     """
     Create a comparison table of top 10 vs bottom 10 items by sales.
+    The Difference_Sales now compares current period vs previous period for top 10 items.
     
     Parameters:
     -----------
@@ -1314,8 +1469,10 @@ def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, 
         'All' or specific location(s)
     start_date : str or datetime, optional
         Start date as string 'YYYY-MM-DD' or datetime object
+        If None and end_date is also None, uses current week based on max date
     end_date : str or datetime, optional
         End date as string 'YYYY-MM-DD' or datetime object
+        If None and start_date is also None, uses current week based on max date
     category_filter : str or list, optional
         Filter by specific category(s)
     server_filter : str or list, optional
@@ -1325,6 +1482,14 @@ def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, 
     --------
     pd.DataFrame
         DataFrame with side-by-side comparison of top vs bottom items
+        Difference_Sales compares current period vs previous period for top 10 items
+        
+    Notes:
+    ------
+    When both start_date and end_date are None:
+    - Current period: 7 days ending on the maximum date in the dataset
+    - Previous period: 7 days before the current period
+    - Comparison shows current week vs last week performance
     """
     
     # Make a copy of the dataframe
@@ -1364,54 +1529,126 @@ def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, 
         else:
             df_copy = df_copy[df_copy['Server'] == server_filter]
     
-    # Filter current period data
-    filtered_df = df_copy.copy()
-    if start_date is not None:
-        filtered_df = filtered_df[filtered_df['Date'] >= start_date]
-    if end_date is not None:
-        filtered_df = filtered_df[filtered_df['Date'] <= end_date]
-    
-    # If the dataframe is empty after filtering, return empty table
-    if filtered_df.empty:
-        return pd.DataFrame(columns=['Rank', 'Top_10_Items', 'T_Sales', 'T_Quantity', 
-                                   'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])
-    
     # Column mapping for clarity
     item_column = 'Menu_Item'
     quantity_column = 'Qty'
     sales_column = 'Net_Price'
     
-    # Group by item and sum quantity and sales
-    all_items = filtered_df.groupby(item_column).agg({
+    # Determine date ranges for comparison
+    if start_date is None and end_date is None:
+        # If no dates provided, use current week and last week based on max date
+        max_date = df_copy['Date'].max()
+        
+        # Define current week as the 7 days ending on max_date
+        current_end_date = max_date
+        current_start_date = max_date - pd.Timedelta(days=6)  # 7 days total including max_date
+        
+        # Define previous week as the 7 days before current week
+        previous_end_date = current_start_date - pd.Timedelta(days=1)
+        previous_start_date = previous_end_date - pd.Timedelta(days=6)  # 7 days total
+        
+        # Filter current week data
+        current_period_df = df_copy[
+            (df_copy['Date'] >= current_start_date) & (df_copy['Date'] <= current_end_date)
+        ].copy()
+        
+        # Filter previous week data
+        previous_period_df = df_copy[
+            (df_copy['Date'] >= previous_start_date) & (df_copy['Date'] <= previous_end_date)
+        ].copy()
+        
+    elif start_date is not None and end_date is not None:
+        # Calculate the number of days in the current period
+        period_days = (end_date - start_date).days + 1  # +1 to include both start and end dates
+        
+        # Calculate previous period dates
+        previous_end_date = start_date - pd.Timedelta(days=1)
+        previous_start_date = previous_end_date - pd.Timedelta(days=period_days-1)
+        
+        # Filter current period data
+        current_period_df = df_copy[
+            (df_copy['Date'] >= start_date) & (df_copy['Date'] <= end_date)
+        ].copy()
+        
+        # Filter previous period data
+        previous_period_df = df_copy[
+            (df_copy['Date'] >= previous_start_date) & (df_copy['Date'] <= previous_end_date)
+        ].copy()
+        
+    else:
+        # If only one date is provided, use all data for current period
+        current_period_df = df_copy.copy()
+        previous_period_df = pd.DataFrame()  # Empty previous period
+        
+        # Apply date filters if only one is provided
+        if start_date is not None:
+            current_period_df = current_period_df[current_period_df['Date'] >= start_date]
+        if end_date is not None:
+            current_period_df = current_period_df[current_period_df['Date'] <= end_date]
+    
+    # If the current period dataframe is empty after filtering, return empty table
+    if current_period_df.empty:
+        return pd.DataFrame(columns=['Rank', 'Top_10_Items', 'T_Sales', 'T_Quantity', 
+                                   'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])
+    
+    # Group by item and sum quantity and sales for current period
+    current_items = current_period_df.groupby(item_column).agg({
         quantity_column: 'sum',
         sales_column: 'sum'
     }).reset_index()
     
     # Rename columns for clarity
-    all_items.columns = ['Item', 'Quantity', 'Sales']
+    current_items.columns = ['Item', 'Quantity', 'Sales']
     
     # Round values appropriately
-    all_items['Sales'] = all_items['Sales'].round(2)
-    all_items['Quantity'] = all_items['Quantity'].round(0).astype(int)
+    current_items['Sales'] = current_items['Sales'].round(2)
+    current_items['Quantity'] = current_items['Quantity'].round(0).astype(int)
     
     # Filter out items with zero or negative sales
-    all_items = all_items[all_items['Sales'] > 0]
+    current_items = current_items[current_items['Sales'] > 0]
     
     # Check if we have enough items after filtering
-    if all_items.empty:
+    if current_items.empty:
         return pd.DataFrame(columns=['Rank', 'Top_10_Items', 'T_Sales', 'T_Quantity', 
                                    'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])
     
-    # Get top 10 items (highest sales)
-    top_items = all_items.sort_values('Sales', ascending=False).head(10).reset_index(drop=True)
+    # Get top 10 items (highest sales) from current period
+    top_items = current_items.sort_values('Sales', ascending=False).head(10).reset_index(drop=True)
     
-    # Get bottom 10 items (lowest sales) - but ensure we have at least 10 items total
-    if len(all_items) >= 10:
-        bottom_items = all_items.sort_values('Sales', ascending=True).head(10).reset_index(drop=True)
+    # Get bottom 10 items (lowest sales) from current period
+    if len(current_items) >= 10:
+        bottom_items = current_items.sort_values('Sales', ascending=True).head(10).reset_index(drop=True)
     else:
         # If we have fewer than 10 items total, take the bottom half
-        bottom_count = max(1, len(all_items) // 2)
-        bottom_items = all_items.sort_values('Sales', ascending=True).head(bottom_count).reset_index(drop=True)
+        bottom_count = max(1, len(current_items) // 2)
+        bottom_items = current_items.sort_values('Sales', ascending=True).head(bottom_count).reset_index(drop=True)
+    
+    # Calculate previous period sales for top 10 items
+    if not previous_period_df.empty and (
+        (start_date is not None and end_date is not None) or 
+        (start_date is None and end_date is None)
+    ):
+        # Group by item and sum sales for previous period
+        previous_items = previous_period_df.groupby(item_column).agg({
+            sales_column: 'sum'
+        }).reset_index()
+        previous_items.columns = ['Item', 'Previous_Sales']
+        previous_items['Previous_Sales'] = previous_items['Previous_Sales'].round(2)
+        
+        # Merge with top items to get previous period sales
+        top_items_with_previous = top_items.merge(
+            previous_items[['Item', 'Previous_Sales']], 
+            on='Item', 
+            how='left'
+        )
+        # Fill NaN values with 0 for items that didn't exist in previous period
+        top_items_with_previous['Previous_Sales'] = top_items_with_previous['Previous_Sales'].fillna(0)
+        
+        # Calculate period-over-period difference for top items
+        top_items_difference = (top_items_with_previous['Sales'] - top_items_with_previous['Previous_Sales']).round(2)
+    else:
+        # If no previous period data available, difference is 0
+        top_items_difference = [0.0] * len(top_items)
     
     # Create comparison table
     max_rows = max(len(top_items), len(bottom_items), 10)  # Ensure at least 10 rows for formatting
@@ -1431,8 +1668,9 @@ def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, 
     comparison_table['B_Sales'] = pad_list(bottom_items['Sales'].values, max_rows, 0.0)
     comparison_table['B_Quantity'] = pad_list(bottom_items['Quantity'].values, max_rows, 0)
     
-    # Calculate difference in sales (Top - Bottom) - fixed calculation
-    comparison_table['Difference_Sales'] = (comparison_table['T_Sales'] - comparison_table['B_Sales']).round(2)
+    # For Difference_Sales, use period-over-period comparison for top items, 0 for bottom items
+    top_differences_padded = pad_list(top_items_difference, max_rows, 0.0)
+    comparison_table['Difference_Sales'] = top_differences_padded
     
     # Clean up the table - remove rows where both top and bottom items are empty
     comparison_table = comparison_table[
@@ -1443,9 +1681,4 @@ def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, 
     comparison_table['Rank'] = range(1, len(comparison_table) + 1)
     
     return comparison_table
-
-# Usage:
-# result = create_top_vs_bottom_comparison(df, location_filter='All', start_date='2025-04-21', end_date='2025-04-21')
-# print(result)
-
 

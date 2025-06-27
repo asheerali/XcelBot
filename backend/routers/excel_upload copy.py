@@ -206,7 +206,7 @@ async def upload_excel(
                 "locations": stores,
                 "years": years,
                 "dates": dates,
-                "fileLocation":["test"],
+                # "fileLocation":["test"],
                 "dashboardName": "Sales Wide",
                 "fileName": file_name, #the full names of the file saved in the uploads folder
                 "data": "Sales Wide Dashboard data."
