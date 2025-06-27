@@ -148,53 +148,89 @@ from financials_dashboard.financials_utils import financials_filters, day_of_the
 #     #     print(traceback.format_exc())
 #     #     # Re-raise to be caught by the endpoint handler
 #     #     raise
+
+
+# def process_financials_file(file_data: Union[io.BytesIO, str, pd.DataFrame], year="All", week_range="All", location="All", start_date=None, end_date=None):
+#     """
+#     Process the uploaded Excel file and transform the data.
+#     Returns data tables for the frontend including the 1P column.
     
+#     Parameters:
+#     - file_data: Excel file as BytesIO object
+#     - start_date: Optional start date for filtering (str format: 'YYYY-MM-DD')
+#     - end_date: Optional end date for filtering (str format: 'YYYY-MM-DD')
+#     - location: Optional location name for filtering
+#     """
+#     # Read the Excel file
+#     # df = pd.read_excel(file_data)
+    
+#     # print("Type of file_data:", type(file_data))
+        
+#     # # Initialize variables
+#     # df = None
+#     # df_budget = None
+
+#     try:
+#             # if isinstance(file_data, pd.DataFrame):
+#             #     print("Received DataFrame directly.")
+#             #     df = file_data
+                   
+#             if isinstance(file_data, io.BytesIO):
+#                 file_data.seek(0)
+#                 print("Reading Excel from BytesIO object.")
+#                 # df = pd.read_excel(file_data, sheet_name="Database")
+#                 df = pd.read_excel(file_data, sheet_name="Actuals")
+#                 file_data.seek(0)
+#                 # df_budget = pd.read_excel(file_data, sheet_name="Budget")
+#                 df_budget = pd.read_excel(file_data, sheet_name="Budget", header=1)
+
+#             elif isinstance(file_data, str):
+#                 print("Reading Excel from file path.")
+#                 # df = pd.read_excel(file_data, sheet_name="Database")
+#                 df = pd.read_excel(file_data, sheet_name="Actuals")
+#                 # df_budget = pd.read_excel(file_data, sheet_name="Budget")
+#                 df_budget = pd.read_excel(file_data, sheet_name="Budget", header=1)
+
+          
+#             if df.empty:
+#                 raise ValueError("The sheet 'Actuals' is empty or missing.")
+#     except ValueError as e:
+#         raise ValueError("Sheet named 'Actuals' not found in the uploaded Excel file.")
 
 
-def process_financials_file(file_data: Union[io.BytesIO, str], year="All", week_range="All", location="All", start_date=None, end_date=None):
+def process_financials_file(df1, df2, year="All", week_range="All", location="All", start_date=None, end_date=None):
     """
     Process the uploaded Excel file and transform the data.
     Returns data tables for the frontend including the 1P column.
     
     Parameters:
-    - file_data: Excel file as BytesIO object
+    - file_data: Excel file as BytesIO object, file path string, DataFrame, or bytes
     - start_date: Optional start date for filtering (str format: 'YYYY-MM-DD')
     - end_date: Optional end date for filtering (str format: 'YYYY-MM-DD')
     - location: Optional location name for filtering
     """
-    # Read the Excel file
-    # df = pd.read_excel(file_data)
     
-    # print("Type of file_data:", type(file_data))
+    
+    try:
+            if isinstance(df1, pd.DataFrame):
+                print("Received DataFrame directly.")
+                df = df1
+
+            if df.empty:
+                raise ValueError("The sheet 'Database' is empty or missing.")
+    except ValueError as e:
+        raise ValueError("Sheet named 'Database' not found in the uploaded Excel file.")
 
     try:
-            if isinstance(file_data, pd.DataFrame):
-                print("Received DataFrame directly.")
-                df = file_data
-                   
-            elif isinstance(file_data, io.BytesIO):
-                file_data.seek(0)
-                print("Reading Excel from BytesIO object.")
-                # df = pd.read_excel(file_data, sheet_name="Database")
-                df = pd.read_excel(file_data, sheet_name="Actuals")
-                file_data.seek(0)
-                # df_budget = pd.read_excel(file_data, sheet_name="Budget")
-                df_budget = pd.read_excel(file_data, sheet_name="Budget", header=1)
+        if isinstance(df2, pd.DataFrame):
+            print("Received Budget DataFrame directly.")
+            df_budget = df2
 
-            elif isinstance(file_data, str):
-                print("Reading Excel from file path.")
-                # df = pd.read_excel(file_data, sheet_name="Database")
-                df = pd.read_excel(file_data, sheet_name="Actuals")
-                # df_budget = pd.read_excel(file_data, sheet_name="Budget")
-                df_budget = pd.read_excel(file_data, sheet_name="Budget", header=1)
-
-          
-            if df.empty:
-                raise ValueError("The sheet 'Actuals' is empty or missing.")
+        if df_budget.empty:
+            raise ValueError("The sheet 'Budget' is empty or missing.")
     except ValueError as e:
-        raise ValueError("Sheet named 'Actuals' not found in the uploaded Excel file.")
+        raise ValueError("Sheet named 'Budget' not found in the uploaded Excel file.")
 
-    # df_budget = pd.read_excel(file_bytes, sheet_name="Budget", header=1)
 
     # Strip whitespace from column names
     df.columns = df.columns.str.strip()
