@@ -12,7 +12,7 @@ from sales_split_dashboard.sales_split_prcoessor import process_sales_split_file
 from constants import *
 
 
-def process_dashboard_data(request, df, file_name, company_id=None):
+def process_dashboard_data(request, df1, df2, file_name, company_id=None):
     """
     Process dashboard data based on the dashboard type specified in the request.
     
@@ -26,11 +26,12 @@ def process_dashboard_data(request, df, file_name, company_id=None):
     """
     
     if request.dashboard in ["Financials and Sales Wide", "Financials", "Sales Wide", "Companywide"]:
-        return process_financials_and_sales_wide(request, df, file_name, company_id)
+        return process_financials_and_sales_wide(request, df1 = df1, df2 = df2, file_name = file_name, company_id = company_id)
+        print(" i am here in Processing Financials and Sales Wide dashboard")
     
     elif request.dashboard in ["Sales Split and Product Mix", "Sales Split", "Product Mix"]:
-        return process_sales_split_and_product_mix(request, df, file_name, company_id)
-    
+        return process_sales_split_and_product_mix(request, df = df1, file_name = file_name, company_id = company_id)
+
     else:
         # Default case for unsupported dashboards
         return [{
@@ -52,7 +53,7 @@ def process_dashboard_data(request, df, file_name, company_id=None):
         }]
 
 
-def process_financials_and_sales_wide(request, df, file_name, company_id=None):
+def process_financials_and_sales_wide(request, df1, df2, file_name, company_id=None):
     """Process Financials and Sales Wide dashboard data."""
     
     print("Dashboard type:", request.dashboard)
@@ -62,7 +63,8 @@ def process_financials_and_sales_wide(request, df, file_name, company_id=None):
     (financials_weeks, financials_years, financials_stores, financials_sales_table, 
      financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table, 
      years, dates, stores) = process_financials_file(
-        df,  
+        df1,
+        df2,  
         year="All", 
         week_range="All", 
         location="All" 
@@ -105,48 +107,50 @@ def process_financials_and_sales_wide(request, df, file_name, company_id=None):
     }
     print("Result for the financials:", financials_result)
     
-    startDate='2025-03-17' 
-    endDate='2025-06-15'
-    # Process companywide/sales wide data
-    # excel_data_copy2 = io.BytesIO(file_content)
-    (sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, 
-     spmh_df, years, dates, stores) = process_companywide_file(
-        df, 
-        store_filter='All', 
-        year_filter=None, 
-        quarter_filter='All', 
-        helper4_filter='All',
-        start_date=startDate,
-        end_date=endDate
-    )
+    # startDate='2025-03-17' 
+    # endDate='2025-06-15'
+    # # Process companywide/sales wide data
+    # # excel_data_copy2 = io.BytesIO(file_content)
+    # (sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, 
+    #  spmh_df, years, dates, stores) = process_companywide_file(
+    #     file_content, 
+    #     store_filter='All', 
+    #     year_filter=None, 
+    #     quarter_filter='All', 
+    #     helper4_filter='All',
+    #     start_date=startDate,
+    #     end_date=endDate
+    # )
     
-    sales_wide_result = {
-        "table1": sales_df.to_dict(orient='records'),
-        "table2": order_df.to_dict(orient='records'),
-        "table3": avg_ticket_df.to_dict(orient='records'),
-        "table4": cogs_df.to_dict(orient='records'),
-        "table5": reg_pay_df.to_dict(orient='records'),
-        "table6": lb_hrs_df.to_dict(orient='records'),
-        "table7": spmh_df.to_dict(orient='records'),
-        "company_id": company_id,
-        "locations": stores,
-        "years": years,
-        "dates": dates,
-        "fileLocation": ["test"],
-        "dashboardName": "Sales Wide",
-        "fileName": file_name,
-        "data": "Sales Wide Dashboard data."
-    }
+    # sales_wide_result = {
+    #     "table1": sales_df.to_dict(orient='records'),
+    #     "table2": order_df.to_dict(orient='records'),
+    #     "table3": avg_ticket_df.to_dict(orient='records'),
+    #     "table4": cogs_df.to_dict(orient='records'),
+    #     "table5": reg_pay_df.to_dict(orient='records'),
+    #     "table6": lb_hrs_df.to_dict(orient='records'),
+    #     "table7": spmh_df.to_dict(orient='records'),
+    #     "company_id": company_id,
+    #     "locations": stores,
+    #     "years": years,
+    #     "dates": dates,
+    #     "fileLocation": ["test"],
+    #     "dashboardName": "Sales Wide",
+    #     "fileName": file_name,
+    #     "data": "Sales Wide Dashboard data."
+    # }
     
     print("Result for the sales wide:", financials_result)
     
-    # Return appropriate result based on dashboard type
-    if request.dashboard == "Financials and Sales Wide":
-        return [financials_result, sales_wide_result]
-    elif request.dashboard == "Financials":
+    if request.dashboard == "Financials":
         return [financials_result]
-    elif request.dashboard in ["Sales Wide", "Companywide"]:
-        return [sales_wide_result]
+    # Return appropriate result based on dashboard type
+    # if request.dashboard == "Financials and Sales Wide":
+    #     return [financials_result, sales_wide_result]
+    # elif request.dashboard == "Financials":
+    #     return [financials_result]
+    # elif request.dashboard in ["Sales Wide", "Companywide"]:
+    #     return [sales_wide_result]
 
 
 def process_sales_split_and_product_mix(request, df, file_name, company_id=None):

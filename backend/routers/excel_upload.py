@@ -355,12 +355,14 @@ async def upload_excel(
             
         excel_data_copy = io.BytesIO(file_content)
 
-        df = pd.read_excel(excel_data_copy)
-        df.columns = df.columns.str.strip()
+        
 
         if request.dashboard == "Sales Split and Product Mix" or request.dashboard == "Product Mix" or request.dashboard == "Sales Split":
             # Process the dashboard data using the separate module
-                   
+            
+            df = pd.read_excel(excel_data_copy)
+            df.columns = df.columns.str.strip()
+            
             # Strip whitespace from column names
             df.columns = df.columns.str.strip()
 
@@ -462,9 +464,16 @@ async def upload_excel(
                 
             # print("i am here in excel upload printing the columns of the dataframe", df.columns, "\n", df.dtypes , "\n", df.head())
             print("i am here in excel upload printing the filename dashboard and company id and df head", file_name, request.dashboard, request.company_id, "\n", df.head())
-            result = process_dashboard_data(request, df, file_name, request.company_id)
-        else:
-            result = process_dashboard_data(request, df, file_name, request.company_id)
+            result = process_dashboard_data(request, df1= df, df2 = None, file_name = file_name, company_id = request.company_id)
+
+
+        elif request.dashboard in ["Financials and Sales Wide", "Financials", "Sales Wide", "Companywide"]:
+            # print("i am here in main excel upload printig the dashboad--", request.dashboard)
+            
+            df1 = pd.read_excel(excel_data_copy, sheet_name='Sales Wide')
+            df2 = pd.read_excel(excel_data_copy, sheet_name='Financials')
+            
+            result = process_dashboard_data(request = request, df1 = df1, df2 = df2, company_id = request.company_id)
 
         # Save file record to database *after* successful processing
         file_record = UploadedFileCreate(
