@@ -364,3 +364,8 @@ def process_financials_file(df1, df2, year="All", week_range="All", location="Al
     # return result
 
     return financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table, years, dates, stores
+
+
+
+
+
