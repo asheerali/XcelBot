@@ -1,73 +1,19 @@
-# # crud/financials_company_wide.py
+# # crud/budget.py
 
 # from sqlalchemy.orm import Session
-# from models.financials_company_wide import FinancialsCompanyWide
-# from schemas.financials_company_wide import FinancialsCompanyWideCreate
+# from models.budget import Budget
+# from schemas.budget import BudgetCreate
 # import pandas as pd
 
-# def create_financials_company_wide(db: Session, obj_in: FinancialsCompanyWideCreate):
-#     db_obj = FinancialsCompanyWide(**obj_in.dict())
+# def create_budget(db: Session, obj_in: BudgetCreate):
+#     db_obj = Budget(**obj_in.dict())
 #     db.add(db_obj)
 #     db.commit()
 #     db.refresh(db_obj)
 #     return db_obj
 
-# def insert_financials_company_wide_df(db: Session, df: pd.DataFrame, company_id: int):
-#     # Create column mapping from DataFrame to database model
-#     column_mapping = {
-#         'Store': 'Store',
-#         'Ly Date': 'Ly_Date',
-#         'Date': 'Date',
-#         'Day': 'Day',
-#         'Week': 'Week',
-#         'Month': 'Month',
-#         'Quarter': 'Quarter',
-#         'Year': 'Year',
-#         'Helper 1': 'Helper_1',
-#         'Helper 2': 'Helper_2',
-#         'Helper 3': 'Helper_3',
-#         'Helper 4': 'Helper_4',
-#         'Tw Sales': 'Tw_Sales',
-#         'Lw Sales': 'Lw_Sales',
-#         'Ly Sales': 'Ly_Sales',
-#         'Tw Orders': 'Tw_Orders',
-#         'Lw Orders': 'Lw_Orders',
-#         'Ly Orders': 'Ly_Orders',
-#         'Tw Avg Tckt': 'Tw_Avg_Tckt',
-#         'Lw Avg Tckt': 'Lw_Avg_Tckt',
-#         'Ly Avg Tckt': 'Ly_Avg_Tckt',
-#         'Tw Labor Hrs': 'Tw_Labor_Hrs',
-#         'Lw Labor Hrs': 'Lw_Labor_Hrs',
-#         'Tw Reg Pay': 'Tw_Reg_Pay',
-#         'Lw Reg Pay': 'Lw_Reg_Pay',
-#         'Tw SPMH': 'Tw_SPMH',
-#         'Lw SPMH': 'Lw_SPMH',
-#         'Tw LPMH': 'Tw_LPMH',
-#         'Lw LPMH': 'Lw_LPMH',
-#         'Tw COGS': 'Tw_COGS',
-#         'TW Johns': 'TW_Johns',
-#         'TW Terra': 'TW_Terra',
-#         'TW Metro': 'TW_Metro',
-#         'TW Victory': 'TW_Victory',
-#         'TW Central Kitchen': 'TW_Central_Kitchen',
-#         'TW Other': 'TW_Other',
-#         'Unnamed: 36': 'Unnamed_36',
-#         'Unnamed: 37': 'Unnamed_37',
-#         'Unnamed: 38': 'Unnamed_38',
-#         'Unnamed: 39': 'Unnamed_39',
-#         'Lw COGS': 'Lw_COGS',
-#         'LW Johns': 'LW_Johns',
-#         'LW Terra': 'LW_Terra',
-#         'LW Metro': 'LW_Metro',
-#         'LW Victory': 'LW_Victory',
-#         'LW Central Kitchen': 'LW_Central_Kitchen',
-#         'LW Other': 'LW_Other'
-#     }
-    
-#     # Rename columns to match database model
-#     df_renamed = df.rename(columns=column_mapping)
-    
-#     for _, row in df_renamed.iterrows():
+# def insert_budget_df(db: Session, df: pd.DataFrame, company_id: int):
+#     for _, row in df.iterrows():
 #         data = row.to_dict()
 #         data["company_id"] = company_id
         
@@ -76,34 +22,34 @@
 #             if pd.isna(value):
 #                 data[key] = None
         
-#         db_obj = FinancialsCompanyWide(**data)
+#         db_obj = Budget(**data)
 #         db.add(db_obj)
 #     db.commit()
 
 
-# Add these functions to your crud/financials_company_wide.py file
+# Add these functions to your crud/budget.py file
 
 import pandas as pd
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
-from models.financials_company_wide import FinancialsCompanyWide
+from models.budget import Budget
 from typing import List, Tuple
 
-def check_and_filter_duplicates_financials(
+def check_and_filter_duplicates_budget(
     db: Session, 
     df_clean: pd.DataFrame, 
     company_id: int
 ) -> Tuple[pd.DataFrame, int, int]:
     """
-    Check for duplicate financial records and filter them out before database insertion.
+    Check for duplicate budget records and filter them out before database insertion.
     """
     
     if df_clean.empty:
         return df_clean, 0, 0
     
-    print(f"Starting duplicate check for {len(df_clean)} financial records...")
+    print(f"Starting duplicate check for {len(df_clean)} budget records...")
     
-    # Define the columns that make up a unique financial record
+    # Define the columns that make up a unique budget record
     unique_identifier_columns = [
         'Store', 'Date', 'Week', 'Year', 'Quarter'
     ]
@@ -115,20 +61,20 @@ def check_and_filter_duplicates_financials(
     else:
         min_year = max_year = None
     
-    print(f"Checking for financial duplicates in year range: {min_year} to {max_year}")
+    print(f"Checking for budget duplicates in year range: {min_year} to {max_year}")
     
     try:
         # Query existing records from database using SQLAlchemy ORM
-        existing_records_query = db.query(FinancialsCompanyWide).filter(
-            FinancialsCompanyWide.company_id == company_id
+        existing_records_query = db.query(Budget).filter(
+            Budget.company_id == company_id
         )
         
         # Add year filtering if available
         if min_year and max_year:
             existing_records_query = existing_records_query.filter(
                 and_(
-                    FinancialsCompanyWide.Year >= min_year,
-                    FinancialsCompanyWide.Year <= max_year
+                    Budget.Year >= min_year,
+                    Budget.Year <= max_year
                 )
             )
         
@@ -141,10 +87,10 @@ def check_and_filter_duplicates_financials(
             existing_records.append(record_dict)
         
         existing_df = pd.DataFrame(existing_records)
-        print(f"Found {len(existing_df)} existing financial records in database for comparison")
+        print(f"Found {len(existing_df)} existing budget records in database for comparison")
         
         if existing_df.empty:
-            print("No existing financial records found. All records will be inserted.")
+            print("No existing budget records found. All records will be inserted.")
             return df_clean, len(df_clean), 0
         
         # Normalize data types for comparison
@@ -199,13 +145,13 @@ def check_and_filter_duplicates_financials(
         duplicates_count = duplicate_mask.sum()
         new_records_count = len(df_comparison) - duplicates_count
         
-        print(f"Financial duplicate analysis complete:")
+        print(f"Budget duplicate analysis complete:")
         print(f"  - Total records in upload: {len(df_comparison)}")
         print(f"  - Duplicate records found: {duplicates_count}")
         print(f"  - New records to insert: {new_records_count}")
         
         if duplicates_count > 0:
-            print("Sample duplicate financial records:")
+            print("Sample duplicate budget records:")
             duplicate_samples = df_comparison[duplicate_mask][unique_identifier_columns].head(3)
             print(duplicate_samples.to_string())
         
@@ -219,23 +165,23 @@ def check_and_filter_duplicates_financials(
         return df_filtered, new_records_count, duplicates_count
         
     except Exception as e:
-        print(f"Error during financial duplicate check: {str(e)}")
+        print(f"Error during budget duplicate check: {str(e)}")
         print("Proceeding without duplicate check...")
         return df_clean, len(df_clean), 0
 
 
-def insert_financials_with_duplicate_check(
+def insert_budget_with_duplicate_check(
     db: Session, 
     df: pd.DataFrame, 
     company_id: int
 ) -> dict:
     """
-    Insert financial data with comprehensive duplicate checking.
+    Insert budget data with comprehensive duplicate checking.
     Same pattern as insert_sales_pmix_with_duplicate_check.
     """
     
     try:
-        print(f"Starting financial insertion process for {len(df)} records...")
+        print(f"Starting budget insertion process for {len(df)} records...")
         
         # Clean and prepare data
         df_clean = df.copy()
@@ -244,25 +190,19 @@ def insert_financials_with_duplicate_check(
         if 'Week' in df_clean.columns:
             df_clean['Week'] = pd.to_numeric(df_clean['Week'], errors='coerce').astype('Int64')
         
-        # Convert datetime columns
-        datetime_columns = ['Ly_Date']
-        for col in datetime_columns:
-            if col in df_clean.columns:
-                df_clean[col] = pd.to_datetime(df_clean[col], errors='coerce')
-        
         # Convert string columns
-        string_columns = ['Date', 'Day', 'Month']
+        string_columns = ['Date', 'Month']
         for col in string_columns:
             if col in df_clean.columns:
                 df_clean[col] = df_clean[col].astype(str).replace('nan', None).replace('NaT', None)
         
         # Check for duplicates
-        df_filtered, new_records_count, duplicates_count = check_and_filter_duplicates_financials(
+        df_filtered, new_records_count, duplicates_count = check_and_filter_duplicates_budget(
             db, df_clean, company_id
         )
         
         if len(df_filtered) == 0:
-            print("No new financial records to insert after duplicate check.")
+            print("No new budget records to insert after duplicate check.")
             return {
                 'inserted_count': 0,
                 'duplicate_count': duplicates_count,
@@ -291,14 +231,14 @@ def insert_financials_with_duplicate_check(
                 records_to_insert.append(record_dict)
             
             # Bulk insert using SQLAlchemy
-            db.bulk_insert_mappings(FinancialsCompanyWide, records_to_insert)
+            db.bulk_insert_mappings(Budget, records_to_insert)
             inserted_count += len(records_to_insert)
             
-            print(f"Inserted financial batch {i//batch_size + 1}: {len(records_to_insert)} records")
+            print(f"Inserted budget batch {i//batch_size + 1}: {len(records_to_insert)} records")
         
         # Commit the transaction
         db.commit()
-        print(f"Successfully inserted {inserted_count} new financial records into financials_company_wide table")
+        print(f"Successfully inserted {inserted_count} new budget records into budget table")
         
         return {
             'inserted_count': inserted_count,
@@ -309,5 +249,5 @@ def insert_financials_with_duplicate_check(
         
     except Exception as e:
         db.rollback()
-        print(f"Error during financial insertion: {str(e)}")
+        print(f"Error during budget insertion: {str(e)}")
         raise e

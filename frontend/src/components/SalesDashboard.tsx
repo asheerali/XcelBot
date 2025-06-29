@@ -179,57 +179,57 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
   };
 
   // Format percentage change with proper styling - show exact backend values
- // Updated formatPercentageChange function with comma formatting
-// Replace this function in your SalesDashboard component
+  // Updated formatPercentageChange function with comma formatting
+  // Replace this function in your SalesDashboard component
 
-// Updated formatPercentageChange function with comma formatting
-// Replace this function in your SalesDashboard component
+  // Updated formatPercentageChange function with comma formatting
+  // Replace this function in your SalesDashboard component
 
-const formatPercentageChange = (value: any) => {
-  // If value is null or undefined, show as is
-  if (value === null || value === undefined) {
-    return { text: "null", color: "#666", arrow: "" };
-  }
-
-  // If value is exactly -1, show it as -1%
-  if (value === -1) {
-    return { text: "-1%", color: "#d32f2f", arrow: "▼" };
-  }
-
-  // If it's a number, format it as percentage with commas and proper decimal places
-  if (typeof value === "number") {
-    const isPositive = value > 0;
-    const isZero = value === 0;
-
-    if (isZero) {
-      return { text: "0%", color: "#666", arrow: "" };
+  const formatPercentageChange = (value: any) => {
+    // If value is null or undefined, show as is
+    if (value === null || value === undefined) {
+      return { text: "null", color: "#666", arrow: "" };
     }
 
-    // Format the number with commas and exactly 2 decimal places for decimals
-    const absValue = Math.abs(value);
-    let formattedValue;
-    
-    if (absValue % 1 === 0) {
-      // Integer value - no decimal places needed
-      formattedValue = absValue.toLocaleString('en-US');
-    } else {
-      // Decimal value - format with exactly 2 decimal places
-      formattedValue = absValue.toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
+    // If value is exactly -1, show it as -1%
+    if (value === -1) {
+      return { text: "-1%", color: "#d32f2f", arrow: "▼" };
     }
-    
-    return {
-      text: `${isPositive ? "+" : "-"}${formattedValue}%`,
-      color: isPositive ? "#2e7d32" : "#d32f2f",
-      arrow: isPositive ? "▲" : "▼",
-    };
-  }
 
-  // For any other type, convert to string
-  return { text: String(value), color: "#666", arrow: "" };
-};
+    // If it's a number, format it as percentage with commas and proper decimal places
+    if (typeof value === "number") {
+      const isPositive = value > 0;
+      const isZero = value === 0;
+
+      if (isZero) {
+        return { text: "0%", color: "#666", arrow: "" };
+      }
+
+      // Format the number with commas and exactly 2 decimal places for decimals
+      const absValue = Math.abs(value);
+      let formattedValue;
+
+      if (absValue % 1 === 0) {
+        // Integer value - no decimal places needed
+        formattedValue = absValue.toLocaleString("en-US");
+      } else {
+        // Decimal value - format with exactly 2 decimal places
+        formattedValue = absValue.toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+      }
+
+      return {
+        text: `${isPositive ? "+" : "-"}${formattedValue}%`,
+        color: isPositive ? "#2e7d32" : "#d32f2f",
+        arrow: isPositive ? "▲" : "▼",
+      };
+    }
+
+    // For any other type, convert to string
+    return { text: String(value), color: "#666", arrow: "" };
+  };
   // Stat card component with change indicator
   const StatCard = ({ title, value, change, color, formatValue }) => {
     const changeFormatted = formatPercentageChange(change);
@@ -266,36 +266,44 @@ const formatPercentageChange = (value: any) => {
         </div>
 
         {/* Change indicator with "vs. previous period" text */}
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "4px",
-          marginTop: "auto",
-          whiteSpace: "nowrap",
-          flexWrap: "nowrap"
-        }}>
-          <span style={{
-            fontSize: "12px",
-            color: "#999",
-            marginRight: "4px",
-            whiteSpace: "nowrap"
-          }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            marginTop: "auto",
+            whiteSpace: "nowrap",
+            flexWrap: "nowrap",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "12px",
+              color: "#999",
+              marginRight: "4px",
+              whiteSpace: "nowrap",
+            }}
+          >
             vs. previous period
           </span>
           {changeFormatted.arrow && (
-            <span style={{
-              color: changeFormatted.color,
-              fontSize: "10px",
-              fontWeight: "bold"
-            }}>
+            <span
+              style={{
+                color: changeFormatted.color,
+                fontSize: "10px",
+                fontWeight: "bold",
+              }}
+            >
               {changeFormatted.arrow}
             </span>
           )}
-          <span style={{
-            color: changeFormatted.color,
-            fontSize: "12px",
-            fontWeight: "600"
-          }}>
+          <span
+            style={{
+              color: changeFormatted.color,
+              fontSize: "12px",
+              fontWeight: "600",
+            }}
+          >
             {changeFormatted.text}
           </span>
         </div>
@@ -307,22 +315,26 @@ const formatPercentageChange = (value: any) => {
   const SalesTrendChart = () => {
     // FIXED: Get all categories from table13 using Sales_Category (with underscore)
     // Include empty Sales_Category if it has sales data, but exclude "Grand Total"
-    const allCategories = (data?.table13 || []).filter(
-      (item) => {
-        const isGrandTotal = item["Sales_Category"] === "Grand Total";
-        const hasValidCategory = item["Sales_Category"] !== undefined && item["Sales_Category"] !== null;
-        console.log(`Filtering item: "${item["Sales_Category"]}" - isGrandTotal: ${isGrandTotal}, hasValidCategory: ${hasValidCategory}, Monday: ${item.Monday}`);
-        return !isGrandTotal && hasValidCategory;
-      }
-    );
+    const allCategories = (data?.table13 || []).filter((item) => {
+      const isGrandTotal = item["Sales_Category"] === "Grand Total";
+      const hasValidCategory =
+        item["Sales_Category"] !== undefined && item["Sales_Category"] !== null;
+      console.log(
+        `Filtering item: "${item["Sales_Category"]}" - isGrandTotal: ${isGrandTotal}, hasValidCategory: ${hasValidCategory}, Monday: ${item.Monday}`
+      );
+      return !isGrandTotal && hasValidCategory;
+    });
 
     console.log("All categories found:", allCategories); // Debug log
-    console.log("Categories with sales data:", allCategories.map(cat => ({
-      category: cat["Sales_Category"] || "(empty)",
-      monday: cat.Monday,
-      tuesday: cat.Tuesday,
-      wednesday: cat.Wednesday
-    }))); // Debug log
+    console.log(
+      "Categories with sales data:",
+      allCategories.map((cat) => ({
+        category: cat["Sales_Category"] || "(empty)",
+        monday: cat.Monday,
+        tuesday: cat.Tuesday,
+        wednesday: cat.Wednesday,
+      }))
+    ); // Debug log
 
     if (allCategories.length === 0) {
       return (
@@ -335,7 +347,7 @@ const formatPercentageChange = (value: any) => {
             color: "#666",
             fontSize: "16px",
             flexDirection: "column",
-            gap: "10px"
+            gap: "10px",
           }}
         >
           <div>No category data available</div>
@@ -347,12 +359,20 @@ const formatPercentageChange = (value: any) => {
     }
 
     // Days of week from table13 structure
-    const dayKeys = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    
+    const dayKeys = [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ];
+
     // Filter out days that don't have data across categories (keep Sunday even if 0)
-    const availableDays = dayKeys.filter(day => 
-      allCategories.some(category => 
-        typeof category[day] === 'number' && category[day] >= 0
+    const availableDays = dayKeys.filter((day) =>
+      allCategories.some(
+        (category) => typeof category[day] === "number" && category[day] >= 0
       )
     );
 
@@ -403,38 +423,38 @@ const formatPercentageChange = (value: any) => {
     const colors = generateColors(allCategories.length);
 
     // Transform data for Recharts format - create aggregated data with category details
-    const chartData = availableDays.map(day => {
+    const chartData = availableDays.map((day) => {
       const dataPoint = { day };
       let totalSales = 0;
       const categoryBreakdown = [];
-      
+
       allCategories.forEach((category, index) => {
         const categoryName = category["Sales_Category"] || "Other Items"; // FIXED: Handle empty category names
         const categoryValue = category[day] || 0;
         totalSales += categoryValue;
-        
+
         if (categoryValue > 0) {
           categoryBreakdown.push({
             name: categoryName,
             value: categoryValue,
-            color: colors[index]
+            color: colors[index],
           });
         }
       });
-      
+
       // Sort breakdown by value (highest first)
       categoryBreakdown.sort((a, b) => b.value - a.value);
-      
+
       dataPoint.totalSales = totalSales;
       dataPoint.categoryBreakdown = categoryBreakdown;
-      
+
       // Debug log to verify totals
       if (day === "Monday") {
         console.log(`📊 Monday total calculated: ${totalSales}`);
         console.log(`📊 Monday categories included:`, categoryBreakdown);
         console.log(`📊 Expected Monday total: $119,925`);
       }
-      
+
       return dataPoint;
     });
 
@@ -444,10 +464,13 @@ const formatPercentageChange = (value: any) => {
         if (index < period - 1) {
           // For early data points, use available data
           const availableData = data.slice(0, index + 1);
-          const sum = availableData.reduce((acc, curr) => acc + curr.totalSales, 0);
+          const sum = availableData.reduce(
+            (acc, curr) => acc + curr.totalSales,
+            0
+          );
           return {
             ...item,
-            movingAverage: sum / availableData.length
+            movingAverage: sum / availableData.length,
           };
         } else {
           // Calculate moving average for the specified period
@@ -455,7 +478,7 @@ const formatPercentageChange = (value: any) => {
           const sum = slice.reduce((acc, curr) => acc + curr.totalSales, 0);
           return {
             ...item,
-            movingAverage: sum / period
+            movingAverage: sum / period,
           };
         }
       });
@@ -464,114 +487,141 @@ const formatPercentageChange = (value: any) => {
     const chartDataWithMA = calculateMovingAverage(chartData);
 
     // Custom tooltip for better formatting
-   // Updated CustomTooltip component - replace the existing one in your SalesTrendChart
-const CustomTooltip = ({ active, payload, label }) => {
-  if (active && payload && payload.length && payload[0].payload.categoryBreakdown) {
-    const breakdown = payload[0].payload.categoryBreakdown;
-    const total = payload[0].payload.totalSales;
-    
-    return (
-      <div
-        style={{
-          background: "white",
-          color: "#333",
-          padding: "12px 16px",
-          borderRadius: "8px",
-          fontSize: "12px",
-          minWidth: "250px",
-          maxWidth: "350px", // Increased maxWidth to accommodate more content
-          boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
-          border: "2px solid #4caf50",
-          // Removed any height constraints to allow natural expansion
-        }}
-      >
-        <div
-          style={{
-            fontWeight: "bold",
-            marginBottom: "8px",
-            fontSize: "14px",
-            borderBottom: "1px solid rgba(0,0,0,0.1)",
-            paddingBottom: "6px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <span>{label}</span>
-          <span style={{ color: "#4caf50", fontWeight: "bold" }}>
-            Total: ${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </span>
-        </div>
-        
-        {/* Category breakdown - REMOVED maxHeight and overflowY to prevent scrolling */}
-        <div>
-          {breakdown.map((entry, index) => (
+    // Updated CustomTooltip component - replace the existing one in your SalesTrendChart
+    const CustomTooltip = ({ active, payload, label }) => {
+      if (
+        active &&
+        payload &&
+        payload.length &&
+        payload[0].payload.categoryBreakdown
+      ) {
+        const breakdown = payload[0].payload.categoryBreakdown;
+        const total = payload[0].payload.totalSales;
+
+        return (
+          <div
+            style={{
+              background: "white",
+              color: "#333",
+              padding: "12px 16px",
+              borderRadius: "8px",
+              fontSize: "12px",
+              minWidth: "250px",
+              maxWidth: "350px", // Increased maxWidth to accommodate more content
+              boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+              border: "2px solid #4caf50",
+              // Removed any height constraints to allow natural expansion
+            }}
+          >
             <div
-              key={index}
               style={{
+                fontWeight: "bold",
+                marginBottom: "8px",
+                fontSize: "14px",
+                borderBottom: "1px solid rgba(0,0,0,0.1)",
+                paddingBottom: "6px",
                 display: "flex",
                 justifyContent: "space-between",
-                marginBottom: "4px",
                 alignItems: "center",
-                padding: "2px 0",
               }}
             >
-              <span
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  flex: 1,
-                  minWidth: 0,
-                }}
-              >
-                <div
-                  style={{
-                    width: "12px",
-                    height: "12px",
-                    borderRadius: "2px",
-                    backgroundColor: entry.color,
-                    flexShrink: 0,
-                  }}
-                />
-                <span style={{ 
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  fontSize: "11px"
-                }}>
-                  {entry.name}
-                </span>
-              </span>
-              <span style={{ 
-                fontWeight: "bold",
-                marginLeft: "8px",
-                flexShrink: 0,
-                fontSize: "11px"
-              }}>
-                ${entry.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span>{label}</span>
+              <span style={{ color: "#4caf50", fontWeight: "bold" }}>
+                Total: $
+                {total.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </span>
             </div>
-          ))}
-        </div>
-        
-        {/* Show percentage of top categories */}
-        {breakdown.length > 3 && (
-          <div style={{ 
-            marginTop: "8px", 
-            paddingTop: "6px", 
-            borderTop: "1px solid rgba(0,0,0,0.1)",
-            fontSize: "10px",
-            color: "#666"
-          }}>
-            Top 3 categories: {((breakdown.slice(0, 3).reduce((sum, cat) => sum + cat.value, 0) / total) * 100).toFixed(1)}% of total
+
+            {/* Category breakdown - REMOVED maxHeight and overflowY to prevent scrolling */}
+            <div>
+              {breakdown.map((entry, index) => (
+                <div
+                  key={index}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "4px",
+                    alignItems: "center",
+                    padding: "2px 0",
+                  }}
+                >
+                  <span
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      flex: 1,
+                      minWidth: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "12px",
+                        height: "12px",
+                        borderRadius: "2px",
+                        backgroundColor: entry.color,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span
+                      style={{
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        fontSize: "11px",
+                      }}
+                    >
+                      {entry.name}
+                    </span>
+                  </span>
+                  <span
+                    style={{
+                      fontWeight: "bold",
+                      marginLeft: "8px",
+                      flexShrink: 0,
+                      fontSize: "11px",
+                    }}
+                  >
+                    $
+                    {entry.value.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Show percentage of top categories */}
+            {breakdown.length > 3 && (
+              <div
+                style={{
+                  marginTop: "8px",
+                  paddingTop: "6px",
+                  borderTop: "1px solid rgba(0,0,0,0.1)",
+                  fontSize: "10px",
+                  color: "#666",
+                }}
+              >
+                Top 3 categories:{" "}
+                {(
+                  (breakdown
+                    .slice(0, 3)
+                    .reduce((sum, cat) => sum + cat.value, 0) /
+                    total) *
+                  100
+                ).toFixed(1)}
+                % of total
+              </div>
+            )}
           </div>
-        )}
-      </div>
-    );
-  }
-  return null;
-};
+        );
+      }
+      return null;
+    };
 
     return (
       <div style={{ width: "100%", height: "400px" }}>
@@ -586,21 +636,17 @@ const CustomTooltip = ({ active, payload, label }) => {
             }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis 
-              dataKey="day" 
+            <XAxis dataKey="day" tick={{ fontSize: 12 }} stroke="#666" />
+            <YAxis
               tick={{ fontSize: 12 }}
               stroke="#666"
-            />
-            <YAxis 
-              tick={{ fontSize: 12 }}
-              stroke="#666"
-              tickFormatter={(value) => `${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`}
+              tickFormatter={(value) =>
+                `${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`
+              }
             />
             <Tooltip content={<CustomTooltip />} />
-            <Legend 
-              wrapperStyle={{ fontSize: "12px" }}
-            />
-            
+            <Legend wrapperStyle={{ fontSize: "12px" }} />
+
             {/* Single aggregated bar showing total sales */}
             <Bar
               dataKey="totalSales"
@@ -608,7 +654,7 @@ const CustomTooltip = ({ active, payload, label }) => {
               radius={[4, 4, 0, 0]}
               name="Total Sales"
             />
-            
+
             {/* Moving average line */}
             <Line
               type="monotone"
@@ -616,7 +662,12 @@ const CustomTooltip = ({ active, payload, label }) => {
               stroke="#ff6b35"
               strokeWidth={3}
               dot={{ fill: "#ff6b35", strokeWidth: 2, r: 4 }}
-              activeDot={{ r: 6, stroke: "#ff6b35", strokeWidth: 2, fill: "white" }}
+              activeDot={{
+                r: 6,
+                stroke: "#ff6b35",
+                strokeWidth: 2,
+                fill: "white",
+              }}
               name="Moving Average"
               connectNulls={false}
             />
@@ -645,7 +696,7 @@ const CustomTooltip = ({ active, payload, label }) => {
     const generateColors = (count) => {
       const baseColors = [
         "#4285f4",
-        "#8bc34a", 
+        "#8bc34a",
         "#ff9800",
         "#9c27b0",
         "#f44336",
@@ -681,14 +732,14 @@ const CustomTooltip = ({ active, payload, label }) => {
       return {
         // Keep all original table11 fields
         ...category,
-        
+
         // Add convenience fields for display
         salesCategory,
         this4WeeksSales,
-        last4WeeksSales, 
+        last4WeeksSales,
         percentChange,
         color: colors[index],
-        
+
         // Calculate additional metrics
         salesDifference: this4WeeksSales - last4WeeksSales,
         isIncrease: percentChange >= 0,
@@ -726,7 +777,7 @@ const CustomTooltip = ({ active, payload, label }) => {
               value={netSales}
               change={netSalesChange}
               color="#1e88e5"
-              formatValue={(v) => `${v.toLocaleString('en-US')}`}
+              formatValue={(v) => `${v.toLocaleString("en-US")}`}
             />
 
             <StatCard
@@ -734,7 +785,7 @@ const CustomTooltip = ({ active, payload, label }) => {
               value={orders}
               change={ordersChange}
               color="#7cb342"
-              formatValue={(v) => v.toLocaleString('en-US')}
+              formatValue={(v) => v.toLocaleString("en-US")}
             />
 
             <StatCard
@@ -742,7 +793,7 @@ const CustomTooltip = ({ active, payload, label }) => {
               value={qtySold}
               change={qtySoldChange}
               color="#fb8c00"
-              formatValue={(v) => v.toLocaleString('en-US')}
+              formatValue={(v) => v.toLocaleString("en-US")}
             />
 
             <StatCard
@@ -750,7 +801,12 @@ const CustomTooltip = ({ active, payload, label }) => {
               value={averageOrderValue}
               change={averageOrderValueChange}
               color="#9c27b0"
-              formatValue={(v) => `${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              formatValue={(v) =>
+                `${v.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}`
+              }
             />
 
             <StatCard
@@ -758,21 +814,29 @@ const CustomTooltip = ({ active, payload, label }) => {
               value={averageItemsPerOrder}
               change={averageItemsPerOrderChange}
               color="#f44336"
-              formatValue={(v) => v.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+              formatValue={(v) =>
+                v.toLocaleString("en-US", {
+                  minimumFractionDigits: 1,
+                  maximumFractionDigits: 1,
+                })
+              }
             />
           </div>
         </div>
       ) : (
-        <div style={{
-          padding: "40px",
-          textAlign: "center",
-          backgroundColor: "white",
-          borderRadius: "8px",
-          color: "#666",
-          border: "1px dashed #ddd",
-          marginBottom: "24px"
-        }}>
-          No summary statistics available. Please ensure your backend is providing table1 data with the required fields.
+        <div
+          style={{
+            padding: "40px",
+            textAlign: "center",
+            backgroundColor: "white",
+            borderRadius: "8px",
+            color: "#666",
+            border: "1px dashed #ddd",
+            marginBottom: "24px",
+          }}
+        >
+          No summary statistics available. Please ensure your backend is
+          providing table1 data with the required fields.
         </div>
       )}
 
@@ -804,16 +868,20 @@ const CustomTooltip = ({ active, payload, label }) => {
           </div>
         </div>
       ) : (
-        <div style={{
-          padding: "40px",
-          textAlign: "center",
-          backgroundColor: "white",
-          borderRadius: "8px",
-          color: "#666",
-          border: "1px dashed #ddd",
-          marginBottom: "24px"
-        }}>
-          No table13 data available. Please ensure your backend is providing table13 with Sales_Category and daily sales data (Monday, Tuesday, etc.).
+        <div
+          style={{
+            padding: "40px",
+            textAlign: "center",
+            backgroundColor: "white",
+            borderRadius: "8px",
+            color: "#666",
+            border: "1px dashed #ddd",
+            marginBottom: "24px",
+          }}
+        >
+          No table13 data available. Please ensure your backend is providing
+          table13 with Sales_Category and daily sales data (Monday, Tuesday,
+          etc.).
         </div>
       )}
 
@@ -827,27 +895,27 @@ const CustomTooltip = ({ active, payload, label }) => {
             color: "#333",
             display: "flex",
             alignItems: "center",
-            gap: "8px"
+            gap: "8px",
           }}
         >
           Sales Categories Performance
-          
-
         </div>
-
-
 
         {/* Show table11 categories with same UI as image but table11 field names */}
         {categoriesData.length === 0 ? (
-          <div style={{
-            padding: "40px",
-            textAlign: "center",
-            backgroundColor: "white",
-            borderRadius: "8px",
-            color: "#666",
-            border: "1px dashed #ddd"
-          }}>
-            No table11 data available. Please ensure your backend is providing table11 with Sales Category, This_4_Weeks_Sales, Last_4_Weeks_Sales, and Percent_Change fields.
+          <div
+            style={{
+              padding: "40px",
+              textAlign: "center",
+              backgroundColor: "white",
+              borderRadius: "8px",
+              color: "#666",
+              border: "1px dashed #ddd",
+            }}
+          >
+            No table11 data available. Please ensure your backend is providing
+            table11 with Sales Category, This_4_Weeks_Sales, Last_4_Weeks_Sales,
+            and Percent_Change fields.
           </div>
         ) : (
           Array.from(
@@ -902,7 +970,8 @@ const CustomTooltip = ({ active, payload, label }) => {
                           {category["Sales Category"]}
                         </div>
                         <div style={{ fontSize: "13px", color: "#666" }}>
-                          Last 4 Weeks Sales: ${category["Last_4_Weeks_Sales"].toLocaleString()}
+                          Last 4 Weeks Sales: $
+                          {category["Last_4_Weeks_Sales"].toLocaleString()}
                         </div>
                       </div>
                       <div style={{ textAlign: "right" }}>
@@ -934,7 +1003,8 @@ const CustomTooltip = ({ active, payload, label }) => {
                             color: "#333",
                           }}
                         >
-                          This 4 Weeks Sales: ${category["This_4_Weeks_Sales"].toLocaleString()}
+                          This 4 Weeks Sales: $
+                          {category["This_4_Weeks_Sales"].toLocaleString()}
                         </div>
                       </div>
                     </div>

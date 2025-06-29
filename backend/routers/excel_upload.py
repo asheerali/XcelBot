@@ -302,7 +302,9 @@ from models.users import User
 from fastapi import Depends
 from database import Base, get_db
 from crud.sales_pmix import insert_sales_pmix_df
-
+# Add these imports
+from crud.financials_company_wide import insert_financials_with_duplicate_check
+from crud.budget import insert_budget_with_duplicate_check
 
 # Import the return processor
 from .excel_upload_return import process_dashboard_data
@@ -496,9 +498,25 @@ async def upload_excel(
             # ------------------------------------------------------------
             # Strip whitespace from column names
             df.columns = df.columns.str.strip()
+         
             
+            # # ===== ADD HELPER COLUMN CHECK HERE =====
+            # # Check if Helper 1 and Helper 4 exist, create them if they don't
+            # if 'Helper 1' not in df.columns:
+            #     print("Helper 1 column not found. Creating Helper 1 column...")
+            #     # Find the position after Year column or at the end
+            #     if 'Year' in df.columns:
+            #         year_idx = df.columns.get_loc('Year')
+            #         df.insert(year_idx + 1, 'Helper 1', '')
+            #     else:
+            #         print("Helper 1 column not found. Creating Helper 1 column at the end...")
+            #         df['Helper 1'] = ''
+            # else:
+            #     print("Helper 1 column already exists.")
+        
+        
             # ===== ADD HELPER COLUMN CHECK HERE =====
-            # Check if Helper 1 and Helper 4 exist, create them if they don't
+            # Check if Helper 1 exists, create it if it doesn't
             if 'Helper 1' not in df.columns:
                 print("Helper 1 column not found. Creating Helper 1 column...")
                 # Find the position after Year column or at the end
@@ -506,9 +524,47 @@ async def upload_excel(
                     year_idx = df.columns.get_loc('Year')
                     df.insert(year_idx + 1, 'Helper 1', '')
                 else:
+                    print("Helper 1 column not found. Creating Helper 1 column at the end...")
                     df['Helper 1'] = ''
             else:
                 print("Helper 1 column already exists.")
+
+            # ===== POPULATE HELPER 1 WITH DAY PATTERN =====
+            # Create mapping dictionaries for day abbreviations to numbers and full names
+            day_to_number = {
+                'Mon': '1',
+                'Tue': '2', 
+                'Wed': '3',
+                'Thu': '4',
+                'Fri': '5',
+                'Sat': '6',
+                'Sun': '7'
+            }
+
+            day_to_full_name = {
+                'Mon': 'Monday',
+                'Tue': 'Tuesday',
+                'Wed': 'Wednesday', 
+                'Thu': 'Thursday',
+                'Fri': 'Friday',
+                'Sat': 'Saturday',
+                'Sun': 'Sunday'
+            }
+
+            # Populate Helper 1 column with the pattern "number - full_day_name"
+            if 'Day' in df.columns:
+                print("Populating Helper 1 with day pattern...")
+                df['Helper 1'] = df['Day'].map(lambda day: f"{day_to_number.get(day, '')} - {day_to_full_name.get(day, '')}" if day in day_to_number else '')
+                print("Helper 1 column populated successfully.")
+            else:
+                print("Warning: Day column not found. Cannot populate Helper 1.")
+                
+            # Display sample of Helper 1 values
+            if not df.empty and 'Helper 1' in df.columns:
+                print("\nSample Helper 1 values:")
+                print(df['Helper 1'].head(10).to_string())
+                
+            print("i am here __ checking the helper1", df.columns, "\n", df['Helper 1'], "\n", df.head())
             
             if 'Helper 4' not in df.columns:
                 print("Helper 4 column not found. Creating Helper 4 column...")
@@ -543,16 +599,58 @@ async def upload_excel(
             # Strip whitespace from column names for budget dataframe
             df_budget.columns = df_budget.columns.str.strip()
             
-            # ===== ADD HELPER COLUMN CHECK FOR BUDGET DF TOO =====
-            # Check if Helper 1 and Helper 4 exist in budget dataframe, create them if they don't
+
+
+
+            # ===== ADD HELPER COLUMN CHECK HERE =====
+            # Check if Helper 1 exists, create it if it doesn't
             if 'Helper 1' not in df_budget.columns:
-                print("Helper 1 column not found in budget data. Creating Helper 1 column...")
+                print("Helper 1 column not found. Creating Helper 1 column...")
+                # Find the position after Year column or at the end
                 if 'Year' in df_budget.columns:
                     year_idx = df_budget.columns.get_loc('Year')
                     df_budget.insert(year_idx + 1, 'Helper 1', '')
                 else:
+                    print("Helper 1 column not found. Creating Helper 1 column at the end...")
                     df_budget['Helper 1'] = ''
-            
+            else:
+                print("Helper 1 column already exists.")
+
+            # ===== POPULATE HELPER 1 WITH DAY PATTERN =====
+            # Create mapping dictionaries for day abbreviations to numbers and full names
+            day_to_number = {
+                'Mon': '1',
+                'Tue': '2', 
+                'Wed': '3',
+                'Thu': '4',
+                'Fri': '5',
+                'Sat': '6',
+                'Sun': '7'
+            }
+
+            day_to_full_name = {
+                'Mon': 'Monday',
+                'Tue': 'Tuesday',
+                'Wed': 'Wednesday', 
+                'Thu': 'Thursday',
+                'Fri': 'Friday',
+                'Sat': 'Saturday',
+                'Sun': 'Sunday'
+            }
+
+            # Populate Helper 1 column with the pattern "number - full_day_name"
+            if 'Day' in df_budget.columns:
+                print("Populating Helper 1 with day pattern...")
+                df_budget['Helper 1'] = df_budget['Day'].map(lambda day: f"{day_to_number.get(day, '')} - {day_to_full_name.get(day, '')}" if day in day_to_number else '')
+                print("Helper 1 column populated successfully.")
+            else:
+                print("Warning: Day column not found. Cannot populate Helper 1.")
+                
+            # Display sample of Helper 1 values
+            if not df_budget.empty and 'Helper 1' in df_budget.columns:
+                print("\nSample Helper 1 values:")
+                print(df_budget['Helper 1'].head(10).to_string())
+
             if 'Helper 4' not in df_budget.columns:
                 print("Helper 4 column not found in budget data. Creating Helper 4 column...")
                 helper_cols = [col for col in df_budget.columns if col.startswith('Helper')]
@@ -708,203 +806,9 @@ async def upload_excel(
         )
         upload_file_record(db, file_record)
         
-        print("i am here in excel uplaod printing the columns of the dataframe", df.columns, "\n", df.dtypes , "\n", df.head())
+        # print("i am here in excel uplaod printing the columns of the dataframe", df.columns, "\n", df.dtypes , "\n", df.head())
         
-                
-        
-        # if request.dashboard == "Sales Split and Product Mix" or request.dashboard == "Product Mix" or request.dashboard == "Sales Split":
-        #     try:
-        #         print(f"Starting database insertion for {len(df)} records...")
-                
-        #         # Validate DataFrame structure before insertion
-        #         required_columns = [
-        #             'Location', 'Order_Id', 'Order_number', 'Sent_Date', 'Order_Date',
-        #             'Check_Id', 'Server', 'Table', 'Dining_Area', 'Service', 'Dining_Option',
-        #             'Item_Selection_Id', 'Item_Id', 'Master_Id', 'SKU', 'PLU', 'Menu_Item',
-        #             'Menu_Subgroups', 'Menu_Group', 'Menu', 'Sales_Category', 'Gross_Price',
-        #             'Discount', 'Net_Price', 'Qty', 'Avg_Price', 'Tax', 'Void', 'Deferred',
-        #             'Tax_Exempt', 'Tax_Inclusion_Option', 'Dining_Option_Tax', 'Tab_Name',
-        #             'Date', 'Time', 'Day', 'Week', 'Month', 'Quarter', 'Year', 'Category'
-        #         ]
-                
-        #         missing_columns = [col for col in required_columns if col not in df.columns]
-        #         if missing_columns:
-        #             raise ValueError(f"Missing required columns: {missing_columns}")
-                
-        #         print("I am here in excel upload printing the columns of the dataframe and checking if something is wrong", df.columns, "\n", df.dtypes, "\n", df.head())
-                
-        #         # Clean and validate data before insertion
-        #         df_clean = df.copy()
-
-        #         # Ensure proper data types for problematic fields
-        #         if 'Week' in df_clean.columns:
-        #             # Convert Week to regular int, handle NaN
-        #             df_clean['Week'] = df_clean['Week'].astype('Int64').replace({pd.NA: None})
-                
-        #         # Convert datetime columns to ensure proper format
-        #         datetime_columns = ['Sent_Date']
-        #         for col in datetime_columns:
-        #             if col in df_clean.columns:
-        #                 df_clean[col] = pd.to_datetime(df_clean[col], errors='coerce')
-                
-        #         # Convert string representations of dates/times to strings
-        #         string_columns = ['Date', 'Time', 'Order_Date']
-        #         for col in string_columns:
-        #             if col in df_clean.columns:
-        #                 df_clean[col] = df_clean[col].astype(str).replace('nan', None).replace('NaT', None)
-                
-        #         print(f"Data validation completed. Checking for existing records...")
-                
-        #         # ===== DUPLICATE CHECK LOGIC =====
-        #         # Define the columns that make up the unique combination
-        #         duplicate_check_columns = ['Sent_Date', 'Order_Date', 'Net_Price', 'Location', 'Qty']
-                
-        #         # Get the date range from the new data to limit the query scope
-        #         min_sent_date = df_clean['Sent_Date'].min()
-        #         max_sent_date = df_clean['Sent_Date'].max()
-        #         min_order_date = df_clean['Order_Date'].min()
-        #         max_order_date = df_clean['Order_Date'].max()
-                
-        #         print(f"Checking for duplicates in date range: {min_sent_date} to {max_sent_date}")
-                
-        #         # Query existing records from database for the company and date range
-        #         # Note: You'll need to adjust the table name and query structure based on your database setup
-        #         existing_records_query = """
-        #         SELECT company_id, sent_date, order_date, net_price, location, qty
-        #         FROM sales_pmix 
-        #         WHERE company_id = %(company_id)s 
-        #         AND (sent_date BETWEEN %(min_sent_date)s AND %(max_sent_date)s
-        #             OR order_date BETWEEN %(min_order_date)s AND %(max_order_date)s)
-        #         """
-                
-        #         # Execute the query to get existing records
-        #         try:
-        #             existing_df = pd.read_sql(
-        #                 existing_records_query, 
-        #                 con=db.connection(),  # Adjust based on your DB connection method
-        #                 params={
-        #                     'company_id': request.company_id,
-        #                     'min_sent_date': min_sent_date,
-        #                     'max_sent_date': max_sent_date,
-        #                     'min_order_date': min_order_date,
-        #                     'max_order_date': max_order_date
-        #                 }
-        #             )
-                    
-        #             print(f"Found {len(existing_df)} existing records in the database for comparison")
-                    
-        #         except Exception as query_error:
-        #             print(f"Error querying existing records: {str(query_error)}")
-        #             # If we can't query existing records, proceed with insertion (you may want to handle this differently)
-        #             existing_df = pd.DataFrame()
-                
-        #         # Add company_id to the new data for comparison
-        #         df_clean['company_id'] = request.company_id
-                
-        #         # Prepare comparison columns (convert to same data types)
-        #         comparison_columns = ['company_id'] + duplicate_check_columns
-                
-        #         if not existing_df.empty:
-        #             # Normalize column names for comparison (handle case sensitivity)
-        #             existing_df.columns = [col.lower() if col.lower() in [c.lower() for c in comparison_columns] 
-        #                                 else col for col in existing_df.columns]
-        #             df_clean_comparison = df_clean.copy()
-                    
-        #             # Convert data types to match for proper comparison
-        #             for col in duplicate_check_columns:
-        #                 if col in existing_df.columns and col in df_clean_comparison.columns:
-        #                     # Handle datetime columns
-        #                     if col in ['Sent_Date', 'Order_Date']:
-        #                         existing_df[col] = pd.to_datetime(existing_df[col], errors='coerce')
-        #                         df_clean_comparison[col] = pd.to_datetime(df_clean_comparison[col], errors='coerce')
-        #                     # Handle numeric columns
-        #                     elif col in ['Net_Price', 'Qty']:
-        #                         existing_df[col] = pd.to_numeric(existing_df[col], errors='coerce')
-        #                         df_clean_comparison[col] = pd.to_numeric(df_clean_comparison[col], errors='coerce')
-        #                     # Handle string columns
-        #                     else:
-        #                         existing_df[col] = existing_df[col].astype(str)
-        #                         df_clean_comparison[col] = df_clean_comparison[col].astype(str)
-                    
-        #             # Create a composite key for comparison
-        #             existing_df['composite_key'] = existing_df[comparison_columns].apply(
-        #                 lambda row: '|'.join([str(val) for val in row]), axis=1
-        #             )
-                    
-        #             df_clean_comparison['composite_key'] = df_clean_comparison[comparison_columns].apply(
-        #                 lambda row: '|'.join([str(val) for val in row]), axis=1
-        #             )
-                    
-        #             # Find duplicates
-        #             existing_keys = set(existing_df['composite_key'].tolist())
-        #             duplicate_mask = df_clean_comparison['composite_key'].isin(existing_keys)
-                    
-        #             duplicates_count = duplicate_mask.sum()
-        #             new_records_count = len(df_clean_comparison) - duplicates_count
-                    
-        #             print(f"Duplicate analysis complete:")
-        #             print(f"  - Total records in upload: {len(df_clean_comparison)}")
-        #             print(f"  - Duplicate records found: {duplicates_count}")
-        #             print(f"  - New records to insert: {new_records_count}")
-                    
-        #             if duplicates_count > 0:
-        #                 print("Sample duplicate records:")
-        #                 duplicate_samples = df_clean_comparison[duplicate_mask][comparison_columns].head(3)
-        #                 print(duplicate_samples.to_string())
-                    
-        #             # Filter out duplicates
-        #             df_clean = df_clean_comparison[~duplicate_mask].copy()
-                    
-        #             # Remove the temporary composite_key and company_id columns if they weren't in original data
-        #             if 'composite_key' in df_clean.columns:
-        #                 df_clean = df_clean.drop('composite_key', axis=1)
-        #             if 'company_id' in df_clean.columns and 'company_id' not in df.columns:
-        #                 df_clean = df_clean.drop('company_id', axis=1)
-                    
-        #         else:
-        #             new_records_count = len(df_clean)
-        #             duplicates_count = 0
-        #             print(f"No existing records found for comparison. All {new_records_count} records will be inserted.")
-                
-        #         # ===== END DUPLICATE CHECK LOGIC =====
-                
-        #         if len(df_clean) == 0:
-        #             print("No new records to insert after duplicate check.")
-        #             inserted_count = 0
-        #         else:
-        #             # Insert the processed DataFrame into the database with error handling
-        #             inserted_count = insert_sales_pmix_df(db, df_clean, request.company_id)
-        #             print(f"Successfully inserted {inserted_count} new records into sales_pmix table")
-                
-        #         # Optional: Add to result for user feedback
-        #         if hasattr(result, '__dict__'):
-        #             result.database_records_inserted = inserted_count
-        #             result.duplicate_records_skipped = duplicates_count
-        #             result.total_records_processed = len(df)
-                
-        #     except Exception as db_error:
-        #         print(f"Database insertion error: {str(db_error)}")
-        #         print(f"DataFrame info: Shape={df.shape}, Columns={list(df.columns)}")
-        #         print(f"Sample data types: {df.dtypes.head(10)}")
-                
-        #         # Rollback the database transaction
-        #         db.rollback()
-                
-        #         # Still save the file record but log the database error
-        #         print("Database insertion failed, but file processing succeeded")
-                
-        #         # Optionally, you can choose to raise the error or continue
-        #         # For now, let's log it but continue (file is still processed successfully)
-        #         # raise HTTPException(status_code=500, detail=f"Database insertion failed: {str(db_error)}")
-                
-        #     except ValueError as validation_error:
-        #         print(f"Data validation error: {str(validation_error)}")
-        #         raise HTTPException(
-        #             status_code=400, 
-        #             detail=f"Data validation failed: {str(validation_error)}"
-        #         )
-        
-        
+              
                 
                 
         if request.dashboard == "Sales Split and Product Mix" or request.dashboard == "Product Mix" or request.dashboard == "Sales Split":
@@ -935,35 +839,80 @@ async def upload_excel(
                     detail=f"Database insertion failed: {str(db_error)}"
                 )
         
-        # if request.dashboard == "Financials and Sales Wide" or request.dashboard == "Financials" or request.dashboard == "Sales Wide" or request.dashboard == "Companywide":
+        
+        # elif request.dashboard in ["Financials and Sales Wide", "Financials", "Sales Wide", "Companywide"]:
         #     try:
-        #         print(f"Starting database insertion for {len(df)} records...")
+        #         # Your existing financials processing...
                 
-        #         # Use the improved insertion function with duplicate checking
-        #         insertion_result = insert_financials_company_wide_df(db, df, request.company_id)
+        #         # Insert actuals data into financials_company_wide table
+        #         insertion_result = insert_financials_with_duplicate_check(db, df, request.company_id)
                 
-        #         print(f"Insertion completed:")
-        #         print(f"  - New records inserted: {insertion_result['inserted_count']}")
-        #         print(f"  - Duplicate records skipped: {insertion_result['duplicate_count']}")
-        #         print(f"  - Total records processed: {insertion_result['total_processed']}")
-                
-        #         # Add results to the response if possible
-        #         if hasattr(result, '__dict__'):
-        #             result.database_records_inserted = insertion_result['inserted_count']
-        #             result.duplicate_records_skipped = insertion_result['duplicate_count']
-        #             result.total_records_processed = insertion_result['total_processed']
-                
+        #         # Insert budget data into budget table
+        #         if not df_budget.empty:
+        #             print(f"Starting budget data insertion: {len(df_budget)} records...")
+                    
+        #             # Insert budget data
+        #             insert_budget = insert_budget_df_check(db, df_budget, request.company_id)
+        #             budget_count = len(df_budget)
+                    
+        #             print(f"Successfully inserted {budget_count} budget records")
+                    
+        #             # Add to response if possible
+        #             if hasattr(result, '__dict__'):
+        #                 result.budget_records_inserted = budget_count
+                        
         #     except Exception as db_error:
-        #         print(f"Database insertion error: {str(db_error)}")
         #         db.rollback()
+        #         raise HTTPException(status_code=500, detail=f"Database insertion failed: {str(db_error)}")
                 
-        #         # You can choose to raise the error or handle it gracefully
-        #         raise HTTPException(
-        #             status_code=500, 
-        #             detail=f"Database insertion failed: {str(db_error)}"
-        #         )
         
-        
+        elif request.dashboard in ["Financials and Sales Wide", "Financials", "Sales Wide", "Companywide"]:
+            try:
+                print(f"Starting database insertion for financials data: {len(df)} records...")
+                
+                # Insert actuals data into financials_company_wide table
+                insertion_result = insert_financials_with_duplicate_check(db, df, request.company_id)
+                
+                print(f"Financials insertion completed:")
+                print(f"  - New records inserted: {insertion_result['inserted_count']}")
+                print(f"  - Duplicate records skipped: {insertion_result['duplicate_count']}")
+                print(f"  - Total records processed: {insertion_result['total_processed']}")
+                
+                # Add results to the response if possible
+                if hasattr(result, '__dict__'):
+                    result.database_records_inserted = insertion_result['inserted_count']
+                    result.duplicate_records_skipped = insertion_result['duplicate_count']
+                    result.total_records_processed = insertion_result['total_processed']
+                
+                # Insert budget data into budget table
+                if not df_budget.empty:
+                    print(f"Starting budget data insertion: {len(df_budget)} records...")
+                    
+                    # Insert budget data with duplicate checking
+                    budget_insertion_result = insert_budget_with_duplicate_check(db, df_budget, request.company_id)
+                    
+                    print(f"Budget insertion completed:")
+                    print(f"  - New budget records inserted: {budget_insertion_result['inserted_count']}")
+                    print(f"  - Duplicate budget records skipped: {budget_insertion_result['duplicate_count']}")
+                    print(f"  - Total budget records processed: {budget_insertion_result['total_processed']}")
+                    
+                    # Add budget results to response if possible
+                    if hasattr(result, '__dict__'):
+                        result.budget_records_inserted = budget_insertion_result['inserted_count']
+                        result.budget_duplicates_skipped = budget_insertion_result['duplicate_count']
+                        result.budget_total_processed = budget_insertion_result['total_processed']
+                else:
+                    print("No budget data to insert (df_budget is empty)")
+                    
+            except Exception as db_error:
+                print(f"Database insertion error: {str(db_error)}")
+                db.rollback()
+                
+                # You can choose to raise the error or handle it gracefully
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Database insertion failed: {str(db_error)}"
+                )
         
         return result
 
