@@ -1153,7 +1153,7 @@ export function Financials() {
                   <rect x="10" y="10" width="35" height="35" rx="4" fill="#5A8DEE"/>
                   <rect x="55" y="10" width="35" height="35" rx="4" fill="#4285F4"/>
                   <rect x="10" y="55" width="35" height="35" rx="4" fill="#1976D2"/>
-                  <rect x="55" y="55" width="35" height="35" rx="4" fill="#3F51B5"/>
+                  <rect x="55" y="55" width="35" height="34" rx="4" fill="#3F51B5"/>
                 </svg>
               </span>
               Financial Dashboard

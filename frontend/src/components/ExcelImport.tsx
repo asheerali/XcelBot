@@ -1333,7 +1333,7 @@ export function ExcelImport() {
                 <StatsCard sx={{ textAlign: 'center', py: 6 }}>
                   <CloudUploadIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
                   <Typography variant="h5" color="text.secondary" gutterBottom fontWeight={600}>
-                    Ready to Analyze Your Data
+                    Ready to Analyze Your Data. 
                   </Typography>
                   <Typography variant="body1" color="text.secondary" paragraph>
                     Upload your Excel files to get started with powerful sales insights

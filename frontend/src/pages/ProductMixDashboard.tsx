@@ -1841,7 +1841,7 @@ export default function ProductMixDashboard() {
                 color="text.secondary"
                 sx={{ mb: 1 }}
               >
-                Active Filters:
+              Active Filters:
               </Typography>
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                 {/* Company filter chip */}

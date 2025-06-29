@@ -205,7 +205,7 @@ const PermissionsTable = () => {
                         fontSize: "14px",
                       }}
                     >
-                      Edit
+                     Edit
                     </button>
                   ) : (
                     <>
