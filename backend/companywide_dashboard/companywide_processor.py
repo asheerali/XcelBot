@@ -77,7 +77,7 @@ def process_companywide_file(df1, store_filter='All', year_filter=None, quarter_
     # df["Store"] = df["Store"].str.replace(r'^\d{4}:\s*', '', regex=True)
     
     years = df["Year"].unique().tolist()  # Display unique values in the 'Year' column
-    dates = df["Helper 4"].unique().tolist()  # Display unique values in the 'Helper 4' column
+    dates = df["Helper_4"].unique().tolist()  # Display unique values in the 'Helper 4' column
     stores = df["Store"].unique().tolist()  # Display unique values in the 'stores' column
 
  

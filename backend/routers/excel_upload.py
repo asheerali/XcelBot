@@ -5,7 +5,7 @@ from sqlalchemy import and_, or_
 from models.sales_pmix import SalesPMix
 from typing import List, Tuple
 
-def check_and_filter_duplicates(
+def check_and_filter_duplicates_sales_pmix(
     db: Session, 
     df_clean: pd.DataFrame, 
     company_id: int
@@ -212,7 +212,7 @@ def insert_sales_pmix_with_duplicate_check(
                 df_clean[col] = df_clean[col].astype(str).replace('nan', None).replace('NaT', None)
         
         # Check for duplicates
-        df_filtered, new_records_count, duplicates_count = check_and_filter_duplicates(
+        df_filtered, new_records_count, duplicates_count = check_and_filter_duplicates_sales_pmix(
             db, df_clean, company_id
         )
         
@@ -605,7 +605,98 @@ async def upload_excel(
             df["Date"] = df["Date"].dt.date
             df_budget["Date"] = df_budget["Date"].dt.date
 
-    
+            df.rename (columns={
+                    'Store': 'Store',
+                    'Ly Date': 'Ly_Date',
+                    'Date': 'Date',
+                    'Day': 'Day',
+                    'Week': 'Week',
+                    'Month': 'Month',
+                    'Quarter': 'Quarter',
+                    'Year': 'Year',
+                    'Helper 1': 'Helper_1',
+                    'Helper 2': 'Helper_2',
+                    'Helper 3': 'Helper_3',
+                    'Helper 4': 'Helper_4',
+                    'Tw Sales': 'Tw_Sales',
+                    'Lw Sales': 'Lw_Sales',
+                    'Ly Sales': 'Ly_Sales',
+                    'Tw Orders': 'Tw_Orders',
+                    'Lw Orders': 'Lw_Orders',
+                    'Ly Orders': 'Ly_Orders',
+                    'Tw Avg Tckt': 'Tw_Avg_Tckt',
+                    'Lw Avg Tckt': 'Lw_Avg_Tckt',
+                    'Ly Avg Tckt': 'Ly_Avg_Tckt',
+                    'Tw Labor Hrs': 'Tw_Labor_Hrs',
+                    'Lw Labor Hrs': 'Lw_Labor_Hrs',
+                    'Tw Reg Pay': 'Tw_Reg_Pay',
+                    'Lw Reg Pay': 'Lw_Reg_Pay',
+                    'Tw SPMH': 'Tw_SPMH',
+                    'Lw SPMH': 'Lw_SPMH',
+                    'Tw LPMH': 'Tw_LPMH',
+                    'Lw LPMH': 'Lw_LPMH',
+                    'Tw COGS': 'Tw_COGS',
+                    'TW Johns': 'TW_Johns',
+                    'TW Terra': 'TW_Terra',
+                    'TW Metro': 'TW_Metro',
+                    'TW Victory': 'TW_Victory',
+                    'TW Central Kitchen': 'TW_Central_Kitchen',
+                    'TW Other': 'TW_Other',
+                    'Unnamed: 36': 'Unnamed_36',
+                    'Unnamed: 37': 'Unnamed_37',
+                    'Unnamed: 38': 'Unnamed_38',
+                    'Unnamed: 39': 'Unnamed_39',
+                    'Lw COGS': 'Lw_COGS',
+                    'LW Johns': 'LW_Johns',
+                    'LW Terra': 'LW_Terra',
+                    'LW Metro': 'LW_Metro',
+                    'LW Victory': 'LW_Victory',
+                    'LW Central Kitchen': 'LW_Central_Kitchen',
+                    'LW Other': 'LW_Other'
+                }, inplace=True)
+            
+            
+            df_budget.rename(columns={
+                'Store': 'Store',
+                'Date': 'Date',
+                'Week': 'Week',
+                'Month': 'Month',
+                'Quater': 'Quarter',  # Fixed spelling to match your previous pattern
+                'Year': 'Year',
+                'Helper 1': 'Helper_1',
+                'Helper': 'Helper',
+                'Helper 2': 'Helper_2',
+                'Helper 4': 'Helper_4',
+                'Sales % Contribution': 'Sales_Pct_Contribution',
+                'Catering Sales': 'Catering_Sales',
+                'In-House Sales': 'In_House_Sales',
+                'Weekly (+/-)': 'Weekly_Plus_Minus',
+                'Net Sales 1': 'Net_Sales_1',
+                'Net Sales': 'Net_Sales',
+                'Orders': 'Orders',
+                'Food $ Cost': 'Food_Cost',
+                'Johns': 'Johns',
+                'Terra': 'Terra',
+                'Metro': 'Metro',
+                'Victory': 'Victory',
+                'Central Kitchen': 'Central_Kitchen',
+                'Other': 'Other',
+                'LPMH': 'LPMH',
+                'SPMH': 'SPMH',
+                'LB Hours': 'LB_Hours',
+                'Labor $ Cost': 'Labor_Cost',
+                'Labor % Cost': 'Labor_Pct_Cost',
+                'Prime $ Cost': 'Prime_Cost',
+                'Prime % Cost': 'Prime_Pct_Cost',
+                'Rent $': 'Rent',
+                'Opex $ Cost': 'Opex_Cost',
+                'TTL $ Expense': 'TTL_Expense',
+                'Net $ Income': 'Net_Income',
+                'Net % Income': 'Net_Pct_Income'
+            }, inplace=True)
+
+            print("i am here in excel upload printing the df_budget columns of the dataframe", df_budget.columns, "\n", df_budget.dtypes , "\n", df_budget.head())
+
             result = process_dashboard_data(request = request, df1 = df, df2 = df_budget, file_name=file_name, company_id = request.company_id)
 
         # Save file record to database *after* successful processing
@@ -843,6 +934,36 @@ async def upload_excel(
                     status_code=500, 
                     detail=f"Database insertion failed: {str(db_error)}"
                 )
+        
+        # if request.dashboard == "Financials and Sales Wide" or request.dashboard == "Financials" or request.dashboard == "Sales Wide" or request.dashboard == "Companywide":
+        #     try:
+        #         print(f"Starting database insertion for {len(df)} records...")
+                
+        #         # Use the improved insertion function with duplicate checking
+        #         insertion_result = insert_financials_company_wide_df(db, df, request.company_id)
+                
+        #         print(f"Insertion completed:")
+        #         print(f"  - New records inserted: {insertion_result['inserted_count']}")
+        #         print(f"  - Duplicate records skipped: {insertion_result['duplicate_count']}")
+        #         print(f"  - Total records processed: {insertion_result['total_processed']}")
+                
+        #         # Add results to the response if possible
+        #         if hasattr(result, '__dict__'):
+        #             result.database_records_inserted = insertion_result['inserted_count']
+        #             result.duplicate_records_skipped = insertion_result['duplicate_count']
+        #             result.total_records_processed = insertion_result['total_processed']
+                
+        #     except Exception as db_error:
+        #         print(f"Database insertion error: {str(db_error)}")
+        #         db.rollback()
+                
+        #         # You can choose to raise the error or handle it gracefully
+        #         raise HTTPException(
+        #             status_code=500, 
+        #             detail=f"Database insertion failed: {str(db_error)}"
+        #         )
+        
+        
         
         return result
 

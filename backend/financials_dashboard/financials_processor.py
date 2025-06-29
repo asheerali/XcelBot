@@ -154,7 +154,7 @@ def process_financials_file(df1, df2, year="All", week_range="All", location="Al
     # df_budget["Date"] = df_budget["Date"].dt.date
 
     years = df["Year"].unique().tolist()  # Display unique values in the 'Year' column
-    dates = df["Helper 4"].unique().tolist()  # Display unique values in the 'Helper 4' column
+    dates = df["Helper_4"].unique().tolist()  # Display unique values in the 'Helper 4' column
     stores = df["Store"].unique().tolist()  # Display unique values in the 'stores' column
 
     financials_weeks, financials_years, financials_stores = financials_filters(df)
