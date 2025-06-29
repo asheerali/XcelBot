@@ -323,8 +323,21 @@ def day_of_the_week_tables(df, store='All', start_date=None, end_date=None):
     # sales_table
     # Clean column names
     df_copy.columns = df_copy.columns.str.strip()
+    
+        # Ensure Date column is datetime type
+    if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
+        df_copy['Date'] = pd.to_datetime(df_copy['Date'])
 
-    print("i am here in the financial utils_  and helper 1", df_copy.columns, df_copy['Helper 1'].unique())
+    # Convert date strings to pandas datetime objects (not .date() objects)
+    if start_date is not None:
+        if isinstance(start_date, str):
+            start_date = pd.to_datetime(start_date)
+    
+    if end_date is not None:
+        if isinstance(end_date, str):
+            end_date = pd.to_datetime(end_date)
+
+    print("i am here in the financial utils_ printing the start date and end date", start_date, end_date, "store", store, "df_copy", df_copy.columns    )
 
     df = df_copy.copy()
         
@@ -577,12 +590,32 @@ def day_of_the_week_tables(df, store='All', start_date=None, end_date=None):
 
 def calculate_tw_lw_bdg_comparison(df, df_budget, store='All', year='All', week_range='All', start_date=None, end_date=None):
     # Clean both dataframes columns
+    
+
+            
     df.columns = df.columns.str.strip()
     df_budget.columns = df_budget.columns.str.strip()
     
     # Make copies of the dataframes
     filtered_df = df.copy()
     filtered_budget_df = df_budget.copy()
+
+    # Ensure Date column is datetime type
+    if not pd.api.types.is_datetime64_any_dtype(filtered_df['Date']):
+        filtered_df['Date'] = pd.to_datetime(filtered_df['Date'])
+
+    # Ensure Date column is datetime type
+    if not pd.api.types.is_datetime64_any_dtype(filtered_budget_df['Date']):
+        filtered_budget_df['Date'] = pd.to_datetime(filtered_budget_df['Date'])
+
+    # Convert date strings to pandas datetime objects (not .date() objects)
+    if start_date is not None:
+        if isinstance(start_date, str):
+            start_date = pd.to_datetime(start_date)
+    
+    if end_date is not None:
+        if isinstance(end_date, str):
+            end_date = pd.to_datetime(end_date)
     
     if start_date is not None:
         if isinstance(start_date, str):

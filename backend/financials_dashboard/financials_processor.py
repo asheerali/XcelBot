@@ -27,9 +27,9 @@ def process_financials_file(df1, df2, year="All", week_range="All", location="Al
                 df = df1
 
             if df.empty:
-                raise ValueError("The sheet 'Database' is empty or missing.")
+                raise ValueError("The table is empty or missing in this date range.")
     except ValueError as e:
-        raise ValueError("Sheet named 'Database' not found in the uploaded Excel file.")
+        raise ValueError("unable to read the table from the database.")
 
     try:
         if isinstance(df2, pd.DataFrame):
@@ -37,9 +37,9 @@ def process_financials_file(df1, df2, year="All", week_range="All", location="Al
             df_budget = df2
 
         if df_budget.empty:
-            raise ValueError("The sheet 'Budget' is empty or missing.")
+            raise ValueError("The budget table is empty or missing.")
     except ValueError as e:
-        raise ValueError("Sheet named 'Budget' not found in the uploaded Excel file.")
+        raise ValueError("budget table is not found.")
 
 
     # # Strip whitespace from column names

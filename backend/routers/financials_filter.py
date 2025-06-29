@@ -325,7 +325,15 @@ async def filter_financials_data(
             for col in numeric_columns:
                 if col in df_budget.columns:
                     df_budget[col] = pd.to_numeric(df_budget[col], errors='coerce').fillna(0)
-        
+
+        print("i am here in the financials filter endpoint after converting the data types",    "\n", df_financials.head(), "\n", "df_budget","\n" ,  df_budget.head())
+
+        print("i am checking the date afer converting the date type", start_date_original, end_date_original, type(start_date_original), type(end_date_original))
+
+        # start_month = pd.to_datetime(start_date_original).day()
+        # end_month = pd.to_datetime(end_date_original).day()
+
+        # print("i am here in the financials filter endpoint after converting the data types",    "\n", start_month, end_month, type(start_month), type(end_month))
 
         (financials_weeks, 
          financials_years, 
@@ -337,8 +345,8 @@ async def filter_financials_data(
          years, 
          dates, 
          stores)  = process_financials_file(
-                df_financials,
-                budget_df=df_budget,  
+                df1 = df_financials,
+                df2 = df_budget,  
                 location=location_filter, 
                 start_date=start_date_original,
                 end_date=end_date_original,
