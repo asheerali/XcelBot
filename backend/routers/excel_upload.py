@@ -464,6 +464,9 @@ async def upload_excel(
                 
             # print("i am here in excel upload printing the columns of the dataframe", df.columns, "\n", df.dtypes , "\n", df.head())
             print("i am here in excel upload printing the filename dashboard and company id and df head", file_name, request.dashboard, request.company_id, "\n", df.head())
+            
+            
+            
             result = process_dashboard_data(request, df1= df, df2 = None, file_name = file_name, company_id = request.company_id)
 
 
@@ -483,9 +486,127 @@ async def upload_excel(
                 if df.empty:
                     raise ValueError("The sheet 'Actuals' is empty or missing.")
             except ValueError as e:
-                raise ValueError("Sheet named 'Actuals' not found in the uploaded Excel file.")            
+                raise ValueError("Sheet named 'Actuals' not found in the uploaded Excel file.")
+
+
+
+
+            # ------------------------------------------------------------
+            # process for the financials filters
+            # ------------------------------------------------------------
+            # Strip whitespace from column names
+            df.columns = df.columns.str.strip()
             
-            result = process_dashboard_data(request = request, df1 = df, df2 = df_budget, company_id = request.company_id)
+            # ===== ADD HELPER COLUMN CHECK HERE =====
+            # Check if Helper 1 and Helper 4 exist, create them if they don't
+            if 'Helper 1' not in df.columns:
+                print("Helper 1 column not found. Creating Helper 1 column...")
+                # Find the position after Year column or at the end
+                if 'Year' in df.columns:
+                    year_idx = df.columns.get_loc('Year')
+                    df.insert(year_idx + 1, 'Helper 1', '')
+                else:
+                    df['Helper 1'] = ''
+            else:
+                print("Helper 1 column already exists.")
+            
+            if 'Helper 4' not in df.columns:
+                print("Helper 4 column not found. Creating Helper 4 column...")
+                # Find the position after Helper columns
+                helper_cols = [col for col in df.columns if col.startswith('Helper')]
+                if helper_cols:
+                    # Insert after the last existing Helper column
+                    last_helper_col = max(helper_cols, key=lambda x: int(x.split()[-1]) if x.split()[-1].isdigit() else 0)
+                    last_helper_idx = df.columns.get_loc(last_helper_col)
+                    df.insert(last_helper_idx + 1, 'Helper 4', '')
+                else:
+                    df['Helper 4'] = ''
+            else:
+                print("Helper 4 column already exists.")
+            # ===== END HELPER COLUMN CHECK =====
+
+            # Define columns to exclude from filling
+            exclude_cols = ['Store', 'Ly Date', 'Date', 'Day', 'Week', 'Month', 'Quarter', 'Year',
+                            'Helper 1', 'Helper 2', 'Helper 3', 'Helper 4']
+
+            # Get all columns that should be filled with 0
+            fill_cols = [col for col in df.columns if col not in exclude_cols]
+
+            # Replace NaN with 0 only in selected columns
+            df[fill_cols] = df[fill_cols].fillna(0)
+
+            # Fill excluded (metadata/helper) columns with empty string
+            df[exclude_cols] = df[exclude_cols].fillna('')
+            df["Store"] = df["Store"].str.replace(r'^\d{4}:\s*', '', regex=True)
+
+
+            # Strip whitespace from column names for budget dataframe
+            df_budget.columns = df_budget.columns.str.strip()
+            
+            # ===== ADD HELPER COLUMN CHECK FOR BUDGET DF TOO =====
+            # Check if Helper 1 and Helper 4 exist in budget dataframe, create them if they don't
+            if 'Helper 1' not in df_budget.columns:
+                print("Helper 1 column not found in budget data. Creating Helper 1 column...")
+                if 'Year' in df_budget.columns:
+                    year_idx = df_budget.columns.get_loc('Year')
+                    df_budget.insert(year_idx + 1, 'Helper 1', '')
+                else:
+                    df_budget['Helper 1'] = ''
+            
+            if 'Helper 4' not in df_budget.columns:
+                print("Helper 4 column not found in budget data. Creating Helper 4 column...")
+                helper_cols = [col for col in df_budget.columns if col.startswith('Helper')]
+                if helper_cols:
+                    last_helper_col = max(helper_cols, key=lambda x: int(x.split()[-1]) if x.split()[-1].isdigit() else 0)
+                    last_helper_idx = df_budget.columns.get_loc(last_helper_col)
+                    df_budget.insert(last_helper_idx + 1, 'Helper 4', '')
+                else:
+                    df_budget['Helper 4'] = ''
+            # ===== END HELPER COLUMN CHECK FOR BUDGET DF =====
+
+            # Identify all column names
+            cols = list(df_budget.columns)
+
+            # Replace only the first occurrence of "Net Sales" with "Net Sales 1"
+            found = False
+            for i, col in enumerate(cols):
+                if col.strip() == "Net Sales" and not found:
+                    cols[i] = "Net Sales 1"
+                    found = True
+
+            # Assign the modified column names back
+            df_budget.columns = cols
+
+            
+            # Define columns to exclude from numeric NaN filling
+            exclude_cols = [
+                'Store', 'Ly Date', 'Date', 'Day', 'Week', 'Month', 'Quarter', 'Year',
+                'Helper 1', 'Helper 2', 'Helper 3', 'Helper 4', 'Helper'  # Include any actual column names in your sheet
+            ]
+
+            # Ensure all exclude columns that are present in df_budget
+            exclude_cols = [col for col in exclude_cols if col in df_budget.columns]
+
+            # Get all columns that should be filled with 0
+            fill_cols = [col for col in df_budget.columns if col not in exclude_cols]
+
+            # Replace NaN with 0 only in selected columns
+            df_budget[fill_cols] = df_budget[fill_cols].fillna(0)
+
+            # Fill excluded (metadata/helper) columns with empty string
+            df_budget[exclude_cols] = df_budget[exclude_cols].fillna('')
+
+            df_budget["Store"] = df_budget["Store"].str.replace(r'^\d{4}:\s*', '', regex=True)
+            df_budget["Store"].unique()  # Display unique values in the 'stores' column
+
+            years = df["Year"].unique().tolist()  # Display unique values in the 'Year' column
+            dates = df["Helper 4"].unique().tolist()  # Display unique values in the 'Helper 4' column
+            stores = df["Store"].unique().tolist()  # Display unique values in the 'stores' column
+            df["Date"] = df["Date"].dt.date
+            df_budget["Date"] = df_budget["Date"].dt.date
+
+    
+            result = process_dashboard_data(request = request, df1 = df, df2 = df_budget, file_name=file_name, company_id = request.company_id)
 
         # Save file record to database *after* successful processing
         file_record = UploadedFileCreate(

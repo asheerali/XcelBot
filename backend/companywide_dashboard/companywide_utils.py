@@ -16,8 +16,22 @@ def companywide_tables(df, store_filter='All', year_filter=None, quarter_filter=
     
     print("i am here printing the df attributes", "\n", store_filter, start_date, end_date, year_filter, quarter_filter, helper4_filter)
     
+    
+
+    
+    
     #Make a copy of the dataframe
     filtered_df = df.copy()
+    
+    
+    if not pd.api.types.is_datetime64_any_dtype(filtered_df['Date']):
+        filtered_df['Date'] = pd.to_datetime(filtered_df['Date'])
+
+    # if end_date is not None and isinstance(end_date, str):
+    #     end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+    # elif end_date is None:
+    #     end_date = filtered_df['Date'].max().date()
     
     # Apply filters
     if store_filter != 'All':
