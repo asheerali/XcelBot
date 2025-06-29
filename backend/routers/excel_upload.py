@@ -496,9 +496,25 @@ async def upload_excel(
             # ------------------------------------------------------------
             # Strip whitespace from column names
             df.columns = df.columns.str.strip()
+         
             
+            # # ===== ADD HELPER COLUMN CHECK HERE =====
+            # # Check if Helper 1 and Helper 4 exist, create them if they don't
+            # if 'Helper 1' not in df.columns:
+            #     print("Helper 1 column not found. Creating Helper 1 column...")
+            #     # Find the position after Year column or at the end
+            #     if 'Year' in df.columns:
+            #         year_idx = df.columns.get_loc('Year')
+            #         df.insert(year_idx + 1, 'Helper 1', '')
+            #     else:
+            #         print("Helper 1 column not found. Creating Helper 1 column at the end...")
+            #         df['Helper 1'] = ''
+            # else:
+            #     print("Helper 1 column already exists.")
+        
+        
             # ===== ADD HELPER COLUMN CHECK HERE =====
-            # Check if Helper 1 and Helper 4 exist, create them if they don't
+            # Check if Helper 1 exists, create it if it doesn't
             if 'Helper 1' not in df.columns:
                 print("Helper 1 column not found. Creating Helper 1 column...")
                 # Find the position after Year column or at the end
@@ -506,9 +522,47 @@ async def upload_excel(
                     year_idx = df.columns.get_loc('Year')
                     df.insert(year_idx + 1, 'Helper 1', '')
                 else:
+                    print("Helper 1 column not found. Creating Helper 1 column at the end...")
                     df['Helper 1'] = ''
             else:
                 print("Helper 1 column already exists.")
+
+            # ===== POPULATE HELPER 1 WITH DAY PATTERN =====
+            # Create mapping dictionaries for day abbreviations to numbers and full names
+            day_to_number = {
+                'Mon': '1',
+                'Tue': '2', 
+                'Wed': '3',
+                'Thu': '4',
+                'Fri': '5',
+                'Sat': '6',
+                'Sun': '7'
+            }
+
+            day_to_full_name = {
+                'Mon': 'Monday',
+                'Tue': 'Tuesday',
+                'Wed': 'Wednesday', 
+                'Thu': 'Thursday',
+                'Fri': 'Friday',
+                'Sat': 'Saturday',
+                'Sun': 'Sunday'
+            }
+
+            # Populate Helper 1 column with the pattern "number - full_day_name"
+            if 'Day' in df.columns:
+                print("Populating Helper 1 with day pattern...")
+                df['Helper 1'] = df['Day'].map(lambda day: f"{day_to_number.get(day, '')} - {day_to_full_name.get(day, '')}" if day in day_to_number else '')
+                print("Helper 1 column populated successfully.")
+            else:
+                print("Warning: Day column not found. Cannot populate Helper 1.")
+                
+            # Display sample of Helper 1 values
+            if not df.empty and 'Helper 1' in df.columns:
+                print("\nSample Helper 1 values:")
+                print(df['Helper 1'].head(10).to_string())
+                
+            print("i am here __ checking the helper1", df.columns, "\n", df['Helper 1'], "\n", df.head())
             
             if 'Helper 4' not in df.columns:
                 print("Helper 4 column not found. Creating Helper 4 column...")
@@ -543,16 +597,58 @@ async def upload_excel(
             # Strip whitespace from column names for budget dataframe
             df_budget.columns = df_budget.columns.str.strip()
             
-            # ===== ADD HELPER COLUMN CHECK FOR BUDGET DF TOO =====
-            # Check if Helper 1 and Helper 4 exist in budget dataframe, create them if they don't
+
+
+
+            # ===== ADD HELPER COLUMN CHECK HERE =====
+            # Check if Helper 1 exists, create it if it doesn't
             if 'Helper 1' not in df_budget.columns:
-                print("Helper 1 column not found in budget data. Creating Helper 1 column...")
+                print("Helper 1 column not found. Creating Helper 1 column...")
+                # Find the position after Year column or at the end
                 if 'Year' in df_budget.columns:
                     year_idx = df_budget.columns.get_loc('Year')
                     df_budget.insert(year_idx + 1, 'Helper 1', '')
                 else:
+                    print("Helper 1 column not found. Creating Helper 1 column at the end...")
                     df_budget['Helper 1'] = ''
-            
+            else:
+                print("Helper 1 column already exists.")
+
+            # ===== POPULATE HELPER 1 WITH DAY PATTERN =====
+            # Create mapping dictionaries for day abbreviations to numbers and full names
+            day_to_number = {
+                'Mon': '1',
+                'Tue': '2', 
+                'Wed': '3',
+                'Thu': '4',
+                'Fri': '5',
+                'Sat': '6',
+                'Sun': '7'
+            }
+
+            day_to_full_name = {
+                'Mon': 'Monday',
+                'Tue': 'Tuesday',
+                'Wed': 'Wednesday', 
+                'Thu': 'Thursday',
+                'Fri': 'Friday',
+                'Sat': 'Saturday',
+                'Sun': 'Sunday'
+            }
+
+            # Populate Helper 1 column with the pattern "number - full_day_name"
+            if 'Day' in df_budget.columns:
+                print("Populating Helper 1 with day pattern...")
+                df_budget['Helper 1'] = df_budget['Day'].map(lambda day: f"{day_to_number.get(day, '')} - {day_to_full_name.get(day, '')}" if day in day_to_number else '')
+                print("Helper 1 column populated successfully.")
+            else:
+                print("Warning: Day column not found. Cannot populate Helper 1.")
+                
+            # Display sample of Helper 1 values
+            if not df_budget.empty and 'Helper 1' in df_budget.columns:
+                print("\nSample Helper 1 values:")
+                print(df_budget['Helper 1'].head(10).to_string())
+
             if 'Helper 4' not in df_budget.columns:
                 print("Helper 4 column not found in budget data. Creating Helper 4 column...")
                 helper_cols = [col for col in df_budget.columns if col.startswith('Helper')]
