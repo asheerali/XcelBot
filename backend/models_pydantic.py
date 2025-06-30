@@ -70,6 +70,7 @@ class DashboardResponse(BaseModel):
     table16: Optional[List[Dict[str, Any]]] = None
     table17: Optional[List[Dict[str, Any]]] = None
     company_id: Optional[int] = None  # Optional company ID filter
+    user_id: Optional[int] = None  # Optional user ID filter
     locations: Optional[List[Any]] = None
     servers: Optional[List[Any]] = None
     categories: Optional[List[Any]] = None

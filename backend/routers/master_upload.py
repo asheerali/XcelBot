@@ -350,17 +350,20 @@ async def master_upload(
         # df = pd.read_excel(excel_data)
 
         file_name = file_name if request.fileName else None
-        dashboard_name = request.dashboard if request.dashboard else "Master Dashboard"
+        company_id = request.company_id if request.company_id  else None
+        # dashboard_name = request.dashboard if request.dashboard else "Master Dashboard"
+        current_user = current_user.id
 
         master_response = {
             # "table1": [df.columns.tolist()],
             "table1": [1,2,4,5],  # Convert DataFrame to list of dictionaries
             "fileName": file_name,
-            "dashboardName": dashboard_name,
+            "company_id": company_id,
+            "userId": current_user,
             "data": "this is the master dashboard"
         }
             
-        
+    
         return [master_response]
         
     except Exception as e:
