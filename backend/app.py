@@ -8,7 +8,7 @@ from requests import Session
 from models import locations
 from routers import locations
 from database import engine, SessionLocal
-from routers import excel_upload, sales_split_filter, health, companywide_filter, pmix_filter, financials_filter
+from routers import excel_upload, sales_split_filter, health, companywide_filter, pmix_filter, financials_filter, master_upload
 # Import from local modules
 from models import users,user_company_companylocation ,locations,company_locations, permissions, user_company, payments, subscriptions, dashboards, user_dashboard_permissions, uploaded_files, file_permissions, companies
 from database import get_db
@@ -27,14 +27,6 @@ user_company.Base.metadata.create_all(bind=engine)
 permissions.Base.metadata.create_all(bind=engine)
 company_locations.Base.metadata.create_all(bind=engine)
 
-
-
-# def get_db():
-#     db = SessionLocal()
-#     try:
-#         yield db
-#     finally:
-#         db.close()
         
 db_dependency = Annotated[Session, Depends(get_db)]
 
@@ -67,6 +59,7 @@ app.include_router(pmix_filter.router)
 app.include_router(financials_filter.router)
 app.include_router(companywide_filter.router)
 app.include_router(health.router)
+app.include_router(master_upload.router)
 
 # for the databases
 from routers import (users, 
