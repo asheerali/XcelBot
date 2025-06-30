@@ -76,6 +76,8 @@ class DashboardResponse(BaseModel):
     categories: Optional[List[Any]] = None
     dateRanges: Optional[List[str]] = None
     fileLocation:Optional[List[Any]] = None
+    columnNames: Optional[List[str]] = None
+    columnsData: Optional[List[Dict[str, Any]]] = None
     dashboardName: str
     fileName: str
     data: str
