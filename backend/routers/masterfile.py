@@ -18,12 +18,27 @@ def create_masterfile(masterfile: masterfile_schema.MasterFileCreate, db: Sessio
 @router.get("/", response_model=list[masterfile_schema.MasterFile])
 def get_masterfiles(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """Get all masterfiles with pagination"""
-    return masterfile_crud.get_all_masterfiles(db, skip, limit)
+    master_file = masterfile_crud.get_all_masterfiles(db, skip, limit)
+    print("i am here in masterfile printing the master db " , master_file)
+        # Print the actual data
+    for mf in master_file:
+        # columns = mf.file_data['columns']
+        print(f"ID: {mf.id}")
+        print(f"Company ID: {mf.company_id}")
+        print(f"Filename: {mf.filename}")
+        # print(f"File Data: {mf.file_data}")
+        # print(f"File Data Columns:  {mf.file_data['columns']}")
+        # print(f"File Data data: {mf.file_data['data']}")
+        df_construction = pd.DataFrame(mf.file_data['data'])
+        print(f"DataFrame Construction: {df_construction}")
+        print("---")
+    return master_file
 
 @router.get("/{masterfile_id}", response_model=masterfile_schema.MasterFile)
 def get_masterfile(masterfile_id: int, db: Session = Depends(get_db)):
     """Get a specific masterfile by ID"""
     masterfile = masterfile_crud.get_masterfile(db, masterfile_id)
+    print("i am here in masterfile printing the master file" , masterfile)
     if not masterfile:
         raise HTTPException(status_code=404, detail="Masterfile not found")
     return masterfile

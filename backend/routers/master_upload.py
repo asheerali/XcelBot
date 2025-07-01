@@ -67,8 +67,8 @@ async def master_upload(
             # Convert DataFrame to JSON format
             # Handle datetime objects and other non-serializable types
             df_json = df.to_dict('records')
-            df_reconstructed = pd.DataFrame(df_json)
-            print(f"Reconstructed DataFrame printing: {df_reconstructed.head()}")
+            # df_reconstructed = pd.DataFrame(df_json)
+            # print(f"Reconstructed DataFrame printing: {df_reconstructed.head()}")
 
             # Convert any datetime objects to strings
             for record in df_json:
@@ -82,7 +82,7 @@ async def master_upload(
             
             # Prepare file data for database storage
             file_data = {
-                "original_filename": request.fileName,
+                # "original_filename": request.fileName,
                 "upload_date": datetime.datetime.now().isoformat(),
                 "user_id": current_user.id,
                 # "location": request.location,
