@@ -14,6 +14,26 @@ router = APIRouter(
     tags=["Master Files"]
 )
 
+
+@router.post("/available_items", response_model=MasterFile)
+# it will go in the table master file and then get the column file data and then read the json data into df then i will retun the df as dict 
+def get_masterfile_items(
+    masterfile_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get items from a masterfile by ID"""
+    masterfile = masterfile_crud.get_masterfile(db, masterfile_id)
+    if not masterfile:
+        raise HTTPException(status_code=404, detail="Masterfile not found")
+    
+    try:
+        # Assuming file_data is stored as JSON in the database
+        file_data_json = json.loads(masterfile.file_data)
+        return file_data_json
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=400, detail=f"Error decoding file data: {str(e)}")
+
 @router.post("/", response_model=MasterFile)
 def create_masterfile_record(
     file_data: MasterFileCreate, 
