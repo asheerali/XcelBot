@@ -241,6 +241,27 @@ def get_masterfile_details(
     
     return {"data": data}        
         
+
+@router.put("/update/{company_id}/{location_id}/{filename}", response_model=masterfile_schema.MasterFile)
+def update_masterfile(
+    company_id: int,
+    location_id: int,
+    filename: str,
+    db: Session = Depends(get_db)
+):
+    """Update a masterfile by company ID, location ID, and filename"""
+    # change the location id
+
+    masterfile = masterfile_crud.get_masterfile_by_filename_and_location(db, company_id, location_id, filename)
+    if not masterfile:
+        raise HTTPException(status_code=404, detail="Masterfile not found")
+    # Update the location_id in the masterfile
+    masterfile.location_id = location_id
+    db.commit()
+    db.refresh(masterfile)
+    return masterfile
+
+
 @router.post("/", response_model=masterfile_schema.MasterFile)
 def create_masterfile(masterfile: masterfile_schema.MasterFileCreate, db: Session = Depends(get_db)):
     """Create a new masterfile record"""
