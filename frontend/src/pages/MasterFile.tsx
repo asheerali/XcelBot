@@ -868,6 +868,8 @@ const MasterFile = () => {
 
   // Master file details and upload states
   const [masterFileDetails, setMasterFileDetails] = useState<MasterFileDetail[]>([]);
+  const [companies, setCompanies] = useState([]); // For upload dialog
+  const [locations, setLocations] = useState([]); // For upload dialog
   const [loadingMasterFileDetails, setLoadingMasterFileDetails] = useState(false);
   const [uploadDialog, setUploadDialog] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -987,7 +989,7 @@ const MasterFile = () => {
     }
   }, [items, currentPriceColumn]);
 
-  // Fetch master file details data
+  // Fetch master file details data (for filters)
   const fetchMasterFileDetails = async () => {
     setLoadingMasterFileDetails(true);
     try {
@@ -1004,32 +1006,48 @@ const MasterFile = () => {
     }
   };
 
-  // Load data on component mount
-  useEffect(() => {
-    fetchMasterFileDetails();
-  }, []);
-
-  // Get unique companies and locations for upload dialog
-  const getUniqueCompaniesForUpload = () => {
-    return Array.from(
-      new Map(
-        masterFileDetails.map(item => [item.company_id, {
-          id: item.company_id,
-          name: item.company_name
-        }])
-      ).values()
-    );
+  // Fetch companies data (for upload dialog)
+  const fetchCompanies = async () => {
+    try {
+      const response = await apiClient.get("/companies"); // Keep original endpoint
+      setCompanies(response.data);
+    } catch (error) {
+      console.error("Error fetching companies:", error);
+      setUploadStatus({
+        type: "error",
+        message: "Failed to fetch companies data",
+      });
+    }
   };
 
-  const getUniqueLocationsForUpload = () => {
-    return Array.from(
-      new Map(
-        masterFileDetails.map(item => [item.location_id, {
-          id: item.location_id,
-          name: item.location_name
-        }])
-      ).values()
-    );
+  // Fetch locations/stores data (for upload dialog)
+  const fetchLocations = async () => {
+    try {
+      const response = await apiClient.get("/stores"); // Keep original endpoint
+      setLocations(response.data);
+    } catch (error) {
+      console.error("Error fetching stores:", error);
+      setUploadStatus({
+        type: "error",
+        message: "Failed to fetch stores data",
+      });
+    }
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    fetchMasterFileDetails(); // For filters
+    fetchCompanies(); // For upload dialog
+    fetchLocations(); // For upload dialog
+  }, []);
+
+  // Get companies and locations for upload dialog (from original endpoints)
+  const getCompaniesForUpload = () => {
+    return companies || [];
+  };
+
+  const getLocationsForUpload = () => {
+    return locations || [];
   };
 
   // Handler for FiltersOrderIQ filter changes
@@ -1252,7 +1270,7 @@ const MasterFile = () => {
         console.log("Sending update data:", updateData);
 
         // Send update to API
-        const response = await apiClient.post("/api/masterfile/updatefile", updateData);
+        const response = await apiClient.post("/api/master/updatefile", updateData);
         
         console.log("Row update response:", response.data);
         
@@ -1498,10 +1516,8 @@ const MasterFile = () => {
       // Send to API using apiClient (will include auth token automatically)
       const response = await apiClient.post("/api/master/upload", uploadData);
 
-      const uniqueCompanies = getUniqueCompaniesForUpload();
-      const uniqueLocations = getUniqueLocationsForUpload();
-      const selectedCompany = uniqueCompanies.find((c) => c.id.toString() === selectedCompanyId);
-      const selectedLocation = uniqueLocations.find((l) => l.id.toString() === selectedLocationId);
+      const selectedCompany = companies.find((c) => c.id.toString() === selectedCompanyId);
+      const selectedLocation = locations.find((l) => l.id.toString() === selectedLocationId);
 
       setUploadStatus({
         type: "success",
@@ -1635,7 +1651,9 @@ const MasterFile = () => {
                   color="primary"
                   style={{ backgroundColor: "#e3f2fd" }}
                   onClick={() => {
-                    fetchMasterFileDetails();
+                    fetchMasterFileDetails(); // For filters
+                    fetchCompanies(); // For upload dialog
+                    fetchLocations(); // For upload dialog
                   }}
                 >
                   <RefreshIcon />
@@ -1908,11 +1926,11 @@ const MasterFile = () => {
                     <BusinessIcon />
                   </InputAdornment>
                 }
-                disabled={loadingMasterFileDetails}
+                disabled={companies.length === 0}
               >
-                {getUniqueCompaniesForUpload().map((company) => (
+                {companies.map((company) => (
                   <MenuItem key={company.id} value={company.id.toString()}>
-                    {company.name}
+                    {company.name} {company.code && `(${company.code})`}
                   </MenuItem>
                 ))}
               </Select>
@@ -1930,11 +1948,11 @@ const MasterFile = () => {
                     <LocationOnIcon />
                   </InputAdornment>
                 }
-                disabled={loadingMasterFileDetails}
+                disabled={locations.length === 0}
               >
-                {getUniqueLocationsForUpload().map((location) => (
+                {locations.map((location) => (
                   <MenuItem key={location.id} value={location.id.toString()}>
-                    {location.name}
+                    {location.name} {location.code && `(${location.code})`}
                   </MenuItem>
                 ))}
               </Select>
