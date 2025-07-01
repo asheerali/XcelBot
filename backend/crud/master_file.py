@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from models.master_file import MasterFile
 from schemas.master_file import MasterFileCreate
 from typing import List, Optional
+from sqlalchemy.orm.attributes import flag_modified
 
 def create_masterfile(db: Session, obj_in: MasterFileCreate):
     """Create a new masterfile record"""
@@ -30,15 +31,52 @@ def get_masterfile_by_filename(db: Session, company_id: int, filename: str):
         MasterFile.filename == filename
     ).first()
 
+# def update_masterfile(db: Session, masterfile_id: int, file_data: dict):
+#     """Update file_data for an existing masterfile record"""
+#     db_obj = db.query(MasterFile).filter(MasterFile.id == masterfile_id).first()
+#     if db_obj:
+#         db_obj.file_data = file_data
+#         db.commit()
+#         db.refresh(db_obj)
+#         return db_obj
+#     return None
+
+
+
 def update_masterfile(db: Session, masterfile_id: int, file_data: dict):
     """Update file_data for an existing masterfile record"""
-    db_obj = db.query(MasterFile).filter(MasterFile.id == masterfile_id).first()
-    if db_obj:
-        db_obj.file_data = file_data
-        db.commit()
-        db.refresh(db_obj)
-        return db_obj
-    return None
+    try:
+        db_obj = db.query(MasterFile).filter(MasterFile.id == masterfile_id).first()
+        if db_obj:
+            print(f"Found masterfile object with ID: {masterfile_id}")
+            print(f"Current file_data keys: {list(db_obj.file_data.keys()) if db_obj.file_data else 'None'}")
+            
+            # Update the file_data
+            db_obj.file_data = file_data
+            
+            # Mark the object as dirty (important for JSON fields)
+            from sqlalchemy.orm.attributes import flag_modified
+            flag_modified(db_obj, "file_data")
+            
+            print(f"Updated file_data keys: {list(file_data.keys())}")
+            
+            # Commit the changes
+            db.commit()
+            print("Database commit successful")
+            
+            # Refresh the object to get the latest state
+            db.refresh(db_obj)
+            print("Object refresh successful")
+            
+            return db_obj
+        else:
+            print(f"No masterfile found with ID: {masterfile_id}")
+            return None
+            
+    except Exception as e:
+        print(f"Error in update_masterfile: {str(e)}")
+        db.rollback()  # Rollback on error
+        raise e
 
 def delete_masterfile(db: Session, masterfile_id: int):
     """Delete a masterfile record"""

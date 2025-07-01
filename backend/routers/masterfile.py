@@ -1,3 +1,5 @@
+import datetime
+import traceback
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from models.locations import Store
@@ -286,7 +288,39 @@ class UpdateMasterFileRequest(BaseModel):
     company_id: int
     location_id: int
     filename: str
+    
     row_data: Dict[str, Any]
+
+# @router.post("/updatefile")
+# def update_masterfile(
+#     request: UpdateMasterFileRequest,
+#     db: Session = Depends(get_db)
+# ):
+#     """Update a masterfile row"""
+    
+#     print("Received request to update masterfile:", request)
+#     try:
+#         # First, find the existing masterfile
+#         masterfile = masterfile_crud.get_masterfile_by_filename_and_location(
+#             db, request.company_id, request.location_id, request.filename
+#         )
+#         if not masterfile:
+#             raise HTTPException(status_code=404, detail="Masterfile not found")
+
+#         # Your update logic here
+#         print("i am here in the update-masterfile function", masterfile.file_data)
+        
+#         df = pd.DataFrame(masterfile.file_data['data'])
+#         print("i am here in the update-masterfile function printing the dataframe", df.head())
+        
+        
+#         # Return minimal response if you don't want much data
+#         return {"status": "updated"}
+        
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Error updating masterfile: {str(e)}")
+
+
 
 @router.post("/updatefile")
 def update_masterfile(
@@ -295,7 +329,7 @@ def update_masterfile(
 ):
     """Update a masterfile row"""
     
-    print("Received request to update masterfile:", request.row_data)
+    print("Received request to update masterfile:", request)
     try:
         # First, find the existing masterfile
         masterfile = masterfile_crud.get_masterfile_by_filename_and_location(
@@ -304,15 +338,96 @@ def update_masterfile(
         if not masterfile:
             raise HTTPException(status_code=404, detail="Masterfile not found")
 
-        # Your update logic here
+        print("Found masterfile, processing update...")
         
-        # Return minimal response if you don't want much data
-        return {"status": "updated"}
+        # Convert stored data back to DataFrame
+        df = pd.DataFrame(masterfile.file_data['data'])
+        print("Current DataFrame shape:", df.shape)
+        print("DataFrame columns:", df.columns.tolist())
+        
+        # Get row data from the request
+        row_data = request.row_data  # This is the data you're already getting
+        print("Row data to match:", row_data)
+        
+        
+        
+        # Create boolean mask for matching rows using all columns except price-related ones
+        mask = pd.Series([True] * len(df))
+        exclude_columns = ["Current Price","Previous Price"]
+        
+        for col in row_data.keys():
+            if col not in exclude_columns and col in df.columns:
+                mask = mask & (df[col] == row_data[col])
+        
+        # Find matching rows
+        matching_rows = df[mask]
+        
+        if matching_rows.empty:
+            print("No matching rows found")
+            return {"status": "error", "message": "No matching rows found"}
+        
+        print(f"Found {len(matching_rows)} matching row(s)")
+        
+        # Update the matching rows
+        # Set Previous Price to the current Current Price before updating
+        if 'Current Price' in df.columns:
+            df.loc[mask, 'Previous Price'] = df.loc[mask, 'Current Price']
+            # Update Current Price to the new value
+            df.loc[mask, 'Current Price'] = row_data['Current Price']
+        
+        
+        print("Updated rows:")
+        print(df[mask][['Category', 'Products', 'Current Price', 'Previous Price']])
+
+        print("df after the update...", df.head())
+        # Convert DataFrame back to JSON format for database storage
+        df_json = df.to_dict('records')
+        
+        # Handle any datetime/timestamp conversions and NaN values
+        for record in df_json:
+            for key, value in record.items():
+                if pd.isna(value):
+                    record[key] = None
+                elif isinstance(value, (pd.Timestamp, datetime.datetime, datetime.date)):
+                    record[key] = value.isoformat() if value else None
+                elif isinstance(value, (int, float)) and pd.isna(value):
+                    record[key] = None
+        
+        # Update the file_data structure
+        updated_file_data = {
+            "upload_date": masterfile.file_data.get('upload_date'),  # Keep original upload date
+            "updated_at": datetime.datetime.now().isoformat(),  # Add last updated timestamp
+            "user_id": masterfile.file_data.get('user_id'),
+            "location_id": masterfile.file_data.get('location_id'),
+            "location_name": masterfile.file_data.get('location_name'),
+            "total_rows": len(df),
+            "columns": df.columns.tolist(),
+            "data": df_json
+        }
+        
+        # Update the database record
+        updated_masterfile = masterfile_crud.update_masterfile(
+            db, masterfile.id, updated_file_data
+        )
+        
+        if updated_masterfile:
+            print("Successfully updated masterfile in database")
+            return {
+                "status": "success", 
+                "message": f"Updated {len(matching_rows)} row(s)",
+                "updated_rows": len(matching_rows),
+                "updated_at": updated_file_data['updated_at'],
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to update database")
         
     except Exception as e:
+        print(f"Error in update_masterfile: {str(e)}")
+        print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error updating masterfile: {str(e)}")
-
-
+    
+    
+    
 @router.post("/", response_model=masterfile_schema.MasterFile)
 def create_masterfile(masterfile: masterfile_schema.MasterFileCreate, db: Session = Depends(get_db)):
     """Create a new masterfile record"""
