@@ -6,6 +6,9 @@ from crud import master_file as masterfile_crud
 from schemas import master_file as masterfile_schema
 from database import get_db
 import pandas as pd
+from crud.locations import get_store  # Add this import at the top with your other imports
+
+
 
 router = APIRouter(
     prefix="/api/masterfile",
@@ -241,6 +244,70 @@ def get_masterfile_details(
     
     return {"data": data}        
         
+
+
+@router.put("/updatelocation/{company_id}/{location_id}/{filename}/{new_location_id}", response_model=masterfile_schema.MasterFile)
+def update_masterfile(
+    company_id: int,
+    location_id: int,  # current location_id to find the record
+    filename: str,
+    new_location_id: int,  # new location_id to update to
+    db: Session = Depends(get_db)
+):
+    """Update a masterfile by company ID, location ID, and filename"""
+    
+    # First, find the existing masterfile
+    masterfile = masterfile_crud.get_masterfile_by_filename_and_location(db, company_id, location_id, filename)
+    if not masterfile:
+        raise HTTPException(status_code=404, detail="Masterfile not found")
+    
+    # Validate that the new location belongs to the specified company
+    new_location = get_store(db, new_location_id)  # Using your existing function
+    if not new_location:
+        raise HTTPException(status_code=404, detail="New location not found")
+    
+    if new_location.company_id != company_id:
+        raise HTTPException(
+            status_code=400, 
+            detail="New location does not belong to the specified company"
+        )
+    
+    # Update the location_id to the new value
+    masterfile.location_id = new_location_id
+    db.commit()
+    db.refresh(masterfile)
+    return masterfile
+
+
+@router.get("/updatefile")
+def update_masterfile(
+    request,  
+    db: Session = Depends(get_db)
+):
+    """Update a masterfile by company ID, location ID, and filename"""
+
+    # # First, find the existing masterfile
+    # masterfile = masterfile_crud.get_masterfile_by_filename_and_location(db, request.company_id, request.location_id, request.filename)
+    # if not masterfile:
+    #     raise HTTPException(status_code=404, detail="Masterfile not found")
+
+    # Update the price to the new value
+    # masterfile.price = price
+    # db.commit()
+    # db.refresh(masterfile)
+    
+    print(request)
+    data = {
+        "request": request,
+        # "masterfile_id": masterfile.id,  # Return the ID instead of the whole object
+        # "filename": masterfile.filename,
+        # "company_id": masterfile.company_id,
+        # "location_id": masterfile.location_id
+    }
+    print("i am here in masterfile printing the master file", data)
+    return data
+
+
 @router.post("/", response_model=masterfile_schema.MasterFile)
 def create_masterfile(masterfile: masterfile_schema.MasterFileCreate, db: Session = Depends(get_db)):
     """Create a new masterfile record"""

@@ -826,6 +826,7 @@ const MasterFile = () => {
   const [previousPriceColumn, setPreviousPriceColumn] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editPrice, setEditPrice] = useState("");
+  const [savingRowId, setSavingRowId] = useState(null); // New state for tracking save operation
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -884,17 +885,29 @@ const MasterFile = () => {
         }
 
         // Process dataframe items
-        const processedItems = response.data.dataframe.map((item, index) => ({
-          ...item,
-          id: `${response.company_id}_${response.location_id}_${index}`, // Unique ID
-          _meta: {
-            company_id: response.company_id,
-            location_id: response.location_id,
-            filename: response.filename,
-            company_name: response.company_name,
-            location_name: response.location_name
+        const processedItems = response.data.dataframe.map((item, index) => {
+          const processedItem = {
+            ...item,
+            id: `${response.company_id}_${response.location_id}_${index}`, // Unique ID
+            _meta: {
+              company_id: response.company_id,
+              location_id: response.location_id,
+              filename: response.filename,
+              company_name: response.company_name,
+              location_name: response.location_name
+            }
+          };
+
+          // Clean up previous price column if it exists
+          if (previousPriceCol && processedItem[previousPriceCol]) {
+            const prevPrice = parseFloat(processedItem[previousPriceCol]);
+            if (isNaN(prevPrice) || prevPrice <= 0) {
+              processedItem[previousPriceCol] = null; // Set to null for invalid values
+            }
           }
-        }));
+
+          return processedItem;
+        });
 
         allItems = [...allItems, ...processedItems];
       }
@@ -1241,21 +1254,77 @@ const MasterFile = () => {
     setEditPrice(currentPrice.toString());
   };
 
-  const handleSaveClick = (id) => {
+  const handleSaveClick = async (id) => {
     const newPrice = parseFloat(editPrice);
     if (!isNaN(newPrice) && newPrice > 0 && currentPriceColumn && previousPriceColumn) {
+      const itemToUpdate = items.find(item => item.id === id);
+      if (!itemToUpdate) return;
+
+      setSavingRowId(id); // Set saving state
+
+      // Update local state first
+      const updatedItem = {
+        ...itemToUpdate,
+        [previousPriceColumn]: itemToUpdate[currentPriceColumn], // Move current to previous
+        [currentPriceColumn]: newPrice, // Set new current price
+      };
+
       setItems((prevItems) =>
         prevItems.map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                [previousPriceColumn]: item[currentPriceColumn], // Move current to previous
-                [currentPriceColumn]: newPrice, // Set new current price
-              }
-            : item
+          item.id === id ? updatedItem : item
         )
       );
+
+      // Prepare data for API call
+      try {
+        const updateData = {
+          company_id: itemToUpdate._meta.company_id,
+          location_id: itemToUpdate._meta.location_id,
+          filename: itemToUpdate._meta.filename,
+          row_data: {
+            ...updatedItem,
+            // Remove metadata from row data
+            _meta: undefined,
+            id: undefined
+          }
+        };
+        console.log("Preparing to update row:", updateData);
+        // Send update to API
+        const response = await apiClient.post("/api/master/updatefile", updateData);
+        
+        console.log("Row update response:", response.data);
+        
+        // Show success message
+        setUploadStatus({
+          type: "success",
+          message: `Successfully updated item in ${itemToUpdate._meta.filename}`
+        });
+        
+        // Auto-clear success message after 3 seconds
+        setTimeout(() => setUploadStatus(null), 3000);
+
+      } catch (error) {
+        console.error("Error updating row:", error);
+        
+        // Revert local state change on API failure
+        setItems((prevItems) =>
+          prevItems.map((item) =>
+            item.id === id ? itemToUpdate : item
+          )
+        );
+        
+        setUploadStatus({
+          type: "error",
+          message: error.response?.data?.detail || "Failed to update item"
+        });
+        
+        // Auto-clear error message after 5 seconds
+        setTimeout(() => setUploadStatus(null), 5000);
+      } finally {
+        setSavingRowId(null); // Clear saving state
+      }
     }
+    
     setEditingId(null);
     setEditPrice("");
   };
@@ -1263,6 +1332,7 @@ const MasterFile = () => {
   const handleCancelClick = () => {
     setEditingId(null);
     setEditPrice("");
+    setSavingRowId(null); // Clear any saving state
   };
 
   const handleChangePage = (event, newPage) => {
@@ -1357,15 +1427,18 @@ const MasterFile = () => {
     
     // Handle previous price column
     if (columnKey === previousPriceColumn) {
+      const numericValue = parseFloat(value);
+      const isValidPrice = !isNaN(numericValue) && numericValue > 0;
+      
       return (
         <Typography
           variant="body2"
           style={{
             color: "#666",
-            fontStyle: value ? "normal" : "italic",
+            fontStyle: isValidPrice ? "normal" : "italic",
           }}
         >
-          {value ? `$${parseFloat(value).toFixed(2)}` : "-"}
+          {isValidPrice ? `${numericValue.toFixed(2)}` : "-"}
         </Typography>
       );
     }
@@ -1746,8 +1819,13 @@ const MasterFile = () => {
                             size="small"
                             color="success"
                             onClick={() => handleSaveClick(item.id)}
+                            disabled={savingRowId === item.id}
                           >
-                            <SaveIcon fontSize="small" />
+                            {savingRowId === item.id ? (
+                              <LinearProgress style={{ width: 16, height: 16 }} />
+                            ) : (
+                              <SaveIcon fontSize="small" />
+                            )}
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Cancel">
@@ -1755,6 +1833,7 @@ const MasterFile = () => {
                             size="small"
                             color="error"
                             onClick={handleCancelClick}
+                            disabled={savingRowId === item.id}
                           >
                             <CancelIcon fontSize="small" />
                           </IconButton>
@@ -1768,7 +1847,7 @@ const MasterFile = () => {
                           onClick={() =>
                             handleEditClick(item.id, item[currentPriceColumn])
                           }
-                          disabled={!currentPriceColumn}
+                          disabled={!currentPriceColumn || savingRowId !== null}
                         >
                           <EditIcon fontSize="small" />
                         </IconButton>
