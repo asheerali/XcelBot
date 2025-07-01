@@ -1288,7 +1288,7 @@ const MasterFile = () => {
             id: undefined
           }
         };
-        console.log("Preparing to update row:", updateData);
+        
         // Send update to API
         const response = await apiClient.post("/api/masterfile/updatefile", updateData);
         

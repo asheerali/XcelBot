@@ -279,33 +279,37 @@ def update_masterfile(
     return masterfile
 
 
-@router.get("/updatefile")
+from pydantic import BaseModel
+from typing import Dict, Any
+
+class UpdateMasterFileRequest(BaseModel):
+    company_id: int
+    location_id: int
+    filename: str
+    row_data: Dict[str, Any]
+
+@router.post("/updatefile")
 def update_masterfile(
-    request,  
+    request: UpdateMasterFileRequest,
     db: Session = Depends(get_db)
 ):
-    """Update a masterfile by company ID, location ID, and filename"""
-
-    # # First, find the existing masterfile
-    # masterfile = masterfile_crud.get_masterfile_by_filename_and_location(db, request.company_id, request.location_id, request.filename)
-    # if not masterfile:
-    #     raise HTTPException(status_code=404, detail="Masterfile not found")
-
-    # Update the price to the new value
-    # masterfile.price = price
-    # db.commit()
-    # db.refresh(masterfile)
+    """Update a masterfile row"""
     
-    print(request)
-    data = {
-        "request": request,
-        # "masterfile_id": masterfile.id,  # Return the ID instead of the whole object
-        # "filename": masterfile.filename,
-        # "company_id": masterfile.company_id,
-        # "location_id": masterfile.location_id
-    }
-    print("i am here in masterfile printing the master file", data)
-    return data
+    try:
+        # First, find the existing masterfile
+        masterfile = masterfile_crud.get_masterfile_by_filename_and_location(
+            db, request.company_id, request.location_id, request.filename
+        )
+        if not masterfile:
+            raise HTTPException(status_code=404, detail="Masterfile not found")
+
+        # Your update logic here
+        
+        # Return minimal response if you don't want much data
+        return {"status": "updated"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating masterfile: {str(e)}")
 
 
 @router.post("/", response_model=masterfile_schema.MasterFile)
