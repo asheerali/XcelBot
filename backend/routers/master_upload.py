@@ -57,12 +57,19 @@ async def master_upload(
             
             # Read Excel file - you might want to handle multiple sheets
             df = pd.read_excel(excel_data, sheet_name=0)  # Read first sheet
-            print(f"Successfully read Excel file with {len(df)} rows and {len(df.columns)} columns")
             
+            # Fill the "Previous Price" column with a dash ('-')
+            df['Previous Price'] = '-'
+            print(f"Successfully read Excel file with {len(df)} rows and {len(df.columns)} columns")
+            print("printing the df head")
+            print(df.head())
+            print("--------------------------------------------------")
             # Convert DataFrame to JSON format
             # Handle datetime objects and other non-serializable types
             df_json = df.to_dict('records')
-            
+            # df_reconstructed = pd.DataFrame(df_json)
+            # print(f"Reconstructed DataFrame printing: {df_reconstructed.head()}")
+
             # Convert any datetime objects to strings
             for record in df_json:
                 for key, value in record.items():
@@ -75,11 +82,11 @@ async def master_upload(
             
             # Prepare file data for database storage
             file_data = {
-                "original_filename": request.fileName,
+                # "original_filename": request.fileName,
                 "upload_date": datetime.datetime.now().isoformat(),
                 "user_id": current_user.id,
-                "location": request.location,
-                "dashboard": request.dashboard,
+                # "location": request.location,
+                # "dashboard": request.dashboard,
                 "total_rows": len(df),
                 "columns": df.columns.tolist(),
                 "data": df_json
@@ -130,6 +137,11 @@ async def master_upload(
             "preview_rows": len(columns_data)
         }
         
+        print("--------------------------------------------------")
+        print("i am here in master_upload, returning response")
+        print(master_response)
+        print("--------------------------------------------------")
+
         return master_response
         
     except HTTPException:

@@ -15,6 +15,10 @@ def get_masterfile(db: Session, masterfile_id: int):
     """Get a masterfile record by ID"""
     return db.query(MasterFile).filter(MasterFile.id == masterfile_id).first()
 
+def get_all_masterfiles(db: Session, skip: int = 0, limit: int = 100):
+    """Get all masterfile records with pagination"""
+    return db.query(MasterFile).offset(skip).limit(limit).all()
+
 def get_masterfile_by_company(db: Session, company_id: int, skip: int = 0, limit: int = 100):
     """Get masterfile records by company ID with pagination"""
     return db.query(MasterFile).filter(MasterFile.company_id == company_id).offset(skip).limit(limit).all()
@@ -33,7 +37,8 @@ def update_masterfile(db: Session, masterfile_id: int, file_data: dict):
         db_obj.file_data = file_data
         db.commit()
         db.refresh(db_obj)
-    return db_obj
+        return db_obj
+    return None
 
 def delete_masterfile(db: Session, masterfile_id: int):
     """Delete a masterfile record"""
@@ -41,7 +46,8 @@ def delete_masterfile(db: Session, masterfile_id: int):
     if db_obj:
         db.delete(db_obj)
         db.commit()
-    return db_obj
+        return True
+    return False
 
 def bulk_create_masterfile(db: Session, objects: List[MasterFileCreate]):
     """Bulk create multiple masterfile records"""

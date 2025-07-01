@@ -8,7 +8,7 @@ from requests import Session
 from models import locations
 from routers import locations
 from database import engine, SessionLocal
-from routers import excel_upload, sales_split_filter, health, companywide_filter, pmix_filter, financials_filter, master_upload
+from routers import excel_upload, sales_split_filter, health, companywide_filter, pmix_filter, financials_filter, master_upload, masterfile
 # Import from local modules
 from models import users,user_company_companylocation ,locations,company_locations, permissions, user_company, payments, subscriptions, dashboards, user_dashboard_permissions, uploaded_files, file_permissions, companies, master_file
 from database import get_db
@@ -61,6 +61,7 @@ app.include_router(financials_filter.router)
 app.include_router(companywide_filter.router)
 app.include_router(health.router)
 app.include_router(master_upload.router)
+app.include_router(masterfile.router)
 
 # for the databases
 from routers import (users, 
