@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+// import axios from 'axios';
+import apiClient from "../api/axiosConfig"; // Adjust path as needed
 import {
   Box,
   Typography,
@@ -34,27 +35,27 @@ import {
   Slider,
   FormControlLabel,
   Switch,
-  Grid
-} from '@mui/material';
+  Grid,
+} from "@mui/material";
 
 // Icons
-import EditIcon from '@mui/icons-material/Edit';
-import SaveIcon from '@mui/icons-material/Save';
-import CancelIcon from '@mui/icons-material/Cancel';
-import SearchIcon from '@mui/icons-material/Search';
-import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import DescriptionIcon from '@mui/icons-material/Description';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ClearIcon from '@mui/icons-material/Clear';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import BusinessIcon from '@mui/icons-material/Business';
-import FiltersOrderIQ from '../components/FiltersOrderIQ';
-import DateRangeSelector from '../components/DateRangeSelector';
-import { API_URL_Local } from '../constants';
+import EditIcon from "@mui/icons-material/Edit";
+import SaveIcon from "@mui/icons-material/Save";
+import CancelIcon from "@mui/icons-material/Cancel";
+import SearchIcon from "@mui/icons-material/Search";
+import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import DescriptionIcon from "@mui/icons-material/Description";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ClearIcon from "@mui/icons-material/Clear";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import BusinessIcon from "@mui/icons-material/Business";
+import FiltersOrderIQ from "../components/FiltersOrderIQ";
+import DateRangeSelector from "../components/DateRangeSelector";
+import { API_URL_Local } from "../constants";
 
 // Types
 interface Company {
@@ -77,7 +78,7 @@ interface FilterOption {
 // DateRangeSelector Button Component
 const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedRange, setSelectedRange] = useState('Date Range');
+  const [selectedRange, setSelectedRange] = useState("Date Range");
   const [tempRange, setTempRange] = useState(null);
 
   const handleOpen = () => setIsOpen(true);
@@ -102,7 +103,7 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
 
   const handleClear = (event) => {
     event.stopPropagation();
-    setSelectedRange('Date Range');
+    setSelectedRange("Date Range");
     onDateRangeSelect(null);
   };
 
@@ -111,21 +112,23 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
       <Button
         variant="outlined"
         startIcon={<CalendarTodayIcon />}
-        endIcon={selectedRange !== 'Date Range' && (
-          <IconButton 
-            size="small" 
-            onClick={handleClear}
-            style={{ padding: '2px', marginLeft: '4px' }}
-          >
-            <ClearIcon style={{ fontSize: '16px' }} />
-          </IconButton>
-        )}
+        endIcon={
+          selectedRange !== "Date Range" && (
+            <IconButton
+              size="small"
+              onClick={handleClear}
+              style={{ padding: "2px", marginLeft: "4px" }}
+            >
+              <ClearIcon style={{ fontSize: "16px" }} />
+            </IconButton>
+          )
+        }
         onClick={handleOpen}
         style={{
-          borderRadius: '8px',
-          textTransform: 'none',
-          minWidth: '180px',
-          justifyContent: 'flex-start'
+          borderRadius: "8px",
+          textTransform: "none",
+          minWidth: "180px",
+          justifyContent: "flex-start",
         }}
       >
         {selectedRange}
@@ -138,54 +141,55 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
         fullWidth
         PaperProps={{
           style: {
-            borderRadius: '12px',
-            maxHeight: '80vh'
-          }
+            borderRadius: "12px",
+            maxHeight: "80vh",
+          },
         }}
       >
-        <DialogTitle style={{ 
-          borderBottom: '1px solid #e0e0e0',
-          paddingBottom: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px'
-        }}>
+        <DialogTitle
+          style={{
+            borderBottom: "1px solid #e0e0e0",
+            paddingBottom: "16px",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+          }}
+        >
           <CalendarTodayIcon color="primary" />
           Select Date Range
         </DialogTitle>
-        
-        <DialogContent style={{ padding: '0' }}>
-          <DateRangeSelector 
+
+        <DialogContent style={{ padding: "0" }}>
+          <DateRangeSelector
             initialState={[
               {
                 startDate: new Date(),
                 endDate: new Date(),
-                key: 'selection'
-              }
+                key: "selection",
+              },
             ]}
-            onSelect={handleDateRangeSelect} 
+            onSelect={handleDateRangeSelect}
           />
         </DialogContent>
-        
-        <DialogActions style={{ 
-          padding: '16px 24px',
-          borderTop: '1px solid #e0e0e0',
-          justifyContent: 'space-between'
-        }}>
-          <Typography variant="body2" style={{ color: '#666' }}>
-            {tempRange && `${tempRange.startDate?.toLocaleDateString()} - ${tempRange.endDate?.toLocaleDateString()}`}
+
+        <DialogActions
+          style={{
+            padding: "16px 24px",
+            borderTop: "1px solid #e0e0e0",
+            justifyContent: "space-between",
+          }}
+        >
+          <Typography variant="body2" style={{ color: "#666" }}>
+            {tempRange &&
+              `${tempRange.startDate?.toLocaleDateString()} - ${tempRange.endDate?.toLocaleDateString()}`}
           </Typography>
-          <Box style={{ display: 'flex', gap: '8px' }}>
-            <Button 
-              onClick={handleClose}
-              color="secondary"
-              variant="outlined"
-            >
+          <Box style={{ display: "flex", gap: "8px" }}>
+            <Button onClick={handleClose} color="secondary" variant="outlined">
               Cancel
             </Button>
-            <Button 
-              onClick={handleApply} 
-              variant="contained" 
+            <Button
+              onClick={handleApply}
+              variant="contained"
               color="primary"
               disabled={!tempRange}
             >
@@ -199,23 +203,23 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
 };
 
 // FiltersOrderIQ2 Component
-const FiltersOrderIQ2 = ({ 
-  onFiltersChange, 
-  totalItems, 
+const FiltersOrderIQ2 = ({
+  onFiltersChange,
+  totalItems,
   filteredItems,
   units = [],
-  categories = []
+  categories = [],
 }) => {
   const [filters, setFilters] = useState({
     priceRange: [0, 20],
-    stockStatus: 'all',
-    unit: 'all',
-    category: 'all',
-    priceChange: 'all',
+    stockStatus: "all",
+    unit: "all",
+    category: "all",
+    priceChange: "all",
     showLowStock: false,
-    showOutOfStock: false
+    showOutOfStock: false,
   });
-  
+
   const [expanded, setExpanded] = useState(false);
 
   const handleFilterChange = (filterName, value) => {
@@ -227,12 +231,12 @@ const FiltersOrderIQ2 = ({
   const clearAllFilters = () => {
     const clearedFilters = {
       priceRange: [0, 20],
-      stockStatus: 'all',
-      unit: 'all',
-      category: 'all',
-      priceChange: 'all',
+      stockStatus: "all",
+      unit: "all",
+      category: "all",
+      priceChange: "all",
       showLowStock: false,
-      showOutOfStock: false
+      showOutOfStock: false,
     };
     setFilters(clearedFilters);
     onFiltersChange(clearedFilters);
@@ -240,10 +244,10 @@ const FiltersOrderIQ2 = ({
 
   const getActiveFiltersCount = () => {
     let count = 0;
-    if (filters.stockStatus !== 'all') count++;
-    if (filters.unit !== 'all') count++;
-    if (filters.category !== 'all') count++;
-    if (filters.priceChange !== 'all') count++;
+    if (filters.stockStatus !== "all") count++;
+    if (filters.unit !== "all") count++;
+    if (filters.category !== "all") count++;
+    if (filters.priceChange !== "all") count++;
     if (filters.showLowStock) count++;
     if (filters.showOutOfStock) count++;
     if (filters.priceRange[0] > 0 || filters.priceRange[1] < 20) count++;
@@ -252,66 +256,83 @@ const FiltersOrderIQ2 = ({
 
   return (
     <Box style={{ marginBottom: 24 }}>
-      <Accordion 
-        expanded={expanded} 
+      <Accordion
+        expanded={expanded}
         onChange={() => setExpanded(!expanded)}
-        style={{ 
-          border: '1px solid #e0e0e0',
+        style={{
+          border: "1px solid #e0e0e0",
           borderRadius: 8,
-          boxShadow: 'none',
-          '&:before': { display: 'none' }
+          boxShadow: "none",
+          "&:before": { display: "none" },
         }}
       >
-        <AccordionSummary 
+        <AccordionSummary
           expandIcon={<ExpandMoreIcon />}
-          style={{ 
-            backgroundColor: '#f8f9fa',
-            borderRadius: expanded ? '8px 8px 0 0' : '8px',
-            minHeight: 64
+          style={{
+            backgroundColor: "#f8f9fa",
+            borderRadius: expanded ? "8px 8px 0 0" : "8px",
+            minHeight: 64,
           }}
         >
-          <Box style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginRight: 16 }}>
-            <Box style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Box
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              width: "100%",
+              marginRight: 16,
+            }}
+          >
+            <Box style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <FilterListIcon color="primary" />
               <Typography variant="h6" style={{ fontWeight: 600 }}>
                 Advanced Filters & Search
               </Typography>
               {getActiveFiltersCount() > 0 && (
-                <Chip 
+                <Chip
                   label={`${getActiveFiltersCount()} active`}
                   color="primary"
                   size="small"
                 />
               )}
             </Box>
-            <Typography variant="body2" style={{ color: '#666' }}>
+            <Typography variant="body2" style={{ color: "#666" }}>
               Showing {filteredItems} of {totalItems} items
             </Typography>
           </Box>
         </AccordionSummary>
-        
+
         <AccordionDetails style={{ padding: 24 }}>
           <Grid container spacing={3}>
             {/* Price Range Filter */}
             <Grid item xs={12} md={3}>
-              <Typography gutterBottom variant="subtitle2" style={{ fontWeight: 600 }}>
+              <Typography
+                gutterBottom
+                variant="subtitle2"
+                style={{ fontWeight: 600 }}
+              >
                 Price Range
               </Typography>
               <Box style={{ paddingLeft: 8, paddingRight: 8 }}>
                 <Slider
                   value={filters.priceRange}
-                  onChange={(e, newValue) => handleFilterChange('priceRange', newValue)}
+                  onChange={(e, newValue) =>
+                    handleFilterChange("priceRange", newValue)
+                  }
                   valueLabelDisplay="auto"
                   min={0}
                   max={20}
                   step={0.25}
                   marks={[
-                    { value: 0, label: '$0' },
-                    { value: 10, label: '$10' },
-                    { value: 20, label: '$20+' }
+                    { value: 0, label: "$0" },
+                    { value: 10, label: "$10" },
+                    { value: 20, label: "$20+" },
                   ]}
                 />
-                <Typography variant="body2" style={{ color: '#666', textAlign: 'center', marginTop: 8 }}>
+                <Typography
+                  variant="body2"
+                  style={{ color: "#666", textAlign: "center", marginTop: 8 }}
+                >
                   ${filters.priceRange[0]} - ${filters.priceRange[1]}
                 </Typography>
               </Box>
@@ -324,7 +345,9 @@ const FiltersOrderIQ2 = ({
                 <Select
                   value={filters.stockStatus}
                   label="Stock Status"
-                  onChange={(e) => handleFilterChange('stockStatus', e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange("stockStatus", e.target.value)
+                  }
                 >
                   <MenuItem value="all">All Items</MenuItem>
                   <MenuItem value="inStock">In Stock</MenuItem>
@@ -341,11 +364,13 @@ const FiltersOrderIQ2 = ({
                 <Select
                   value={filters.unit}
                   label="Unit Type"
-                  onChange={(e) => handleFilterChange('unit', e.target.value)}
+                  onChange={(e) => handleFilterChange("unit", e.target.value)}
                 >
                   <MenuItem value="all">All Units</MenuItem>
-                  {units.map(unit => (
-                    <MenuItem key={unit} value={unit}>{unit}</MenuItem>
+                  {units.map((unit) => (
+                    <MenuItem key={unit} value={unit}>
+                      {unit}
+                    </MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -358,7 +383,9 @@ const FiltersOrderIQ2 = ({
                 <Select
                   value={filters.priceChange}
                   label="Price Change"
-                  onChange={(e) => handleFilterChange('priceChange', e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange("priceChange", e.target.value)
+                  }
                 >
                   <MenuItem value="all">All Changes</MenuItem>
                   <MenuItem value="increased">Price Increased</MenuItem>
@@ -370,15 +397,20 @@ const FiltersOrderIQ2 = ({
 
             {/* Toggle Switches */}
             <Grid item xs={12} md={3}>
-              <Typography variant="subtitle2" style={{ fontWeight: 600, marginBottom: 8 }}>
+              <Typography
+                variant="subtitle2"
+                style={{ fontWeight: 600, marginBottom: 8 }}
+              >
                 Quick Filters
               </Typography>
-              <Box style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <Box style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <FormControlLabel
                   control={
                     <Switch
                       checked={filters.showLowStock}
-                      onChange={(e) => handleFilterChange('showLowStock', e.target.checked)}
+                      onChange={(e) =>
+                        handleFilterChange("showLowStock", e.target.checked)
+                      }
                       size="small"
                     />
                   }
@@ -388,7 +420,9 @@ const FiltersOrderIQ2 = ({
                   control={
                     <Switch
                       checked={filters.showOutOfStock}
-                      onChange={(e) => handleFilterChange('showOutOfStock', e.target.checked)}
+                      onChange={(e) =>
+                        handleFilterChange("showOutOfStock", e.target.checked)
+                      }
                       size="small"
                     />
                   }
@@ -400,7 +434,13 @@ const FiltersOrderIQ2 = ({
 
           {/* Clear Filters Button */}
           {getActiveFiltersCount() > 0 && (
-            <Box style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #e0e0e0' }}>
+            <Box
+              style={{
+                marginTop: 16,
+                paddingTop: 16,
+                borderTop: "1px solid #e0e0e0",
+              }}
+            >
               <Button
                 startIcon={<ClearIcon />}
                 onClick={clearAllFilters}
@@ -419,48 +459,248 @@ const FiltersOrderIQ2 = ({
 
 // Mock data with more items
 const initialItems = [
-  { id: 1, code: '12OZCO_7415', name: '12 oz coffee cup', currentPrice: 2.34, previousPrice: 2.20, unit: 'Bag', stock: 0 },
-  { id: 2, code: '12OZCO_5802', name: '12 oz coffee cup', currentPrice: 2.34, previousPrice: 2.25, unit: 'Bag', stock: 0 },
-  { id: 3, code: '12OZCO_0995', name: '12 oz coffee cup', currentPrice: 2.34, previousPrice: 2.30, unit: 'Bag', stock: 0 },
-  { id: 4, code: '16OZCO_7415', name: '16 oz coffee cup', currentPrice: 2.30, previousPrice: 2.15, unit: 'Bag', stock: 0 },
-  { id: 5, code: '16OZCO_5802', name: '16 oz coffee cup', currentPrice: 2.30, previousPrice: 2.20, unit: 'Bag', stock: 0 },
-  { id: 6, code: '20OZCO_1234', name: '20 oz coffee cup', currentPrice: 2.50, previousPrice: 2.35, unit: 'Bag', stock: 15 },
-  { id: 7, code: 'NAPKIN_001', name: 'Paper napkins', currentPrice: 1.25, previousPrice: 1.15, unit: 'Pack', stock: 200 },
-  { id: 8, code: 'STIRRER_99', name: 'Coffee stirrers', currentPrice: 0.85, previousPrice: 0.80, unit: 'Box', stock: 50 },
-  { id: 9, code: 'SLEEVE_12', name: '12 oz cup sleeves', currentPrice: 1.95, previousPrice: 1.85, unit: 'Pack', stock: 0 },
-  { id: 10, code: 'SLEEVE_16', name: '16 oz cup sleeves', currentPrice: 2.10, previousPrice: 1.95, unit: 'Pack', stock: 25 },
-  { id: 11, code: 'LID_12_WHITE', name: '12 oz white lid', currentPrice: 1.75, previousPrice: 1.65, unit: 'Bag', stock: 0 },
-  { id: 12, code: 'LID_16_WHITE', name: '16 oz white lid', currentPrice: 1.85, previousPrice: 1.70, unit: 'Bag', stock: 30 },
-  { id: 13, code: 'SUGAR_PACK', name: 'Sugar packets', currentPrice: 0.05, previousPrice: 0.04, unit: 'Each', stock: 1000 },
-  { id: 14, code: 'CREAM_PACK', name: 'Cream packets', currentPrice: 0.08, previousPrice: 0.07, unit: 'Each', stock: 500 },
-  { id: 15, code: 'STRAW_BEND', name: 'Bendable straws', currentPrice: 0.95, previousPrice: 0.85, unit: 'Pack', stock: 75 },
-  { id: 16, code: 'FORK_PLAST', name: 'Plastic forks', currentPrice: 1.20, previousPrice: 1.10, unit: 'Pack', stock: 100 },
-  { id: 17, code: 'KNIFE_PLAST', name: 'Plastic knives', currentPrice: 1.15, previousPrice: 1.05, unit: 'Pack', stock: 85 },
-  { id: 18, code: 'SPOON_PLAST', name: 'Plastic spoons', currentPrice: 1.10, previousPrice: 1.00, unit: 'Pack', stock: 90 },
-  { id: 19, code: 'PLATE_PAPER', name: 'Paper plates 9"', currentPrice: 3.25, previousPrice: 3.10, unit: 'Pack', stock: 40 },
-  { id: 20, code: 'BOWL_FOAM', name: 'Foam bowls', currentPrice: 2.85, previousPrice: 2.70, unit: 'Pack', stock: 60 },
-  { id: 21, code: 'BAG_TAKEOUT', name: 'Takeout bags', currentPrice: 4.50, previousPrice: 4.25, unit: 'Pack', stock: 25 },
-  { id: 22, code: 'CONTAINER_16', name: '16 oz containers', currentPrice: 5.75, previousPrice: 5.50, unit: 'Pack', stock: 35 },
-  { id: 23, code: 'WRAP_FOIL', name: 'Foil wrap', currentPrice: 8.95, previousPrice: 8.50, unit: 'Roll', stock: 12 },
-  { id: 24, code: 'GLOVES_VINYL', name: 'Vinyl gloves', currentPrice: 12.50, previousPrice: 11.75, unit: 'Box', stock: 20 },
-  { id: 25, code: 'TOWEL_PAPER', name: 'Paper towels', currentPrice: 6.25, previousPrice: 5.95, unit: 'Pack', stock: 18 }
+  {
+    id: 1,
+    code: "12OZCO_7415",
+    name: "12 oz coffee cup",
+    currentPrice: 2.34,
+    previousPrice: 2.2,
+    unit: "Bag",
+    stock: 0,
+  },
+  {
+    id: 2,
+    code: "12OZCO_5802",
+    name: "12 oz coffee cup",
+    currentPrice: 2.34,
+    previousPrice: 2.25,
+    unit: "Bag",
+    stock: 0,
+  },
+  {
+    id: 3,
+    code: "12OZCO_0995",
+    name: "12 oz coffee cup",
+    currentPrice: 2.34,
+    previousPrice: 2.3,
+    unit: "Bag",
+    stock: 0,
+  },
+  {
+    id: 4,
+    code: "16OZCO_7415",
+    name: "16 oz coffee cup",
+    currentPrice: 2.3,
+    previousPrice: 2.15,
+    unit: "Bag",
+    stock: 0,
+  },
+  {
+    id: 5,
+    code: "16OZCO_5802",
+    name: "16 oz coffee cup",
+    currentPrice: 2.3,
+    previousPrice: 2.2,
+    unit: "Bag",
+    stock: 0,
+  },
+  {
+    id: 6,
+    code: "20OZCO_1234",
+    name: "20 oz coffee cup",
+    currentPrice: 2.5,
+    previousPrice: 2.35,
+    unit: "Bag",
+    stock: 15,
+  },
+  {
+    id: 7,
+    code: "NAPKIN_001",
+    name: "Paper napkins",
+    currentPrice: 1.25,
+    previousPrice: 1.15,
+    unit: "Pack",
+    stock: 200,
+  },
+  {
+    id: 8,
+    code: "STIRRER_99",
+    name: "Coffee stirrers",
+    currentPrice: 0.85,
+    previousPrice: 0.8,
+    unit: "Box",
+    stock: 50,
+  },
+  {
+    id: 9,
+    code: "SLEEVE_12",
+    name: "12 oz cup sleeves",
+    currentPrice: 1.95,
+    previousPrice: 1.85,
+    unit: "Pack",
+    stock: 0,
+  },
+  {
+    id: 10,
+    code: "SLEEVE_16",
+    name: "16 oz cup sleeves",
+    currentPrice: 2.1,
+    previousPrice: 1.95,
+    unit: "Pack",
+    stock: 25,
+  },
+  {
+    id: 11,
+    code: "LID_12_WHITE",
+    name: "12 oz white lid",
+    currentPrice: 1.75,
+    previousPrice: 1.65,
+    unit: "Bag",
+    stock: 0,
+  },
+  {
+    id: 12,
+    code: "LID_16_WHITE",
+    name: "16 oz white lid",
+    currentPrice: 1.85,
+    previousPrice: 1.7,
+    unit: "Bag",
+    stock: 30,
+  },
+  {
+    id: 13,
+    code: "SUGAR_PACK",
+    name: "Sugar packets",
+    currentPrice: 0.05,
+    previousPrice: 0.04,
+    unit: "Each",
+    stock: 1000,
+  },
+  {
+    id: 14,
+    code: "CREAM_PACK",
+    name: "Cream packets",
+    currentPrice: 0.08,
+    previousPrice: 0.07,
+    unit: "Each",
+    stock: 500,
+  },
+  {
+    id: 15,
+    code: "STRAW_BEND",
+    name: "Bendable straws",
+    currentPrice: 0.95,
+    previousPrice: 0.85,
+    unit: "Pack",
+    stock: 75,
+  },
+  {
+    id: 16,
+    code: "FORK_PLAST",
+    name: "Plastic forks",
+    currentPrice: 1.2,
+    previousPrice: 1.1,
+    unit: "Pack",
+    stock: 100,
+  },
+  {
+    id: 17,
+    code: "KNIFE_PLAST",
+    name: "Plastic knives",
+    currentPrice: 1.15,
+    previousPrice: 1.05,
+    unit: "Pack",
+    stock: 85,
+  },
+  {
+    id: 18,
+    code: "SPOON_PLAST",
+    name: "Plastic spoons",
+    currentPrice: 1.1,
+    previousPrice: 1.0,
+    unit: "Pack",
+    stock: 90,
+  },
+  {
+    id: 19,
+    code: "PLATE_PAPER",
+    name: 'Paper plates 9"',
+    currentPrice: 3.25,
+    previousPrice: 3.1,
+    unit: "Pack",
+    stock: 40,
+  },
+  {
+    id: 20,
+    code: "BOWL_FOAM",
+    name: "Foam bowls",
+    currentPrice: 2.85,
+    previousPrice: 2.7,
+    unit: "Pack",
+    stock: 60,
+  },
+  {
+    id: 21,
+    code: "BAG_TAKEOUT",
+    name: "Takeout bags",
+    currentPrice: 4.5,
+    previousPrice: 4.25,
+    unit: "Pack",
+    stock: 25,
+  },
+  {
+    id: 22,
+    code: "CONTAINER_16",
+    name: "16 oz containers",
+    currentPrice: 5.75,
+    previousPrice: 5.5,
+    unit: "Pack",
+    stock: 35,
+  },
+  {
+    id: 23,
+    code: "WRAP_FOIL",
+    name: "Foil wrap",
+    currentPrice: 8.95,
+    previousPrice: 8.5,
+    unit: "Roll",
+    stock: 12,
+  },
+  {
+    id: 24,
+    code: "GLOVES_VINYL",
+    name: "Vinyl gloves",
+    currentPrice: 12.5,
+    previousPrice: 11.75,
+    unit: "Box",
+    stock: 20,
+  },
+  {
+    id: 25,
+    code: "TOWEL_PAPER",
+    name: "Paper towels",
+    currentPrice: 6.25,
+    previousPrice: 5.95,
+    unit: "Pack",
+    stock: 18,
+  },
 ];
 
 const MasterFile = () => {
   const [items, setItems] = useState(initialItems);
   const [editingId, setEditingId] = useState(null);
-  const [editPrice, setEditPrice] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [editPrice, setEditPrice] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [filters, setFilters] = useState({
     priceRange: [0, 20],
-    stockStatus: 'all',
-    unit: 'all',
-    category: 'all',
-    priceChange: 'all',
+    stockStatus: "all",
+    unit: "all",
+    category: "all",
+    priceChange: "all",
     showLowStock: false,
-    showOutOfStock: false
+    showOutOfStock: false,
   });
 
   // API Data States
@@ -472,31 +712,69 @@ const MasterFile = () => {
   // State for FiltersOrderIQ component
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  
+
   // Excel upload states
   const [uploadDialog, setUploadDialog] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [selectedCompanyId, setSelectedCompanyId] = useState("");
 
   // Date range selector state
   const [selectedDateRange, setSelectedDateRange] = useState(null);
 
   // Get unique units for filter options
-  const uniqueUnits = [...new Set(items.map(item => item.unit))];
+  const uniqueUnits = [...new Set(items.map((item) => item.unit))];
+
+  // // Fetch companies data
+  // const fetchCompanies = async () => {
+  //   setLoadingCompanies(true);
+  //   try {
+  //     // const response = await axios.get(`${API_URL_Local}/companies`);
+  //     const response = await apiClient.get('/companies');
+
+  //     setCompanies(response.data);
+  //   } catch (error) {
+  //     console.error('Error fetching companies:', error);
+  //     setUploadStatus({
+  //       type: 'error',
+  //       message: 'Failed to fetch companies data'
+  //     });
+  //   } finally {
+  //     setLoadingCompanies(false);
+  //   }
+  // };
+
+  // // Fetch locations/stores data
+  // const fetchLocations = async () => {
+  //   setLoadingLocations(true);
+  //   try {
+  //     // const response = await axios.get(`${API_URL_Local}/stores`);
+  //     const response = await apiClient.get('/stores');
+
+  //     setLocations(response.data);
+  //   } catch (error) {
+  //     console.error('Error fetching stores:', error);
+  //     setUploadStatus({
+  //       type: 'error',
+  //       message: 'Failed to fetch stores data'
+  //     });
+  //   } finally {
+  //     setLoadingLocations(false);
+  //   }
+  // };
 
   // Fetch companies data
   const fetchCompanies = async () => {
     setLoadingCompanies(true);
     try {
-      const response = await axios.get(`${API_URL_Local}/companies`);
+      const response = await apiClient.get("/companies"); // Using apiClient now
       setCompanies(response.data);
     } catch (error) {
-      console.error('Error fetching companies:', error);
-      setUploadStatus({ 
-        type: 'error', 
-        message: 'Failed to fetch companies data' 
+      console.error("Error fetching companies:", error);
+      setUploadStatus({
+        type: "error",
+        message: "Failed to fetch companies data",
       });
     } finally {
       setLoadingCompanies(false);
@@ -507,13 +785,13 @@ const MasterFile = () => {
   const fetchLocations = async () => {
     setLoadingLocations(true);
     try {
-      const response = await axios.get(`${API_URL_Local}/stores`);
+      const response = await apiClient.get("/stores"); // Using apiClient now
       setLocations(response.data);
     } catch (error) {
-      console.error('Error fetching stores:', error);
-      setUploadStatus({ 
-        type: 'error', 
-        message: 'Failed to fetch stores data' 
+      console.error("Error fetching stores:", error);
+      setUploadStatus({
+        type: "error",
+        message: "Failed to fetch stores data",
       });
     } finally {
       setLoadingLocations(false);
@@ -527,14 +805,14 @@ const MasterFile = () => {
   }, []);
 
   // Convert companies and locations to filter options
-  const companyOptions: FilterOption[] = companies.map(company => ({
+  const companyOptions: FilterOption[] = companies.map((company) => ({
     value: company.id.toString(),
-    label: company.name
+    label: company.name,
   }));
 
-  const locationOptions: FilterOption[] = locations.map(location => ({
+  const locationOptions: FilterOption[] = locations.map((location) => ({
     value: location.id.toString(),
-    label: location.name
+    label: location.name,
   }));
 
   // Handler for FiltersOrderIQ filter changes
@@ -548,11 +826,11 @@ const MasterFile = () => {
 
   // Handler for applying FiltersOrderIQ filters
   const handleApplyOrderIQFilters = () => {
-    console.log('Applied FiltersOrderIQ filters:', {
+    console.log("Applied FiltersOrderIQ filters:", {
       companies: selectedCompanies,
-      locations: selectedLocations
+      locations: selectedLocations,
     });
-    
+
     // Here you can integrate these filters with your existing filtering logic
     // For example, you might want to filter items based on selected companies/locations
     setPage(0); // Reset to first page when filters change
@@ -560,36 +838,52 @@ const MasterFile = () => {
 
   // Apply filters to items
   const applyFilters = (itemsList) => {
-    return itemsList.filter(item => {
+    return itemsList.filter((item) => {
       // Search term filter
-      const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           item.code.toLowerCase().includes(searchTerm.toLowerCase());
-      
+      const matchesSearch =
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.code.toLowerCase().includes(searchTerm.toLowerCase());
+
       // Price range filter
-      const withinPriceRange = item.currentPrice >= filters.priceRange[0] && 
-                              item.currentPrice <= filters.priceRange[1];
-      
+      const withinPriceRange =
+        item.currentPrice >= filters.priceRange[0] &&
+        item.currentPrice <= filters.priceRange[1];
+
       // Stock status filter
       let matchesStockStatus = true;
-      if (filters.stockStatus === 'inStock') matchesStockStatus = item.stock > 20;
-      else if (filters.stockStatus === 'lowStock') matchesStockStatus = item.stock > 0 && item.stock <= 20;
-      else if (filters.stockStatus === 'outOfStock') matchesStockStatus = item.stock === 0;
-      
+      if (filters.stockStatus === "inStock")
+        matchesStockStatus = item.stock > 20;
+      else if (filters.stockStatus === "lowStock")
+        matchesStockStatus = item.stock > 0 && item.stock <= 20;
+      else if (filters.stockStatus === "outOfStock")
+        matchesStockStatus = item.stock === 0;
+
       // Unit filter
-      const matchesUnit = filters.unit === 'all' || item.unit === filters.unit;
-      
+      const matchesUnit = filters.unit === "all" || item.unit === filters.unit;
+
       // Price change filter
       let matchesPriceChange = true;
-      if (filters.priceChange === 'increased') matchesPriceChange = item.currentPrice > item.previousPrice;
-      else if (filters.priceChange === 'decreased') matchesPriceChange = item.currentPrice < item.previousPrice;
-      else if (filters.priceChange === 'unchanged') matchesPriceChange = item.currentPrice === item.previousPrice;
-      
+      if (filters.priceChange === "increased")
+        matchesPriceChange = item.currentPrice > item.previousPrice;
+      else if (filters.priceChange === "decreased")
+        matchesPriceChange = item.currentPrice < item.previousPrice;
+      else if (filters.priceChange === "unchanged")
+        matchesPriceChange = item.currentPrice === item.previousPrice;
+
       // Quick filters
-      const matchesLowStock = !filters.showLowStock || (item.stock > 0 && item.stock <= 20);
+      const matchesLowStock =
+        !filters.showLowStock || (item.stock > 0 && item.stock <= 20);
       const matchesOutOfStock = filters.showOutOfStock || item.stock > 0;
-      
-      return matchesSearch && withinPriceRange && matchesStockStatus && 
-             matchesUnit && matchesPriceChange && matchesLowStock && matchesOutOfStock;
+
+      return (
+        matchesSearch &&
+        withinPriceRange &&
+        matchesStockStatus &&
+        matchesUnit &&
+        matchesPriceChange &&
+        matchesLowStock &&
+        matchesOutOfStock
+      );
     });
   };
 
@@ -615,21 +909,25 @@ const MasterFile = () => {
   const handleSaveClick = (id) => {
     const newPrice = parseFloat(editPrice);
     if (!isNaN(newPrice) && newPrice > 0) {
-      setItems(prevItems =>
-        prevItems.map(item =>
+      setItems((prevItems) =>
+        prevItems.map((item) =>
           item.id === id
-            ? { ...item, previousPrice: item.currentPrice, currentPrice: newPrice }
+            ? {
+                ...item,
+                previousPrice: item.currentPrice,
+                currentPrice: newPrice,
+              }
             : item
         )
       );
     }
     setEditingId(null);
-    setEditPrice('');
+    setEditPrice("");
   };
 
   const handleCancelClick = () => {
     setEditingId(null);
-    setEditPrice('');
+    setEditPrice("");
   };
 
   const handleChangePage = (event, newPage) => {
@@ -642,9 +940,9 @@ const MasterFile = () => {
   };
 
   const getStockStatus = (stock) => {
-    if (stock === 0) return { label: 'Out of Stock', color: 'error' };
-    if (stock <= 20) return { label: 'Low Stock', color: 'warning' };
-    return { label: 'In Stock', color: 'success' };
+    if (stock === 0) return { label: "Out of Stock", color: "error" };
+    if (stock <= 20) return { label: "Low Stock", color: "warning" };
+    return { label: "In Stock", color: "success" };
   };
 
   // Convert file to base64
@@ -655,7 +953,7 @@ const MasterFile = () => {
       reader.onload = () => {
         const result = reader.result as string;
         // Remove the data:application/...;base64, prefix
-        const base64 = result.split(',')[1];
+        const base64 = result.split(",")[1];
         resolve(base64);
       };
       reader.onerror = (error) => reject(error);
@@ -667,26 +965,94 @@ const MasterFile = () => {
     const file = event.target.files[0];
     if (file) {
       const validTypes = [
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/vnd.ms-excel',
-        'text/csv'
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-excel",
+        "text/csv",
       ];
-      
-      if (validTypes.includes(file.type) || file.name.match(/\.(xlsx|xls|csv)$/i)) {
+
+      if (
+        validTypes.includes(file.type) ||
+        file.name.match(/\.(xlsx|xls|csv)$/i)
+      ) {
         setSelectedFile(file);
         setUploadStatus(null);
       } else {
-        setUploadStatus({ type: 'error', message: 'Please select a valid Excel file (.xlsx, .xls) or CSV file.' });
+        setUploadStatus({
+          type: "error",
+          message:
+            "Please select a valid Excel file (.xlsx, .xls) or CSV file.",
+        });
         setSelectedFile(null);
       }
     }
   };
 
+  // const handleUploadFile = async () => {
+  //   if (!selectedFile || !selectedCompanyId) {
+  //     setUploadStatus({
+  //       type: "error",
+  //       message: "Please select both a file and a company",
+  //     });
+  //     return;
+  //   }
+
+  //   setUploading(true);
+  //   setUploadStatus(null);
+
+  //   try {
+  //     // Convert file to base64
+  //     const fileContent = await fileToBase64(selectedFile);
+
+  //     // Prepare upload data
+  //     const uploadData = {
+  //       company_id: parseInt(selectedCompanyId),
+  //       fileName: selectedFile.name,
+  //       fileContent: fileContent,
+  //     };
+
+  //     // Send to API
+  //     // const response = await axios.post(`${API_URL_Local}/api/master/upload`, uploadData, {
+  //     //   headers: {
+  //     //     'Content-Type': 'application/json',
+  //     //   }
+  //     // });
+  //     const response = await apiClient.post("/api/master/upload", uploadData);
+
+  //     setUploadStatus({
+  //       type: "success",
+  //       message: `Successfully uploaded ${selectedFile.name} for ${
+  //         companies.find((c) => c.id.toString() === selectedCompanyId)?.name
+  //       }`,
+  //     });
+
+  //     // Reset after successful upload
+  //     setTimeout(() => {
+  //       setUploadDialog(false);
+  //       setSelectedFile(null);
+  //       setSelectedCompanyId("");
+  //       setUploadStatus(null);
+  //     }, 2000);
+
+  //     console.log("Upload response:", response.data);
+  //   } catch (error) {
+  //     console.error("Upload error:", error);
+  //     setUploadStatus({
+  //       type: "error",
+  //       message:
+  //         error.response?.data?.message ||
+  //         "Failed to upload file. Please try again.",
+  //     });
+  //   } finally {
+  //     setUploading(false);
+  //   }
+  // };
+
+  // Upload function
   const handleUploadFile = async () => {
     if (!selectedFile || !selectedCompanyId) {
-      setUploadStatus({ 
-        type: 'error', 
-        message: 'Please select both a file and a company' 
+      setUploadStatus({
+        type: "error",
+        message: "Please select both a file and a company",
       });
       return;
     }
@@ -697,41 +1063,40 @@ const MasterFile = () => {
     try {
       // Convert file to base64
       const fileContent = await fileToBase64(selectedFile);
-      
+
       // Prepare upload data
       const uploadData = {
         company_id: parseInt(selectedCompanyId),
         fileName: selectedFile.name,
-        fileContent: fileContent
+        fileContent: fileContent,
       };
 
-      // Send to API
-      const response = await axios.post(`${API_URL_Local}/api/master/upload`, uploadData, {
-        headers: {
-          'Content-Type': 'application/json',
-        }
+      // Send to API using apiClient (will include auth token automatically)
+      const response = await apiClient.post("/api/master/upload", uploadData);
+
+      setUploadStatus({
+        type: "success",
+        message: `Successfully uploaded ${selectedFile.name} for ${
+          companies.find((c) => c.id.toString() === selectedCompanyId)?.name
+        }`,
       });
 
-      setUploadStatus({ 
-        type: 'success', 
-        message: `Successfully uploaded ${selectedFile.name} for ${companies.find(c => c.id.toString() === selectedCompanyId)?.name}` 
-      });
-      
       // Reset after successful upload
       setTimeout(() => {
         setUploadDialog(false);
         setSelectedFile(null);
-        setSelectedCompanyId('');
+        setSelectedCompanyId("");
         setUploadStatus(null);
       }, 2000);
 
-      console.log('Upload response:', response.data);
-
+      console.log("Upload response:", response.data);
     } catch (error) {
-      console.error('Upload error:', error);
-      setUploadStatus({ 
-        type: 'error', 
-        message: error.response?.data?.message || 'Failed to upload file. Please try again.' 
+      console.error("Upload error:", error);
+      setUploadStatus({
+        type: "error",
+        message:
+          error.response?.data?.detail ||
+          "Failed to upload file. Please try again.",
       });
     } finally {
       setUploading(false);
@@ -741,7 +1106,7 @@ const MasterFile = () => {
   const handleCloseUploadDialog = () => {
     setUploadDialog(false);
     setSelectedFile(null);
-    setSelectedCompanyId('');
+    setSelectedCompanyId("");
     setUploadStatus(null);
     setUploading(false);
   };
@@ -749,32 +1114,39 @@ const MasterFile = () => {
   // Date range handler
   const handleDateRangeSelect = (range) => {
     setSelectedDateRange(range);
-    console.log('Selected date range:', range);
+    console.log("Selected date range:", range);
     // Here you would typically filter items based on the selected date range
     // For example: filterItemsByDateRange(range);
   };
 
   return (
     <Container maxWidth="xl" style={{ paddingTop: 24, paddingBottom: 24 }}>
-      <Paper 
-        style={{ 
-          borderRadius: 8, 
-          overflow: 'hidden',
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+      <Paper
+        style={{
+          borderRadius: 8,
+          overflow: "hidden",
+          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
         }}
       >
-        
         {/* Header Section */}
-        <Box 
-          style={{ 
-            background: '#f8f9fa',
+        <Box
+          style={{
+            background: "#f8f9fa",
             padding: 24,
-            borderBottom: '1px solid #e0e0e0'
+            borderBottom: "1px solid #e0e0e0",
           }}
         >
           {/* Search and Actions */}
-          <Box style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-            <Box style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <Box
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 16,
+            }}
+          >
+            <Box style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <Typography variant="h6" style={{ fontWeight: 600 }}>
                 {filteredItems.length} Items
               </Typography>
@@ -784,14 +1156,16 @@ const MasterFile = () => {
                   color="primary"
                   size="small"
                   onDelete={() => setSelectedDateRange(null)}
-                  style={{ fontSize: '0.75rem' }}
+                  style={{ fontSize: "0.75rem" }}
                 />
               )}
             </Box>
-            
-            <Box style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-              <DateRangeSelectorButton onDateRangeSelect={handleDateRangeSelect} />
-              
+
+            <Box style={{ display: "flex", gap: 16, alignItems: "center" }}>
+              <DateRangeSelectorButton
+                onDateRangeSelect={handleDateRangeSelect}
+              />
+
               <TextField
                 placeholder="Search items..."
                 value={searchTerm}
@@ -806,23 +1180,23 @@ const MasterFile = () => {
                   ),
                 }}
               />
-              
+
               <Button
                 variant="contained"
                 startIcon={<UploadFileIcon />}
                 onClick={() => setUploadDialog(true)}
-                style={{ 
-                  backgroundColor: '#4caf50',
-                  '&:hover': { backgroundColor: '#45a049' }
+                style={{
+                  backgroundColor: "#4caf50",
+                  "&:hover": { backgroundColor: "#45a049" },
                 }}
               >
                 Upload Excel
               </Button>
-              
+
               <Tooltip title="Refresh data">
-                <IconButton 
+                <IconButton
                   color="primary"
-                  style={{ backgroundColor: '#e3f2fd' }}
+                  style={{ backgroundColor: "#e3f2fd" }}
                   onClick={() => {
                     fetchCompanies();
                     fetchLocations();
@@ -850,7 +1224,7 @@ const MasterFile = () => {
         </Box>
 
         {/* Advanced FiltersOrderIQ2 Component */}
-        <Box style={{ padding: 24, backgroundColor: 'white' }}>
+        <Box style={{ padding: 24, backgroundColor: "white" }}>
           <FiltersOrderIQ2
             onFiltersChange={handleFiltersChange}
             totalItems={items.length}
@@ -864,25 +1238,29 @@ const MasterFile = () => {
         <TableContainer>
           <Table stickyHeader>
             <TableHead>
-              <TableRow style={{ backgroundColor: '#fafafa' }}>
+              <TableRow style={{ backgroundColor: "#fafafa" }}>
                 <TableCell style={{ fontWeight: 700, width: 40 }}>
                   <DragIndicatorIcon />
                 </TableCell>
                 <TableCell style={{ fontWeight: 700 }}>Code</TableCell>
                 <TableCell style={{ fontWeight: 700 }}>Name</TableCell>
                 <TableCell style={{ fontWeight: 700 }}>Current Price</TableCell>
-                <TableCell style={{ fontWeight: 700 }}>Previous Price</TableCell>
+                <TableCell style={{ fontWeight: 700 }}>
+                  Previous Price
+                </TableCell>
                 <TableCell style={{ fontWeight: 700 }}>Unit</TableCell>
                 <TableCell style={{ fontWeight: 700 }}>Stock</TableCell>
-                <TableCell style={{ fontWeight: 700, width: 100 }}>Actions</TableCell>
+                <TableCell style={{ fontWeight: 700, width: 100 }}>
+                  Actions
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {paginatedItems.map((item, index) => (
-                <TableRow 
+                <TableRow
                   key={item.id}
                   style={{
-                    backgroundColor: index % 2 === 1 ? '#fafafa' : 'white'
+                    backgroundColor: index % 2 === 1 ? "#fafafa" : "white",
                   }}
                 >
                   <TableCell>
@@ -890,19 +1268,22 @@ const MasterFile = () => {
                       <DragIndicatorIcon fontSize="small" />
                     </IconButton>
                   </TableCell>
-                  
+
                   <TableCell>
-                    <Typography variant="body2" style={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                    <Typography
+                      variant="body2"
+                      style={{ fontFamily: "monospace", fontWeight: 600 }}
+                    >
                       {item.code}
                     </Typography>
                   </TableCell>
-                  
+
                   <TableCell>
                     <Typography variant="body2" style={{ fontWeight: 500 }}>
                       {item.name}
                     </Typography>
                   </TableCell>
-                  
+
                   <TableCell>
                     {editingId === item.id ? (
                       <TextField
@@ -910,22 +1291,32 @@ const MasterFile = () => {
                         onChange={(e) => setEditPrice(e.target.value)}
                         type="number"
                         size="small"
-                        inputProps={{ 
-                          step: "0.01", 
+                        inputProps={{
+                          step: "0.01",
                           min: "0",
-                          style: { textAlign: 'center' }
+                          style: { textAlign: "center" },
                         }}
                         autoFocus
                         style={{ maxWidth: 100 }}
                       />
                     ) : (
-                      <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Typography 
-                          variant="body2" 
-                          style={{ 
+                      <Box
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          style={{
                             fontWeight: 600,
-                            color: item.currentPrice > item.previousPrice ? '#2e7d32' : 
-                                   item.currentPrice < item.previousPrice ? '#d32f2f' : '#666'
+                            color:
+                              item.currentPrice > item.previousPrice
+                                ? "#2e7d32"
+                                : item.currentPrice < item.previousPrice
+                                ? "#d32f2f"
+                                : "#666",
                           }}
                         >
                           ${item.currentPrice.toFixed(2)}
@@ -933,53 +1324,70 @@ const MasterFile = () => {
                         {item.currentPrice !== item.previousPrice && (
                           <Chip
                             size="small"
-                            label={item.currentPrice > item.previousPrice ? '↑' : '↓'}
-                            color={item.currentPrice > item.previousPrice ? 'success' : 'error'}
-                            style={{ minWidth: 24, height: 20, fontSize: '0.7rem' }}
+                            label={
+                              item.currentPrice > item.previousPrice ? "↑" : "↓"
+                            }
+                            color={
+                              item.currentPrice > item.previousPrice
+                                ? "success"
+                                : "error"
+                            }
+                            style={{
+                              minWidth: 24,
+                              height: 20,
+                              fontSize: "0.7rem",
+                            }}
                           />
                         )}
                       </Box>
                     )}
                   </TableCell>
-                  
+
                   <TableCell>
-                    <Typography 
-                      variant="body2" 
-                      style={{ 
-                        color: '#666',
-                        fontStyle: item.previousPrice ? 'normal' : 'italic'
+                    <Typography
+                      variant="body2"
+                      style={{
+                        color: "#666",
+                        fontStyle: item.previousPrice ? "normal" : "italic",
                       }}
                     >
-                      {item.previousPrice ? `${item.previousPrice.toFixed(2)}` : '-'}
+                      {item.previousPrice
+                        ? `${item.previousPrice.toFixed(2)}`
+                        : "-"}
                     </Typography>
                   </TableCell>
-                  
+
                   <TableCell>
-                    <Typography variant="body2" style={{ color: '#666' }}>
+                    <Typography variant="body2" style={{ color: "#666" }}>
                       {item.unit}
                     </Typography>
                   </TableCell>
-                  
+
                   <TableCell>
-                    <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Typography variant="body2" style={{ fontWeight: 600, minWidth: 30 }}>
+                    <Box
+                      style={{ display: "flex", alignItems: "center", gap: 8 }}
+                    >
+                      <Typography
+                        variant="body2"
+                        style={{ fontWeight: 600, minWidth: 30 }}
+                      >
                         {item.stock}
                       </Typography>
                       <Chip
                         label={getStockStatus(item.stock).label}
                         color={getStockStatus(item.stock).color}
                         size="small"
-                        style={{ fontSize: '0.75rem' }}
+                        style={{ fontSize: "0.75rem" }}
                       />
                     </Box>
                   </TableCell>
-                  
+
                   <TableCell>
                     {editingId === item.id ? (
-                      <Box style={{ display: 'flex', gap: 4 }}>
+                      <Box style={{ display: "flex", gap: 4 }}>
                         <Tooltip title="Save changes">
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             color="success"
                             onClick={() => handleSaveClick(item.id)}
                           >
@@ -987,8 +1395,8 @@ const MasterFile = () => {
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Cancel">
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             color="error"
                             onClick={handleCancelClick}
                           >
@@ -1001,7 +1409,9 @@ const MasterFile = () => {
                         <IconButton
                           size="small"
                           color="primary"
-                          onClick={() => handleEditClick(item.id, item.currentPrice)}
+                          onClick={() =>
+                            handleEditClick(item.id, item.currentPrice)
+                          }
                         >
                           <EditIcon fontSize="small" />
                         </IconButton>
@@ -1015,7 +1425,7 @@ const MasterFile = () => {
         </TableContainer>
 
         {/* Pagination */}
-        <Box style={{ borderTop: '1px solid #e0e0e0' }}>
+        <Box style={{ borderTop: "1px solid #e0e0e0" }}>
           <TablePagination
             rowsPerPageOptions={[5, 10, 25, 50]}
             component="div"
@@ -1029,23 +1439,26 @@ const MasterFile = () => {
       </Paper>
 
       {/* Excel Upload Dialog */}
-      <Dialog 
-        open={uploadDialog} 
+      <Dialog
+        open={uploadDialog}
         onClose={handleCloseUploadDialog}
         maxWidth="sm"
         fullWidth
       >
         <DialogTitle>
-          <Box style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Box style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <CloudUploadIcon color="primary" />
             Upload Excel File
           </Box>
         </DialogTitle>
-        
+
         <DialogContent>
-          <Box style={{ padding: '16px 0' }}>
-            <Typography variant="body2" style={{ marginBottom: 16, color: '#666' }}>
-              Upload an Excel file (.xlsx, .xls) or CSV file with items data. 
+          <Box style={{ padding: "16px 0" }}>
+            <Typography
+              variant="body2"
+              style={{ marginBottom: 16, color: "#666" }}
+            >
+              Upload an Excel file (.xlsx, .xls) or CSV file with items data.
               Expected columns: Code, Name, Current Price, Unit, Stock
             </Typography>
 
@@ -1070,29 +1483,31 @@ const MasterFile = () => {
                 ))}
               </Select>
             </FormControl>
-            
+
             <input
               type="file"
               accept=".xlsx,.xls,.csv"
               onChange={handleFileSelect}
-              style={{ display: 'none' }}
+              style={{ display: "none" }}
               id="excel-upload"
             />
-            
+
             <label htmlFor="excel-upload">
               <Button
                 variant="outlined"
                 component="span"
                 fullWidth
                 startIcon={<UploadFileIcon />}
-                style={{ 
+                style={{
                   height: 100,
-                  border: '2px dashed #ccc',
+                  border: "2px dashed #ccc",
                   borderRadius: 8,
-                  fontSize: '1.1rem'
+                  fontSize: "1.1rem",
                 }}
               >
-                {selectedFile ? selectedFile.name : 'Click to select Excel file'}
+                {selectedFile
+                  ? selectedFile.name
+                  : "Click to select Excel file"}
               </Button>
             </label>
 
@@ -1106,27 +1521,22 @@ const MasterFile = () => {
             )}
 
             {uploadStatus && (
-              <Alert 
-                severity={uploadStatus.type} 
-                style={{ marginTop: 16 }}
-              >
+              <Alert severity={uploadStatus.type} style={{ marginTop: 16 }}>
                 {uploadStatus.message}
               </Alert>
             )}
           </Box>
         </DialogContent>
-        
+
         <DialogActions>
-          <Button onClick={handleCloseUploadDialog}>
-            Cancel
-          </Button>
-          <Button 
+          <Button onClick={handleCloseUploadDialog}>Cancel</Button>
+          <Button
             onClick={handleUploadFile}
             variant="contained"
             disabled={!selectedFile || !selectedCompanyId || uploading}
             startIcon={uploading ? null : <UploadFileIcon />}
           >
-            {uploading ? 'Uploading...' : 'Upload'}
+            {uploading ? "Uploading..." : "Upload"}
           </Button>
         </DialogActions>
       </Dialog>

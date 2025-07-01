@@ -18,7 +18,7 @@ router = APIRouter(
     tags=["master_upload"],
 )
 
-@router.post("/master/upload", response_model=DualDashboardResponse)
+@router.post("/master/upload")
 async def master_upload(
     request: ExcelUploadRequest = Body(...),
     db: Session = Depends(get_db),
@@ -29,6 +29,7 @@ async def master_upload(
     """
     try:
         print(f"Received file upload: {request.fileName}")
+        print("printing the checking")
         
         # Validate required fields
         if not request.company_id:
@@ -42,6 +43,8 @@ async def master_upload(
         
         # Decode base64 file content
         try:
+            # content = base64.b64encode(b"test content").decode('utf-8')
+            # file_content = base64.b64decode(content)
             file_content = base64.b64decode(request.fileContent)
             print("Successfully decoded base64 file content")
         except Exception as e:
