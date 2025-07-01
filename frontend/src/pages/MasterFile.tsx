@@ -207,7 +207,7 @@ const FiltersOrderIQ2 = ({
   filteredItems,
   units = [],
   categories = [],
-  priceRange = [0, 100],
+  priceRange = [0, 100]
 }) => {
   const [filters, setFilters] = useState({
     priceRange: priceRange,
@@ -223,9 +223,9 @@ const FiltersOrderIQ2 = ({
 
   // Update price range when prop changes
   useEffect(() => {
-    setFilters((prev) => ({
+    setFilters(prev => ({
       ...prev,
-      priceRange: priceRange,
+      priceRange: priceRange
     }));
   }, [priceRange]);
 
@@ -257,11 +257,7 @@ const FiltersOrderIQ2 = ({
     if (filters.priceChange !== "all") count++;
     if (filters.showLowStock) count++;
     if (filters.showOutOfStock) count++;
-    if (
-      filters.priceRange[0] > priceRange[0] ||
-      filters.priceRange[1] < priceRange[1]
-    )
-      count++;
+    if (filters.priceRange[0] > priceRange[0] || filters.priceRange[1] < priceRange[1]) count++;
     return count;
   };
 
@@ -336,12 +332,7 @@ const FiltersOrderIQ2 = ({
                   step={priceRange[1] > 100 ? 10 : 1}
                   marks={[
                     { value: priceRange[0], label: `$${priceRange[0]}` },
-                    {
-                      value: Math.round((priceRange[0] + priceRange[1]) / 2),
-                      label: `$${Math.round(
-                        (priceRange[0] + priceRange[1]) / 2
-                      )}`,
-                    },
+                    { value: Math.round((priceRange[0] + priceRange[1]) / 2), label: `$${Math.round((priceRange[0] + priceRange[1]) / 2)}` },
                     { value: priceRange[1], label: `$${priceRange[1]}+` },
                   ]}
                 />
@@ -400,9 +391,7 @@ const FiltersOrderIQ2 = ({
                   <Select
                     value={filters.category}
                     label="Category"
-                    onChange={(e) =>
-                      handleFilterChange("category", e.target.value)
-                    }
+                    onChange={(e) => handleFilterChange("category", e.target.value)}
                   >
                     <MenuItem value="all">All Categories</MenuItem>
                     {categories.map((category) => (
@@ -512,13 +501,10 @@ const FiltersOrderIQWithFilename = ({
   // Get unique companies
   const companyOptions = Array.from(
     new Map(
-      masterFileDetails.map((item) => [
-        item.company_id,
-        {
-          value: item.company_id.toString(),
-          label: item.company_name,
-        },
-      ])
+      masterFileDetails.map(item => [item.company_id, {
+        value: item.company_id.toString(),
+        label: item.company_name
+      }])
     ).values()
   );
 
@@ -526,20 +512,17 @@ const FiltersOrderIQWithFilename = ({
   const getLocationOptions = () => {
     let filteredData = masterFileDetails;
     if (selectedCompanies.length > 0) {
-      filteredData = masterFileDetails.filter((item) =>
+      filteredData = masterFileDetails.filter(item => 
         selectedCompanies.includes(item.company_id.toString())
       );
     }
-
+    
     return Array.from(
       new Map(
-        filteredData.map((item) => [
-          item.location_id,
-          {
-            value: item.location_id.toString(),
-            label: item.location_name,
-          },
-        ])
+        filteredData.map(item => [item.location_id, {
+          value: item.location_id.toString(),
+          label: item.location_name
+        }])
       ).values()
     );
   };
@@ -547,49 +530,49 @@ const FiltersOrderIQWithFilename = ({
   // Get unique filenames filtered by selected companies and locations
   const getFilenameOptions = () => {
     let filteredData = masterFileDetails;
-
+    
     if (selectedCompanies.length > 0) {
-      filteredData = filteredData.filter((item) =>
+      filteredData = filteredData.filter(item => 
         selectedCompanies.includes(item.company_id.toString())
       );
     }
-
+    
     if (selectedLocations.length > 0) {
-      filteredData = filteredData.filter((item) =>
+      filteredData = filteredData.filter(item => 
         selectedLocations.includes(item.location_id.toString())
       );
     }
-
-    return Array.from(new Set(filteredData.map((item) => item.filename))).map(
-      (filename) => ({
-        value: filename,
-        label: filename,
-      })
-    );
+    
+    return Array.from(
+      new Set(filteredData.map(item => item.filename))
+    ).map(filename => ({
+      value: filename,
+      label: filename
+    }));
   };
 
   // Calculate how many API calls will be made
   const getApiCallCount = () => {
     let filteredDetails = masterFileDetails;
-
+    
     if (selectedCompanies.length > 0) {
-      filteredDetails = filteredDetails.filter((item) =>
+      filteredDetails = filteredDetails.filter(item => 
         selectedCompanies.includes(item.company_id.toString())
       );
     }
-
+    
     if (selectedLocations.length > 0) {
-      filteredDetails = filteredDetails.filter((item) =>
+      filteredDetails = filteredDetails.filter(item => 
         selectedLocations.includes(item.location_id.toString())
       );
     }
-
+    
     if (selectedFilenames.length > 0) {
-      filteredDetails = filteredDetails.filter((item) =>
+      filteredDetails = filteredDetails.filter(item => 
         selectedFilenames.includes(item.filename)
       );
     }
-
+    
     return filteredDetails.length;
   };
 
@@ -605,13 +588,13 @@ const FiltersOrderIQWithFilename = ({
 
   // Handle company selection with Select All functionality
   const handleCompanyChange = (value) => {
-    if (value.includes("select_all")) {
+    if (value.includes('select_all')) {
       if (selectedCompanies.length === companyOptions.length) {
         // If all are selected, deselect all
         onCompanyChange([]);
       } else {
         // Select all companies
-        onCompanyChange(companyOptions.map((option) => option.value));
+        onCompanyChange(companyOptions.map(option => option.value));
       }
     } else {
       onCompanyChange(value);
@@ -621,13 +604,13 @@ const FiltersOrderIQWithFilename = ({
   // Handle location selection with Select All functionality
   const handleLocationChange = (value) => {
     const locationOptions = getLocationOptions();
-    if (value.includes("select_all")) {
+    if (value.includes('select_all')) {
       if (selectedLocations.length === locationOptions.length) {
         // If all are selected, deselect all
         onLocationChange([]);
       } else {
         // Select all locations
-        onLocationChange(locationOptions.map((option) => option.value));
+        onLocationChange(locationOptions.map(option => option.value));
       }
     } else {
       onLocationChange(value);
@@ -637,13 +620,13 @@ const FiltersOrderIQWithFilename = ({
   // Handle filename selection with Select All functionality
   const handleFilenameChange = (value) => {
     const filenameOptions = getFilenameOptions();
-    if (value.includes("select_all")) {
+    if (value.includes('select_all')) {
       if (selectedFilenames.length === filenameOptions.length) {
         // If all are selected, deselect all
         onFilenameChange([]);
       } else {
         // Select all filenames
-        onFilenameChange(filenameOptions.map((option) => option.value));
+        onFilenameChange(filenameOptions.map(option => option.value));
       }
     } else {
       onFilenameChange(value);
@@ -652,41 +635,30 @@ const FiltersOrderIQWithFilename = ({
 
   // Render value functions
   const renderCompanyValue = (selected) => {
-    if (selected.length === 0) return "Select Companies";
-    if (selected.length === companyOptions.length)
-      return "All Companies Selected";
-    if (selected.length === 1)
-      return companyOptions.find((c) => c.value === selected[0])?.label;
+    if (selected.length === 0) return 'Select Companies';
+    if (selected.length === companyOptions.length) return 'All Companies Selected';
+    if (selected.length === 1) return companyOptions.find(c => c.value === selected[0])?.label;
     return `${selected.length} selected`;
   };
 
   const renderLocationValue = (selected) => {
     const locationOptions = getLocationOptions();
-    if (!isLocationDropdownEnabled()) return "Select companies first";
-    if (selected.length === 0) return "Select Locations";
-    if (
-      selected.length === locationOptions.length &&
-      locationOptions.length > 0
-    )
-      return "All Locations Selected";
-    if (selected.length === 1)
-      return locationOptions.find((l) => l.value === selected[0])?.label;
+    if (!isLocationDropdownEnabled()) return 'Select companies first';
+    if (selected.length === 0) return 'Select Locations';
+    if (selected.length === locationOptions.length && locationOptions.length > 0) return 'All Locations Selected';
+    if (selected.length === 1) return locationOptions.find(l => l.value === selected[0])?.label;
     return `${selected.length} selected`;
   };
 
   const renderFilenameValue = (selected) => {
     const filenameOptions = getFilenameOptions();
     if (!isFilenameDropdownEnabled()) {
-      if (selectedCompanies.length === 0) return "Select companies first";
-      if (selectedLocations.length === 0) return "Select locations first";
-      return "Select companies & locations first";
+      if (selectedCompanies.length === 0) return 'Select companies first';
+      if (selectedLocations.length === 0) return 'Select locations first';
+      return 'Select companies & locations first';
     }
-    if (selected.length === 0) return "Select Files";
-    if (
-      selected.length === filenameOptions.length &&
-      filenameOptions.length > 0
-    )
-      return "All Files Selected";
+    if (selected.length === 0) return 'Select Files';
+    if (selected.length === filenameOptions.length && filenameOptions.length > 0) return 'All Files Selected';
     if (selected.length === 1) return selected[0];
     return `${selected.length} selected`;
   };
@@ -706,15 +678,10 @@ const FiltersOrderIQWithFilename = ({
               renderValue={renderCompanyValue}
             >
               {/* Select All Option */}
-              <MenuItem
-                value="select_all"
-                style={{ fontWeight: "bold", borderBottom: "1px solid #eee" }}
-              >
-                <Box style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <MenuItem value="select_all" style={{ fontWeight: 'bold', borderBottom: '1px solid #eee' }}>
+                <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <BusinessIcon fontSize="small" />
-                  {selectedCompanies.length === companyOptions.length
-                    ? "Deselect All"
-                    : "Select All Companies"}
+                  {selectedCompanies.length === companyOptions.length ? 'Deselect All' : 'Select All Companies'}
                 </Box>
               </MenuItem>
               {companyOptions.map((option) => (
@@ -743,17 +710,10 @@ const FiltersOrderIQWithFilename = ({
             >
               {/* Select All Option */}
               {getLocationOptions().length > 0 && (
-                <MenuItem
-                  value="select_all"
-                  style={{ fontWeight: "bold", borderBottom: "1px solid #eee" }}
-                >
-                  <Box
-                    style={{ display: "flex", alignItems: "center", gap: 8 }}
-                  >
+                <MenuItem value="select_all" style={{ fontWeight: 'bold', borderBottom: '1px solid #eee' }}>
+                  <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <LocationOnIcon fontSize="small" />
-                    {selectedLocations.length === getLocationOptions().length
-                      ? "Deselect All"
-                      : "Select All Locations"}
+                    {selectedLocations.length === getLocationOptions().length ? 'Deselect All' : 'Select All Locations'}
                   </Box>
                 </MenuItem>
               )}
@@ -782,25 +742,14 @@ const FiltersOrderIQWithFilename = ({
               }}
             >
               {/* Select All Option */}
-              {getFilenameOptions().length > 0 &&
-                isFilenameDropdownEnabled() && (
-                  <MenuItem
-                    value="select_all"
-                    style={{
-                      fontWeight: "bold",
-                      borderBottom: "1px solid #eee",
-                    }}
-                  >
-                    <Box
-                      style={{ display: "flex", alignItems: "center", gap: 8 }}
-                    >
-                      <DescriptionIcon fontSize="small" />
-                      {selectedFilenames.length === getFilenameOptions().length
-                        ? "Deselect All"
-                        : "Select All Files"}
-                    </Box>
-                  </MenuItem>
-                )}
+              {getFilenameOptions().length > 0 && isFilenameDropdownEnabled() && (
+                <MenuItem value="select_all" style={{ fontWeight: 'bold', borderBottom: '1px solid #eee' }}>
+                  <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <DescriptionIcon fontSize="small" />
+                    {selectedFilenames.length === getFilenameOptions().length ? 'Deselect All' : 'Select All Files'}
+                  </Box>
+                </MenuItem>
+              )}
               {getFilenameOptions().map((option) => (
                 <MenuItem key={option.value} value={option.value}>
                   {option.label}
@@ -818,75 +767,48 @@ const FiltersOrderIQWithFilename = ({
               color="primary"
               onClick={onApplyFilters}
               fullWidth
-              startIcon={
-                loadingMasterFileDetails ? (
-                  <RefreshIcon className="rotating" />
-                ) : (
-                  <FilterListIcon />
-                )
-              }
-              disabled={
-                selectedCompanies.length === 0 || loadingMasterFileDetails
-              }
-              style={{ height: "40px" }} // Match dropdown height
+              startIcon={loadingMasterFileDetails ? <RefreshIcon className="rotating" /> : <FilterListIcon />}
+              disabled={selectedCompanies.length === 0 || loadingMasterFileDetails}
+              style={{ height: '40px' }} // Match dropdown height
             >
-              {loadingMasterFileDetails ? "Loading..." : "Apply Filters"}
+              {loadingMasterFileDetails ? 'Loading...' : 'Apply Filters'}
             </Button>
           </Grid>
         )}
       </Grid>
-
+      
       {/* Show selection guidance and active filters */}
       <Box style={{ marginTop: 8 }}>
         {loadingMasterFileDetails ? (
-          <Box style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <LinearProgress style={{ width: 100, height: 4 }} />
-            <Typography
-              variant="body2"
-              color="primary"
-              style={{ fontWeight: 500 }}
-            >
+            <Typography variant="body2" color="primary" style={{ fontWeight: 500 }}>
               Loading filtered data from {getApiCallCount()} source(s)...
             </Typography>
           </Box>
         ) : selectedCompanies.length === 0 ? (
-          <Box style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Typography
-              variant="body2"
-              color="primary"
-              style={{ fontWeight: 500 }}
-            >
+          <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Typography variant="body2" color="primary" style={{ fontWeight: 500 }}>
               Step 1: Select companies to continue
             </Typography>
           </Box>
         ) : selectedLocations.length === 0 ? (
-          <Box style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Typography
-              variant="body2"
-              color="primary"
-              style={{ fontWeight: 500 }}
-            >
+          <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Typography variant="body2" color="primary" style={{ fontWeight: 500 }}>
               Step 2: Select locations to enable file selection
             </Typography>
           </Box>
         ) : getFilenameOptions().length === 0 ? (
-          <Typography
-            variant="body2"
-            color="warning.main"
-            style={{ fontWeight: 500 }}
-          >
+          <Typography variant="body2" color="warning.main" style={{ fontWeight: 500 }}>
             No files available for selected companies and locations
           </Typography>
         ) : (
           <Typography variant="body2" color="textSecondary">
-            Active filters:{" "}
-            {selectedCompanies.length +
-              selectedLocations.length +
-              selectedFilenames.length}
-            <span style={{ marginLeft: 8, color: "#4caf50" }}>
+            Active filters: {selectedCompanies.length + selectedLocations.length + selectedFilenames.length}
+            <span style={{ marginLeft: 8, color: '#4caf50' }}>
               • {getFilenameOptions().length} files available
             </span>
-            <span style={{ marginLeft: 8, color: "#2196f3" }}>
+            <span style={{ marginLeft: 8, color: '#2196f3' }}>
               • {getApiCallCount()} API call(s) will be made
             </span>
           </Typography>
@@ -919,11 +841,8 @@ const MasterFile = () => {
   });
 
   // Updated API Data States
-  const [masterFileDetails, setMasterFileDetails] = useState<
-    MasterFileDetail[]
-  >([]);
-  const [loadingMasterFileDetails, setLoadingMasterFileDetails] =
-    useState(false);
+  const [masterFileDetails, setMasterFileDetails] = useState<MasterFileDetail[]>([]);
+  const [loadingMasterFileDetails, setLoadingMasterFileDetails] = useState(false);
 
   // State for FiltersOrderIQ component - Updated
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
@@ -953,13 +872,13 @@ const MasterFile = () => {
         // Merge columns (use first response's column structure as base)
         if (Object.keys(mergedColumns).length === 0) {
           mergedColumns = { ...response.data.columns };
-
+          
           // Find current and previous price columns
-          Object.keys(mergedColumns).forEach((key) => {
+          Object.keys(mergedColumns).forEach(key => {
             const columnName = mergedColumns[key].toLowerCase();
-            if (columnName.includes("current price")) {
+            if (columnName.includes('current price')) {
               currentPriceCol = key;
-            } else if (columnName.includes("previous price")) {
+            } else if (columnName.includes('previous price')) {
               previousPriceCol = key;
             }
           });
@@ -975,8 +894,8 @@ const MasterFile = () => {
               location_id: response.location_id,
               filename: response.filename,
               company_name: response.company_name,
-              location_name: response.location_name,
-            },
+              location_name: response.location_name
+            }
           };
 
           // Clean up previous price column if it exists
@@ -1003,23 +922,22 @@ const MasterFile = () => {
   // Get unique values for filters
   const getUniqueValues = (columnKey) => {
     if (!columnKey || items.length === 0) return [];
-    return [...new Set(items.map((item) => item[columnKey]).filter(Boolean))];
+    return [...new Set(items.map(item => item[columnKey]).filter(Boolean))];
   };
 
   // Get unique units for filter options (look for UOM column)
   const getUniqueUnits = () => {
-    const uomColumn = Object.keys(columns).find(
-      (key) =>
-        columns[key].toLowerCase().includes("uom") ||
-        columns[key].toLowerCase().includes("unit")
+    const uomColumn = Object.keys(columns).find(key => 
+      columns[key].toLowerCase().includes('uom') || 
+      columns[key].toLowerCase().includes('unit')
     );
     return getUniqueValues(uomColumn);
   };
 
   // Get unique categories for filter options
   const getUniqueCategories = () => {
-    const categoryColumn = Object.keys(columns).find((key) =>
-      columns[key].toLowerCase().includes("category")
+    const categoryColumn = Object.keys(columns).find(key => 
+      columns[key].toLowerCase().includes('category')
     );
     return getUniqueValues(categoryColumn);
   };
@@ -1027,19 +945,14 @@ const MasterFile = () => {
   // Get price range for filters
   const getPriceRange = () => {
     if (!items.length || !currentPriceColumn) return [0, 100];
-
-    const prices = items.map(
-      (item) => parseFloat(item[currentPriceColumn]) || 0
-    );
+    
+    const prices = items.map(item => parseFloat(item[currentPriceColumn]) || 0);
     const maxPrice = Math.max(...prices);
     const minPrice = Math.min(...prices);
-
+    
     // Round up max price to nearest 10 or 100
-    const roundedMax =
-      maxPrice < 100
-        ? Math.ceil(maxPrice / 10) * 10
-        : Math.ceil(maxPrice / 100) * 100;
-
+    const roundedMax = maxPrice < 100 ? Math.ceil(maxPrice / 10) * 10 : Math.ceil(maxPrice / 100) * 100;
+    
     return [Math.floor(minPrice), roundedMax];
   };
 
@@ -1047,9 +960,9 @@ const MasterFile = () => {
   useEffect(() => {
     if (items.length > 0 && currentPriceColumn) {
       const [minPrice, maxPrice] = getPriceRange();
-      setFilters((prev) => ({
+      setFilters(prev => ({
         ...prev,
-        priceRange: [minPrice, maxPrice],
+        priceRange: [minPrice, maxPrice]
       }));
     }
   }, [items, currentPriceColumn]);
@@ -1080,13 +993,10 @@ const MasterFile = () => {
   const getUniqueCompaniesForUpload = () => {
     return Array.from(
       new Map(
-        masterFileDetails.map((item) => [
-          item.company_id,
-          {
-            id: item.company_id,
-            name: item.company_name,
-          },
-        ])
+        masterFileDetails.map(item => [item.company_id, {
+          id: item.company_id,
+          name: item.company_name
+        }])
       ).values()
     );
   };
@@ -1094,13 +1004,10 @@ const MasterFile = () => {
   const getUniqueLocationsForUpload = () => {
     return Array.from(
       new Map(
-        masterFileDetails.map((item) => [
-          item.location_id,
-          {
-            id: item.location_id,
-            name: item.location_name,
-          },
-        ])
+        masterFileDetails.map(item => [item.location_id, {
+          id: item.location_id,
+          name: item.location_name
+        }])
       ).values()
     );
   };
@@ -1140,106 +1047,101 @@ const MasterFile = () => {
 
     try {
       setLoadingMasterFileDetails(true);
-
+      
       // Get all valid combinations based on the original masterFileDetails
       let filteredDetails = masterFileDetails;
-
+      
       // Filter by selected companies
       if (selectedCompanies.length > 0) {
-        filteredDetails = filteredDetails.filter((item) =>
+        filteredDetails = filteredDetails.filter(item => 
           selectedCompanies.includes(item.company_id.toString())
         );
       }
-
+      
       // Filter by selected locations
       if (selectedLocations.length > 0) {
-        filteredDetails = filteredDetails.filter((item) =>
+        filteredDetails = filteredDetails.filter(item => 
           selectedLocations.includes(item.location_id.toString())
         );
       }
-
+      
       // Filter by selected filenames
       if (selectedFilenames.length > 0) {
-        filteredDetails = filteredDetails.filter((item) =>
+        filteredDetails = filteredDetails.filter(item => 
           selectedFilenames.includes(item.filename)
         );
       }
 
       // Create API calls for each filtered combination
-      const apiCalls = filteredDetails.map((detail) => {
-        const url = `/api/masterfile/details/${detail.company_id}/${
-          detail.location_id
-        }/${encodeURIComponent(detail.filename)}`;
-        return apiClient.get(url).then((response) => ({
+      const apiCalls = filteredDetails.map(detail => {
+        const url = `/api/masterfile/details/${detail.company_id}/${detail.location_id}/${encodeURIComponent(detail.filename)}`;
+        return apiClient.get(url).then(response => ({
           ...response.data,
           company_id: detail.company_id,
           location_id: detail.location_id,
           filename: detail.filename,
           company_name: detail.company_name,
-          location_name: detail.location_name,
+          location_name: detail.location_name
         }));
       });
 
-      console.log(
-        `Making ${apiCalls.length} API calls for filtered combinations`
-      );
+      console.log(`Making ${apiCalls.length} API calls for filtered combinations`);
 
       // Execute all API calls
       const results = await Promise.allSettled(apiCalls);
-
+      
       // Process successful results
       const successfulResults = results
-        .filter((result) => result.status === "fulfilled")
-        .map((result) => result.value);
-
+        .filter(result => result.status === 'fulfilled')
+        .map(result => result.value);
+      
       // Process failed results
       const failedResults = results
-        .filter((result) => result.status === "rejected")
-        .map((result) => result.reason);
+        .filter(result => result.status === 'rejected')
+        .map(result => result.reason);
 
-      console.log(
-        `API Results: ${successfulResults.length} successful, ${failedResults.length} failed`
-      );
-
+      console.log(`API Results: ${successfulResults.length} successful, ${failedResults.length} failed`);
+      
       if (successfulResults.length > 0) {
         console.log("Successful API responses:", successfulResults);
-
+        
         // Process the API response data
         processApiResponseData(successfulResults);
-
+        
         setUploadStatus({
           type: "success",
-          message: `Successfully loaded data from ${successfulResults.length} source(s)`,
+          message: `Successfully loaded data from ${successfulResults.length} source(s)`
         });
-
+        
         // Auto-clear success message after 5 seconds
         setTimeout(() => setUploadStatus(null), 5000);
       }
-
+      
       if (failedResults.length > 0) {
         console.error("Failed API calls:", failedResults);
-
+        
         if (successfulResults.length > 0) {
           setUploadStatus({
             type: "warning",
-            message: `Loaded ${successfulResults.length} sources successfully, ${failedResults.length} failed`,
+            message: `Loaded ${successfulResults.length} sources successfully, ${failedResults.length} failed`
           });
           // Auto-clear warning message after 7 seconds
           setTimeout(() => setUploadStatus(null), 7000);
         } else {
           setUploadStatus({
             type: "error",
-            message: `All ${failedResults.length} API calls failed`,
+            message: `All ${failedResults.length} API calls failed`
           });
           // Auto-clear error message after 10 seconds
           setTimeout(() => setUploadStatus(null), 10000);
         }
       }
+
     } catch (error) {
       console.error("Error applying filters:", error);
       setUploadStatus({
         type: "error",
-        message: "Failed to load filtered data",
+        message: "Failed to load filtered data"
       });
       // Auto-clear error message after 10 seconds
       setTimeout(() => setUploadStatus(null), 10000);
@@ -1257,37 +1159,28 @@ const MasterFile = () => {
     return itemsList.filter((item) => {
       // Search term filter - search across all text columns
       const searchableText = Object.keys(columns)
-        .filter((key) => typeof item[key] === "string")
-        .map((key) => item[key])
-        .join(" ")
+        .filter(key => typeof item[key] === 'string')
+        .map(key => item[key])
+        .join(' ')
         .toLowerCase();
       const matchesSearch = searchableText.includes(searchTerm.toLowerCase());
 
       // Price range filter
       const currentPrice = parseFloat(item[currentPriceColumn]) || 0;
-      const withinPriceRange =
-        currentPrice >= filters.priceRange[0] &&
-        currentPrice <= filters.priceRange[1];
+      const withinPriceRange = currentPrice >= filters.priceRange[0] && currentPrice <= filters.priceRange[1];
 
       // Unit filter - find UOM column
-      const uomColumn = Object.keys(columns).find(
-        (key) =>
-          columns[key].toLowerCase().includes("uom") ||
-          columns[key].toLowerCase().includes("unit")
+      const uomColumn = Object.keys(columns).find(key => 
+        columns[key].toLowerCase().includes('uom') || 
+        columns[key].toLowerCase().includes('unit')
       );
-      const matchesUnit =
-        filters.unit === "all" ||
-        !uomColumn ||
-        item[uomColumn] === filters.unit;
+      const matchesUnit = filters.unit === "all" || !uomColumn || item[uomColumn] === filters.unit;
 
       // Category filter - find category column
-      const categoryColumn = Object.keys(columns).find((key) =>
-        columns[key].toLowerCase().includes("category")
+      const categoryColumn = Object.keys(columns).find(key => 
+        columns[key].toLowerCase().includes('category')
       );
-      const matchesCategory =
-        filters.category === "all" ||
-        !categoryColumn ||
-        item[categoryColumn] === filters.category;
+      const matchesCategory = filters.category === "all" || !categoryColumn || item[categoryColumn] === filters.category;
 
       // Price change filter
       let matchesPriceChange = true;
@@ -1303,11 +1196,10 @@ const MasterFile = () => {
       }
 
       // Stock status filter - look for stock/inventory column
-      const stockColumn = Object.keys(columns).find(
-        (key) =>
-          columns[key].toLowerCase().includes("stock") ||
-          columns[key].toLowerCase().includes("inventory") ||
-          columns[key].toLowerCase().includes("quantity")
+      const stockColumn = Object.keys(columns).find(key => 
+        columns[key].toLowerCase().includes('stock') || 
+        columns[key].toLowerCase().includes('inventory') ||
+        columns[key].toLowerCase().includes('quantity')
       );
       let matchesStockStatus = true;
       if (stockColumn && filters.stockStatus !== "all") {
@@ -1364,13 +1256,8 @@ const MasterFile = () => {
 
   const handleSaveClick = async (id) => {
     const newPrice = parseFloat(editPrice);
-    if (
-      !isNaN(newPrice) &&
-      newPrice > 0 &&
-      currentPriceColumn &&
-      previousPriceColumn
-    ) {
-      const itemToUpdate = items.find((item) => item.id === id);
+    if (!isNaN(newPrice) && newPrice > 0 && currentPriceColumn && previousPriceColumn) {
+      const itemToUpdate = items.find(item => item.id === id);
       if (!itemToUpdate) return;
 
       setSavingRowId(id); // Set saving state
@@ -1383,8 +1270,28 @@ const MasterFile = () => {
       };
 
       setItems((prevItems) =>
-        prevItems.map((item) => (item.id === id ? updatedItem : item))
+        prevItems.map((item) =>
+          item.id === id ? updatedItem : item
+        )
       );
+
+      // Convert column keys to actual column names for API
+      const convertToColumnNames = (rowData) => {
+        const convertedData = {};
+        
+        Object.keys(rowData).forEach(columnKey => {
+          // Skip metadata and id fields
+          if (columnKey === '_meta' || columnKey === 'id') return;
+          
+          // Get the actual column name from the columns mapping
+          const columnName = columns[columnKey];
+          if (columnName) {
+            convertedData[columnName] = rowData[columnKey];
+          }
+        });
+        
+        return convertedData;
+      };
 
       // Prepare data for API call
       try {
@@ -1392,50 +1299,47 @@ const MasterFile = () => {
           company_id: itemToUpdate._meta.company_id,
           location_id: itemToUpdate._meta.location_id,
           filename: itemToUpdate._meta.filename,
-          row_data: {
-            ...updatedItem,
-            // Remove metadata from row data
-            _meta: undefined,
-            id: undefined,
-          },
+          row_data: convertToColumnNames(updatedItem)
         };
-        console.log("Preparing to update row:", updateData);
+
+        console.log("Sending update data:", updateData);
+
         // Send update to API
-        const response = await apiClient.post(
-          "/api/masterfile/updatefile",
-          updateData
-        );
-
+        const response = await apiClient.post("/api/masterfile/updatefile", updateData);
+        
         console.log("Row update response:", response.data);
-
+        
         // Show success message
         setUploadStatus({
           type: "success",
-          message: `Successfully updated item in ${itemToUpdate._meta.filename}`,
+          message: `Successfully updated item in ${itemToUpdate._meta.filename}`
         });
-
+        
         // Auto-clear success message after 3 seconds
         setTimeout(() => setUploadStatus(null), 3000);
+
       } catch (error) {
         console.error("Error updating row:", error);
-
+        
         // Revert local state change on API failure
         setItems((prevItems) =>
-          prevItems.map((item) => (item.id === id ? itemToUpdate : item))
+          prevItems.map((item) =>
+            item.id === id ? itemToUpdate : item
+          )
         );
-
+        
         setUploadStatus({
           type: "error",
-          message: error.response?.data?.detail || "Failed to update item",
+          message: error.response?.data?.detail || "Failed to update item"
         });
-
+        
         // Auto-clear error message after 5 seconds
         setTimeout(() => setUploadStatus(null), 5000);
       } finally {
         setSavingRowId(null); // Clear saving state
       }
     }
-
+    
     setEditingId(null);
     setEditPrice("");
   };
@@ -1457,15 +1361,14 @@ const MasterFile = () => {
 
   const getStockStatus = (item) => {
     // Find stock column dynamically
-    const stockColumn = Object.keys(columns).find(
-      (key) =>
-        columns[key].toLowerCase().includes("stock") ||
-        columns[key].toLowerCase().includes("inventory") ||
-        columns[key].toLowerCase().includes("quantity")
+    const stockColumn = Object.keys(columns).find(key => 
+      columns[key].toLowerCase().includes('stock') || 
+      columns[key].toLowerCase().includes('inventory') ||
+      columns[key].toLowerCase().includes('quantity')
     );
-
+    
     if (!stockColumn) return { label: "No Stock Info", color: "default" };
-
+    
     const stock = parseInt(item[stockColumn]) || 0;
     if (stock === 0) return { label: "Out of Stock", color: "error" };
     if (stock <= 20) return { label: "Low Stock", color: "warning" };
@@ -1475,12 +1378,11 @@ const MasterFile = () => {
   // Get price change indicator
   const getPriceChangeIndicator = (item) => {
     if (!currentPriceColumn || !previousPriceColumn) return null;
-
+    
     const currentPrice = parseFloat(item[currentPriceColumn]) || 0;
     const previousPrice = parseFloat(item[previousPriceColumn]) || 0;
-
-    if (currentPrice > previousPrice)
-      return { direction: "↑", color: "success" };
+    
+    if (currentPrice > previousPrice) return { direction: "↑", color: "success" };
     if (currentPrice < previousPrice) return { direction: "↓", color: "error" };
     return null;
   };
@@ -1489,7 +1391,7 @@ const MasterFile = () => {
   const renderCellContent = (item, columnKey) => {
     const value = item[columnKey];
     const columnName = columns[columnKey];
-
+    
     // Handle price columns with editing
     if (columnKey === currentPriceColumn) {
       if (editingId === item.id) {
@@ -1516,11 +1418,7 @@ const MasterFile = () => {
               variant="body2"
               style={{
                 fontWeight: 600,
-                color: priceChange
-                  ? priceChange.color === "success"
-                    ? "#2e7d32"
-                    : "#d32f2f"
-                  : "#666",
+                color: priceChange ? (priceChange.color === "success" ? "#2e7d32" : "#d32f2f") : "#666",
               }}
             >
               ${parseFloat(value || 0).toFixed(2)}
@@ -1541,12 +1439,12 @@ const MasterFile = () => {
         );
       }
     }
-
+    
     // Handle previous price column
     if (columnKey === previousPriceColumn) {
       const numericValue = parseFloat(value);
       const isValidPrice = !isNaN(numericValue) && numericValue > 0;
-
+      
       return (
         <Typography
           variant="body2"
@@ -1559,35 +1457,26 @@ const MasterFile = () => {
         </Typography>
       );
     }
-
+    
     // Handle numeric columns (assume price-like formatting for currency)
-    if (
-      typeof value === "number" &&
-      columnName.toLowerCase().includes("price")
-    ) {
+    if (typeof value === 'number' && columnName.toLowerCase().includes('price')) {
       return (
         <Typography variant="body2" style={{ fontWeight: 500 }}>
           ${value.toFixed(2)}
         </Typography>
       );
     }
-
+    
     // Handle regular text/numeric columns
     return (
-      <Typography
-        variant="body2"
-        style={{
-          fontWeight:
-            columnName.toLowerCase().includes("name") ||
-            columnName.toLowerCase().includes("product")
-              ? 500
-              : 400,
-          fontFamily: columnName.toLowerCase().includes("code")
-            ? "monospace"
-            : "inherit",
+      <Typography 
+        variant="body2" 
+        style={{ 
+          fontWeight: columnName.toLowerCase().includes('name') || columnName.toLowerCase().includes('product') ? 500 : 400,
+          fontFamily: columnName.toLowerCase().includes('code') ? 'monospace' : 'inherit'
         }}
       >
-        {value || "-"}
+        {value || '-'}
       </Typography>
     );
   };
@@ -1664,12 +1553,8 @@ const MasterFile = () => {
 
       const uniqueCompanies = getUniqueCompaniesForUpload();
       const uniqueLocations = getUniqueLocationsForUpload();
-      const selectedCompany = uniqueCompanies.find(
-        (c) => c.id.toString() === selectedCompanyId
-      );
-      const selectedLocation = uniqueLocations.find(
-        (l) => l.id.toString() === selectedLocationId
-      );
+      const selectedCompany = uniqueCompanies.find((c) => c.id.toString() === selectedCompanyId);
+      const selectedLocation = uniqueLocations.find((l) => l.id.toString() === selectedLocationId);
 
       setUploadStatus({
         type: "success",
@@ -1748,12 +1633,9 @@ const MasterFile = () => {
           >
             <Box style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <Typography variant="h6" style={{ fontWeight: 600 }}>
-                {filteredItems.length}{" "}
-                {filteredItems.length === 1 ? "Item" : "Items"}
+                {filteredItems.length} {filteredItems.length === 1 ? 'Item' : 'Items'}
                 {items.length > 0 && (
-                  <span
-                    style={{ color: "#666", fontSize: "0.9rem", marginLeft: 8 }}
-                  >
+                  <span style={{ color: '#666', fontSize: '0.9rem', marginLeft: 8 }}>
                     from {Object.keys(columns).length} columns
                   </span>
                 )}
@@ -1818,7 +1700,7 @@ const MasterFile = () => {
           {/* Updated FiltersOrderIQ Component */}
           <Box style={{ marginTop: 24 }}>
             {loadingMasterFileDetails ? (
-              <Box style={{ textAlign: "center", padding: 20 }}>
+              <Box style={{ textAlign: 'center', padding: 20 }}>
                 <LinearProgress />
                 <Typography variant="body2" style={{ marginTop: 8 }}>
                   Loading filter options...
@@ -1838,7 +1720,7 @@ const MasterFile = () => {
                 loadingMasterFileDetails={loadingMasterFileDetails}
               />
             )}
-
+            
             {/* Show upload/filter status */}
             {uploadStatus && (
               <Box style={{ marginTop: 16 }}>
@@ -1877,19 +1759,14 @@ const MasterFile = () => {
                   </TableCell>
                 ))}
                 {/* Stock Status Column (if stock column exists) */}
-                {Object.keys(columns).some(
-                  (key) =>
-                    columns[key].toLowerCase().includes("stock") ||
-                    columns[key].toLowerCase().includes("inventory") ||
-                    columns[key].toLowerCase().includes("quantity")
+                {Object.keys(columns).some(key => 
+                  columns[key].toLowerCase().includes('stock') || 
+                  columns[key].toLowerCase().includes('inventory') ||
+                  columns[key].toLowerCase().includes('quantity')
                 ) && (
-                  <TableCell style={{ fontWeight: 700 }}>
-                    Stock Status
-                  </TableCell>
+                  <TableCell style={{ fontWeight: 700 }}>Stock Status</TableCell>
                 )}
-                <TableCell style={{ fontWeight: 700, width: 100 }}>
-                  Actions
-                </TableCell>
+                <TableCell style={{ fontWeight: 700, width: 100 }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -1914,31 +1791,23 @@ const MasterFile = () => {
                   ))}
 
                   {/* Stock Status Cell (if stock column exists) */}
-                  {Object.keys(columns).some(
-                    (key) =>
-                      columns[key].toLowerCase().includes("stock") ||
-                      columns[key].toLowerCase().includes("inventory") ||
-                      columns[key].toLowerCase().includes("quantity")
+                  {Object.keys(columns).some(key => 
+                    columns[key].toLowerCase().includes('stock') || 
+                    columns[key].toLowerCase().includes('inventory') ||
+                    columns[key].toLowerCase().includes('quantity')
                   ) && (
                     <TableCell>
                       {(() => {
-                        const stockColumn = Object.keys(columns).find(
-                          (key) =>
-                            columns[key].toLowerCase().includes("stock") ||
-                            columns[key].toLowerCase().includes("inventory") ||
-                            columns[key].toLowerCase().includes("quantity")
+                        const stockColumn = Object.keys(columns).find(key => 
+                          columns[key].toLowerCase().includes('stock') || 
+                          columns[key].toLowerCase().includes('inventory') ||
+                          columns[key].toLowerCase().includes('quantity')
                         );
                         const stock = parseInt(item[stockColumn]) || 0;
                         const status = getStockStatus(item);
-
+                        
                         return (
-                          <Box
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 8,
-                            }}
-                          >
+                          <Box style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <Typography
                               variant="body2"
                               style={{ fontWeight: 600, minWidth: 30 }}
@@ -1968,9 +1837,7 @@ const MasterFile = () => {
                             disabled={savingRowId === item.id}
                           >
                             {savingRowId === item.id ? (
-                              <LinearProgress
-                                style={{ width: 16, height: 16 }}
-                              />
+                              <LinearProgress style={{ width: 16, height: 16 }} />
                             ) : (
                               <SaveIcon fontSize="small" />
                             )}
@@ -2004,18 +1871,19 @@ const MasterFile = () => {
                   </TableCell>
                 </TableRow>
               ))}
-
+              
               {/* Show message when no data */}
               {paginatedItems.length === 0 && (
                 <TableRow>
-                  <TableCell
-                    colSpan={Object.keys(columns).length + 3}
-                    style={{ textAlign: "center", padding: 40 }}
+                  <TableCell 
+                    colSpan={Object.keys(columns).length + 3} 
+                    style={{ textAlign: 'center', padding: 40 }}
                   >
                     <Typography variant="body1" color="textSecondary">
-                      {items.length === 0
+                      {items.length === 0 
                         ? "No data loaded. Please apply filters to load data from selected sources."
-                        : "No items match the current filters."}
+                        : "No items match the current filters."
+                      }
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -2155,12 +2023,7 @@ const MasterFile = () => {
           <Button
             onClick={handleUploadFile}
             variant="contained"
-            disabled={
-              !selectedFile ||
-              !selectedCompanyId ||
-              !selectedLocationId ||
-              uploading
-            }
+            disabled={!selectedFile || !selectedCompanyId || !selectedLocationId || uploading}
             startIcon={uploading ? null : <UploadFileIcon />}
           >
             {uploading ? "Uploading..." : "Upload"}
