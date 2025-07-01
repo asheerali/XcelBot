@@ -322,6 +322,110 @@ class UpdateMasterFileRequest(BaseModel):
 
 
 
+# @router.post("/updatefile")
+# def update_masterfile(
+#     request: UpdateMasterFileRequest,
+#     db: Session = Depends(get_db)
+# ):
+#     """Update a masterfile row"""
+    
+#     print("Received request to update masterfile:", request)
+#     try:
+#         # First, find the existing masterfile
+#         masterfile = masterfile_crud.get_masterfile_by_filename_and_location(
+#             db, request.company_id, request.location_id, request.filename
+#         )
+#         if not masterfile:
+#             raise HTTPException(status_code=404, detail="Masterfile not found")
+
+#         print("Found masterfile, processing update...")
+        
+#         # Convert stored data back to DataFrame
+#         df = pd.DataFrame(masterfile.file_data['data'])
+#         print("Current DataFrame shape:", df.shape)
+#         print("DataFrame columns:", df.columns.tolist())
+        
+#         # Get row data from the request
+#         row_data = request.row_data  # This is the data you're already getting
+#         print("Row data to match:", row_data)
+        
+        
+        
+#         # Create boolean mask for matching rows using all columns except price-related ones
+#         mask = pd.Series([True] * len(df))
+#         exclude_columns = ["Current Price","Previous Price"]
+        
+#         for col in row_data.keys():
+#             if col not in exclude_columns and col in df.columns:
+#                 mask = mask & (df[col] == row_data[col])
+        
+#         # Find matching rows
+#         matching_rows = df[mask]
+        
+#         if matching_rows.empty:
+#             print("No matching rows found")
+#             return {"status": "error", "message": "No matching rows found"}
+        
+#         print(f"Found {len(matching_rows)} matching row(s)")
+        
+#         # Update the matching rows
+#         # Set Previous Price to the current Current Price before updating
+#         if 'Current Price' in df.columns:
+#             df.loc[mask, 'Previous Price'] = df.loc[mask, 'Current Price']
+#             # Update Current Price to the new value
+#             df.loc[mask, 'Current Price'] = row_data['Current Price']
+        
+        
+#         print("Updated rows:")
+#         print(df[mask][['Category', 'Products', 'Current Price', 'Previous Price']])
+
+#         print("df after the update...", df.head())
+#         # Convert DataFrame back to JSON format for database storage
+#         df_json = df.to_dict('records')
+        
+#         # Handle any datetime/timestamp conversions and NaN values
+#         for record in df_json:
+#             for key, value in record.items():
+#                 if pd.isna(value):
+#                     record[key] = None
+#                 elif isinstance(value, (pd.Timestamp, datetime.datetime, datetime.date)):
+#                     record[key] = value.isoformat() if value else None
+#                 elif isinstance(value, (int, float)) and pd.isna(value):
+#                     record[key] = None
+        
+#         # Update the file_data structure
+#         updated_file_data = {
+#             "upload_date": masterfile.file_data.get('upload_date'),  # Keep original upload date
+#             "updated_at": datetime.datetime.now().isoformat(),  # Add last updated timestamp
+#             "user_id": masterfile.file_data.get('user_id'),
+#             "location_id": masterfile.file_data.get('location_id'),
+#             "location_name": masterfile.file_data.get('location_name'),
+#             "total_rows": len(df),
+#             "columns": df.columns.tolist(),
+#             "data": df_json
+#         }
+        
+#         # Update the database record
+#         updated_masterfile = masterfile_crud.update_masterfile(
+#             db, masterfile.id, updated_file_data
+#         )
+        
+#         if updated_masterfile:
+#             print("Successfully updated masterfile in database")
+#             return {
+#                 "status": "success", 
+#                 "message": f"Updated {len(matching_rows)} row(s)",
+#                 "updated_rows": len(matching_rows),
+#                 "updated_at": updated_file_data['updated_at'],
+#             }
+#         else:
+#             raise HTTPException(status_code=500, detail="Failed to update database")
+        
+#     except Exception as e:
+#         print(f"Error in update_masterfile: {str(e)}")
+#         print(traceback.format_exc())
+#         raise HTTPException(status_code=500, detail=f"Error updating masterfile: {str(e)}")
+    
 @router.post("/updatefile")
 def update_masterfile(
     request: UpdateMasterFileRequest,
@@ -412,6 +516,44 @@ def update_masterfile(
         
         if updated_masterfile:
             print("Successfully updated masterfile in database")
+            
+            # Save the row data to logs table
+            try:
+                # Import logs crud at the top of the file
+                from crud import logs as logs_crud
+                from schemas.logs import LogsCreate
+                
+                # Create log entry with the updated row data
+                log_data = {
+                    "action": "update_price",
+                    "timestamp": datetime.datetime.now().isoformat(),
+                    "user_id": masterfile.file_data.get('user_id'),
+                    "original_data": row_data,  # The whole row data from request
+                    "updated_rows_count": len(matching_rows),
+                    "masterfile_id": masterfile.id,
+                    "changes": {
+                        "previous_price": df.loc[mask, 'Previous Price'].iloc[0] if len(matching_rows) > 0 else None,
+                        "new_price": row_data['Current Price']
+                    }
+                }
+                
+                # Create logs entry
+                logs_create = LogsCreate(
+                    company_id=request.company_id,
+                    location_id=request.location_id,
+                    filename=f"update_log_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                    file_data=log_data
+                    # created_at will be auto-set by the schema default
+                )
+                
+                # Save to logs table
+                created_log = logs_crud.create_logs(db, logs_create)
+                print(f"Successfully created log entry with ID: {created_log.id}")
+                
+            except Exception as log_error:
+                print(f"Error creating log entry: {str(log_error)}")
+                # Don't fail the main operation if logging fails
+                
             return {
                 "status": "success", 
                 "message": f"Updated {len(matching_rows)} row(s)",
@@ -425,9 +567,8 @@ def update_masterfile(
         print(f"Error in update_masterfile: {str(e)}")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error updating masterfile: {str(e)}")
-    
-    
-    
+
+
 @router.post("/", response_model=masterfile_schema.MasterFile)
 def create_masterfile(masterfile: masterfile_schema.MasterFileCreate, db: Session = Depends(get_db)):
     """Create a new masterfile record"""
