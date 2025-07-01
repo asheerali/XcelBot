@@ -1,313 +1,17 @@
-
-import pandas as pd
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
-from models.sales_pmix import SalesPMix
-from typing import List, Tuple
-
-def check_and_filter_duplicates_sales_pmix(
-    db: Session, 
-    df_clean: pd.DataFrame, 
-    company_id: int
-) -> Tuple[pd.DataFrame, int, int]:
-    """
-    Check for duplicate records and filter them out before database insertion.
-    
-    Args:
-        db: Database session
-        df_clean: Cleaned DataFrame to check for duplicates
-        company_id: Company ID for filtering
-    
-    Returns:
-        Tuple of (filtered_dataframe, new_records_count, duplicates_count)
-    """
-    
-    if df_clean.empty:
-        return df_clean, 0, 0
-    
-    print(f"Starting duplicate check for {len(df_clean)} records...")
-    
-    # Define the columns that make up a unique record
-    # You can adjust these based on your business logic
-    unique_identifier_columns = [
-        'Sent_Date', 'Order_Date', 'Net_Price', 'Location', 
-        'Qty', 'Menu_Item', 'Order_Id'
-    ]
-    
-    # Get the date range from the new data to optimize the query
-    min_sent_date = df_clean['Sent_Date'].min()
-    max_sent_date = df_clean['Sent_Date'].max()
-    
-    print(f"Checking for duplicates in date range: {min_sent_date} to {max_sent_date}")
-    
-    try:
-        # Query existing records from database using SQLAlchemy ORM
-        # This is more efficient than loading all records
-        existing_records_query = db.query(SalesPMix).filter(
-            and_(
-                SalesPMix.company_id == company_id,
-                or_(
-                    and_(
-                        SalesPMix.Sent_Date >= min_sent_date,
-                        SalesPMix.Sent_Date <= max_sent_date
-                    ),
-                    and_(
-                        SalesPMix.Order_Date >= min_sent_date.strftime('%m-%d-%Y') if min_sent_date else None,
-                        SalesPMix.Order_Date <= max_sent_date.strftime('%m-%d-%Y') if max_sent_date else None
-                    )
-                )
-            )
-        )
-        
-        # Convert to DataFrame for easier comparison
-        existing_records = []
-        for record in existing_records_query:
-            record_dict = {}
-            for col in unique_identifier_columns:
-                record_dict[col] = getattr(record, col, None)
-            existing_records.append(record_dict)
-        
-        existing_df = pd.DataFrame(existing_records)
-        print(f"Found {len(existing_df)} existing records in database for comparison")
-        
-        if existing_df.empty:
-            print("No existing records found. All records will be inserted.")
-            return df_clean, len(df_clean), 0
-        
-        # Normalize data types for comparison
-        df_comparison = df_clean.copy()
-        
-        # Handle datetime columns
-        for col in ['Sent_Date']:
-            if col in existing_df.columns and col in df_comparison.columns:
-                existing_df[col] = pd.to_datetime(existing_df[col], errors='coerce')
-                df_comparison[col] = pd.to_datetime(df_comparison[col], errors='coerce')
-        
-        # Handle string date columns
-        for col in ['Order_Date']:
-            if col in existing_df.columns and col in df_comparison.columns:
-                existing_df[col] = existing_df[col].astype(str).replace('None', '').replace('nan', '')
-                df_comparison[col] = df_comparison[col].astype(str).replace('None', '').replace('nan', '')
-        
-        # Handle numeric columns
-        for col in ['Net_Price', 'Qty', 'Order_Id']:
-            if col in existing_df.columns and col in df_comparison.columns:
-                existing_df[col] = pd.to_numeric(existing_df[col], errors='coerce').fillna(0)
-                df_comparison[col] = pd.to_numeric(df_comparison[col], errors='coerce').fillna(0)
-        
-        # Handle string columns
-        for col in ['Location', 'Menu_Item']:
-            if col in existing_df.columns and col in df_comparison.columns:
-                existing_df[col] = existing_df[col].astype(str).fillna('').str.strip()
-                df_comparison[col] = df_comparison[col].astype(str).fillna('').str.strip()
-        
-        # Create composite keys for comparison
-        def create_composite_key(row, columns):
-            """Create a composite key from specified columns"""
-            key_parts = []
-            for col in columns:
-                if col in row.index:
-                    val = row[col]
-                    if pd.isna(val) or val is None:
-                        key_parts.append('NULL')
-                    else:
-                        key_parts.append(str(val))
-                else:
-                    key_parts.append('NULL')
-            return '|'.join(key_parts)
-        
-        # Create composite keys
-        existing_df['composite_key'] = existing_df.apply(
-            lambda row: create_composite_key(row, unique_identifier_columns), axis=1
-        )
-        
-        df_comparison['composite_key'] = df_comparison.apply(
-            lambda row: create_composite_key(row, unique_identifier_columns), axis=1
-        )
-        
-        # Find duplicates
-        existing_keys = set(existing_df['composite_key'].tolist())
-        duplicate_mask = df_comparison['composite_key'].isin(existing_keys)
-        
-        duplicates_count = duplicate_mask.sum()
-        new_records_count = len(df_comparison) - duplicates_count
-        
-        print(f"Duplicate analysis complete:")
-        print(f"  - Total records in upload: {len(df_comparison)}")
-        print(f"  - Duplicate records found: {duplicates_count}")
-        print(f"  - New records to insert: {new_records_count}")
-        
-        if duplicates_count > 0:
-            print("Sample duplicate records:")
-            duplicate_samples = df_comparison[duplicate_mask][unique_identifier_columns].head(3)
-            print(duplicate_samples.to_string())
-        
-        # Filter out duplicates
-        df_filtered = df_comparison[~duplicate_mask].copy()
-        
-        # Remove the temporary composite_key column
-        if 'composite_key' in df_filtered.columns:
-            df_filtered = df_filtered.drop('composite_key', axis=1)
-        
-        return df_filtered, new_records_count, duplicates_count
-        
-    except Exception as e:
-        print(f"Error during duplicate check: {str(e)}")
-        print("Proceeding without duplicate check...")
-        return df_clean, len(df_clean), 0
-
-
-def insert_sales_pmix_with_duplicate_check(
-    db: Session, 
-    df: pd.DataFrame, 
-    company_id: int
-) -> dict:
-    """
-    Insert sales data with comprehensive duplicate checking.
-    
-    Args:
-        db: Database session
-        df: DataFrame to insert
-        company_id: Company ID
-    
-    Returns:
-        Dictionary with insertion results
-    """
-    
-    try:
-        print(f"Starting insertion process for {len(df)} records...")
-        
-        # Validate DataFrame structure
-        required_columns = [
-            'Location', 'Order_Id', 'Order_number', 'Sent_Date', 'Order_Date',
-            'Check_Id', 'Server', 'Table', 'Dining_Area', 'Service', 'Dining_Option',
-            'Item_Selection_Id', 'Item_Id', 'Master_Id', 'SKU', 'PLU', 'Menu_Item',
-            'Menu_Subgroups', 'Menu_Group', 'Menu', 'Sales_Category', 'Gross_Price',
-            'Discount', 'Net_Price', 'Qty', 'Avg_Price', 'Tax', 'Void', 'Deferred',
-            'Tax_Exempt', 'Tax_Inclusion_Option', 'Dining_Option_Tax', 'Tab_Name',
-            'Date', 'Time', 'Day', 'Week', 'Month', 'Quarter', 'Year', 'Category'
-        ]
-        
-        missing_columns = [col for col in required_columns if col not in df.columns]
-        if missing_columns:
-            raise ValueError(f"Missing required columns: {missing_columns}")
-        
-        # Clean and prepare data
-        df_clean = df.copy()
-        
-        # Handle Week column properly
-        if 'Week' in df_clean.columns:
-            df_clean['Week'] = pd.to_numeric(df_clean['Week'], errors='coerce').astype('Int64')
-        
-        # Convert datetime columns
-        datetime_columns = ['Sent_Date']
-        for col in datetime_columns:
-            if col in df_clean.columns:
-                df_clean[col] = pd.to_datetime(df_clean[col], errors='coerce')
-        
-        # Convert string columns
-        string_columns = ['Date', 'Time', 'Order_Date']
-        for col in string_columns:
-            if col in df_clean.columns:
-                df_clean[col] = df_clean[col].astype(str).replace('nan', None).replace('NaT', None)
-        
-        # Check for duplicates
-        df_filtered, new_records_count, duplicates_count = check_and_filter_duplicates_sales_pmix(
-            db, df_clean, company_id
-        )
-        
-        if len(df_filtered) == 0:
-            print("No new records to insert after duplicate check.")
-            return {
-                'inserted_count': 0,
-                'duplicate_count': duplicates_count,
-                'total_processed': len(df),
-                'status': 'success'
-            }
-        
-        # Insert records in batches for better performance
-        batch_size = 1000
-        inserted_count = 0
-        
-        for i in range(0, len(df_filtered), batch_size):
-            batch_df = df_filtered.iloc[i:i + batch_size]
-            
-            # Convert DataFrame to list of dictionaries
-            records_to_insert = []
-            for _, row in batch_df.iterrows():
-                record_dict = row.to_dict()
-                record_dict['company_id'] = company_id
-                
-                # Handle NaN values
-                for key, value in record_dict.items():
-                    if pd.isna(value):
-                        record_dict[key] = None
-                
-                records_to_insert.append(record_dict)
-            
-            # Bulk insert using SQLAlchemy
-            db.bulk_insert_mappings(SalesPMix, records_to_insert)
-            inserted_count += len(records_to_insert)
-            
-            print(f"Inserted batch {i//batch_size + 1}: {len(records_to_insert)} records")
-        
-        # Commit the transaction
-        db.commit()
-        print(f"Successfully inserted {inserted_count} new records into sales_pmix table")
-        
-        return {
-            'inserted_count': inserted_count,
-            'duplicate_count': duplicates_count,
-            'total_processed': len(df),
-            'status': 'success'
-        }
-        
-    except Exception as e:
-        db.rollback()
-        print(f"Error during insertion: {str(e)}")
-        raise e
-
-
-
-
-# router/excel_upload.py
-
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi import FastAPI, HTTPException, Body
-from fastapi.middleware.cors import CORSMiddleware
-import base64
-import io
-import pandas as pd
-import numpy as np
-import os
-import datetime
-import traceback
-from datetime import date
-from dateutil.relativedelta import relativedelta
-from fastapi import Request
-from sqlalchemy.orm import Session
-
-# Import from local modules
-from models.sales_pmix import SalesPMix
-from models_pydantic import ExcelUploadRequest, ExcelFilterRequest, ExcelUploadResponse, SalesAnalyticsResponse, DualDashboardResponse, DashboardResponse
-from excel_processor import process_excel_file
-# from utils import find_file_in_directory
-from sales_analytics import generate_sales_analytics
-from constants import *
-
-from crud.uploaded_files import upload_file_record
-from schemas.uploaded_files import UploadedFileCreate
+from schemas.master_file import MasterFileCreate
+from crud import master_file as masterfile_crud
+from database import get_db
 from dependencies.auth import get_current_active_user
 from models.users import User
-from fastapi import Depends
-from database import Base, get_db
-from crud.sales_pmix import insert_sales_pmix_df
-# Add these imports
-from crud.financials_company_wide import insert_financials_with_duplicate_check
-from crud.budget import insert_budget_with_duplicate_check
-
-# Import the return processor
-from .excel_upload_return import process_dashboard_data
+from models_pydantic import ExcelUploadRequest, DualDashboardResponse
+import base64
+import json
+import io
+import pandas as pd
+import datetime
+import traceback
 
 router = APIRouter(
     prefix="/api",
@@ -320,57 +24,191 @@ async def master_upload(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
+    """
+    Upload and process master file data, saving it to the database
+    """
     try:
         print(f"Received file upload: {request.fileName}")
         
+        # Validate required fields
+        if not request.company_id:
+            raise HTTPException(status_code=400, detail="Company ID is required")
+        
+        if not request.fileName:
+            raise HTTPException(status_code=400, detail="File name is required")
+        
+        if not request.fileContent:
+            raise HTTPException(status_code=400, detail="File content is required")
+        
         # Decode base64 file content
-        file_content = base64.b64decode(request.fileContent)
-        print("Type of file_content:", type(file_content))
+        try:
+            file_content = base64.b64decode(request.fileContent)
+            print("Successfully decoded base64 file content")
+        except Exception as e:
+            print(f"Error decoding base64 content: {str(e)}")
+            raise HTTPException(status_code=400, detail="Invalid base64 file content")
         
-        # Create BytesIO object for pandas
-        excel_data = io.BytesIO(file_content)
-        
-        # Save file to disk with timestamp
-        # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-
-        safe_file_name = os.path.basename(request.fileName)  # Prevent path issues
-        
-        # Ensure the file name is safe and does not contain any path components
-        file_name = f"{timestamp}_{safe_file_name}"
-
-        
-        print('Processing uploaded file:', request.fileName)
-        if request.location:
-            print('Location:', request.location)
-            print("Dashboard:", request.dashboard) 
-
+        # Process the Excel file to extract data
+        try:
+            excel_data = io.BytesIO(file_content)
             
-        excel_data = io.BytesIO(file_content)
-        # df = pd.read_excel(excel_data)
-
-        file_name = file_name if request.fileName else None
-        company_id = request.company_id if request.company_id  else None
-        # dashboard_name = request.dashboard if request.dashboard else "Master Dashboard"
-        current_user = current_user.id
-
+            # Read Excel file - you might want to handle multiple sheets
+            df = pd.read_excel(excel_data, sheet_name=0)  # Read first sheet
+            print(f"Successfully read Excel file with {len(df)} rows and {len(df.columns)} columns")
+            
+            # Convert DataFrame to JSON format
+            # Handle datetime objects and other non-serializable types
+            df_json = df.to_dict('records')
+            
+            # Convert any datetime objects to strings
+            for record in df_json:
+                for key, value in record.items():
+                    if pd.isna(value):
+                        record[key] = None
+                    elif isinstance(value, (pd.Timestamp, datetime.datetime, datetime.date)):
+                        record[key] = value.isoformat() if value else None
+                    elif isinstance(value, (int, float)) and pd.isna(value):
+                        record[key] = None
+            
+            # Prepare file data for database storage
+            file_data = {
+                "original_filename": request.fileName,
+                "upload_date": datetime.datetime.now().isoformat(),
+                "user_id": current_user.id,
+                "location": request.location,
+                "dashboard": request.dashboard,
+                "total_rows": len(df),
+                "columns": df.columns.tolist(),
+                "data": df_json
+            }
+            
+        except Exception as e:
+            print(f"Error processing Excel file: {str(e)}")
+            print(traceback.format_exc())
+            raise HTTPException(status_code=400, detail=f"Error processing Excel file: {str(e)}")
+        
+        # Check if file with same name already exists for this company
+        existing_file = masterfile_crud.get_masterfile_by_filename(
+            db, request.company_id, request.fileName
+        )
+        
+        if existing_file:
+            # Update existing file
+            print(f"Updating existing file: {request.fileName}")
+            updated_file = masterfile_crud.update_masterfile(
+                db, existing_file.id, file_data
+            )
+            saved_file = updated_file
+        else:
+            # Create new file record
+            print(f"Creating new file record: {request.fileName}")
+            masterfile_create = MasterFileCreate(
+                company_id=request.company_id,
+                filename=request.fileName,
+                file_data=file_data
+            )
+            saved_file = masterfile_crud.create_masterfile(db, masterfile_create)
+        
+        print(f"Successfully saved file to database with ID: {saved_file.id}")
+        
+        # Prepare response data
+        column_names = df.columns.tolist()
+        columns_data = df_json[:10]  # Return first 10 rows as preview
+        
         master_response = {
-            "columnNames": ["column1", "column2", "column3"],  # Convert DataFrame to list of dictionaries
-            "columnsData": [
-                {"column1": "value1", "column2": "value2", "column3": "value3"},
-                {"column1": "value4", "column2": "value5", "column3": "value6"},
-                ],
-            "fileName": file_name,
-            "company_id": company_id,
-            "userId": current_user,
-            "data": "this is the master dashboard"
+            "columnNames": column_names,
+            "columnsData": columns_data,
+            "fileName": request.fileName,
+            "company_id": request.company_id,
+            "userId": current_user.id,
+            "data": f"File uploaded successfully. {len(df)} rows processed and saved to database.",
+            "file_id": saved_file.id,
+            "total_rows": len(df),
+            "preview_rows": len(columns_data)
         }
-            
-    
-        return [master_response]
+        
+        return master_response
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions without modification
+        raise
+    except Exception as e:
+        print(f"Unexpected error in master_upload: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@router.get("/master/files/company/{company_id}")
+async def get_company_master_files(
+    company_id: int,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get all master files for a specific company
+    """
+    try:
+        files = masterfile_crud.get_masterfile_by_company(db, company_id, skip, limit)
+        
+        # Prepare response with file metadata
+        files_data = []
+        for file in files:
+            file_info = {
+                "id": file.id,
+                "filename": file.filename,
+                "company_id": file.company_id,
+                "upload_date": file.file_data.get("upload_date"),
+                "total_rows": file.file_data.get("total_rows", 0),
+                "columns": file.file_data.get("columns", []),
+                "location": file.file_data.get("location"),
+                "dashboard": file.file_data.get("dashboard"),
+                "user_id": file.file_data.get("user_id")
+            }
+            files_data.append(file_info)
+        
+        return {
+            "files": files_data,
+            "total": len(files_data),
+            "skip": skip,
+            "limit": limit
+        }
         
     except Exception as e:
-        print(f"Error decoding file content: {str(e)}")
-        raise HTTPException(status_code=400, detail="Invalid file format or content.")
-    
+        print(f"Error retrieving company files: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving files: {str(e)}")
 
+
+@router.get("/master/files/{file_id}/data")
+async def get_master_file_data(
+    file_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get the actual data from a specific master file
+    """
+    try:
+        file = masterfile_crud.get_masterfile(db, file_id)
+        
+        if not file:
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        return {
+            "file_info": {
+                "id": file.id,
+                "filename": file.filename,
+                "company_id": file.company_id,
+                "upload_date": file.file_data.get("upload_date"),
+                "total_rows": file.file_data.get("total_rows", 0),
+                "columns": file.file_data.get("columns", [])
+            },
+            "data": file.file_data.get("data", [])
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error retrieving file data: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving file data: {str(e)}")

@@ -10,7 +10,7 @@ from routers import locations
 from database import engine, SessionLocal
 from routers import excel_upload, sales_split_filter, health, companywide_filter, pmix_filter, financials_filter, master_upload
 # Import from local modules
-from models import users,user_company_companylocation ,locations,company_locations, permissions, user_company, payments, subscriptions, dashboards, user_dashboard_permissions, uploaded_files, file_permissions, companies
+from models import users,user_company_companylocation ,locations,company_locations, permissions, user_company, payments, subscriptions, dashboards, user_dashboard_permissions, uploaded_files, file_permissions, companies, master_file
 from database import get_db
 # Initialize FastAPI app
 app = FastAPI()
@@ -26,6 +26,7 @@ companies.Base.metadata.create_all(bind=engine)
 user_company.Base.metadata.create_all(bind=engine)
 permissions.Base.metadata.create_all(bind=engine)
 company_locations.Base.metadata.create_all(bind=engine)
+master_file.Base.metadata.create_all(bind=engine)
 
         
 db_dependency = Annotated[Session, Depends(get_db)]
