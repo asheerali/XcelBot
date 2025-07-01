@@ -59,16 +59,13 @@ import DateRangeSelector from "../components/DateRangeSelector";
 import { API_URL_Local } from "../constants";
 
 // Types
-interface Company {
+interface MasterFileDetail {
   id: number;
-  name: string;
-  code?: string;
-}
-
-interface Location {
-  id: number;
-  name: string;
-  code?: string;
+  company_id: number;
+  company_name: string;
+  filename: string;
+  location_id: number;
+  location_name: string;
 }
 
 interface FilterOption {
@@ -210,9 +207,10 @@ const FiltersOrderIQ2 = ({
   filteredItems,
   units = [],
   categories = [],
+  priceRange = [0, 100]
 }) => {
   const [filters, setFilters] = useState({
-    priceRange: [0, 20],
+    priceRange: priceRange,
     stockStatus: "all",
     unit: "all",
     category: "all",
@@ -223,6 +221,14 @@ const FiltersOrderIQ2 = ({
 
   const [expanded, setExpanded] = useState(false);
 
+  // Update price range when prop changes
+  useEffect(() => {
+    setFilters(prev => ({
+      ...prev,
+      priceRange: priceRange
+    }));
+  }, [priceRange]);
+
   const handleFilterChange = (filterName, value) => {
     const newFilters = { ...filters, [filterName]: value };
     setFilters(newFilters);
@@ -231,7 +237,7 @@ const FiltersOrderIQ2 = ({
 
   const clearAllFilters = () => {
     const clearedFilters = {
-      priceRange: [0, 20],
+      priceRange: priceRange,
       stockStatus: "all",
       unit: "all",
       category: "all",
@@ -251,7 +257,7 @@ const FiltersOrderIQ2 = ({
     if (filters.priceChange !== "all") count++;
     if (filters.showLowStock) count++;
     if (filters.showOutOfStock) count++;
-    if (filters.priceRange[0] > 0 || filters.priceRange[1] < 20) count++;
+    if (filters.priceRange[0] > priceRange[0] || filters.priceRange[1] < priceRange[1]) count++;
     return count;
   };
 
@@ -321,13 +327,13 @@ const FiltersOrderIQ2 = ({
                     handleFilterChange("priceRange", newValue)
                   }
                   valueLabelDisplay="auto"
-                  min={0}
-                  max={20}
-                  step={0.25}
+                  min={priceRange[0]}
+                  max={priceRange[1]}
+                  step={priceRange[1] > 100 ? 10 : 1}
                   marks={[
-                    { value: 0, label: "$0" },
-                    { value: 10, label: "$10" },
-                    { value: 20, label: "$20+" },
+                    { value: priceRange[0], label: `$${priceRange[0]}` },
+                    { value: Math.round((priceRange[0] + priceRange[1]) / 2), label: `$${Math.round((priceRange[0] + priceRange[1]) / 2)}` },
+                    { value: priceRange[1], label: `$${priceRange[1]}+` },
                   ]}
                 />
                 <Typography
@@ -376,6 +382,27 @@ const FiltersOrderIQ2 = ({
                 </Select>
               </FormControl>
             </Grid>
+
+            {/* Category Filter */}
+            {categories.length > 0 && (
+              <Grid item xs={12} md={2}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Category</InputLabel>
+                  <Select
+                    value={filters.category}
+                    label="Category"
+                    onChange={(e) => handleFilterChange("category", e.target.value)}
+                  >
+                    <MenuItem value="all">All Categories</MenuItem>
+                    {categories.map((category) => (
+                      <MenuItem key={category} value={category}>
+                        {category}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
 
             {/* Price Change Filter */}
             <Grid item xs={12} md={2}>
@@ -458,244 +485,352 @@ const FiltersOrderIQ2 = ({
   );
 };
 
-// Mock data with more items
-const initialItems = [
-  {
-    id: 1,
-    code: "12OZCO_7415",
-    name: "12 oz coffee cup",
-    currentPrice: 2.34,
-    previousPrice: 2.2,
-    unit: "Bag",
-    stock: 0,
-  },
-  {
-    id: 2,
-    code: "12OZCO_5802",
-    name: "12 oz coffee cup",
-    currentPrice: 2.34,
-    previousPrice: 2.25,
-    unit: "Bag",
-    stock: 0,
-  },
-  {
-    id: 3,
-    code: "12OZCO_0995",
-    name: "12 oz coffee cup",
-    currentPrice: 2.34,
-    previousPrice: 2.3,
-    unit: "Bag",
-    stock: 0,
-  },
-  {
-    id: 4,
-    code: "16OZCO_7415",
-    name: "16 oz coffee cup",
-    currentPrice: 2.3,
-    previousPrice: 2.15,
-    unit: "Bag",
-    stock: 0,
-  },
-  {
-    id: 5,
-    code: "16OZCO_5802",
-    name: "16 oz coffee cup",
-    currentPrice: 2.3,
-    previousPrice: 2.2,
-    unit: "Bag",
-    stock: 0,
-  },
-  {
-    id: 6,
-    code: "20OZCO_1234",
-    name: "20 oz coffee cup",
-    currentPrice: 2.5,
-    previousPrice: 2.35,
-    unit: "Bag",
-    stock: 15,
-  },
-  {
-    id: 7,
-    code: "NAPKIN_001",
-    name: "Paper napkins",
-    currentPrice: 1.25,
-    previousPrice: 1.15,
-    unit: "Pack",
-    stock: 200,
-  },
-  {
-    id: 8,
-    code: "STIRRER_99",
-    name: "Coffee stirrers",
-    currentPrice: 0.85,
-    previousPrice: 0.8,
-    unit: "Box",
-    stock: 50,
-  },
-  {
-    id: 9,
-    code: "SLEEVE_12",
-    name: "12 oz cup sleeves",
-    currentPrice: 1.95,
-    previousPrice: 1.85,
-    unit: "Pack",
-    stock: 0,
-  },
-  {
-    id: 10,
-    code: "SLEEVE_16",
-    name: "16 oz cup sleeves",
-    currentPrice: 2.1,
-    previousPrice: 1.95,
-    unit: "Pack",
-    stock: 25,
-  },
-  {
-    id: 11,
-    code: "LID_12_WHITE",
-    name: "12 oz white lid",
-    currentPrice: 1.75,
-    previousPrice: 1.65,
-    unit: "Bag",
-    stock: 0,
-  },
-  {
-    id: 12,
-    code: "LID_16_WHITE",
-    name: "16 oz white lid",
-    currentPrice: 1.85,
-    previousPrice: 1.7,
-    unit: "Bag",
-    stock: 30,
-  },
-  {
-    id: 13,
-    code: "SUGAR_PACK",
-    name: "Sugar packets",
-    currentPrice: 0.05,
-    previousPrice: 0.04,
-    unit: "Each",
-    stock: 1000,
-  },
-  {
-    id: 14,
-    code: "CREAM_PACK",
-    name: "Cream packets",
-    currentPrice: 0.08,
-    previousPrice: 0.07,
-    unit: "Each",
-    stock: 500,
-  },
-  {
-    id: 15,
-    code: "STRAW_BEND",
-    name: "Bendable straws",
-    currentPrice: 0.95,
-    previousPrice: 0.85,
-    unit: "Pack",
-    stock: 75,
-  },
-  {
-    id: 16,
-    code: "FORK_PLAST",
-    name: "Plastic forks",
-    currentPrice: 1.2,
-    previousPrice: 1.1,
-    unit: "Pack",
-    stock: 100,
-  },
-  {
-    id: 17,
-    code: "KNIFE_PLAST",
-    name: "Plastic knives",
-    currentPrice: 1.15,
-    previousPrice: 1.05,
-    unit: "Pack",
-    stock: 85,
-  },
-  {
-    id: 18,
-    code: "SPOON_PLAST",
-    name: "Plastic spoons",
-    currentPrice: 1.1,
-    previousPrice: 1.0,
-    unit: "Pack",
-    stock: 90,
-  },
-  {
-    id: 19,
-    code: "PLATE_PAPER",
-    name: 'Paper plates 9"',
-    currentPrice: 3.25,
-    previousPrice: 3.1,
-    unit: "Pack",
-    stock: 40,
-  },
-  {
-    id: 20,
-    code: "BOWL_FOAM",
-    name: "Foam bowls",
-    currentPrice: 2.85,
-    previousPrice: 2.7,
-    unit: "Pack",
-    stock: 60,
-  },
-  {
-    id: 21,
-    code: "BAG_TAKEOUT",
-    name: "Takeout bags",
-    currentPrice: 4.5,
-    previousPrice: 4.25,
-    unit: "Pack",
-    stock: 25,
-  },
-  {
-    id: 22,
-    code: "CONTAINER_16",
-    name: "16 oz containers",
-    currentPrice: 5.75,
-    previousPrice: 5.5,
-    unit: "Pack",
-    stock: 35,
-  },
-  {
-    id: 23,
-    code: "WRAP_FOIL",
-    name: "Foil wrap",
-    currentPrice: 8.95,
-    previousPrice: 8.5,
-    unit: "Roll",
-    stock: 12,
-  },
-  {
-    id: 24,
-    code: "GLOVES_VINYL",
-    name: "Vinyl gloves",
-    currentPrice: 12.5,
-    previousPrice: 11.75,
-    unit: "Box",
-    stock: 20,
-  },
-  {
-    id: 25,
-    code: "TOWEL_PAPER",
-    name: "Paper towels",
-    currentPrice: 6.25,
-    previousPrice: 5.95,
-    unit: "Pack",
-    stock: 18,
-  },
-];
+// Updated FiltersOrderIQ Component with Filename and Select All
+const FiltersOrderIQWithFilename = ({
+  masterFileDetails,
+  selectedCompanies,
+  selectedLocations,
+  selectedFilenames,
+  onCompanyChange,
+  onLocationChange,
+  onFilenameChange,
+  onApplyFilters,
+  showApplyButton = true,
+  loadingMasterFileDetails = false,
+}) => {
+  // Get unique companies
+  const companyOptions = Array.from(
+    new Map(
+      masterFileDetails.map(item => [item.company_id, {
+        value: item.company_id.toString(),
+        label: item.company_name
+      }])
+    ).values()
+  );
+
+  // Get unique locations filtered by selected companies
+  const getLocationOptions = () => {
+    let filteredData = masterFileDetails;
+    if (selectedCompanies.length > 0) {
+      filteredData = masterFileDetails.filter(item => 
+        selectedCompanies.includes(item.company_id.toString())
+      );
+    }
+    
+    return Array.from(
+      new Map(
+        filteredData.map(item => [item.location_id, {
+          value: item.location_id.toString(),
+          label: item.location_name
+        }])
+      ).values()
+    );
+  };
+
+  // Get unique filenames filtered by selected companies and locations
+  const getFilenameOptions = () => {
+    let filteredData = masterFileDetails;
+    
+    if (selectedCompanies.length > 0) {
+      filteredData = filteredData.filter(item => 
+        selectedCompanies.includes(item.company_id.toString())
+      );
+    }
+    
+    if (selectedLocations.length > 0) {
+      filteredData = filteredData.filter(item => 
+        selectedLocations.includes(item.location_id.toString())
+      );
+    }
+    
+    return Array.from(
+      new Set(filteredData.map(item => item.filename))
+    ).map(filename => ({
+      value: filename,
+      label: filename
+    }));
+  };
+
+  // Calculate how many API calls will be made
+  const getApiCallCount = () => {
+    let filteredDetails = masterFileDetails;
+    
+    if (selectedCompanies.length > 0) {
+      filteredDetails = filteredDetails.filter(item => 
+        selectedCompanies.includes(item.company_id.toString())
+      );
+    }
+    
+    if (selectedLocations.length > 0) {
+      filteredDetails = filteredDetails.filter(item => 
+        selectedLocations.includes(item.location_id.toString())
+      );
+    }
+    
+    if (selectedFilenames.length > 0) {
+      filteredDetails = filteredDetails.filter(item => 
+        selectedFilenames.includes(item.filename)
+      );
+    }
+    
+    return filteredDetails.length;
+  };
+
+  // Check if filename dropdown should be enabled
+  const isFilenameDropdownEnabled = () => {
+    return selectedCompanies.length > 0 && selectedLocations.length > 0;
+  };
+
+  // Check if location dropdown should be enabled
+  const isLocationDropdownEnabled = () => {
+    return selectedCompanies.length > 0;
+  };
+
+  // Handle company selection with Select All functionality
+  const handleCompanyChange = (value) => {
+    if (value.includes('select_all')) {
+      if (selectedCompanies.length === companyOptions.length) {
+        // If all are selected, deselect all
+        onCompanyChange([]);
+      } else {
+        // Select all companies
+        onCompanyChange(companyOptions.map(option => option.value));
+      }
+    } else {
+      onCompanyChange(value);
+    }
+  };
+
+  // Handle location selection with Select All functionality
+  const handleLocationChange = (value) => {
+    const locationOptions = getLocationOptions();
+    if (value.includes('select_all')) {
+      if (selectedLocations.length === locationOptions.length) {
+        // If all are selected, deselect all
+        onLocationChange([]);
+      } else {
+        // Select all locations
+        onLocationChange(locationOptions.map(option => option.value));
+      }
+    } else {
+      onLocationChange(value);
+    }
+  };
+
+  // Handle filename selection with Select All functionality
+  const handleFilenameChange = (value) => {
+    const filenameOptions = getFilenameOptions();
+    if (value.includes('select_all')) {
+      if (selectedFilenames.length === filenameOptions.length) {
+        // If all are selected, deselect all
+        onFilenameChange([]);
+      } else {
+        // Select all filenames
+        onFilenameChange(filenameOptions.map(option => option.value));
+      }
+    } else {
+      onFilenameChange(value);
+    }
+  };
+
+  // Render value functions
+  const renderCompanyValue = (selected) => {
+    if (selected.length === 0) return 'Select Companies';
+    if (selected.length === companyOptions.length) return 'All Companies Selected';
+    if (selected.length === 1) return companyOptions.find(c => c.value === selected[0])?.label;
+    return `${selected.length} selected`;
+  };
+
+  const renderLocationValue = (selected) => {
+    const locationOptions = getLocationOptions();
+    if (!isLocationDropdownEnabled()) return 'Select companies first';
+    if (selected.length === 0) return 'Select Locations';
+    if (selected.length === locationOptions.length && locationOptions.length > 0) return 'All Locations Selected';
+    if (selected.length === 1) return locationOptions.find(l => l.value === selected[0])?.label;
+    return `${selected.length} selected`;
+  };
+
+  const renderFilenameValue = (selected) => {
+    const filenameOptions = getFilenameOptions();
+    if (!isFilenameDropdownEnabled()) {
+      if (selectedCompanies.length === 0) return 'Select companies first';
+      if (selectedLocations.length === 0) return 'Select locations first';
+      return 'Select companies & locations first';
+    }
+    if (selected.length === 0) return 'Select Files';
+    if (selected.length === filenameOptions.length && filenameOptions.length > 0) return 'All Files Selected';
+    if (selected.length === 1) return selected[0];
+    return `${selected.length} selected`;
+  };
+
+  return (
+    <Box style={{ marginBottom: 16 }}>
+      <Grid container spacing={2} alignItems="flex-start">
+        {/* Company Filter */}
+        <Grid item xs={12} md={3}>
+          <FormControl fullWidth size="small">
+            <InputLabel>Companies *</InputLabel>
+            <Select
+              multiple
+              value={selectedCompanies}
+              label="Companies *"
+              onChange={(e) => handleCompanyChange(e.target.value)}
+              renderValue={renderCompanyValue}
+            >
+              {/* Select All Option */}
+              <MenuItem value="select_all" style={{ fontWeight: 'bold', borderBottom: '1px solid #eee' }}>
+                <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <BusinessIcon fontSize="small" />
+                  {selectedCompanies.length === companyOptions.length ? 'Deselect All' : 'Select All Companies'}
+                </Box>
+              </MenuItem>
+              {companyOptions.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+
+        {/* Location Filter */}
+        <Grid item xs={12} md={3}>
+          <FormControl fullWidth size="small">
+            <InputLabel>Locations *</InputLabel>
+            <Select
+              multiple
+              value={selectedLocations}
+              label="Locations *"
+              onChange={(e) => handleLocationChange(e.target.value)}
+              renderValue={renderLocationValue}
+              disabled={!isLocationDropdownEnabled()}
+              style={{
+                opacity: isLocationDropdownEnabled() ? 1 : 0.6,
+              }}
+            >
+              {/* Select All Option */}
+              {getLocationOptions().length > 0 && (
+                <MenuItem value="select_all" style={{ fontWeight: 'bold', borderBottom: '1px solid #eee' }}>
+                  <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <LocationOnIcon fontSize="small" />
+                    {selectedLocations.length === getLocationOptions().length ? 'Deselect All' : 'Select All Locations'}
+                  </Box>
+                </MenuItem>
+              )}
+              {getLocationOptions().map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+
+        {/* Filename Filter */}
+        <Grid item xs={12} md={3}>
+          <FormControl fullWidth size="small">
+            <InputLabel>Files</InputLabel>
+            <Select
+              multiple
+              value={selectedFilenames}
+              label="Files"
+              onChange={(e) => handleFilenameChange(e.target.value)}
+              renderValue={renderFilenameValue}
+              disabled={!isFilenameDropdownEnabled()}
+              style={{
+                opacity: isFilenameDropdownEnabled() ? 1 : 0.6,
+              }}
+            >
+              {/* Select All Option */}
+              {getFilenameOptions().length > 0 && isFilenameDropdownEnabled() && (
+                <MenuItem value="select_all" style={{ fontWeight: 'bold', borderBottom: '1px solid #eee' }}>
+                  <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <DescriptionIcon fontSize="small" />
+                    {selectedFilenames.length === getFilenameOptions().length ? 'Deselect All' : 'Select All Files'}
+                  </Box>
+                </MenuItem>
+              )}
+              {getFilenameOptions().map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+
+        {/* Apply Button */}
+        {showApplyButton && (
+          <Grid item xs={12} md={3}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={onApplyFilters}
+              fullWidth
+              startIcon={loadingMasterFileDetails ? <RefreshIcon className="rotating" /> : <FilterListIcon />}
+              disabled={selectedCompanies.length === 0 || loadingMasterFileDetails}
+              style={{ height: '40px' }} // Match dropdown height
+            >
+              {loadingMasterFileDetails ? 'Loading...' : 'Apply Filters'}
+            </Button>
+          </Grid>
+        )}
+      </Grid>
+      
+      {/* Show selection guidance and active filters */}
+      <Box style={{ marginTop: 8 }}>
+        {loadingMasterFileDetails ? (
+          <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <LinearProgress style={{ width: 100, height: 4 }} />
+            <Typography variant="body2" color="primary" style={{ fontWeight: 500 }}>
+              Loading filtered data from {getApiCallCount()} source(s)...
+            </Typography>
+          </Box>
+        ) : selectedCompanies.length === 0 ? (
+          <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Typography variant="body2" color="primary" style={{ fontWeight: 500 }}>
+              Step 1: Select companies to continue
+            </Typography>
+          </Box>
+        ) : selectedLocations.length === 0 ? (
+          <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Typography variant="body2" color="primary" style={{ fontWeight: 500 }}>
+              Step 2: Select locations to enable file selection
+            </Typography>
+          </Box>
+        ) : getFilenameOptions().length === 0 ? (
+          <Typography variant="body2" color="warning.main" style={{ fontWeight: 500 }}>
+            No files available for selected companies and locations
+          </Typography>
+        ) : (
+          <Typography variant="body2" color="textSecondary">
+            Active filters: {selectedCompanies.length + selectedLocations.length + selectedFilenames.length}
+            <span style={{ marginLeft: 8, color: '#4caf50' }}>
+              • {getFilenameOptions().length} files available
+            </span>
+            <span style={{ marginLeft: 8, color: '#2196f3' }}>
+              • {getApiCallCount()} API call(s) will be made
+            </span>
+          </Typography>
+        )}
+      </Box>
+    </Box>
+  );
+};
 
 const MasterFile = () => {
-  const [items, setItems] = useState(initialItems);
+  // Updated state structure for dynamic data
+  const [items, setItems] = useState([]);
+  const [columns, setColumns] = useState({});
+  const [currentPriceColumn, setCurrentPriceColumn] = useState(null);
+  const [previousPriceColumn, setPreviousPriceColumn] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editPrice, setEditPrice] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [filters, setFilters] = useState({
-    priceRange: [0, 20],
+    priceRange: [0, 100],
     stockStatus: "all",
     unit: "all",
     category: "all",
@@ -704,147 +839,383 @@ const MasterFile = () => {
     showOutOfStock: false,
   });
 
-  // API Data States
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [loadingCompanies, setLoadingCompanies] = useState(false);
-  const [loadingLocations, setLoadingLocations] = useState(false);
+  // Updated API Data States
+  const [masterFileDetails, setMasterFileDetails] = useState<MasterFileDetail[]>([]);
+  const [loadingMasterFileDetails, setLoadingMasterFileDetails] = useState(false);
 
-  // State for FiltersOrderIQ component
+  // State for FiltersOrderIQ component - Updated
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [selectedFilenames, setSelectedFilenames] = useState<string[]>([]);
 
-  // Excel upload states
+  // Excel upload states - Updated to use masterFileDetails
   const [uploadDialog, setUploadDialog] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState("");
-  const [selectedLocationId, setSelectedLocationId] = useState(""); // Added location state
+  const [selectedLocationId, setSelectedLocationId] = useState("");
 
   // Date range selector state
   const [selectedDateRange, setSelectedDateRange] = useState(null);
 
-  // Get unique units for filter options
-  const uniqueUnits = [...new Set(items.map((item) => item.unit))];
+  // Process API response data
+  const processApiResponseData = (apiResponses) => {
+    let allItems = [];
+    let mergedColumns = {};
+    let currentPriceCol = null;
+    let previousPriceCol = null;
 
-  // Fetch companies data
-  const fetchCompanies = async () => {
-    setLoadingCompanies(true);
-    try {
-      const response = await apiClient.get("/companies"); // Using apiClient now
-      setCompanies(response.data);
-    } catch (error) {
-      console.error("Error fetching companies:", error);
-      setUploadStatus({
-        type: "error",
-        message: "Failed to fetch companies data",
-      });
-    } finally {
-      setLoadingCompanies(false);
-    }
+    apiResponses.forEach((response) => {
+      if (response.data && response.data.columns && response.data.dataframe) {
+        // Merge columns (use first response's column structure as base)
+        if (Object.keys(mergedColumns).length === 0) {
+          mergedColumns = { ...response.data.columns };
+          
+          // Find current and previous price columns
+          Object.keys(mergedColumns).forEach(key => {
+            const columnName = mergedColumns[key].toLowerCase();
+            if (columnName.includes('current price')) {
+              currentPriceCol = key;
+            } else if (columnName.includes('previous price')) {
+              previousPriceCol = key;
+            }
+          });
+        }
+
+        // Process dataframe items
+        const processedItems = response.data.dataframe.map((item, index) => ({
+          ...item,
+          id: `${response.company_id}_${response.location_id}_${index}`, // Unique ID
+          _meta: {
+            company_id: response.company_id,
+            location_id: response.location_id,
+            filename: response.filename,
+            company_name: response.company_name,
+            location_name: response.location_name
+          }
+        }));
+
+        allItems = [...allItems, ...processedItems];
+      }
+    });
+
+    setItems(allItems);
+    setColumns(mergedColumns);
+    setCurrentPriceColumn(currentPriceCol);
+    setPreviousPriceColumn(previousPriceCol);
   };
 
-  // Fetch locations/stores data
-  const fetchLocations = async () => {
-    setLoadingLocations(true);
+  // Get unique values for filters
+  const getUniqueValues = (columnKey) => {
+    if (!columnKey || items.length === 0) return [];
+    return [...new Set(items.map(item => item[columnKey]).filter(Boolean))];
+  };
+
+  // Get unique units for filter options (look for UOM column)
+  const getUniqueUnits = () => {
+    const uomColumn = Object.keys(columns).find(key => 
+      columns[key].toLowerCase().includes('uom') || 
+      columns[key].toLowerCase().includes('unit')
+    );
+    return getUniqueValues(uomColumn);
+  };
+
+  // Get unique categories for filter options
+  const getUniqueCategories = () => {
+    const categoryColumn = Object.keys(columns).find(key => 
+      columns[key].toLowerCase().includes('category')
+    );
+    return getUniqueValues(categoryColumn);
+  };
+
+  // Get price range for filters
+  const getPriceRange = () => {
+    if (!items.length || !currentPriceColumn) return [0, 100];
+    
+    const prices = items.map(item => parseFloat(item[currentPriceColumn]) || 0);
+    const maxPrice = Math.max(...prices);
+    const minPrice = Math.min(...prices);
+    
+    // Round up max price to nearest 10 or 100
+    const roundedMax = maxPrice < 100 ? Math.ceil(maxPrice / 10) * 10 : Math.ceil(maxPrice / 100) * 100;
+    
+    return [Math.floor(minPrice), roundedMax];
+  };
+
+  // Update price range when data changes
+  useEffect(() => {
+    if (items.length > 0 && currentPriceColumn) {
+      const [minPrice, maxPrice] = getPriceRange();
+      setFilters(prev => ({
+        ...prev,
+        priceRange: [minPrice, maxPrice]
+      }));
+    }
+  }, [items, currentPriceColumn]);
+
+  // Fetch master file details data
+  const fetchMasterFileDetails = async () => {
+    setLoadingMasterFileDetails(true);
     try {
-      const response = await apiClient.get("/stores"); // Using apiClient now
-      setLocations(response.data);
+      const response = await apiClient.get("/api/masterfile/details");
+      setMasterFileDetails(response.data.data || []);
     } catch (error) {
-      console.error("Error fetching stores:", error);
+      console.error("Error fetching master file details:", error);
       setUploadStatus({
         type: "error",
-        message: "Failed to fetch stores data",
+        message: "Failed to fetch master file details",
       });
     } finally {
-      setLoadingLocations(false);
+      setLoadingMasterFileDetails(false);
     }
   };
 
   // Load data on component mount
   useEffect(() => {
-    fetchCompanies();
-    fetchLocations();
+    fetchMasterFileDetails();
   }, []);
 
-  // Convert companies and locations to filter options
-  const companyOptions: FilterOption[] = companies.map((company) => ({
-    value: company.id.toString(),
-    label: company.name,
-  }));
+  // Get unique companies and locations for upload dialog
+  const getUniqueCompaniesForUpload = () => {
+    return Array.from(
+      new Map(
+        masterFileDetails.map(item => [item.company_id, {
+          id: item.company_id,
+          name: item.company_name
+        }])
+      ).values()
+    );
+  };
 
-  const locationOptions: FilterOption[] = locations.map((location) => ({
-    value: location.id.toString(),
-    label: location.name,
-  }));
+  const getUniqueLocationsForUpload = () => {
+    return Array.from(
+      new Map(
+        masterFileDetails.map(item => [item.location_id, {
+          id: item.location_id,
+          name: item.location_name
+        }])
+      ).values()
+    );
+  };
 
   // Handler for FiltersOrderIQ filter changes
   const handleCompanyChange = (values: string[]) => {
     setSelectedCompanies(values);
+    // Clear location and filename selections when company changes
+    setSelectedLocations([]);
+    setSelectedFilenames([]);
   };
 
   const handleLocationChange = (values: string[]) => {
     setSelectedLocations(values);
+    // Clear filename selections when location changes
+    setSelectedFilenames([]);
+  };
+
+  const handleFilenameChange = (values: string[]) => {
+    setSelectedFilenames(values);
   };
 
   // Handler for applying FiltersOrderIQ filters
-  const handleApplyOrderIQFilters = () => {
+  const handleApplyOrderIQFilters = async () => {
     console.log("Applied FiltersOrderIQ filters:", {
       companies: selectedCompanies,
       locations: selectedLocations,
+      filenames: selectedFilenames,
     });
 
-    // Here you can integrate these filters with your existing filtering logic
-    // For example, you might want to filter items based on selected companies/locations
+    // If no specific filters are selected, don't make API calls
+    if (selectedCompanies.length === 0) {
+      console.log("No companies selected, skipping API calls");
+      setPage(0);
+      return;
+    }
+
+    try {
+      setLoadingMasterFileDetails(true);
+      
+      // Get all valid combinations based on the original masterFileDetails
+      let filteredDetails = masterFileDetails;
+      
+      // Filter by selected companies
+      if (selectedCompanies.length > 0) {
+        filteredDetails = filteredDetails.filter(item => 
+          selectedCompanies.includes(item.company_id.toString())
+        );
+      }
+      
+      // Filter by selected locations
+      if (selectedLocations.length > 0) {
+        filteredDetails = filteredDetails.filter(item => 
+          selectedLocations.includes(item.location_id.toString())
+        );
+      }
+      
+      // Filter by selected filenames
+      if (selectedFilenames.length > 0) {
+        filteredDetails = filteredDetails.filter(item => 
+          selectedFilenames.includes(item.filename)
+        );
+      }
+
+      // Create API calls for each filtered combination
+      const apiCalls = filteredDetails.map(detail => {
+        const url = `/api/masterfile/details/${detail.company_id}/${detail.location_id}/${encodeURIComponent(detail.filename)}`;
+        return apiClient.get(url).then(response => ({
+          ...response.data,
+          company_id: detail.company_id,
+          location_id: detail.location_id,
+          filename: detail.filename,
+          company_name: detail.company_name,
+          location_name: detail.location_name
+        }));
+      });
+
+      console.log(`Making ${apiCalls.length} API calls for filtered combinations`);
+
+      // Execute all API calls
+      const results = await Promise.allSettled(apiCalls);
+      
+      // Process successful results
+      const successfulResults = results
+        .filter(result => result.status === 'fulfilled')
+        .map(result => result.value);
+      
+      // Process failed results
+      const failedResults = results
+        .filter(result => result.status === 'rejected')
+        .map(result => result.reason);
+
+      console.log(`API Results: ${successfulResults.length} successful, ${failedResults.length} failed`);
+      
+      if (successfulResults.length > 0) {
+        console.log("Successful API responses:", successfulResults);
+        
+        // Process the API response data
+        processApiResponseData(successfulResults);
+        
+        setUploadStatus({
+          type: "success",
+          message: `Successfully loaded data from ${successfulResults.length} source(s)`
+        });
+        
+        // Auto-clear success message after 5 seconds
+        setTimeout(() => setUploadStatus(null), 5000);
+      }
+      
+      if (failedResults.length > 0) {
+        console.error("Failed API calls:", failedResults);
+        
+        if (successfulResults.length > 0) {
+          setUploadStatus({
+            type: "warning",
+            message: `Loaded ${successfulResults.length} sources successfully, ${failedResults.length} failed`
+          });
+          // Auto-clear warning message after 7 seconds
+          setTimeout(() => setUploadStatus(null), 7000);
+        } else {
+          setUploadStatus({
+            type: "error",
+            message: `All ${failedResults.length} API calls failed`
+          });
+          // Auto-clear error message after 10 seconds
+          setTimeout(() => setUploadStatus(null), 10000);
+        }
+      }
+
+    } catch (error) {
+      console.error("Error applying filters:", error);
+      setUploadStatus({
+        type: "error",
+        message: "Failed to load filtered data"
+      });
+      // Auto-clear error message after 10 seconds
+      setTimeout(() => setUploadStatus(null), 10000);
+    } finally {
+      setLoadingMasterFileDetails(false);
+    }
+
     setPage(0); // Reset to first page when filters change
   };
 
-  // Apply filters to items
+  // Apply filters to items - Updated for dynamic data
   const applyFilters = (itemsList) => {
+    if (!itemsList.length || !currentPriceColumn) return itemsList;
+
     return itemsList.filter((item) => {
-      // Search term filter
-      const matchesSearch =
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.code.toLowerCase().includes(searchTerm.toLowerCase());
+      // Search term filter - search across all text columns
+      const searchableText = Object.keys(columns)
+        .filter(key => typeof item[key] === 'string')
+        .map(key => item[key])
+        .join(' ')
+        .toLowerCase();
+      const matchesSearch = searchableText.includes(searchTerm.toLowerCase());
 
       // Price range filter
-      const withinPriceRange =
-        item.currentPrice >= filters.priceRange[0] &&
-        item.currentPrice <= filters.priceRange[1];
+      const currentPrice = parseFloat(item[currentPriceColumn]) || 0;
+      const withinPriceRange = currentPrice >= filters.priceRange[0] && currentPrice <= filters.priceRange[1];
 
-      // Stock status filter
-      let matchesStockStatus = true;
-      if (filters.stockStatus === "inStock")
-        matchesStockStatus = item.stock > 20;
-      else if (filters.stockStatus === "lowStock")
-        matchesStockStatus = item.stock > 0 && item.stock <= 20;
-      else if (filters.stockStatus === "outOfStock")
-        matchesStockStatus = item.stock === 0;
+      // Unit filter - find UOM column
+      const uomColumn = Object.keys(columns).find(key => 
+        columns[key].toLowerCase().includes('uom') || 
+        columns[key].toLowerCase().includes('unit')
+      );
+      const matchesUnit = filters.unit === "all" || !uomColumn || item[uomColumn] === filters.unit;
 
-      // Unit filter
-      const matchesUnit = filters.unit === "all" || item.unit === filters.unit;
+      // Category filter - find category column
+      const categoryColumn = Object.keys(columns).find(key => 
+        columns[key].toLowerCase().includes('category')
+      );
+      const matchesCategory = filters.category === "all" || !categoryColumn || item[categoryColumn] === filters.category;
 
       // Price change filter
       let matchesPriceChange = true;
-      if (filters.priceChange === "increased")
-        matchesPriceChange = item.currentPrice > item.previousPrice;
-      else if (filters.priceChange === "decreased")
-        matchesPriceChange = item.currentPrice < item.previousPrice;
-      else if (filters.priceChange === "unchanged")
-        matchesPriceChange = item.currentPrice === item.previousPrice;
+      if (previousPriceColumn && filters.priceChange !== "all") {
+        const previousPrice = parseFloat(item[previousPriceColumn]) || 0;
+        if (filters.priceChange === "increased") {
+          matchesPriceChange = currentPrice > previousPrice;
+        } else if (filters.priceChange === "decreased") {
+          matchesPriceChange = currentPrice < previousPrice;
+        } else if (filters.priceChange === "unchanged") {
+          matchesPriceChange = currentPrice === previousPrice;
+        }
+      }
 
-      // Quick filters
-      const matchesLowStock =
-        !filters.showLowStock || (item.stock > 0 && item.stock <= 20);
-      const matchesOutOfStock = filters.showOutOfStock || item.stock > 0;
+      // Stock status filter - look for stock/inventory column
+      const stockColumn = Object.keys(columns).find(key => 
+        columns[key].toLowerCase().includes('stock') || 
+        columns[key].toLowerCase().includes('inventory') ||
+        columns[key].toLowerCase().includes('quantity')
+      );
+      let matchesStockStatus = true;
+      if (stockColumn && filters.stockStatus !== "all") {
+        const stock = parseInt(item[stockColumn]) || 0;
+        if (filters.stockStatus === "inStock") {
+          matchesStockStatus = stock > 20;
+        } else if (filters.stockStatus === "lowStock") {
+          matchesStockStatus = stock > 0 && stock <= 20;
+        } else if (filters.stockStatus === "outOfStock") {
+          matchesStockStatus = stock === 0;
+        }
+      }
+
+      // Quick filters for stock
+      let matchesLowStock = true;
+      let matchesOutOfStock = true;
+      if (stockColumn) {
+        const stock = parseInt(item[stockColumn]) || 0;
+        matchesLowStock = !filters.showLowStock || (stock > 0 && stock <= 20);
+        matchesOutOfStock = filters.showOutOfStock || stock > 0;
+      }
 
       return (
         matchesSearch &&
         withinPriceRange &&
-        matchesStockStatus &&
         matchesUnit &&
+        matchesCategory &&
         matchesPriceChange &&
+        matchesStockStatus &&
         matchesLowStock &&
         matchesOutOfStock
       );
@@ -872,14 +1243,14 @@ const MasterFile = () => {
 
   const handleSaveClick = (id) => {
     const newPrice = parseFloat(editPrice);
-    if (!isNaN(newPrice) && newPrice > 0) {
+    if (!isNaN(newPrice) && newPrice > 0 && currentPriceColumn && previousPriceColumn) {
       setItems((prevItems) =>
         prevItems.map((item) =>
           item.id === id
             ? {
                 ...item,
-                previousPrice: item.currentPrice,
-                currentPrice: newPrice,
+                [previousPriceColumn]: item[currentPriceColumn], // Move current to previous
+                [currentPriceColumn]: newPrice, // Set new current price
               }
             : item
         )
@@ -903,10 +1274,123 @@ const MasterFile = () => {
     setPage(0);
   };
 
-  const getStockStatus = (stock) => {
+  const getStockStatus = (item) => {
+    // Find stock column dynamically
+    const stockColumn = Object.keys(columns).find(key => 
+      columns[key].toLowerCase().includes('stock') || 
+      columns[key].toLowerCase().includes('inventory') ||
+      columns[key].toLowerCase().includes('quantity')
+    );
+    
+    if (!stockColumn) return { label: "No Stock Info", color: "default" };
+    
+    const stock = parseInt(item[stockColumn]) || 0;
     if (stock === 0) return { label: "Out of Stock", color: "error" };
     if (stock <= 20) return { label: "Low Stock", color: "warning" };
     return { label: "In Stock", color: "success" };
+  };
+
+  // Get price change indicator
+  const getPriceChangeIndicator = (item) => {
+    if (!currentPriceColumn || !previousPriceColumn) return null;
+    
+    const currentPrice = parseFloat(item[currentPriceColumn]) || 0;
+    const previousPrice = parseFloat(item[previousPriceColumn]) || 0;
+    
+    if (currentPrice > previousPrice) return { direction: "↑", color: "success" };
+    if (currentPrice < previousPrice) return { direction: "↓", color: "error" };
+    return null;
+  };
+
+  // Render cell content based on column type
+  const renderCellContent = (item, columnKey) => {
+    const value = item[columnKey];
+    const columnName = columns[columnKey];
+    
+    // Handle price columns with editing
+    if (columnKey === currentPriceColumn) {
+      if (editingId === item.id) {
+        return (
+          <TextField
+            value={editPrice}
+            onChange={(e) => setEditPrice(e.target.value)}
+            type="number"
+            size="small"
+            inputProps={{
+              step: "0.01",
+              min: "0",
+              style: { textAlign: "center" },
+            }}
+            autoFocus
+            style={{ maxWidth: 100 }}
+          />
+        );
+      } else {
+        const priceChange = getPriceChangeIndicator(item);
+        return (
+          <Box style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Typography
+              variant="body2"
+              style={{
+                fontWeight: 600,
+                color: priceChange ? (priceChange.color === "success" ? "#2e7d32" : "#d32f2f") : "#666",
+              }}
+            >
+              ${parseFloat(value || 0).toFixed(2)}
+            </Typography>
+            {priceChange && (
+              <Chip
+                size="small"
+                label={priceChange.direction}
+                color={priceChange.color}
+                style={{
+                  minWidth: 24,
+                  height: 20,
+                  fontSize: "0.7rem",
+                }}
+              />
+            )}
+          </Box>
+        );
+      }
+    }
+    
+    // Handle previous price column
+    if (columnKey === previousPriceColumn) {
+      return (
+        <Typography
+          variant="body2"
+          style={{
+            color: "#666",
+            fontStyle: value ? "normal" : "italic",
+          }}
+        >
+          {value ? `$${parseFloat(value).toFixed(2)}` : "-"}
+        </Typography>
+      );
+    }
+    
+    // Handle numeric columns (assume price-like formatting for currency)
+    if (typeof value === 'number' && columnName.toLowerCase().includes('price')) {
+      return (
+        <Typography variant="body2" style={{ fontWeight: 500 }}>
+          ${value.toFixed(2)}
+        </Typography>
+      );
+    }
+    
+    // Handle regular text/numeric columns
+    return (
+      <Typography 
+        variant="body2" 
+        style={{ 
+          fontWeight: columnName.toLowerCase().includes('name') || columnName.toLowerCase().includes('product') ? 500 : 400,
+          fontFamily: columnName.toLowerCase().includes('code') ? 'monospace' : 'inherit'
+        }}
+      >
+        {value || '-'}
+      </Typography>
+    );
   };
 
   // Convert file to base64
@@ -971,7 +1455,7 @@ const MasterFile = () => {
       // Prepare upload data with both company_id and location_id
       const uploadData = {
         company_id: parseInt(selectedCompanyId),
-        location_id: parseInt(selectedLocationId), // Added location_id
+        location_id: parseInt(selectedLocationId),
         fileName: selectedFile.name,
         fileContent: fileContent,
       };
@@ -979,20 +1463,25 @@ const MasterFile = () => {
       // Send to API using apiClient (will include auth token automatically)
       const response = await apiClient.post("/api/master/upload", uploadData);
 
-      const selectedCompany = companies.find((c) => c.id.toString() === selectedCompanyId);
-      const selectedLocation = locations.find((l) => l.id.toString() === selectedLocationId);
+      const uniqueCompanies = getUniqueCompaniesForUpload();
+      const uniqueLocations = getUniqueLocationsForUpload();
+      const selectedCompany = uniqueCompanies.find((c) => c.id.toString() === selectedCompanyId);
+      const selectedLocation = uniqueLocations.find((l) => l.id.toString() === selectedLocationId);
 
       setUploadStatus({
         type: "success",
         message: `Successfully uploaded ${selectedFile.name} for ${selectedCompany?.name} - ${selectedLocation?.name}`,
       });
 
+      // Refresh master file details after successful upload
+      fetchMasterFileDetails();
+
       // Reset after successful upload
       setTimeout(() => {
         setUploadDialog(false);
         setSelectedFile(null);
         setSelectedCompanyId("");
-        setSelectedLocationId(""); // Reset location
+        setSelectedLocationId("");
         setUploadStatus(null);
       }, 2000);
 
@@ -1014,7 +1503,7 @@ const MasterFile = () => {
     setUploadDialog(false);
     setSelectedFile(null);
     setSelectedCompanyId("");
-    setSelectedLocationId(""); // Reset location
+    setSelectedLocationId("");
     setUploadStatus(null);
     setUploading(false);
   };
@@ -1056,7 +1545,12 @@ const MasterFile = () => {
           >
             <Box style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <Typography variant="h6" style={{ fontWeight: 600 }}>
-                {filteredItems.length} Items
+                {filteredItems.length} {filteredItems.length === 1 ? 'Item' : 'Items'}
+                {items.length > 0 && (
+                  <span style={{ color: '#666', fontSize: '0.9rem', marginLeft: 8 }}>
+                    from {Object.keys(columns).length} columns
+                  </span>
+                )}
               </Typography>
               {selectedDateRange && (
                 <Chip
@@ -1106,8 +1600,7 @@ const MasterFile = () => {
                   color="primary"
                   style={{ backgroundColor: "#e3f2fd" }}
                   onClick={() => {
-                    fetchCompanies();
-                    fetchLocations();
+                    fetchMasterFileDetails();
                   }}
                 >
                   <RefreshIcon />
@@ -1116,18 +1609,38 @@ const MasterFile = () => {
             </Box>
           </Box>
 
-          {/* FiltersOrderIQ Component */}
+          {/* Updated FiltersOrderIQ Component */}
           <Box style={{ marginTop: 24 }}>
-            <FiltersOrderIQ
-              locationOptions={locationOptions}
-              companyOptions={companyOptions}
-              selectedLocations={selectedLocations}
-              selectedCompanies={selectedCompanies}
-              onLocationChange={handleLocationChange}
-              onCompanyChange={handleCompanyChange}
-              onApplyFilters={handleApplyOrderIQFilters}
-              showApplyButton={true}
-            />
+            {loadingMasterFileDetails ? (
+              <Box style={{ textAlign: 'center', padding: 20 }}>
+                <LinearProgress />
+                <Typography variant="body2" style={{ marginTop: 8 }}>
+                  Loading filter options...
+                </Typography>
+              </Box>
+            ) : (
+              <FiltersOrderIQWithFilename
+                masterFileDetails={masterFileDetails}
+                selectedCompanies={selectedCompanies}
+                selectedLocations={selectedLocations}
+                selectedFilenames={selectedFilenames}
+                onCompanyChange={handleCompanyChange}
+                onLocationChange={handleLocationChange}
+                onFilenameChange={handleFilenameChange}
+                onApplyFilters={handleApplyOrderIQFilters}
+                showApplyButton={true}
+                loadingMasterFileDetails={loadingMasterFileDetails}
+              />
+            )}
+            
+            {/* Show upload/filter status */}
+            {uploadStatus && (
+              <Box style={{ marginTop: 16 }}>
+                <Alert severity={uploadStatus.type} style={{ borderRadius: 8 }}>
+                  {uploadStatus.message}
+                </Alert>
+              </Box>
+            )}
           </Box>
         </Box>
 
@@ -1137,8 +1650,9 @@ const MasterFile = () => {
             onFiltersChange={handleFiltersChange}
             totalItems={items.length}
             filteredItems={filteredItems.length}
-            units={uniqueUnits}
-            categories={[]} // Add categories if needed
+            units={getUniqueUnits()}
+            categories={getUniqueCategories()}
+            priceRange={getPriceRange()}
           />
         </Box>
 
@@ -1150,17 +1664,21 @@ const MasterFile = () => {
                 <TableCell style={{ fontWeight: 700, width: 40 }}>
                   <DragIndicatorIcon />
                 </TableCell>
-                <TableCell style={{ fontWeight: 700 }}>Code</TableCell>
-                <TableCell style={{ fontWeight: 700 }}>Name</TableCell>
-                <TableCell style={{ fontWeight: 700 }}>Current Price</TableCell>
-                <TableCell style={{ fontWeight: 700 }}>
-                  Previous Price
-                </TableCell>
-                <TableCell style={{ fontWeight: 700 }}>Unit</TableCell>
-                <TableCell style={{ fontWeight: 700 }}>Stock</TableCell>
-                <TableCell style={{ fontWeight: 700, width: 100 }}>
-                  Actions
-                </TableCell>
+                {/* Dynamic column headers */}
+                {Object.keys(columns).map((columnKey) => (
+                  <TableCell key={columnKey} style={{ fontWeight: 700 }}>
+                    {columns[columnKey]}
+                  </TableCell>
+                ))}
+                {/* Stock Status Column (if stock column exists) */}
+                {Object.keys(columns).some(key => 
+                  columns[key].toLowerCase().includes('stock') || 
+                  columns[key].toLowerCase().includes('inventory') ||
+                  columns[key].toLowerCase().includes('quantity')
+                ) && (
+                  <TableCell style={{ fontWeight: 700 }}>Stock Status</TableCell>
+                )}
+                <TableCell style={{ fontWeight: 700, width: 100 }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -1177,118 +1695,48 @@ const MasterFile = () => {
                     </IconButton>
                   </TableCell>
 
-                  <TableCell>
-                    <Typography
-                      variant="body2"
-                      style={{ fontFamily: "monospace", fontWeight: 600 }}
-                    >
-                      {item.code}
-                    </Typography>
-                  </TableCell>
+                  {/* Dynamic column cells */}
+                  {Object.keys(columns).map((columnKey) => (
+                    <TableCell key={columnKey}>
+                      {renderCellContent(item, columnKey)}
+                    </TableCell>
+                  ))}
 
-                  <TableCell>
-                    <Typography variant="body2" style={{ fontWeight: 500 }}>
-                      {item.name}
-                    </Typography>
-                  </TableCell>
-
-                  <TableCell>
-                    {editingId === item.id ? (
-                      <TextField
-                        value={editPrice}
-                        onChange={(e) => setEditPrice(e.target.value)}
-                        type="number"
-                        size="small"
-                        inputProps={{
-                          step: "0.01",
-                          min: "0",
-                          style: { textAlign: "center" },
-                        }}
-                        autoFocus
-                        style={{ maxWidth: 100 }}
-                      />
-                    ) : (
-                      <Box
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                        }}
-                      >
-                        <Typography
-                          variant="body2"
-                          style={{
-                            fontWeight: 600,
-                            color:
-                              item.currentPrice > item.previousPrice
-                                ? "#2e7d32"
-                                : item.currentPrice < item.previousPrice
-                                ? "#d32f2f"
-                                : "#666",
-                          }}
-                        >
-                          ${item.currentPrice.toFixed(2)}
-                        </Typography>
-                        {item.currentPrice !== item.previousPrice && (
-                          <Chip
-                            size="small"
-                            label={
-                              item.currentPrice > item.previousPrice ? "↑" : "↓"
-                            }
-                            color={
-                              item.currentPrice > item.previousPrice
-                                ? "success"
-                                : "error"
-                            }
-                            style={{
-                              minWidth: 24,
-                              height: 20,
-                              fontSize: "0.7rem",
-                            }}
-                          />
-                        )}
-                      </Box>
-                    )}
-                  </TableCell>
-
-                  <TableCell>
-                    <Typography
-                      variant="body2"
-                      style={{
-                        color: "#666",
-                        fontStyle: item.previousPrice ? "normal" : "italic",
-                      }}
-                    >
-                      {item.previousPrice
-                        ? `${item.previousPrice.toFixed(2)}`
-                        : "-"}
-                    </Typography>
-                  </TableCell>
-
-                  <TableCell>
-                    <Typography variant="body2" style={{ color: "#666" }}>
-                      {item.unit}
-                    </Typography>
-                  </TableCell>
-
-                  <TableCell>
-                    <Box
-                      style={{ display: "flex", alignItems: "center", gap: 8 }}
-                    >
-                      <Typography
-                        variant="body2"
-                        style={{ fontWeight: 600, minWidth: 30 }}
-                      >
-                        {item.stock}
-                      </Typography>
-                      <Chip
-                        label={getStockStatus(item.stock).label}
-                        color={getStockStatus(item.stock).color}
-                        size="small"
-                        style={{ fontSize: "0.75rem" }}
-                      />
-                    </Box>
-                  </TableCell>
+                  {/* Stock Status Cell (if stock column exists) */}
+                  {Object.keys(columns).some(key => 
+                    columns[key].toLowerCase().includes('stock') || 
+                    columns[key].toLowerCase().includes('inventory') ||
+                    columns[key].toLowerCase().includes('quantity')
+                  ) && (
+                    <TableCell>
+                      {(() => {
+                        const stockColumn = Object.keys(columns).find(key => 
+                          columns[key].toLowerCase().includes('stock') || 
+                          columns[key].toLowerCase().includes('inventory') ||
+                          columns[key].toLowerCase().includes('quantity')
+                        );
+                        const stock = parseInt(item[stockColumn]) || 0;
+                        const status = getStockStatus(item);
+                        
+                        return (
+                          <Box style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <Typography
+                              variant="body2"
+                              style={{ fontWeight: 600, minWidth: 30 }}
+                            >
+                              {stock}
+                            </Typography>
+                            <Chip
+                              label={status.label}
+                              color={status.color}
+                              size="small"
+                              style={{ fontSize: "0.75rem" }}
+                            />
+                          </Box>
+                        );
+                      })()}
+                    </TableCell>
+                  )}
 
                   <TableCell>
                     {editingId === item.id ? (
@@ -1318,8 +1766,9 @@ const MasterFile = () => {
                           size="small"
                           color="primary"
                           onClick={() =>
-                            handleEditClick(item.id, item.currentPrice)
+                            handleEditClick(item.id, item[currentPriceColumn])
                           }
+                          disabled={!currentPriceColumn}
                         >
                           <EditIcon fontSize="small" />
                         </IconButton>
@@ -1328,6 +1777,23 @@ const MasterFile = () => {
                   </TableCell>
                 </TableRow>
               ))}
+              
+              {/* Show message when no data */}
+              {paginatedItems.length === 0 && (
+                <TableRow>
+                  <TableCell 
+                    colSpan={Object.keys(columns).length + 3} 
+                    style={{ textAlign: 'center', padding: 40 }}
+                  >
+                    <Typography variant="body1" color="textSecondary">
+                      {items.length === 0 
+                        ? "No data loaded. Please apply filters to load data from selected sources."
+                        : "No items match the current filters."
+                      }
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </TableContainer>
@@ -1382,11 +1848,11 @@ const MasterFile = () => {
                     <BusinessIcon />
                   </InputAdornment>
                 }
-                disabled={loadingCompanies}
+                disabled={loadingMasterFileDetails}
               >
-                {companies.map((company) => (
+                {getUniqueCompaniesForUpload().map((company) => (
                   <MenuItem key={company.id} value={company.id.toString()}>
-                    {company.name} {company.code && `(${company.code})`}
+                    {company.name}
                   </MenuItem>
                 ))}
               </Select>
@@ -1404,11 +1870,11 @@ const MasterFile = () => {
                     <LocationOnIcon />
                   </InputAdornment>
                 }
-                disabled={loadingLocations}
+                disabled={loadingMasterFileDetails}
               >
-                {locations.map((location) => (
+                {getUniqueLocationsForUpload().map((location) => (
                   <MenuItem key={location.id} value={location.id.toString()}>
-                    {location.name} {location.code && `(${location.code})`}
+                    {location.name}
                   </MenuItem>
                 ))}
               </Select>

@@ -37,3 +37,4 @@ put / companes
 
 api/master/upload
 api/masterfile/details/{company_id}/{location_id}/{filename}
+api/master/updatefile
