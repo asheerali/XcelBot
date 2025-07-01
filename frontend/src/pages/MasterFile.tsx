@@ -1290,7 +1290,7 @@ const MasterFile = () => {
         };
         console.log("Preparing to update row:", updateData);
         // Send update to API
-        const response = await apiClient.post("/api/master/updatefile", updateData);
+        const response = await apiClient.post("/api/masterfile/updatefile", updateData);
         
         console.log("Row update response:", response.data);
         
