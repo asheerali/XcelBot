@@ -295,6 +295,7 @@ def update_masterfile(
 ):
     """Update a masterfile row"""
     
+    print("Received request to update masterfile:", request.row_data)
     try:
         # First, find the existing masterfile
         masterfile = masterfile_crud.get_masterfile_by_filename_and_location(
