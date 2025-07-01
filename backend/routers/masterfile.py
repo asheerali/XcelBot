@@ -93,6 +93,154 @@ def get_masterfile_details_alt(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Error fetching masterfile details: {str(e)}")
 
 
+# @router.get("/details/{company_id}/{location_id}/{filename}")
+# def get_masterfile_details(
+#     company_id: int, 
+#     location_id: int, 
+#     filename: str, 
+#     db: Session = Depends(get_db)
+# ):
+#     """Get masterfile details by company ID, location ID, and filename"""
+    
+#     try:
+#         # Validate input parameters
+#         if company_id <= 0 or location_id <= 0:
+#             raise HTTPException(status_code=400, detail="Company ID and Location ID must be positive integers")
+        
+#         if not filename or filename.strip() == "":
+#             raise HTTPException(status_code=400, detail="Filename cannot be empty")
+        
+#         # Get the masterfile
+#         masterfile = masterfile_crud.get_masterfile_by_filename_and_location(db, company_id, location_id, filename)
+        
+#         if not masterfile:
+#             raise HTTPException(status_code=404, detail="Masterfile not found")
+        
+#         # Check if file_data exists
+#         if not hasattr(masterfile, 'file_data') or not masterfile.file_data:
+#             return {
+#                 "message": "No file data found in this masterfile",
+#                 "data": {
+#                     "masterfile_id": masterfile.id,
+#                     "company_id": masterfile.company_id,
+#                     "location_id": masterfile.location_id,
+#                     "filename": masterfile.filename,
+#                     "dataframe": [],
+#                     "columns": [],
+#                     "shape": [0, 0]
+#                 }
+#             }
+        
+#         file_data = masterfile.file_data
+        
+#         # Check if data exists in file_data
+#         if not isinstance(file_data, dict) or 'data' not in file_data or not file_data['data']:
+#             return {
+#                 "message": "No data found in this masterfile", 
+#                 "data": {
+#                     "masterfile_id": masterfile.id,
+#                     "company_id": masterfile.company_id,
+#                     "location_id": masterfile.location_id,
+#                     "filename": masterfile.filename,
+#                     "dataframe": [],
+#                     "columns": [],
+#                     "shape": [0, 0]
+#                 }
+#             }
+        
+#         # Convert file_data to DataFrame
+#         try:
+#             df = pd.DataFrame(file_data['data'])
+            
+#             # Check if DataFrame is empty
+#             if df.empty:
+#                 return {
+#                     "message": "Empty dataset found in masterfile",
+#                     "data": {
+#                         "masterfile_id": masterfile.id,
+#                         "company_id": masterfile.company_id,
+#                         "location_id": masterfile.location_id,
+#                         "filename": masterfile.filename,
+#                         "dataframe": [],
+#                         "columns": [],
+#                         "shape": [0, 0]
+#                     }
+#                 }
+            
+#             data = {
+#                 "masterfile_id": masterfile.id,
+#                 "company_id": masterfile.company_id,
+#                 "location_id": masterfile.location_id,
+#                 "filename": masterfile.filename,
+#                 "dataframe": df.to_dict('records'),
+#                 "columns": df.columns.tolist(),
+#                 "shape": list(df.shape)  # Convert tuple to list for JSON serialization
+#             }
+            
+#             return {
+#                 "message": "Masterfile data retrieved successfully",
+#                 "data": data
+#             }
+            
+#         except Exception as df_error:
+#             raise HTTPException(
+#                 status_code=500, 
+#                 detail=f"Error processing dataframe: {str(df_error)}"
+#             )
+    
+#     except HTTPException:
+#         # Re-raise HTTP exceptions (400, 404, etc.)
+#         raise
+    
+#     except Exception as e:
+#         # Catch any other unexpected errors
+#         raise HTTPException(
+#             status_code=500, 
+#             detail=f"Error fetching masterfile details: {str(e)}"
+#         )
+
+
+@router.get("/details/{company_id}/{location_id}/{filename}")
+def get_masterfile_details(
+    company_id: int, 
+    location_id: int, 
+    filename: str, 
+    db: Session = Depends(get_db)
+):
+    """Get masterfile details by company ID, location ID, and filename"""
+    
+    # Get the masterfile
+    masterfile = masterfile_crud.get_masterfile_by_filename_and_location(db, company_id, location_id, filename)
+    
+    if not masterfile:
+        return {"message": "Masterfile not found", "data": []}
+    
+    # Check if file_data exists and has data
+    if not masterfile.file_data or 'data' not in masterfile.file_data or not masterfile.file_data['data']:
+        return {"message": "No data found in this masterfile", "data": []}
+    
+    # Convert file_data to DataFrame
+    df = pd.DataFrame(masterfile.file_data['data'])
+    
+    # print("i am here in masterfile printing the dataframe","\n" ,df.head())
+    # df.columns = df.columns.str.strip()  # Strip whitespace from column names
+    columns_dict = {f"column{i}": col for i, col in enumerate(df.columns)}    
+    
+    # Create a copy of DataFrame with renamed columns
+    df_copy = df.copy()
+    df_copy.columns = [f"column{i}" for i in range(len(df.columns))]    
+    # Check if DataFrame is empty
+    if df.empty:
+        return {"message": "Empty dataset found in masterfile", "data": []}
+    
+    data = {
+        "totalColumns": len(df.columns),
+        "columns": columns_dict,
+        "dataframe": df_copy.to_dict(orient='records'),
+    }
+    
+    return {"data": data}        
+        
 @router.post("/", response_model=masterfile_schema.MasterFile)
 def create_masterfile(masterfile: masterfile_schema.MasterFileCreate, db: Session = Depends(get_db)):
     """Create a new masterfile record"""

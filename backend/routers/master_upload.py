@@ -203,6 +203,7 @@ async def master_upload(
         try:
             excel_data = io.BytesIO(file_content)
             df = pd.read_excel(excel_data, sheet_name=0)
+            df.columns = df.columns.str.strip() 
             df['Previous Price'] = '-'
             print(f"Successfully read Excel file with {len(df)} rows and {len(df.columns)} columns")
             
