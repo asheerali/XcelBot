@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-// import axios from 'axios';
+import { useDispatch, useSelector } from "react-redux";
 import apiClient from "../api/axiosConfig"; // Adjust path as needed
 import {
   Box,
@@ -57,6 +57,28 @@ import LocationOnIcon from "@mui/icons-material/LocationOn";
 import FiltersOrderIQ from "../components/FiltersOrderIQ";
 import DateRangeSelector from "../components/DateRangeSelector";
 import { API_URL_Local } from "../constants";
+
+// Redux imports
+import {
+  loadMasterFileData,
+  loadMultipleMasterFileData,
+  setSelectedCompanies,
+  setSelectedLocations,
+  setSelectedFilenames,
+  updateItem,
+  clearError,
+  selectMasterFileState,
+  selectItems,
+  selectColumns,
+  selectCurrentPriceColumn,
+  selectPreviousPriceColumn,
+  selectSelectedCompanies,
+  selectSelectedLocations,
+  selectSelectedFilenames,
+  selectLastAppliedFilters,
+  selectLoading,
+  selectError
+} from "../store/slices/masterFileSlice"; // Adjust path as needed
 
 // Types
 interface MasterFileDetail {
@@ -819,14 +841,24 @@ const FiltersOrderIQWithFilename = ({
 };
 
 const MasterFile = () => {
-  // Updated state structure for dynamic data
-  const [items, setItems] = useState([]);
-  const [columns, setColumns] = useState({});
-  const [currentPriceColumn, setCurrentPriceColumn] = useState(null);
-  const [previousPriceColumn, setPreviousPriceColumn] = useState(null);
+  const dispatch = useDispatch();
+  
+  // Redux selectors
+  const items = useSelector(selectItems);
+  const columns = useSelector(selectColumns);
+  const currentPriceColumn = useSelector(selectCurrentPriceColumn);
+  const previousPriceColumn = useSelector(selectPreviousPriceColumn);
+  const selectedCompanies = useSelector(selectSelectedCompanies);
+  const selectedLocations = useSelector(selectSelectedLocations);
+  const selectedFilenames = useSelector(selectSelectedFilenames);
+  const lastAppliedFilters = useSelector(selectLastAppliedFilters);
+  const loading = useSelector(selectLoading);
+  const reduxError = useSelector(selectError);
+
+  // Local state for UI-only concerns
   const [editingId, setEditingId] = useState(null);
   const [editPrice, setEditPrice] = useState("");
-  const [savingRowId, setSavingRowId] = useState(null); // New state for tracking save operation
+  const [savingRowId, setSavingRowId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -840,83 +872,77 @@ const MasterFile = () => {
     showOutOfStock: false,
   });
 
-  // Updated API Data States
+  // Master file details and upload states
   const [masterFileDetails, setMasterFileDetails] = useState<MasterFileDetail[]>([]);
   const [loadingMasterFileDetails, setLoadingMasterFileDetails] = useState(false);
-
-  // State for FiltersOrderIQ component - Updated
-  const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [selectedFilenames, setSelectedFilenames] = useState<string[]>([]);
-
-  // Excel upload states - Updated to use masterFileDetails
   const [uploadDialog, setUploadDialog] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState("");
   const [selectedLocationId, setSelectedLocationId] = useState("");
-
-  // Date range selector state
   const [selectedDateRange, setSelectedDateRange] = useState(null);
 
-  // Process API response data
-  const processApiResponseData = (apiResponses) => {
-    let allItems = [];
-    let mergedColumns = {};
-    let currentPriceCol = null;
-    let previousPriceCol = null;
-
-    apiResponses.forEach((response) => {
-      if (response.data && response.data.columns && response.data.dataframe) {
-        // Merge columns (use first response's column structure as base)
-        if (Object.keys(mergedColumns).length === 0) {
-          mergedColumns = { ...response.data.columns };
-          
-          // Find current and previous price columns
-          Object.keys(mergedColumns).forEach(key => {
-            const columnName = mergedColumns[key].toLowerCase();
-            if (columnName.includes('current price')) {
-              currentPriceCol = key;
-            } else if (columnName.includes('previous price')) {
-              previousPriceCol = key;
-            }
-          });
+  // Auto-load data on component mount if we have saved filters
+  useEffect(() => {
+    const autoLoadData = async () => {
+      const { companies, locations, filenames } = lastAppliedFilters;
+      
+      if (companies.length > 0 && locations.length > 0) {
+        console.log("Auto-loading data from saved filters:", lastAppliedFilters);
+        
+        // Set the selections in Redux
+        dispatch(setSelectedCompanies(companies));
+        dispatch(setSelectedLocations(locations));
+        dispatch(setSelectedFilenames(filenames));
+        
+        // Load data automatically
+        if (companies.length === 1 && locations.length === 1 && filenames.length === 1) {
+          // Single file load
+          dispatch(loadMasterFileData({
+            company_id: parseInt(companies[0]),
+            location_id: parseInt(locations[0]),
+            filename: filenames[0]
+          }));
+        } else {
+          // Multiple files load
+          await handleMultipleFilesLoad(companies, locations, filenames);
         }
-
-        // Process dataframe items
-        const processedItems = response.data.dataframe.map((item, index) => {
-          const processedItem = {
-            ...item,
-            id: `${response.company_id}_${response.location_id}_${index}`, // Unique ID
-            _meta: {
-              company_id: response.company_id,
-              location_id: response.location_id,
-              filename: response.filename,
-              company_name: response.company_name,
-              location_name: response.location_name
-            }
-          };
-
-          // Clean up previous price column if it exists
-          if (previousPriceCol && processedItem[previousPriceCol]) {
-            const prevPrice = parseFloat(processedItem[previousPriceCol]);
-            if (isNaN(prevPrice) || prevPrice <= 0) {
-              processedItem[previousPriceCol] = null; // Set to null for invalid values
-            }
-          }
-
-          return processedItem;
-        });
-
-        allItems = [...allItems, ...processedItems];
       }
-    });
+    };
 
-    setItems(allItems);
-    setColumns(mergedColumns);
-    setCurrentPriceColumn(currentPriceCol);
-    setPreviousPriceColumn(previousPriceCol);
+    // Only auto-load if we don't already have items loaded
+    if (items.length === 0 && lastAppliedFilters.companies.length > 0) {
+      autoLoadData();
+    }
+  }, []); // Run only once on mount
+
+  // Helper function to handle multiple files loading
+  const handleMultipleFilesLoad = async (companies, locations, filenames) => {
+    // Create filter combinations
+    let filteredDetails = masterFileDetails;
+    
+    if (companies.length > 0) {
+      filteredDetails = filteredDetails.filter(item => 
+        companies.includes(item.company_id.toString())
+      );
+    }
+    
+    if (locations.length > 0) {
+      filteredDetails = filteredDetails.filter(item => 
+        locations.includes(item.location_id.toString())
+      );
+    }
+    
+    if (filenames.length > 0) {
+      filteredDetails = filteredDetails.filter(item => 
+        filenames.includes(item.filename)
+      );
+    }
+
+    if (filteredDetails.length > 0) {
+      dispatch(loadMultipleMasterFileData(filteredDetails));
+    }
   };
 
   // Get unique values for filters
@@ -1014,20 +1040,20 @@ const MasterFile = () => {
 
   // Handler for FiltersOrderIQ filter changes
   const handleCompanyChange = (values: string[]) => {
-    setSelectedCompanies(values);
+    dispatch(setSelectedCompanies(values));
     // Clear location and filename selections when company changes
-    setSelectedLocations([]);
-    setSelectedFilenames([]);
+    dispatch(setSelectedLocations([]));
+    dispatch(setSelectedFilenames([]));
   };
 
   const handleLocationChange = (values: string[]) => {
-    setSelectedLocations(values);
+    dispatch(setSelectedLocations(values));
     // Clear filename selections when location changes
-    setSelectedFilenames([]);
+    dispatch(setSelectedFilenames([]));
   };
 
   const handleFilenameChange = (values: string[]) => {
-    setSelectedFilenames(values);
+    dispatch(setSelectedFilenames(values));
   };
 
   // Handler for applying FiltersOrderIQ filters
@@ -1045,97 +1071,29 @@ const MasterFile = () => {
       return;
     }
 
+    // Clear any previous errors
+    dispatch(clearError());
+
     try {
-      setLoadingMasterFileDetails(true);
-      
-      // Get all valid combinations based on the original masterFileDetails
-      let filteredDetails = masterFileDetails;
-      
-      // Filter by selected companies
-      if (selectedCompanies.length > 0) {
-        filteredDetails = filteredDetails.filter(item => 
-          selectedCompanies.includes(item.company_id.toString())
-        );
-      }
-      
-      // Filter by selected locations
-      if (selectedLocations.length > 0) {
-        filteredDetails = filteredDetails.filter(item => 
-          selectedLocations.includes(item.location_id.toString())
-        );
-      }
-      
-      // Filter by selected filenames
-      if (selectedFilenames.length > 0) {
-        filteredDetails = filteredDetails.filter(item => 
-          selectedFilenames.includes(item.filename)
-        );
-      }
-
-      // Create API calls for each filtered combination
-      const apiCalls = filteredDetails.map(detail => {
-        const url = `/api/masterfile/details/${detail.company_id}/${detail.location_id}/${encodeURIComponent(detail.filename)}`;
-        return apiClient.get(url).then(response => ({
-          ...response.data,
-          company_id: detail.company_id,
-          location_id: detail.location_id,
-          filename: detail.filename,
-          company_name: detail.company_name,
-          location_name: detail.location_name
+      // Single file scenario
+      if (selectedCompanies.length === 1 && selectedLocations.length === 1 && selectedFilenames.length === 1) {
+        dispatch(loadMasterFileData({
+          company_id: parseInt(selectedCompanies[0]),
+          location_id: parseInt(selectedLocations[0]),
+          filename: selectedFilenames[0]
         }));
+      } else {
+        // Multiple files scenario
+        await handleMultipleFilesLoad(selectedCompanies, selectedLocations, selectedFilenames);
+      }
+
+      setUploadStatus({
+        type: "success",
+        message: `Successfully applied filters and loaded data`
       });
-
-      console.log(`Making ${apiCalls.length} API calls for filtered combinations`);
-
-      // Execute all API calls
-      const results = await Promise.allSettled(apiCalls);
       
-      // Process successful results
-      const successfulResults = results
-        .filter(result => result.status === 'fulfilled')
-        .map(result => result.value);
-      
-      // Process failed results
-      const failedResults = results
-        .filter(result => result.status === 'rejected')
-        .map(result => result.reason);
-
-      console.log(`API Results: ${successfulResults.length} successful, ${failedResults.length} failed`);
-      
-      if (successfulResults.length > 0) {
-        console.log("Successful API responses:", successfulResults);
-        
-        // Process the API response data
-        processApiResponseData(successfulResults);
-        
-        setUploadStatus({
-          type: "success",
-          message: `Successfully loaded data from ${successfulResults.length} source(s)`
-        });
-        
-        // Auto-clear success message after 5 seconds
-        setTimeout(() => setUploadStatus(null), 5000);
-      }
-      
-      if (failedResults.length > 0) {
-        console.error("Failed API calls:", failedResults);
-        
-        if (successfulResults.length > 0) {
-          setUploadStatus({
-            type: "warning",
-            message: `Loaded ${successfulResults.length} sources successfully, ${failedResults.length} failed`
-          });
-          // Auto-clear warning message after 7 seconds
-          setTimeout(() => setUploadStatus(null), 7000);
-        } else {
-          setUploadStatus({
-            type: "error",
-            message: `All ${failedResults.length} API calls failed`
-          });
-          // Auto-clear error message after 10 seconds
-          setTimeout(() => setUploadStatus(null), 10000);
-        }
-      }
+      // Auto-clear success message after 3 seconds
+      setTimeout(() => setUploadStatus(null), 3000);
 
     } catch (error) {
       console.error("Error applying filters:", error);
@@ -1143,10 +1101,8 @@ const MasterFile = () => {
         type: "error",
         message: "Failed to load filtered data"
       });
-      // Auto-clear error message after 10 seconds
-      setTimeout(() => setUploadStatus(null), 10000);
-    } finally {
-      setLoadingMasterFileDetails(false);
+      // Auto-clear error message after 5 seconds
+      setTimeout(() => setUploadStatus(null), 5000);
     }
 
     setPage(0); // Reset to first page when filters change
@@ -1262,18 +1218,13 @@ const MasterFile = () => {
 
       setSavingRowId(id); // Set saving state
 
-      // Update local state first
+      // Update Redux state first (optimistic update)
       const updatedItem = {
-        ...itemToUpdate,
         [previousPriceColumn]: itemToUpdate[currentPriceColumn], // Move current to previous
         [currentPriceColumn]: newPrice, // Set new current price
       };
 
-      setItems((prevItems) =>
-        prevItems.map((item) =>
-          item.id === id ? updatedItem : item
-        )
-      );
+      dispatch(updateItem({ id, updates: updatedItem }));
 
       // Convert column keys to actual column names for API
       const convertToColumnNames = (rowData) => {
@@ -1295,17 +1246,19 @@ const MasterFile = () => {
 
       // Prepare data for API call
       try {
+        const completeUpdatedItem = { ...itemToUpdate, ...updatedItem };
+        
         const updateData = {
           company_id: itemToUpdate._meta.company_id,
           location_id: itemToUpdate._meta.location_id,
           filename: itemToUpdate._meta.filename,
-          row_data: convertToColumnNames(updatedItem)
+          row_data: convertToColumnNames(completeUpdatedItem)
         };
 
         console.log("Sending update data:", updateData);
 
         // Send update to API
-        const response = await apiClient.post("/api/masterfile/updatefile", updateData);
+        const response = await apiClient.post("api/masterfile/updatefile", updateData);
         
         console.log("Row update response:", response.data);
         
@@ -1321,12 +1274,12 @@ const MasterFile = () => {
       } catch (error) {
         console.error("Error updating row:", error);
         
-        // Revert local state change on API failure
-        setItems((prevItems) =>
-          prevItems.map((item) =>
-            item.id === id ? itemToUpdate : item
-          )
-        );
+        // Revert Redux state change on API failure
+        const revertedItem = {
+          [previousPriceColumn]: itemToUpdate[previousPriceColumn], // Restore original previous price
+          [currentPriceColumn]: itemToUpdate[currentPriceColumn], // Restore original current price
+        };
+        dispatch(updateItem({ id, updates: revertedItem }));
         
         setUploadStatus({
           type: "error",
@@ -1717,16 +1670,35 @@ const MasterFile = () => {
                 onFilenameChange={handleFilenameChange}
                 onApplyFilters={handleApplyOrderIQFilters}
                 showApplyButton={true}
-                loadingMasterFileDetails={loadingMasterFileDetails}
+                loadingMasterFileDetails={loading} // Use Redux loading state
               />
             )}
             
-            {/* Show upload/filter status */}
-            {uploadStatus && (
+            {/* Show upload/filter status - Handle both Redux and local errors */}
+            {(uploadStatus || reduxError) && (
               <Box style={{ marginTop: 16 }}>
-                <Alert severity={uploadStatus.type} style={{ borderRadius: 8 }}>
-                  {uploadStatus.message}
-                </Alert>
+                {uploadStatus && (
+                  <Alert severity={uploadStatus.type} style={{ borderRadius: 8, marginBottom: reduxError ? 8 : 0 }}>
+                    {uploadStatus.message}
+                  </Alert>
+                )}
+                {reduxError && (
+                  <Alert severity="error" style={{ borderRadius: 8 }}>
+                    {reduxError}
+                  </Alert>
+                )}
+              </Box>
+            )}
+            
+            {/* Show auto-loaded data info */}
+            {items.length > 0 && lastAppliedFilters.companies.length > 0 && (
+              <Box style={{ marginTop: 8 }}>
+                <Chip 
+                  label={`Data auto-loaded from saved filters`}
+                  color="info"
+                  size="small"
+                  icon={<RefreshIcon style={{ fontSize: 16 }} />}
+                />
               </Box>
             )}
           </Box>
