@@ -279,9 +279,18 @@ def update_masterfile(
     return masterfile
 
 
+from pydantic import BaseModel
+from typing import Dict, Any
+
+class UpdateMasterFileRequest(BaseModel):
+    company_id: int
+    location_id: int
+    filename: str
+    row_data: Dict[str, Any]
+
 @router.post("/updatefile")
 def update_masterfile(
-    request, 
+    request: UpdateMasterFileRequest,
     db: Session = Depends(get_db)
 ):
     """Update a masterfile row"""
@@ -294,20 +303,10 @@ def update_masterfile(
         if not masterfile:
             raise HTTPException(status_code=404, detail="Masterfile not found")
 
-        # Update the specific row in the file_data
-        # You'll need to implement logic to find and update the specific row
-        # based on some unique identifier in the row_data
+        # Your update logic here
         
-        # For now, just return the request data for testing
-        return {
-            "message": "Row updated successfully",
-            "data": {
-                "company_id": request.company_id,
-                "location_id": request.location_id,
-                "filename": request.filename,
-                "updated_row": request.row_data
-            }
-        }
+        # Return minimal response if you don't want much data
+        return {"status": "updated"}
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating masterfile: {str(e)}")
