@@ -1,4 +1,4 @@
-// Updated FinancialTablesComponent.tsx with $ signs for Orders and Labor Hours
+// Updated FinancialTablesComponent.tsx with $ signs for Labor Cost and no $ signs for Labor Hours
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -139,7 +139,7 @@ const FinancialTablesComponent: React.FC<FinancialTablesComponentProps> = ({ fin
     return `${value.toFixed(2)}%`;
   };
 
-  // UPDATED: Format number with $ sign for Orders table
+  // Format number with $ sign for Orders table
   const formatNumberWithDollar = (value: number): string => {
     if (value === 0 || value === null || value === undefined) return '$0';
     return '$' + new Intl.NumberFormat('en-US').format(Math.round(value));
@@ -151,13 +151,13 @@ const FinancialTablesComponent: React.FC<FinancialTablesComponentProps> = ({ fin
     return new Intl.NumberFormat('en-US').format(Math.round(value));
   };
 
-  // UPDATED: Format hours with $ sign for Labor Hours table
+  // Format hours with $ sign (removed - no longer used)
   const formatHoursWithDollar = (value: number): string => {
     if (value === 0 || value === null || value === undefined) return '$0.00';
     return '$' + value.toFixed(2);
   };
 
-  // Format hours (for non-currency hours)
+  // Format hours (for Labor Hours table - no currency)
   const formatHours = (value: number): string => {
     if (value === 0 || value === null || value === undefined) return '0.00';
     return value.toFixed(2);
@@ -205,9 +205,9 @@ const FinancialTablesComponent: React.FC<FinancialTablesComponentProps> = ({ fin
         data: financialTables.table2 || [],
         columns: [
           { key: 'Store', label: 'Store Location', align: 'left' as const },
-          { key: 'Tw Orders', label: 'This Week', align: 'center' as const,  }, // UPDATED
-          { key: 'Lw Orders', label: 'Last Week', align: 'center' as const,  }, // UPDATED
-          { key: 'Ly Orders', label: 'Last Year', align: 'center' as const,  }, // UPDATED
+          { key: 'Tw Orders', label: 'This Week', align: 'center' as const, format: 'numberWithDollar' },
+          { key: 'Lw Orders', label: 'Last Week', align: 'center' as const, format: 'numberWithDollar' },
+          { key: 'Ly Orders', label: 'Last Year', align: 'center' as const, format: 'numberWithDollar' },
           { key: 'Tw vs. Lw', label: 'TW vs LW', align: 'center' as const, format: 'percentage' },
           { key: 'Tw vs. Ly', label: 'TW vs LY', align: 'center' as const, format: 'percentage' }
         ]
@@ -240,20 +240,20 @@ const FinancialTablesComponent: React.FC<FinancialTablesComponentProps> = ({ fin
           { key: 'Lw Fc %', label: 'LW %', align: 'center' as const, format: 'percentage' }
         ]
       },
-    {
-  id: 'labor',
-  title: 'Labor Cost',
-  icon: '👥',
-  data: financialTables.table5 || [],
-  columns: [
-    { key: 'Store', label: 'Store Location', align: 'left' as const },
-    { key: 'Tw Reg Pay', label: 'This Week', align: 'center' as const, format: 'number' }, // UPDATED: Changed from 'currency' to 'number'
-    { key: 'Lw Reg Pay', label: 'Last Week', align: 'center' as const, format: 'number' }, // UPDATED: Changed from 'currency' to 'number'
-    { key: 'Tw vs. Lw', label: 'Change', align: 'center' as const, format: 'percentage' },
-    { key: 'Tw Lc %', label: 'TW %', align: 'center' as const, format: 'percentage' },
-    { key: 'Lw Lc %', label: 'LW %', align: 'center' as const, format: 'percentage' }
-  ]
-},
+      {
+        id: 'labor',
+        title: 'Labor Cost',
+        icon: '👥',
+        data: financialTables.table5 || [],
+        columns: [
+          { key: 'Store', label: 'Store Location', align: 'left' as const },
+          { key: 'Tw Reg Pay', label: 'This Week', align: 'center' as const, format: 'currency' }, // UPDATED: Changed from 'number' to 'currency'
+          { key: 'Lw Reg Pay', label: 'Last Week', align: 'center' as const, format: 'currency' }, // UPDATED: Changed from 'number' to 'currency'
+          { key: 'Tw vs. Lw', label: 'Change', align: 'center' as const, format: 'percentage' },
+          { key: 'Tw Lc %', label: 'TW %', align: 'center' as const, format: 'percentage' },
+          { key: 'Lw Lc %', label: 'LW %', align: 'center' as const, format: 'percentage' }
+        ]
+      },
       {
         id: 'hours',
         title: 'Labor Hours',
@@ -261,8 +261,8 @@ const FinancialTablesComponent: React.FC<FinancialTablesComponentProps> = ({ fin
         data: financialTables.table6 || [],
         columns: [
           { key: 'Store', label: 'Store Location', align: 'left' as const },
-          { key: 'Tw Lb Hrs', label: 'This Week', align: 'center' as const, format: 'hoursWithDollar' }, // UPDATED
-          { key: 'Lw Lb Hrs', label: 'Last Week', align: 'center' as const, format: 'hoursWithDollar' }, // UPDATED
+          { key: 'Tw Lb Hrs', label: 'This Week', align: 'center' as const, format: 'hours' }, // UPDATED: Changed from 'hoursWithDollar' to 'hours'
+          { key: 'Lw Lb Hrs', label: 'Last Week', align: 'center' as const, format: 'hours' }, // UPDATED: Changed from 'hoursWithDollar' to 'hours'
           { key: 'Tw vs. Lw', label: 'Change', align: 'center' as const, format: 'percentage' }
         ]
       },
@@ -283,7 +283,7 @@ const FinancialTablesComponent: React.FC<FinancialTablesComponentProps> = ({ fin
     return tables.filter(table => table.data.length > 0);
   };
 
-  // UPDATED: Format cell value based on type - added new formats
+  // Format cell value based on type
   const formatCellValue = (value: any, format: string) => {
     if (value === null || value === undefined) return '-';
     
@@ -294,11 +294,11 @@ const FinancialTablesComponent: React.FC<FinancialTablesComponentProps> = ({ fin
         return formatPercentage(value);
       case 'number':
         return formatNumber(value);
-      case 'numberWithDollar': // NEW FORMAT
+      case 'numberWithDollar':
         return formatNumberWithDollar(value);
       case 'hours':
         return formatHours(value);
-      case 'hoursWithDollar': // NEW FORMAT
+      case 'hoursWithDollar':
         return formatHoursWithDollar(value);
       default:
         return value.toString();
@@ -382,56 +382,54 @@ const FinancialTablesComponent: React.FC<FinancialTablesComponentProps> = ({ fin
 
   return (
     <Box sx={{ width: '100%' }}>
-      {/* UPDATED: Compact table filter tabs with smaller spacing to fit all on one screen */}
+      {/* Compact table filter tabs with smaller spacing to fit all on one screen */}
       <Box sx={{ 
         borderBottom: 1, 
         borderColor: 'divider', 
         mb: 2,
         backgroundColor: alpha(theme.palette.primary.main, 0.02),
         borderRadius: 1,
-        p: 0.5, // Reduced padding
-        overflow: 'hidden' // Prevent overflow
+        p: 0.5,
+        overflow: 'hidden'
       }}>
         <Tabs 
           value={tableTab}
           onChange={handleTableTabChange}
-          variant="scrollable" // Changed to scrollable as fallback
-          scrollButtons={false} // Hide scroll buttons
+          variant="scrollable"
+          scrollButtons={false}
           allowScrollButtonsMobile={false}
           sx={{
-            minHeight: 'auto', // Reduce minimum height
+            minHeight: 'auto',
             '& .MuiTabs-flexContainer': {
-              gap: 0.5, // Small gap between tabs
+              gap: 0.5,
             },
             '& .MuiTab-root': {
               textTransform: 'none',
-              minWidth: 'auto', // Allow smaller minimum width
-              minHeight: 'auto', // Allow smaller minimum height
+              minWidth: 'auto',
+              minHeight: 'auto',
               fontWeight: 500,
-              fontSize: '0.75rem', // Smaller font size
-              px: 1, // Reduced padding
-              py: 0.5, // Reduced padding
-              margin: '0 2px', // Small margin between tabs
+              fontSize: '0.75rem',
+              px: 1,
+              py: 0.5,
+              margin: '0 2px',
               borderRadius: 0.5,
               transition: 'all 0.2s ease',
-              maxWidth: '140px', // Limit maximum width
+              maxWidth: '140px',
               '&.Mui-selected': {
                 color: theme.palette.primary.main,
                 fontWeight: 600,
                 backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                fontSize: '0.75rem', // Keep consistent font size
+                fontSize: '0.75rem',
               },
               '&:hover': {
                 backgroundColor: alpha(theme.palette.primary.main, 0.05)
               }
             },
             '& .MuiTabs-indicator': {
-              display: 'none' // Hide indicator to save space
+              display: 'none'
             }
           }}
         >
-
-          
           <Tab 
             label={
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -484,7 +482,7 @@ const FinancialTablesComponent: React.FC<FinancialTablesComponentProps> = ({ fin
 
       {/* All Tables Panel */}
       <TablePanel value={tableTab} index={0}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}> {/* Reduced gap */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {tablesData.map((table, index) => (
             <Card 
               key={index} 
@@ -650,7 +648,7 @@ const FinancialTablesComponent: React.FC<FinancialTablesComponentProps> = ({ fin
         </Box>
       </TablePanel>
 
-      {/* Individual table panels - also with centered values */}
+      {/* Individual table panels */}
       {tablesData.map((table, index) => (
         <TablePanel value={tableTab} index={index + 1} key={index}>
           <Card 

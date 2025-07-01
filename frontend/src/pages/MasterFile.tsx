@@ -53,6 +53,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ClearIcon from "@mui/icons-material/Clear";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import BusinessIcon from "@mui/icons-material/Business";
+import LocationOnIcon from "@mui/icons-material/LocationOn";
 import FiltersOrderIQ from "../components/FiltersOrderIQ";
 import DateRangeSelector from "../components/DateRangeSelector";
 import { API_URL_Local } from "../constants";
@@ -719,50 +720,13 @@ const MasterFile = () => {
   const [uploadStatus, setUploadStatus] = useState(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState("");
+  const [selectedLocationId, setSelectedLocationId] = useState(""); // Added location state
 
   // Date range selector state
   const [selectedDateRange, setSelectedDateRange] = useState(null);
 
   // Get unique units for filter options
   const uniqueUnits = [...new Set(items.map((item) => item.unit))];
-
-  // // Fetch companies data
-  // const fetchCompanies = async () => {
-  //   setLoadingCompanies(true);
-  //   try {
-  //     // const response = await axios.get(`${API_URL_Local}/companies`);
-  //     const response = await apiClient.get('/companies');
-
-  //     setCompanies(response.data);
-  //   } catch (error) {
-  //     console.error('Error fetching companies:', error);
-  //     setUploadStatus({
-  //       type: 'error',
-  //       message: 'Failed to fetch companies data'
-  //     });
-  //   } finally {
-  //     setLoadingCompanies(false);
-  //   }
-  // };
-
-  // // Fetch locations/stores data
-  // const fetchLocations = async () => {
-  //   setLoadingLocations(true);
-  //   try {
-  //     // const response = await axios.get(`${API_URL_Local}/stores`);
-  //     const response = await apiClient.get('/stores');
-
-  //     setLocations(response.data);
-  //   } catch (error) {
-  //     console.error('Error fetching stores:', error);
-  //     setUploadStatus({
-  //       type: 'error',
-  //       message: 'Failed to fetch stores data'
-  //     });
-  //   } finally {
-  //     setLoadingLocations(false);
-  //   }
-  // };
 
   // Fetch companies data
   const fetchCompanies = async () => {
@@ -987,72 +951,12 @@ const MasterFile = () => {
     }
   };
 
-  // const handleUploadFile = async () => {
-  //   if (!selectedFile || !selectedCompanyId) {
-  //     setUploadStatus({
-  //       type: "error",
-  //       message: "Please select both a file and a company",
-  //     });
-  //     return;
-  //   }
-
-  //   setUploading(true);
-  //   setUploadStatus(null);
-
-  //   try {
-  //     // Convert file to base64
-  //     const fileContent = await fileToBase64(selectedFile);
-
-  //     // Prepare upload data
-  //     const uploadData = {
-  //       company_id: parseInt(selectedCompanyId),
-  //       fileName: selectedFile.name,
-  //       fileContent: fileContent,
-  //     };
-
-  //     // Send to API
-  //     // const response = await axios.post(`${API_URL_Local}/api/master/upload`, uploadData, {
-  //     //   headers: {
-  //     //     'Content-Type': 'application/json',
-  //     //   }
-  //     // });
-  //     const response = await apiClient.post("/api/master/upload", uploadData);
-
-  //     setUploadStatus({
-  //       type: "success",
-  //       message: `Successfully uploaded ${selectedFile.name} for ${
-  //         companies.find((c) => c.id.toString() === selectedCompanyId)?.name
-  //       }`,
-  //     });
-
-  //     // Reset after successful upload
-  //     setTimeout(() => {
-  //       setUploadDialog(false);
-  //       setSelectedFile(null);
-  //       setSelectedCompanyId("");
-  //       setUploadStatus(null);
-  //     }, 2000);
-
-  //     console.log("Upload response:", response.data);
-  //   } catch (error) {
-  //     console.error("Upload error:", error);
-  //     setUploadStatus({
-  //       type: "error",
-  //       message:
-  //         error.response?.data?.message ||
-  //         "Failed to upload file. Please try again.",
-  //     });
-  //   } finally {
-  //     setUploading(false);
-  //   }
-  // };
-
-  // Upload function
+  // Updated upload function with location_id
   const handleUploadFile = async () => {
-    if (!selectedFile || !selectedCompanyId) {
+    if (!selectedFile || !selectedCompanyId || !selectedLocationId) {
       setUploadStatus({
         type: "error",
-        message: "Please select both a file and a company",
+        message: "Please select a file, company, and location",
       });
       return;
     }
@@ -1064,9 +968,10 @@ const MasterFile = () => {
       // Convert file to base64
       const fileContent = await fileToBase64(selectedFile);
 
-      // Prepare upload data
+      // Prepare upload data with both company_id and location_id
       const uploadData = {
         company_id: parseInt(selectedCompanyId),
+        location_id: parseInt(selectedLocationId), // Added location_id
         fileName: selectedFile.name,
         fileContent: fileContent,
       };
@@ -1074,11 +979,12 @@ const MasterFile = () => {
       // Send to API using apiClient (will include auth token automatically)
       const response = await apiClient.post("/api/master/upload", uploadData);
 
+      const selectedCompany = companies.find((c) => c.id.toString() === selectedCompanyId);
+      const selectedLocation = locations.find((l) => l.id.toString() === selectedLocationId);
+
       setUploadStatus({
         type: "success",
-        message: `Successfully uploaded ${selectedFile.name} for ${
-          companies.find((c) => c.id.toString() === selectedCompanyId)?.name
-        }`,
+        message: `Successfully uploaded ${selectedFile.name} for ${selectedCompany?.name} - ${selectedLocation?.name}`,
       });
 
       // Reset after successful upload
@@ -1086,6 +992,7 @@ const MasterFile = () => {
         setUploadDialog(false);
         setSelectedFile(null);
         setSelectedCompanyId("");
+        setSelectedLocationId(""); // Reset location
         setUploadStatus(null);
       }, 2000);
 
@@ -1107,6 +1014,7 @@ const MasterFile = () => {
     setUploadDialog(false);
     setSelectedFile(null);
     setSelectedCompanyId("");
+    setSelectedLocationId(""); // Reset location
     setUploadStatus(null);
     setUploading(false);
   };
@@ -1464,10 +1372,10 @@ const MasterFile = () => {
 
             {/* Company Selection */}
             <FormControl fullWidth style={{ marginBottom: 16 }}>
-              <InputLabel>Select Company</InputLabel>
+              <InputLabel>Select Company *</InputLabel>
               <Select
                 value={selectedCompanyId}
-                label="Select Company"
+                label="Select Company *"
                 onChange={(e) => setSelectedCompanyId(e.target.value)}
                 startAdornment={
                   <InputAdornment position="start">
@@ -1479,6 +1387,28 @@ const MasterFile = () => {
                 {companies.map((company) => (
                   <MenuItem key={company.id} value={company.id.toString()}>
                     {company.name} {company.code && `(${company.code})`}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {/* Location Selection */}
+            <FormControl fullWidth style={{ marginBottom: 16 }}>
+              <InputLabel>Select Location *</InputLabel>
+              <Select
+                value={selectedLocationId}
+                label="Select Location *"
+                onChange={(e) => setSelectedLocationId(e.target.value)}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <LocationOnIcon />
+                  </InputAdornment>
+                }
+                disabled={loadingLocations}
+              >
+                {locations.map((location) => (
+                  <MenuItem key={location.id} value={location.id.toString()}>
+                    {location.name} {location.code && `(${location.code})`}
                   </MenuItem>
                 ))}
               </Select>
@@ -1533,7 +1463,7 @@ const MasterFile = () => {
           <Button
             onClick={handleUploadFile}
             variant="contained"
-            disabled={!selectedFile || !selectedCompanyId || uploading}
+            disabled={!selectedFile || !selectedCompanyId || !selectedLocationId || uploading}
             startIcon={uploading ? null : <UploadFileIcon />}
           >
             {uploading ? "Uploading..." : "Upload"}

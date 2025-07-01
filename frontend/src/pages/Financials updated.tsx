@@ -83,6 +83,20 @@ interface Company {
 const FINANCIAL_FILTER_API_URL = `${API_URL_Local}/api/financials/filter`;
 const COMPANIES_API_URL = `${API_URL_Local}/companies`; // NEW: Companies API endpoint
 
+// NEW: Color mapping for Week-Over-Week Analysis metrics (individual colors like first image)
+const metricColors = {
+  'Net Sales': '#3B82F6',      // Blue
+  'Orders': '#10B981',         // Green  
+  'Qty Sold': '#F59E0B',       // Orange
+  'Avg Ticket': '#8B5CF6',     // Purple
+  'Avg Order Value': '#8B5CF6', // Purple (same as Avg Ticket)
+  'Average items per order': '#EF4444', // Red
+  'Food Cost %': '#EF4444',    // Red
+  'Lbr %': '#06B6D4',          // Cyan
+  'SPMH': '#84CC16',           // Lime
+  'LPMH': '#F97316'            // Orange-red
+};
+
 // Enhanced styled components
 const StyledCard = styled(Card)(({ theme }) => ({
   borderRadius: 16,
@@ -1014,54 +1028,51 @@ export function Financials() {
     if (table5Data.length > 0) {
       const metricsMap = extractFinancialMetrics(table5Data);
       
-      // Updated metrics to match the image - all 7 metrics for 4+3 grid layout
-      const keyMetrics = [
+      // All available metrics - try to find what exists in the data
+      const possibleMetrics = [
         'Net Sales',
         'Orders', 
+        'Qty Sold',
         'Avg Ticket',
+        'Average items per order',
         'Food Cost %',
         'Lbr %',
         'SPMH',
         'LPMH'
       ];
 
-      const newStatsData = keyMetrics.map(metricName => {
+      const newStatsData = [];
+      
+      possibleMetrics.forEach(metricName => {
         const metricData = metricsMap.get(metricName);
         
-        if (!metricData) {
-          return {
-            label: metricName.toUpperCase(),
-            value: '0',
-            bottomChange: '0%',
-            bottomLabel: 'VS. PREVIOUS',
-            changeColor: '#666',
-            changeDirection: 'up'
-          };
-        }
+        if (metricData) {
+          const twLwChange = formatPercentageChange(metricData.twLwChange);
+          
+          let formattedValue = metricData.thisWeek;
+          let displayLabel = metricName === 'Avg Ticket' ? 'Avg Order Value' : metricName;
+          
+          if (metricName === 'Net Sales') {
+            formattedValue = formatCurrency(metricData.thisWeek);
+          } else if (metricName === 'Avg Ticket' || metricName === 'SPMH' || metricName === 'LPMH') {
+            formattedValue = formatCurrency(metricData.thisWeek);
+          } else if (metricName.includes('%')) {
+            formattedValue = `${parseFloat(metricData.thisWeek)}%`;
+          } else if (metricName === 'Orders' || metricName === 'Qty Sold') {
+            formattedValue = parseInt(metricData.thisWeek).toLocaleString();
+          } else if (metricName === 'Average items per order') {
+            formattedValue = parseFloat(metricData.thisWeek).toFixed(2);
+          }
 
-        const twLwChange = formatPercentageChange(metricData.twLwChange);
-        
-        let formattedValue = metricData.thisWeek;
-        let displayLabel = metricName.toUpperCase();
-        
-        if (metricName === 'Net Sales') {
-          formattedValue = formatCurrency(metricData.thisWeek);
-        } else if (metricName === 'Avg Ticket' || metricName === 'SPMH' || metricName === 'LPMH') {
-          formattedValue = formatCurrency(metricData.thisWeek);
-        } else if (metricName.includes('%')) {
-          formattedValue = `${parseFloat(metricData.thisWeek)}%`;
-        } else if (metricName === 'Orders') {
-          formattedValue = parseInt(metricData.thisWeek).toLocaleString();
+          newStatsData.push({
+            label: displayLabel,
+            value: formattedValue,
+            bottomChange: twLwChange.value,
+            bottomLabel: 'vs. previous period',
+            changeColor: twLwChange.isPositive ? '#10B981' : '#EF4444',
+            changeDirection: twLwChange.isPositive ? 'up' : 'down'
+          });
         }
-
-        return {
-          label: displayLabel,
-          value: formattedValue,
-          bottomChange: twLwChange.value,
-          bottomLabel: 'VS. PREVIOUS',
-          changeColor: twLwChange.isPositive ? '#10B981' : '#EF4444', // Green for positive, red for negative
-          changeDirection: twLwChange.isPositive ? 'up' : 'down'
-        };
       });
       
       // FIX: Force stats update with new array reference
@@ -1595,216 +1606,226 @@ export function Financials() {
             </Box>
           )}
           
-          {/* NEW: Enhanced Stats Grid - 4+3 Layout for All 7 Metrics */}
+          {/* NEW: Enhanced Stats Grid - 4+3 Layout with Individual Colors */}
           {!isLoading && !loading && (
             <>
               {statsData.length > 0 ? (
                 <Box>
                   {/* First Row - 4 items */}
                   <Grid container spacing={2} justifyContent="center" sx={{ mb: 2 }}>
-                    {statsData.slice(0, 4).map((stat, index) => (
-                      <Grid item xs={12} sm={6} md={3} key={index}>
-                        <Card
-                          elevation={0}
-                          sx={{
-                            padding: theme.spacing(2.5, 2),
-                            textAlign: 'center',
-                            height: '140px',
-                            borderRadius: '12px',
-                            background: '#FFFFFF',
-                            border: '1px solid #E5E7EB',
-                            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                            position: 'relative',
-                            overflow: 'hidden',
-                            '&::before': {
-                              content: '""',
-                              position: 'absolute',
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              height: 4,
-                              background: 'linear-gradient(90deg, #3B82F6 0%, #8B5CF6 100%)',
-                            },
-                            '&:hover': {
-                              transform: 'translateY(-2px)',
-                              boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
-                            }
-                          }}
-                        >
-                          {/* Label */}
-                          <Typography 
-                            sx={{ 
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                              color: '#3B82F6',
-                              mb: 1,
-                              letterSpacing: '0.5px',
-                              textTransform: 'uppercase'
+                    {statsData.slice(0, 4).map((stat, index) => {
+                      const metricKey = stat.label === 'Avg Order Value' ? 'Avg Ticket' : stat.label;
+                      const metricColor = metricColors[metricKey] || theme.palette.primary.main;
+                      
+                      return (
+                        <Grid item xs={12} sm={6} md={3} key={index}>
+                          <Card
+                            elevation={0}
+                            sx={{
+                              padding: theme.spacing(3, 2),
+                              textAlign: 'center',
+                              height: '140px',
+                              borderRadius: '16px',
+                              background: '#FFFFFF',
+                              border: '1px solid #F1F5F9',
+                              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                              position: 'relative',
+                              overflow: 'hidden',
+                              '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                height: 4,
+                                background: metricColor,
+                              },
+                              '&:hover': {
+                                transform: 'translateY(-2px)',
+                                boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
+                              }
                             }}
                           >
-                            {stat.label}
-                          </Typography>
-
-                          {/* Large Number */}
-                          <Typography 
-                            sx={{ 
-                              fontSize: '1.5rem',
-                              fontWeight: 700,
-                              color: '#1F2937',
-                              mb: 1,
-                              lineHeight: 1.2
-                            }}
-                          >
-                            {stat.value}
-                          </Typography>
-                          
-                          {/* Change Indicator */}
-                          <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            gap: 0.5,
-                            mb: 0.5
-                          }}>
-                            {stat.changeDirection && (
-                              <span style={{ 
-                                color: stat.changeColor, 
-                                fontSize: '12px',
-                                fontWeight: 'bold'
-                              }}>
-                                {stat.changeDirection === 'up' ? '▲' : '▼'}
-                              </span>
-                            )}
+                            {/* Large Number */}
                             <Typography 
                               sx={{ 
-                                color: stat.changeColor,
-                                fontSize: '0.875rem',
-                                fontWeight: 600
+                                fontSize: '1.75rem',
+                                fontWeight: 700,
+                                color: metricColor,
+                                mb: 0.5,
+                                lineHeight: 1.2
                               }}
                             >
-                              {stat.bottomChange}
+                              {stat.value}
                             </Typography>
-                          </Box>
-
-                          <Typography 
-                            sx={{ 
-                              fontSize: '0.75rem',
-                              color: '#6B7280',
-                              fontWeight: 400,
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.5px'
-                            }}
-                          >
-                            {stat.bottomLabel}
-                          </Typography>
-                        </Card>
-                      </Grid>
-                    ))}
+                            
+                            {/* Label */}
+                            <Typography 
+                              sx={{ 
+                                fontSize: '0.875rem',
+                                fontWeight: 500,
+                                color: '#64748B',
+                                mb: 1,
+                                lineHeight: 1.3
+                              }}
+                            >
+                              {stat.label}
+                            </Typography>
+                            
+                            {/* Change Indicator */}
+                            <Box sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              gap: 0.5
+                            }}>
+                              <Typography 
+                                sx={{ 
+                                  fontSize: '0.75rem',
+                                  color: '#94A3B8',
+                                  fontWeight: 400
+                                }}
+                              >
+                                vs. previous period
+                              </Typography>
+                              
+                              {stat.changeDirection && (
+                                <>
+                                  <span style={{ 
+                                    color: stat.changeColor, 
+                                    fontSize: '10px',
+                                    fontWeight: 'bold',
+                                    marginLeft: '4px'
+                                  }}>
+                                    {stat.changeDirection === 'up' ? '▲' : '▼'}
+                                  </span>
+                                  <Typography 
+                                    sx={{ 
+                                      color: stat.changeColor,
+                                      fontSize: '0.75rem',
+                                      fontWeight: 600
+                                    }}
+                                  >
+                                    {stat.bottomChange}
+                                  </Typography>
+                                </>
+                              )}
+                            </Box>
+                          </Card>
+                        </Grid>
+                      );
+                    })}
                   </Grid>
                   
                   {/* Second Row - 3 items centered */}
-                  <Grid container spacing={2} justifyContent="center">
-                    {statsData.slice(4, 7).map((stat, index) => (
-                      <Grid item xs={12} sm={6} md={4} key={index + 4}>
-                        <Card
-                          elevation={0}
-                          sx={{
-                            padding: theme.spacing(2.5, 2),
-                            textAlign: 'center',
-                            height: '140px',
-                            borderRadius: '12px',
-                            background: '#FFFFFF',
-                            border: '1px solid #E5E7EB',
-                            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                            position: 'relative',
-                            overflow: 'hidden',
-                            '&::before': {
-                              content: '""',
-                              position: 'absolute',
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              height: 4,
-                              background: 'linear-gradient(90deg, #3B82F6 0%, #8B5CF6 100%)',
-                            },
-                            '&:hover': {
-                              transform: 'translateY(-2px)',
-                              boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
-                            }
-                          }}
-                        >
-                          {/* Label */}
-                          <Typography 
-                            sx={{ 
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                              color: '#3B82F6',
-                              mb: 1,
-                              letterSpacing: '0.5px',
-                              textTransform: 'uppercase'
-                            }}
-                          >
-                            {stat.label}
-                          </Typography>
-
-                          {/* Large Number */}
-                          <Typography 
-                            sx={{ 
-                              fontSize: '1.5rem',
-                              fontWeight: 700,
-                              color: '#1F2937',
-                              mb: 1,
-                              lineHeight: 1.2
-                            }}
-                          >
-                            {stat.value}
-                          </Typography>
-                          
-                          {/* Change Indicator */}
-                          <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            gap: 0.5,
-                            mb: 0.5
-                          }}>
-                            {stat.changeDirection && (
-                              <span style={{ 
-                                color: stat.changeColor, 
-                                fontSize: '12px',
-                                fontWeight: 'bold'
-                              }}>
-                                {stat.changeDirection === 'up' ? '▲' : '▼'}
-                              </span>
-                            )}
-                            <Typography 
-                              sx={{ 
-                                color: stat.changeColor,
-                                fontSize: '0.875rem',
-                                fontWeight: 600
+                  {statsData.length > 4 && (
+                    <Grid container spacing={2} justifyContent="center">
+                      {statsData.slice(4, 7).map((stat, index) => {
+                        const metricKey = stat.label === 'Avg Order Value' ? 'Avg Ticket' : stat.label;
+                        const metricColor = metricColors[metricKey] || theme.palette.primary.main;
+                        
+                        return (
+                          <Grid item xs={12} sm={6} md={4} key={index + 4}>
+                            <Card
+                              elevation={0}
+                              sx={{
+                                padding: theme.spacing(3, 2),
+                                textAlign: 'center',
+                                height: '140px',
+                                borderRadius: '16px',
+                                background: '#FFFFFF',
+                                border: '1px solid #F1F5F9',
+                                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                '&::before': {
+                                  content: '""',
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  right: 0,
+                                  height: 4,
+                                  background: metricColor,
+                                },
+                                '&:hover': {
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
+                                }
                               }}
                             >
-                              {stat.bottomChange}
-                            </Typography>
-                          </Box>
-
-                          <Typography 
-                            sx={{ 
-                              fontSize: '0.75rem',
-                              color: '#6B7280',
-                              fontWeight: 400,
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.5px'
-                            }}
-                          >
-                            {stat.bottomLabel}
-                          </Typography>
-                        </Card>
-                      </Grid>
-                    ))}
-                  </Grid>
+                              {/* Large Number */}
+                              <Typography 
+                                sx={{ 
+                                  fontSize: '1.75rem',
+                                  fontWeight: 700,
+                                  color: metricColor,
+                                  mb: 0.5,
+                                  lineHeight: 1.2
+                                }}
+                              >
+                                {stat.value}
+                              </Typography>
+                              
+                              {/* Label */}
+                              <Typography 
+                                sx={{ 
+                                  fontSize: '0.875rem',
+                                  fontWeight: 500,
+                                  color: '#64748B',
+                                  mb: 1,
+                                  lineHeight: 1.3
+                                }}
+                              >
+                                {stat.label}
+                              </Typography>
+                              
+                              {/* Change Indicator */}
+                              <Box sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                gap: 0.5
+                              }}>
+                                <Typography 
+                                  sx={{ 
+                                    fontSize: '0.75rem',
+                                    color: '#94A3B8',
+                                    fontWeight: 400
+                                  }}
+                                >
+                                  vs. previous period
+                                </Typography>
+                                
+                                {stat.changeDirection && (
+                                  <>
+                                    <span style={{ 
+                                      color: stat.changeColor, 
+                                      fontSize: '10px',
+                                      fontWeight: 'bold',
+                                      marginLeft: '4px'
+                                    }}>
+                                      {stat.changeDirection === 'up' ? '▲' : '▼'}
+                                    </span>
+                                    <Typography 
+                                      sx={{ 
+                                        color: stat.changeColor,
+                                        fontSize: '0.75rem',
+                                        fontWeight: 600
+                                      }}
+                                    >
+                                      {stat.bottomChange}
+                                    </Typography>
+                                  </>
+                                )}
+                              </Box>
+                            </Card>
+                          </Grid>
+                        );
+                      })}
+                    </Grid>
+                  )}
                 </Box>
               ) : (
                 <Box sx={{ 
