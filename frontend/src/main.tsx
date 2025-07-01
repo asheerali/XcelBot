@@ -43,6 +43,7 @@ import FiltersOrderIQ from "./components/FiltersOrderIQ";
 import SummaryFinancialDashboard from "./pages/SummaryFinancialDashboard";
 import OrderIQDashboard from "./pages/OrderIQDashboard"; // Import the OrderIQDashboard component
 import StoreSummaryProduction from "./pages/StoreSummaryProduction"; // Import the StoreSummaryProduction component
+import Reports from "./pages/Reports";
 const router = createBrowserRouter([
   {
     path: "/sign-in",
@@ -106,6 +107,10 @@ const router = createBrowserRouter([
           {
             path: "StoreSummaryProduction",
             Component: StoreSummaryProduction,
+          },
+          {
+            path: "Reports",
+            Component: Reports,
           },
           
         

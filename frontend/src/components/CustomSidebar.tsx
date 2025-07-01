@@ -115,6 +115,11 @@ const CustomSidebar = ({ onSignOut }) => {
       path: "/SummaryFinancialDashboard",
       icon: <TrendingUpIcon />,
     },
+     {
+      title: "Reports",
+      path: "/Reports",
+      icon: <PieChartIcon />,
+    },
     
  
   ];

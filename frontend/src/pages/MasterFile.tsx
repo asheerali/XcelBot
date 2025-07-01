@@ -598,15 +598,9 @@ const FiltersOrderIQWithFilename = ({
     return filteredDetails.length;
   };
 
-  // Check if filename dropdown should be enabled
-  const isFilenameDropdownEnabled = () => {
-    return selectedCompanies.length > 0 && selectedLocations.length > 0;
-  };
-
-  // Check if location dropdown should be enabled
-  const isLocationDropdownEnabled = () => {
-    return selectedCompanies.length > 0;
-  };
+  // FIXED: Check if dropdowns should be enabled based on current Redux state
+  const isLocationDropdownEnabled = selectedCompanies.length > 0;
+  const isFilenameDropdownEnabled = selectedCompanies.length > 0 && selectedLocations.length > 0;
 
   // Handle company selection with Select All functionality
   const handleCompanyChange = (value) => {
@@ -655,7 +649,7 @@ const FiltersOrderIQWithFilename = ({
     }
   };
 
-  // Render value functions
+  // Render value functions with proper disabled state handling
   const renderCompanyValue = (selected) => {
     if (selected.length === 0) return 'Select Companies';
     if (selected.length === companyOptions.length) return 'All Companies Selected';
@@ -664,8 +658,8 @@ const FiltersOrderIQWithFilename = ({
   };
 
   const renderLocationValue = (selected) => {
+    if (!isLocationDropdownEnabled) return 'Select companies first';
     const locationOptions = getLocationOptions();
-    if (!isLocationDropdownEnabled()) return 'Select companies first';
     if (selected.length === 0) return 'Select Locations';
     if (selected.length === locationOptions.length && locationOptions.length > 0) return 'All Locations Selected';
     if (selected.length === 1) return locationOptions.find(l => l.value === selected[0])?.label;
@@ -673,12 +667,10 @@ const FiltersOrderIQWithFilename = ({
   };
 
   const renderFilenameValue = (selected) => {
+    if (!isLocationDropdownEnabled) return 'Select companies first';
+    if (!isFilenameDropdownEnabled) return 'Select locations first';
+    
     const filenameOptions = getFilenameOptions();
-    if (!isFilenameDropdownEnabled()) {
-      if (selectedCompanies.length === 0) return 'Select companies first';
-      if (selectedLocations.length === 0) return 'Select locations first';
-      return 'Select companies & locations first';
-    }
     if (selected.length === 0) return 'Select Files';
     if (selected.length === filenameOptions.length && filenameOptions.length > 0) return 'All Files Selected';
     if (selected.length === 1) return selected[0];
@@ -688,7 +680,7 @@ const FiltersOrderIQWithFilename = ({
   return (
     <Box style={{ marginBottom: 16 }}>
       <Grid container spacing={2} alignItems="flex-start">
-        {/* Company Filter */}
+        {/* Company Filter - Always Enabled */}
         <Grid item xs={12} md={3}>
           <FormControl fullWidth size="small">
             <InputLabel>Companies *</InputLabel>
@@ -715,7 +707,7 @@ const FiltersOrderIQWithFilename = ({
           </FormControl>
         </Grid>
 
-        {/* Location Filter */}
+        {/* Location Filter - Enabled only when companies are selected */}
         <Grid item xs={12} md={3}>
           <FormControl fullWidth size="small">
             <InputLabel>Locations *</InputLabel>
@@ -725,13 +717,13 @@ const FiltersOrderIQWithFilename = ({
               label="Locations *"
               onChange={(e) => handleLocationChange(e.target.value)}
               renderValue={renderLocationValue}
-              disabled={!isLocationDropdownEnabled()}
+              disabled={!isLocationDropdownEnabled}
               style={{
-                opacity: isLocationDropdownEnabled() ? 1 : 0.6,
+                opacity: isLocationDropdownEnabled ? 1 : 0.6,
               }}
             >
-              {/* Select All Option */}
-              {getLocationOptions().length > 0 && (
+              {/* Select All Option - Only show when locations are available */}
+              {isLocationDropdownEnabled && getLocationOptions().length > 0 && (
                 <MenuItem value="select_all" style={{ fontWeight: 'bold', borderBottom: '1px solid #eee' }}>
                   <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <LocationOnIcon fontSize="small" />
@@ -739,7 +731,8 @@ const FiltersOrderIQWithFilename = ({
                   </Box>
                 </MenuItem>
               )}
-              {getLocationOptions().map((option) => (
+              {/* Only show location options when enabled */}
+              {isLocationDropdownEnabled && getLocationOptions().map((option) => (
                 <MenuItem key={option.value} value={option.value}>
                   {option.label}
                 </MenuItem>
@@ -748,7 +741,7 @@ const FiltersOrderIQWithFilename = ({
           </FormControl>
         </Grid>
 
-        {/* Filename Filter */}
+        {/* Filename Filter - Enabled only when both companies and locations are selected */}
         <Grid item xs={12} md={3}>
           <FormControl fullWidth size="small">
             <InputLabel>Files</InputLabel>
@@ -758,13 +751,13 @@ const FiltersOrderIQWithFilename = ({
               label="Files"
               onChange={(e) => handleFilenameChange(e.target.value)}
               renderValue={renderFilenameValue}
-              disabled={!isFilenameDropdownEnabled()}
+              disabled={!isFilenameDropdownEnabled}
               style={{
-                opacity: isFilenameDropdownEnabled() ? 1 : 0.6,
+                opacity: isFilenameDropdownEnabled ? 1 : 0.6,
               }}
             >
-              {/* Select All Option */}
-              {getFilenameOptions().length > 0 && isFilenameDropdownEnabled() && (
+              {/* Select All Option - Only show when files are available */}
+              {isFilenameDropdownEnabled && getFilenameOptions().length > 0 && (
                 <MenuItem value="select_all" style={{ fontWeight: 'bold', borderBottom: '1px solid #eee' }}>
                   <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <DescriptionIcon fontSize="small" />
@@ -772,7 +765,8 @@ const FiltersOrderIQWithFilename = ({
                   </Box>
                 </MenuItem>
               )}
-              {getFilenameOptions().map((option) => (
+              {/* Only show filename options when enabled */}
+              {isFilenameDropdownEnabled && getFilenameOptions().map((option) => (
                 <MenuItem key={option.value} value={option.value}>
                   {option.label}
                 </MenuItem>
@@ -1258,7 +1252,7 @@ const MasterFile = () => {
         console.log("Sending update data:", updateData);
 
         // Send update to API
-        const response = await apiClient.post("api/masterfile/updatefile", updateData);
+        const response = await apiClient.post("/api/masterfile/updatefile", updateData);
         
         console.log("Row update response:", response.data);
         
