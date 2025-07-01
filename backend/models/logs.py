@@ -1,5 +1,7 @@
 # models/logs.py
-from sqlalchemy import Column, Integer, String, JSON, ForeignKey
+from sqlalchemy import Column, Integer, String, JSON, ForeignKey, DateTime
+from database import Base
+from datetime import datetime
 from database import Base
 
 class Logs(Base):
@@ -9,5 +11,6 @@ class Logs(Base):
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
     filename = Column(String(255), nullable=False, index=True)
-    created_at = Column(Integer, nullable=False)  # Timestamp in seconds
+    # created_at = Column(Integer, nullable=False)  # Timestamp in seconds
+    created_at = Column(DateTime, default=datetime.utcnow)
     file_data = Column(JSON, nullable=False)

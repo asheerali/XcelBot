@@ -7,11 +7,11 @@ from sqlalchemy.orm.attributes import flag_modified
 
 def create_logs(db: Session, obj_in: LogsCreate):
     """Create a new logs record"""
-    # Convert Pydantic model to dict and ensure created_at is set
-    obj_data = obj_in.dict()
-    if 'created_at' not in obj_data or obj_data['created_at'] is None:
-        import time
-        obj_data['created_at'] = int(time.time())
+    # Convert Pydantic model to dict, created_at will be auto-set by SQLAlchemy default
+    obj_data = obj_in.dict(exclude_unset=True)
+    # Remove created_at if it's None to let SQLAlchemy handle the default
+    if 'created_at' in obj_data and obj_data['created_at'] is None:
+        del obj_data['created_at']
     
     db_obj = Logs(**obj_data)
     db.add(db_obj)
@@ -95,14 +95,12 @@ def delete_logs(db: Session, logs_id: int):
 
 def bulk_create_logs(db: Session, objects: List[LogsCreate]):
     """Bulk create multiple logs records"""
-    import time
-    current_timestamp = int(time.time())
-    
     db_objects = []
     for obj in objects:
-        obj_data = obj.dict()
-        if 'created_at' not in obj_data or obj_data['created_at'] is None:
-            obj_data['created_at'] = current_timestamp
+        obj_data = obj.dict(exclude_unset=True)
+        # Remove created_at if it's None to let SQLAlchemy handle the default
+        if 'created_at' in obj_data and obj_data['created_at'] is None:
+            del obj_data['created_at']
         db_objects.append(Logs(**obj_data))
     
     db.add_all(db_objects)

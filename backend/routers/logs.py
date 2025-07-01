@@ -47,9 +47,8 @@ def get_logs_details_alt(db: Session = Depends(get_db)):
         
         details = []
         for log in logs:
-            # Convert timestamp to readable format for display
-            import datetime
-            readable_date = datetime.datetime.fromtimestamp(log.created_at).strftime('%Y-%m-%d %H:%M:%S') if log.created_at else "Unknown"
+            # Format datetime for display
+            readable_date = log.created_at.strftime('%Y-%m-%d %H:%M:%S') if log.created_at else "Unknown"
             
             details.append({
                 "id": log.id,
@@ -58,8 +57,9 @@ def get_logs_details_alt(db: Session = Depends(get_db)):
                 "filename": log.filename,
                 "location_id": log.location_id,
                 "location_name": location_lookup.get(log.location_id, "Unknown"),
-                "created_at": log.created_at,
+                "created_at": log.created_at.isoformat() if log.created_at else None,
                 "created_at_readable": readable_date,
+                "file_data": log.file_data,
             })
 
         return {"message": "Logs details fetched successfully", "data": details}
@@ -103,8 +103,8 @@ def get_logs_details(
         "totalColumns": len(df.columns),
         "columns": columns_dict,
         "dataframe": df_copy.to_dict(orient='records'),
-        "created_at": logs.created_at,
-        "created_at_readable": datetime.datetime.fromtimestamp(logs.created_at).strftime('%Y-%m-%d %H:%M:%S') if logs.created_at else "Unknown",
+        "created_at": logs.created_at.isoformat() if logs.created_at else None,
+        "created_at_readable": logs.created_at.strftime('%Y-%m-%d %H:%M:%S') if logs.created_at else "Unknown",
     }
     
     return {"data": data}
@@ -350,8 +350,8 @@ def get_logs_as_dataframe(skip: int = 0, limit: int = 100, db: Session = Depends
                 row_with_metadata['filename'] = log.filename
                 row_with_metadata['company_id'] = log.company_id
                 row_with_metadata['location_id'] = log.location_id
-                row_with_metadata['created_at'] = log.created_at
-                row_with_metadata['created_at_readable'] = datetime.datetime.fromtimestamp(log.created_at).strftime('%Y-%m-%d %H:%M:%S') if log.created_at else "Unknown"
+                row_with_metadata['created_at'] = log.created_at.isoformat() if log.created_at else None
+                row_with_metadata['created_at_readable'] = log.created_at.strftime('%Y-%m-%d %H:%M:%S') if log.created_at else "Unknown"
                 all_data.append(row_with_metadata)
     
     if not all_data:
@@ -403,8 +403,8 @@ def get_single_logs_as_dataframe(logs_id: int, db: Session = Depends(get_db)):
     return {
         "logs_id": logs_id,
         "filename": logs.filename,
-        "created_at": logs.created_at,
-        "created_at_readable": datetime.datetime.fromtimestamp(logs.created_at).strftime('%Y-%m-%d %H:%M:%S') if logs.created_at else "Unknown",
+        "created_at": logs.created_at.isoformat() if logs.created_at else None,
+        "created_at_readable": logs.created_at.strftime('%Y-%m-%d %H:%M:%S') if logs.created_at else "Unknown",
         "shape": df.shape,
         "columns": df.columns.tolist(),
         "data": df.to_dict('records'),

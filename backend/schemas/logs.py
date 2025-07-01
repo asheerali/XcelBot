@@ -1,7 +1,7 @@
 # schemas/logs.py
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Any, Dict, Optional
-import time
+from datetime import datetime
 
 class LogsBase(BaseModel):
     filename: str = Field(..., max_length=255, min_length=1)
@@ -10,12 +10,12 @@ class LogsBase(BaseModel):
 class LogsCreate(LogsBase):
     company_id: int = Field(..., ge=1)
     location_id: int = Field(..., ge=1)
-    created_at: Optional[int] = Field(default_factory=lambda: int(time.time()))
+    created_at: Optional[datetime] = Field(default=None, description="Will be auto-set if not provided")
 
 class Logs(LogsBase):
     id: int = Field(..., ge=1)
     company_id: int = Field(..., ge=1)
     location_id: int = Field(..., ge=1)
-    created_at: int = Field(..., description="Timestamp in seconds")
+    created_at: datetime = Field(..., description="Creation timestamp")
 
     model_config = ConfigDict(from_attributes=True)

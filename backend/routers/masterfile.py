@@ -523,6 +523,7 @@ def update_masterfile(
                 from crud import logs as logs_crud
                 from schemas.logs import LogsCreate
                 
+                change_delta = row_data["Current Price"] - row_data["Previous Price"]
                 # Create log entry with the updated row data
                 log_data = {
                     "action": "update_price",
@@ -532,16 +533,20 @@ def update_masterfile(
                     "updated_rows_count": len(matching_rows),
                     "masterfile_id": masterfile.id,
                     "changes": {
-                        "previous_price": df.loc[mask, 'Previous Price'].iloc[0] if len(matching_rows) > 0 else None,
-                        "new_price": row_data['Current Price']
+                        "previous_price": row_data['Previous Price'],
+                        "new_price": row_data['Current Price'],
+                        "change_percent": (change_delta / row_data["Previous Price"] * 100) if row_data["Previous Price"] != 0 else 0,
+                        "change_delta": change_delta,
+                        "change_p_n": "positive" if change_delta > 0 else "negative" if change_delta < 0 else "no_change"
                     }
+                    
                 }
                 
                 # Create logs entry
                 logs_create = LogsCreate(
                     company_id=request.company_id,
                     location_id=request.location_id,
-                    filename=f"update_log_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                    filename=request.filename,
                     file_data=log_data
                     # created_at will be auto-set by the schema default
                 )
