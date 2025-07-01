@@ -1,3 +1,4 @@
+# schemas/master_file.py
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Any, Dict
 
@@ -6,10 +7,12 @@ class MasterFileBase(BaseModel):
     file_data: Dict[str, Any] = Field(..., description="JSON data from frontend")
 
 class MasterFileCreate(MasterFileBase):
-    company_id: int = Field(..., ge=1)  # Required, positive integer
+    company_id: int = Field(..., ge=1)
+    location_id: int = Field(..., ge=1)  # NEW
 
 class MasterFile(MasterFileBase):
-    id: int = Field(..., ge=1)  # Required, positive integer
-    company_id: int = Field(..., ge=1)  # Required, positive integer
+    id: int = Field(..., ge=1)
+    company_id: int = Field(..., ge=1)
+    location_id: int = Field(..., ge=1)  # NEW
 
-    model_config = ConfigDict(from_attributes=True)  # Updated for Pydantic v2
+    model_config = ConfigDict(from_attributes=True)
