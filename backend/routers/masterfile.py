@@ -13,16 +13,56 @@ router = APIRouter(
 )
 
 
+# @router.get("/details")
+# def get_masterfile_details_alt(db: Session = Depends(get_db)):
+#     """Get details of all masterfiles with company and location info (alternative approach)"""
+    
+#     try:
+        
+#         masterfiles = masterfile_crud.get_all_masterfiles(db)
+        
+#         if not masterfiles:
+#             return {"message": "No masterfiles found", "data": []}
+        
+#         # Get all unique company and location IDs
+#         company_ids = list(set(mf.company_id for mf in masterfiles if mf.company_id))
+#         location_ids = list(set(mf.location_id for mf in masterfiles if mf.location_id))
+        
+#         # Fetch companies and locations in batch
+#         companies = db.query(Company).filter(Company.id.in_(company_ids)).all()
+#         locations = db.query(Store).filter(Store.id.in_(location_ids)).all()
+
+#         # Create lookup dictionaries
+#         company_lookup = {comp.id: comp.name for comp in companies}
+#         location_lookup = {loc.id: loc.name for loc in locations}
+        
+#         details = []
+#         for mf in masterfiles:
+#             details.append({
+#                 "id": mf.id,
+#                 "company_id": mf.company_id,
+#                 "company_name": company_lookup.get(mf.company_id, "Unknown"),
+#                 "filename": mf.filename,
+#                 "location_id": mf.location_id,
+#                 "location_name": location_lookup.get(mf.location_id, "Unknown"),
+#             })
+        
+
+#         return {"data": details}
+
+
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Error fetching masterfile details: {str(e)}")
+
+
 @router.get("/details")
 def get_masterfile_details_alt(db: Session = Depends(get_db)):
     """Get details of all masterfiles with company and location info (alternative approach)"""
-    
     try:
-        
         masterfiles = masterfile_crud.get_all_masterfiles(db)
         
         if not masterfiles:
-            return {"message": "No masterfiles found", "data": []}
+            return {"message": "Database is empty", "data": []}
         
         # Get all unique company and location IDs
         company_ids = list(set(mf.company_id for mf in masterfiles if mf.company_id))
@@ -46,14 +86,11 @@ def get_masterfile_details_alt(db: Session = Depends(get_db)):
                 "location_id": mf.location_id,
                 "location_name": location_lookup.get(mf.location_id, "Unknown"),
             })
-        
 
-        return {"data": details}
-
+        return {"message": "Masterfile details fetched successfully", "data": details}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching masterfile details: {str(e)}")
-
 
 
 @router.post("/", response_model=masterfile_schema.MasterFile)
