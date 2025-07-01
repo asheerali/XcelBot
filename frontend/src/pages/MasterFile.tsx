@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import {
   Box,
   Typography,
@@ -50,8 +51,28 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ClearIcon from '@mui/icons-material/Clear';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import BusinessIcon from '@mui/icons-material/Business';
 import FiltersOrderIQ from '../components/FiltersOrderIQ';
 import DateRangeSelector from '../components/DateRangeSelector';
+import { API_URL_Local } from '../constants';
+
+// Types
+interface Company {
+  id: number;
+  name: string;
+  code?: string;
+}
+
+interface Location {
+  id: number;
+  name: string;
+  code?: string;
+}
+
+interface FilterOption {
+  value: string;
+  label: string;
+}
 
 // DateRangeSelector Button Component
 const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
@@ -442,18 +463,22 @@ const MasterFile = () => {
     showOutOfStock: false
   });
 
+  // API Data States
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+  const [loadingLocations, setLoadingLocations] = useState(false);
+
   // State for FiltersOrderIQ component
-  const [orderIQFilters, setOrderIQFilters] = useState({
-    stockStatus: [],
-    unit: [],
-    priceChange: []
-  });
+  const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   
   // Excel upload states
   const [uploadDialog, setUploadDialog] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedCompanyId, setSelectedCompanyId] = useState('');
 
   // Date range selector state
   const [selectedDateRange, setSelectedDateRange] = useState(null);
@@ -461,65 +486,75 @@ const MasterFile = () => {
   // Get unique units for filter options
   const uniqueUnits = [...new Set(items.map(item => item.unit))];
 
-  // Define filter fields for FiltersOrderIQ
-  const filterFields = [
-    {
-      key: 'stockStatus',
-      label: 'Stock Status',
-      placeholder: 'All stock levels',
-      options: [
-        { value: 'inStock', label: 'In Stock' },
-        { value: 'lowStock', label: 'Low Stock' },
-        { value: 'outOfStock', label: 'Out of Stock' }
-      ]
-    },
-    {
-      key: 'unit',
-      label: 'Unit Type',
-      placeholder: 'All units',
-      options: uniqueUnits.map(unit => ({ value: unit, label: unit }))
-    },
-    {
-      key: 'priceChange',
-      label: 'Price Change',
-      placeholder: 'All changes',
-      options: [
-        { value: 'increased', label: 'Price Increased' },
-        { value: 'decreased', label: 'Price Decreased' },
-        { value: 'unchanged', label: 'No Change' }
-      ]
+  // Fetch companies data
+  const fetchCompanies = async () => {
+    setLoadingCompanies(true);
+    try {
+      const response = await axios.get(`${API_URL_Local}/companies`);
+      setCompanies(response.data);
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+      setUploadStatus({ 
+        type: 'error', 
+        message: 'Failed to fetch companies data' 
+      });
+    } finally {
+      setLoadingCompanies(false);
     }
-  ];
+  };
+
+  // Fetch locations/stores data
+  const fetchLocations = async () => {
+    setLoadingLocations(true);
+    try {
+      const response = await axios.get(`${API_URL_Local}/stores`);
+      setLocations(response.data);
+    } catch (error) {
+      console.error('Error fetching stores:', error);
+      setUploadStatus({ 
+        type: 'error', 
+        message: 'Failed to fetch stores data' 
+      });
+    } finally {
+      setLoadingLocations(false);
+    }
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    fetchCompanies();
+    fetchLocations();
+  }, []);
+
+  // Convert companies and locations to filter options
+  const companyOptions: FilterOption[] = companies.map(company => ({
+    value: company.id.toString(),
+    label: company.name
+  }));
+
+  const locationOptions: FilterOption[] = locations.map(location => ({
+    value: location.id.toString(),
+    label: location.name
+  }));
 
   // Handler for FiltersOrderIQ filter changes
-  const handleOrderIQFilterChange = (fieldKey, values) => {
-    setOrderIQFilters(prev => ({
-      ...prev,
-      [fieldKey]: values
-    }));
+  const handleCompanyChange = (values: string[]) => {
+    setSelectedCompanies(values);
+  };
+
+  const handleLocationChange = (values: string[]) => {
+    setSelectedLocations(values);
   };
 
   // Handler for applying FiltersOrderIQ filters
   const handleApplyOrderIQFilters = () => {
-    console.log('Applied FiltersOrderIQ filters:', orderIQFilters);
+    console.log('Applied FiltersOrderIQ filters:', {
+      companies: selectedCompanies,
+      locations: selectedLocations
+    });
     
-    // Integrate with existing filters
-    const newFilters = { ...filters };
-    
-    // Map orderIQFilters to existing filter structure
-    if (orderIQFilters.stockStatus.length > 0) {
-      newFilters.stockStatus = orderIQFilters.stockStatus[0];
-    }
-    
-    if (orderIQFilters.unit.length > 0) {
-      newFilters.unit = orderIQFilters.unit[0];
-    }
-    
-    if (orderIQFilters.priceChange.length > 0) {
-      newFilters.priceChange = orderIQFilters.priceChange[0];
-    }
-    
-    setFilters(newFilters);
+    // Here you can integrate these filters with your existing filtering logic
+    // For example, you might want to filter items based on selected companies/locations
     setPage(0); // Reset to first page when filters change
   };
 
@@ -612,6 +647,21 @@ const MasterFile = () => {
     return { label: 'In Stock', color: 'success' };
   };
 
+  // Convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove the data:application/...;base64, prefix
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   // Excel upload functions
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
@@ -632,59 +682,56 @@ const MasterFile = () => {
     }
   };
 
-  const processExcelFile = async (file) => {
-    // Simulate Excel processing - in real implementation, use a library like xlsx
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // Mock processed data - this would come from the actual Excel file
-        const mockExcelData = [
-          { code: 'EXCEL_001', name: 'Imported Item 1', currentPrice: 3.50, unit: 'Pack', stock: 25 },
-          { code: 'EXCEL_002', name: 'Imported Item 2', currentPrice: 2.75, unit: 'Box', stock: 40 },
-          { code: 'EXCEL_003', name: 'Imported Item 3', currentPrice: 1.95, unit: 'Each', stock: 100 }
-        ];
-        resolve(mockExcelData);
-      }, 2000);
-    });
-  };
-
   const handleUploadFile = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile || !selectedCompanyId) {
+      setUploadStatus({ 
+        type: 'error', 
+        message: 'Please select both a file and a company' 
+      });
+      return;
+    }
 
     setUploading(true);
     setUploadStatus(null);
 
     try {
-      const excelData = await processExcelFile(selectedFile);
+      // Convert file to base64
+      const fileContent = await fileToBase64(selectedFile);
       
-      // Add new items to the existing list
-      const maxId = Math.max(...items.map(item => item.id));
-      const newItems = excelData.map((item, index) => ({
-        id: maxId + index + 1,
-        code: item.code,
-        name: item.name,
-        currentPrice: item.currentPrice,
-        previousPrice: 0,
-        unit: item.unit,
-        stock: item.stock
-      }));
+      // Prepare upload data
+      const uploadData = {
+        company_id: parseInt(selectedCompanyId),
+        fileName: selectedFile.name,
+        fileContent: fileContent
+      };
 
-      setItems(prevItems => [...prevItems, ...newItems]);
+      // Send to API
+      const response = await axios.post(`${API_URL_Local}/api/master/upload`, uploadData, {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
       setUploadStatus({ 
         type: 'success', 
-        message: `Successfully imported ${newItems.length} items from ${selectedFile.name}` 
+        message: `Successfully uploaded ${selectedFile.name} for ${companies.find(c => c.id.toString() === selectedCompanyId)?.name}` 
       });
       
       // Reset after successful upload
       setTimeout(() => {
         setUploadDialog(false);
         setSelectedFile(null);
+        setSelectedCompanyId('');
         setUploadStatus(null);
       }, 2000);
 
+      console.log('Upload response:', response.data);
+
     } catch (error) {
+      console.error('Upload error:', error);
       setUploadStatus({ 
         type: 'error', 
-        message: 'Failed to process the Excel file. Please check the file format and try again.' 
+        message: error.response?.data?.message || 'Failed to upload file. Please try again.' 
       });
     } finally {
       setUploading(false);
@@ -694,6 +741,7 @@ const MasterFile = () => {
   const handleCloseUploadDialog = () => {
     setUploadDialog(false);
     setSelectedFile(null);
+    setSelectedCompanyId('');
     setUploadStatus(null);
     setUploading(false);
   };
@@ -775,6 +823,10 @@ const MasterFile = () => {
                 <IconButton 
                   color="primary"
                   style={{ backgroundColor: '#e3f2fd' }}
+                  onClick={() => {
+                    fetchCompanies();
+                    fetchLocations();
+                  }}
                 >
                   <RefreshIcon />
                 </IconButton>
@@ -782,12 +834,15 @@ const MasterFile = () => {
             </Box>
           </Box>
 
-          {/* Basic FiltersOrderIQ Component */}
+          {/* FiltersOrderIQ Component */}
           <Box style={{ marginTop: 24 }}>
             <FiltersOrderIQ
-              filterFields={filterFields}
-              filters={orderIQFilters}
-              onFilterChange={handleOrderIQFilterChange}
+              locationOptions={locationOptions}
+              companyOptions={companyOptions}
+              selectedLocations={selectedLocations}
+              selectedCompanies={selectedCompanies}
+              onLocationChange={handleLocationChange}
+              onCompanyChange={handleCompanyChange}
               onApplyFilters={handleApplyOrderIQFilters}
               showApplyButton={true}
             />
@@ -993,6 +1048,28 @@ const MasterFile = () => {
               Upload an Excel file (.xlsx, .xls) or CSV file with items data. 
               Expected columns: Code, Name, Current Price, Unit, Stock
             </Typography>
+
+            {/* Company Selection */}
+            <FormControl fullWidth style={{ marginBottom: 16 }}>
+              <InputLabel>Select Company</InputLabel>
+              <Select
+                value={selectedCompanyId}
+                label="Select Company"
+                onChange={(e) => setSelectedCompanyId(e.target.value)}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <BusinessIcon />
+                  </InputAdornment>
+                }
+                disabled={loadingCompanies}
+              >
+                {companies.map((company) => (
+                  <MenuItem key={company.id} value={company.id.toString()}>
+                    {company.name} {company.code && `(${company.code})`}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
             
             <input
               type="file"
@@ -1022,7 +1099,7 @@ const MasterFile = () => {
             {uploading && (
               <Box style={{ marginTop: 16 }}>
                 <Typography variant="body2" style={{ marginBottom: 8 }}>
-                  Processing file...
+                  Uploading file to server...
                 </Typography>
                 <LinearProgress />
               </Box>
@@ -1046,7 +1123,7 @@ const MasterFile = () => {
           <Button 
             onClick={handleUploadFile}
             variant="contained"
-            disabled={!selectedFile || uploading}
+            disabled={!selectedFile || !selectedCompanyId || uploading}
             startIcon={uploading ? null : <UploadFileIcon />}
           >
             {uploading ? 'Uploading...' : 'Upload'}

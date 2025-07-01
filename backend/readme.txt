@@ -34,3 +34,5 @@ post / companes
 delete / companes
 put / companes
 
+
+api/master/upload
