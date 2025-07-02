@@ -38,3 +38,10 @@ put / companes
 api/master/upload
 api/masterfile/details/{company_id}/{location_id}/{filename}
 api/masterfile/updatefile
+
+
+for the reports page
+api/logs/details/{company_id}
+
+for the store orders page to show the available items 
+api/masterfile/availableitems/{company_id}/{location_id}

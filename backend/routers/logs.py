@@ -67,6 +67,378 @@ def get_logs_details_alt(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching logs details: {str(e)}")
 
+
+# @router.get("/details/{company_id}")
+# def get_logs_details_by_company(company_id: int, db: Session = Depends(get_db)):
+#     """Get details of all logs for a specific company"""
+#     try:
+#         logs = logs_crud.get_logs_by_company(db, company_id)
+        
+#         if not logs:
+#             return {"message": "No logs found for this company", "data": []}
+        
+#         # Get all unique company and location IDs
+#         company_ids = list(set(log.company_id for log in logs if log.company_id))
+#         location_ids = list(set(log.location_id for log in logs if log.location_id))
+        
+#         # Fetch companies and locations in batch
+#         companies = db.query(Company).filter(Company.id.in_(company_ids)).all()
+#         locations = db.query(Store).filter(Store.id.in_(location_ids)).all()
+
+#         # Create lookup dictionaries
+#         company_lookup = {comp.id: comp.name for comp in companies}
+#         location_lookup = {loc.id: loc.name for loc in locations}
+        
+#         details = []
+#         for log in logs:
+#             # Format datetime for display
+#             readable_date = log.created_at.strftime('%Y-%m-%d %H:%M:%S') if log.created_at else "Unknown"
+            
+#             details.append({
+#                 "id": log.id,
+#                 "company_id": log.company_id,
+#                 "company_name": company_lookup.get(log.company_id, "Unknown"),
+#                 "filename": log.filename,
+#                 "location_id": log.location_id,
+#                 "location_name": location_lookup.get(log.location_id, "Unknown"),
+#                 "created_at": log.created_at.isoformat() if log.created_at else None,
+#                 "created_at_readable": readable_date,
+#                 "file_data": log.file_data,
+#             })
+            
+            
+
+#         return {"message": "Logs details fetched successfully", "data": details}
+
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Error fetching logs details: {str(e)}")
+
+# @router.get("/details/{company_id}")
+# def get_logs_details_by_company(company_id: int, db: Session = Depends(get_db)):
+#     """Get details of all logs for a specific company"""
+#     try:
+#         logs = logs_crud.get_logs_by_company(db, company_id)
+        
+#         if not logs:
+#             return {"message": "No logs found for this company", "data": []}
+        
+#         # Get all unique company and location IDs
+#         company_ids = list(set(log.company_id for log in logs if log.company_id))
+#         location_ids = list(set(log.location_id for log in logs if log.location_id))
+        
+#         # Fetch companies and locations in batch
+#         companies = db.query(Company).filter(Company.id.in_(company_ids)).all()
+#         locations = db.query(Store).filter(Store.id.in_(location_ids)).all()
+
+#         # Create lookup dictionaries
+#         company_lookup = {comp.id: comp.name for comp in companies}
+#         location_lookup = {loc.id: loc.name for loc in locations}
+        
+#         # Initialize the totals
+#         total_items = 0
+#         total_positive_changes = 0
+#         total_negative_changes = 0
+#         total_value_impact = 0
+        
+#         details = []
+#         for log in logs:
+#             # Format datetime for display
+#             readable_date = log.created_at.strftime('%Y-%m-%d %H:%M:%S') if log.created_at else "Unknown"
+            
+#             # Parse file_data (assuming it's a JSON string)
+#             file_data = log.file_data
+#             try:
+#                 changes = file_data.get('changes', {})
+#                 change_delta = changes.get('change_delta', 0)
+#                 change_p_n = changes.get('change_p_n', 'positive')
+                
+#                 # Calculate totals
+#                 total_items += 1
+#                 if change_p_n == "positive":
+#                     total_positive_changes += 1
+#                 elif change_p_n == "negative":
+#                     total_negative_changes += 1
+#                 total_value_impact += change_delta
+#             except (AttributeError, KeyError) as e:
+#                 # Handle case where 'changes' or 'change_delta' doesn't exist
+#                 pass
+            
+#             # Add log details to response
+#             details.append({
+#                 "id": log.id,
+#                 "company_id": log.company_id,
+#                 "company_name": company_lookup.get(log.company_id, "Unknown"),
+#                 "filename": log.filename,
+#                 "location_id": log.location_id,
+#                 "location_name": location_lookup.get(log.location_id, "Unknown"),
+#                 "created_at": log.created_at.isoformat() if log.created_at else None,
+#                 "created_at_readable": readable_date,
+#                 "file_data": log.file_data,
+#             })
+        
+#         # Add totals to the response
+#         return {
+#             "message": "Logs details fetched successfully",
+#             "data": details,
+#             "totals": {
+#                 "total_items": total_items,
+#                 "total_positive_changes": total_positive_changes,
+#                 "total_negative_changes": total_negative_changes,
+#                 "total_value_impact": total_value_impact
+#             }
+#         }
+
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Error fetching logs details: {str(e)}")
+
+
+# @router.get("/details/{company_id}")
+# def get_logs_details_by_company(company_id: int, db: Session = Depends(get_db)):
+#     """Get details of all logs for a specific company"""
+#     try:
+#         logs = logs_crud.get_logs_by_company(db, company_id)
+        
+#         if not logs:
+#             return {"message": "No logs found for this company", "data": []}
+        
+#         # Get all unique company and location IDs
+#         company_ids = list(set(log.company_id for log in logs if log.company_id))
+#         location_ids = list(set(log.location_id for log in logs if log.location_id))
+        
+#         # Fetch companies and locations in batch
+#         companies = db.query(Company).filter(Company.id.in_(company_ids)).all()
+#         locations = db.query(Store).filter(Store.id.in_(location_ids)).all()
+
+#         # Create lookup dictionaries
+#         company_lookup = {comp.id: comp.name for comp in companies}
+#         location_lookup = {loc.id: loc.name for loc in locations}
+        
+#         # Initialize the totals
+#         total_items = 0
+#         total_positive_changes = 0
+#         total_negative_changes = 0
+#         total_value_impact = 0
+#         total_positive_percent = 0
+#         total_negative_percent = 0
+        
+#         details = []
+#         #  Aggregation dictionary for store-wise changes
+#         store_aggregates = {}
+#         for log in logs:
+#             # Format datetime for display
+#             readable_date = log.created_at.strftime('%Y-%m-%d %H:%M:%S') if log.created_at else "Unknown"
+            
+#             # Parse file_data (assuming it's a JSON string)
+#             file_data = log.file_data
+#             try:
+#                 changes = file_data.get('changes', {})
+#                 change_delta = changes.get('change_delta', 0)
+#                 change_percent = changes.get('change_percent', 0)
+#                 change_p_n = changes.get('change_p_n', 'positive')
+                
+#                 # Calculate totals
+#                 total_items += 1
+#                 if change_p_n == "positive":
+#                     total_positive_changes += 1
+#                     total_positive_percent += change_percent  # Add to total positive percentage
+#                 elif change_p_n == "negative":
+#                     total_negative_changes += 1
+#                     total_negative_percent += change_percent  # Add to total negative percentage
+#                 total_value_impact += change_delta
+#             except (AttributeError, KeyError) as e:
+#                 # Handle case where 'changes' or 'change_delta' doesn't exist
+#                 pass
+            
+#             # Add log details to response
+#             details.append({
+#                 "id": log.id,
+#                 "company_id": log.company_id,
+#                 "company_name": company_lookup.get(log.company_id, "Unknown"),
+#                 "filename": log.filename,
+#                 "location_id": log.location_id,
+#                 "location_name": location_lookup.get(log.location_id, "Unknown"),
+#                 "created_at": log.created_at.isoformat() if log.created_at else None,
+#                 "created_at_readable": readable_date,
+#                 "file_data": log.file_data,
+#             })
+        
+#         # Calculate average percentage change for positive and negative
+#         avg_percent_increase = (total_positive_percent / total_positive_changes) if total_positive_changes > 0 else 0
+#         avg_percent_decrease = (total_negative_percent / total_negative_changes) if total_negative_changes > 0 else 0
+        
+        
+#         # Convert store aggregates to list
+#         store_by_store = []
+#         for location_name, aggregates in store_aggregates.items():
+#             store_by_store.append({
+#                 "location_name": location_name,
+#                 "total_changes": aggregates["total_changes"],
+#                 "increases": aggregates["increases"],
+#                 "decreases": aggregates["decreases"]
+#             })
+            
+        
+#         # Add totals to the response
+#         return {
+#             "message": "Logs details fetched successfully",
+#             "data": details,
+#             "totals": {
+#                 "total_items_tracked": total_items,
+#                 "price_increases": total_positive_changes,
+#                 "price_decreases": total_negative_changes,
+#                 "avg_price_increase": avg_percent_increase,
+#                 "avg_price_decrease": avg_percent_decrease,
+#                 "total_value_impact": total_value_impact,
+#             },
+#             "store_by_store": store_by_store
+#         }
+
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Error fetching logs details: {str(e)}")
+
+@router.get("/details/{company_id}")
+def get_logs_details_by_company(company_id: int, db: Session = Depends(get_db)):
+    """Get details of all logs for a specific company"""
+    try:
+        logs = logs_crud.get_logs_by_company(db, company_id)
+        
+        if not logs:
+            return {"message": "No logs found for this company", "data": []}
+        
+        # Get all unique company and location IDs
+        company_ids = list(set(log.company_id for log in logs if log.company_id))
+        location_ids = list(set(log.location_id for log in logs if log.location_id))
+        
+        # Fetch companies and locations in batch
+        companies = db.query(Company).filter(Company.id.in_(company_ids)).all()
+        locations = db.query(Store).filter(Store.id.in_(location_ids)).all()
+
+        # Create lookup dictionaries
+        company_lookup = {comp.id: comp.name for comp in companies}
+        location_lookup = {loc.id: loc.name for loc in locations}
+        
+        # Initialize the totals
+        total_items = 0
+        total_positive_changes = 0
+        total_negative_changes = 0
+        total_value_impact = 0
+        total_positive_percent = 0
+        total_negative_percent = 0
+        
+        details = []
+        # Aggregation dictionary for store-wise changes
+        store_aggregates = {}
+        
+        trend_analysis = []
+        
+        for log in logs:
+            # Format datetime for display
+            readable_date = log.created_at.strftime('%Y-%m-%d %H:%M:%S') if log.created_at else "Unknown"
+            
+            # Parse file_data (assuming it's a JSON string)
+            file_data = log.file_data
+            try:
+                changes = file_data.get('changes', {})
+                change_delta = changes.get('change_delta', 0)
+                change_percent = changes.get('change_percent', 0)
+                change_p_n = changes.get('change_p_n', 'positive')
+                
+                # Calculate totals
+                total_items += 1
+                if change_p_n == "positive":
+                    total_positive_changes += 1
+                    total_positive_percent += change_percent  # Add to total positive percentage
+                elif change_p_n == "negative":
+                    total_negative_changes += 1
+                    total_negative_percent += change_percent  # Add to total negative percentage
+                total_value_impact += change_delta
+                
+                # Aggregate store-wise changes
+                location_id = log.location_id
+                location_name = location_lookup.get(location_id, "Unknown")
+                if location_name not in store_aggregates:
+                    store_aggregates[location_name] = {
+                        "total_changes": 0,
+                        "increases": 0,
+                        "decreases": 0
+                    }
+                store_aggregates[location_name]["total_changes"] += 1
+                if change_p_n == "positive":
+                    store_aggregates[location_name]["increases"] += 1
+                elif change_p_n == "negative":
+                    store_aggregates[location_name]["decreases"] += 1
+                
+            except (AttributeError, KeyError) as e:
+                # Handle case where 'changes' or 'change_delta' doesn't exist
+                pass
+            
+            # Add log details to response
+            details.append({
+                "id": log.id,
+                "company_id": log.company_id,
+                "company_name": company_lookup.get(log.company_id, "Unknown"),
+                "filename": log.filename,
+                "location_id": log.location_id,
+                "location_name": location_lookup.get(log.location_id, "Unknown"),
+                "created_at": log.created_at.isoformat() if log.created_at else None,
+                "created_at_readable": readable_date,
+                "file_data": log.file_data,
+            })
+            product_value = log.file_data.get("original_data", {}).get('Products', [])
+            
+            data_2nd = log.file_data.get("original_data", {})
+            data_2nd = list(data_2nd.keys())[1]
+
+            data_product_value = log.file_data.get("original_data", {}).get(data_2nd, [])
+            
+            # print("i am here in logs printing the product_value", product_value, data_product_value)
+            
+            product_value = product_value if product_value[0] else data_product_value
+            # print("i am here in logs printing the product_value 2nd time ", product_value, data_2nd)
+
+            trend_analysis.append({
+                "location_id": log.location_id,
+                "location_name": location_lookup.get(log.location_id, "Unknown"),
+                "created_at": log.created_at.isoformat() if log.created_at else None,
+               "products": product_value,
+               "change_percent": log.file_data.get('changes', {}).get('change_percent', 0),
+               "change_p_n": log.file_data.get('changes', {}).get('change_p_n', 0),
+            })
+        
+        # Calculate average percentage change for positive and negative
+        avg_percent_increase = (total_positive_percent / total_positive_changes) if total_positive_changes > 0 else 0
+        avg_percent_decrease = (total_negative_percent / total_negative_changes) if total_negative_changes > 0 else 0
+        
+        # Convert store aggregates to list
+        store_by_store = []
+        for location_name, aggregates in store_aggregates.items():
+            store_by_store.append({
+                "location_name": location_name,
+                "total_changes": aggregates["total_changes"],
+                "increases": aggregates["increases"],
+                "decreases": aggregates["decreases"]
+            })
+        
+        # Add totals to the response
+        return {
+            "message": "Logs details fetched successfully",
+            "data": details,
+            "trend_analysis": trend_analysis,
+            "totals": {
+                "total_items_tracked": total_items,
+                "price_increases": total_positive_changes,
+                "price_decreases": total_negative_changes,
+                "avg_price_increase": avg_percent_increase,
+                "avg_price_decrease": avg_percent_decrease,
+                "total_value_impact": total_value_impact,
+            },
+            "store_by_store": store_by_store
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching logs details: {str(e)}")
+
+
 @router.get("/details/{company_id}/{location_id}/{filename}")
 def get_logs_details(
     company_id: int, 
