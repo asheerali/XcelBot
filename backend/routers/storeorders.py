@@ -13,6 +13,17 @@ from pydantic import BaseModel
 from typing import Dict, Any
 from crud import storeorders as storeorders_crud
 from schemas import storeorders as storeorders_schema
+
+
+from pydantic import BaseModel
+from typing import Optional, List
+
+class OrderItemsRequest(BaseModel):
+    company_id: Optional[int] = None
+    location_id: Optional[int] = None
+    items: Optional[List[Dict[str, Any]]] = None
+    # Add other fields as neede
+
         
 router = APIRouter(
     prefix="/api/storeorders",
@@ -356,16 +367,6 @@ def bulk_create_storeorders(storeorders: list[storeorders_schema.StoreOrdersCrea
     return storeorders_crud.bulk_create_storeorders(db, storeorders)
 
 
-
-from pydantic import BaseModel
-from typing import Optional, List
-
-class OrderItemsRequest(BaseModel):
-    company_id: Optional[int] = None
-    location_id: Optional[int] = None
-    items: Optional[List[Dict[str, Any]]] = None
-    # Add other fields as neede
-
 # @router.post("/orderitems") 
 # def get_order_items(request: OrderItemsRequest, db: Session = Depends(get_db)):
 #     """Get order items from masterfile"""
@@ -465,4 +466,42 @@ def get_recent_storeorders_details_by_location(
     }
     
     
+    
+
+# now i want to updated the recent orders the detail will be request
+@router.post("/orderupdate")
+def update_recent_storeorders_items(
+    request: UpdateStoreOrdersRequest,
+    db: Session = Depends(get_db)
+):
+    """Update items_ordered for the most recent store orders record"""
+    
+    print("Received request to update recent store orders:", request)
+    try:
+        # Create update object
+        update_obj = storeorders_schema.StoreOrdersUpdate(items_ordered=request.items_ordered)
+        
+        # Update by company and location
+        updated_storeorders = storeorders_crud.update_storeorders_by_location(
+            db, request.company_id, request.location_id, update_obj
+        )
+        
+        if updated_storeorders:
+            print("Successfully updated recent store orders in database")
+            return {
+                "status": "success", 
+                "message": "Recent store orders updated successfully",
+                "updated_at": updated_storeorders.updated_at.isoformat(),
+                "id": updated_storeorders.id
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Recent store orders not found for the specified company and location")
+        
+    except Exception as e:
+        print(f"Error in update_recent_storeorders_items: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error updating recent store orders: {str(e)}")
+
+
+
 

@@ -58,3 +58,5 @@ for submitting the orders
 for getting the details of recent orders
 /api/storeorders/detailsrecent/{company_id}/{location_id}
 
+for updating the recent orders
+/api/storeorders/orderupdate
