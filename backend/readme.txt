@@ -47,5 +47,8 @@ for the store orders page to show the available items
 api/masterfile/availableitems/{company_id}/{location_id}
 
 
+for submitting the orders 
+/api/storeorders/orderitems
+
 for getting the companies with locations
 company-locations/all

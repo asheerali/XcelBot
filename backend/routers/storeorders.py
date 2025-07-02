@@ -351,3 +351,16 @@ def delete_storeorders(storeorders_id: int, db: Session = Depends(get_db)):
 def bulk_create_storeorders(storeorders: list[storeorders_schema.StoreOrdersCreate], db: Session = Depends(get_db)):
     """Bulk create multiple store orders records"""
     return storeorders_crud.bulk_create_storeorders(db, storeorders)
+
+
+
+# now i want to make an endpoint names as orderitems in which i will get the request and i will print it and send the request in the response 
+@router.post("/orderitems") 
+def get_order_items(request, db: Session = Depends(get_db)):
+    """Get order items from masterfile"""
+    print("Received request in orderitems endpoint:", request)
+    
+    # Here you can process the request as needed
+    # For now, just return the request back in the response
+    
+    return {"received_request": request}
