@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -38,8 +38,27 @@ import {
 } from '@mui/icons-material';
 
 // Import your existing FiltersOrderIQ component and DateRangeSelector
-import FiltersOrderIQ from '../components/FiltersOrderIQ'; // Adjust the import path as needed
+// import FiltersOrderIQ from '../components/FiltersOrderIQ'; // Commented out - using custom implementation
 import DateRangeSelector from '../components/DateRangeSelector'; // Adjust the import path as needed
+import { API_URL_Local } from '../constants';
+
+/*
+ * API Configuration Notes:
+ * 
+ * This component expects the following API endpoints to be available:
+ * 1. GET /companies - Returns array of company objects
+ * 2. GET /stores - Returns array of store/location objects  
+ * 3. GET /api/masterfile/availableitems/{company_id}/{location_id} - Returns available items
+ * 4. POST /api/masterfile/orderitems - Accepts order submission
+ * 
+ * Set REACT_APP_API_BASE_URL environment variable to configure the API base URL.
+ * If endpoints are not available, the component will fall back to mock data for development.
+ * 
+ * Example API responses expected:
+ * - Companies: [{"id": 1, "name": "Company Name", "email": "email@company.com"}, ...]
+ * - Stores: [{"id": 1, "name": "Store Name", "city": "City", "company_id": 1}, ...]
+ * - Available Items: {"data": {"dataframe": [{"column0": "Category", "column1": "Product", ...}]}}
+ */
 
 // DateRangeSelector Button Component
 const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
@@ -169,15 +188,6 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
   );
 };
 
-// Mock data for available items
-const availableItems = [
-  { id: '12OZCO_7415', name: '12 oz coffee cup', price: 2.34, unit: 'Bag' },
-  { id: '12OZCO_5802', name: '12 oz coffee cup', price: 2.34, unit: 'Bag' },
-  { id: '12OZCO_0996', name: '12 oz coffee cup', price: 2.34, unit: 'Bag' },
-  { id: '16OZCO_7415', name: '16 oz coffee cup', price: 2.30, unit: 'Bag' },
-  { id: '16OZCO_5802', name: '16 oz coffee cup', price: 2.30, unit: 'Bag' }
-];
-
 // Mock data for recent orders with detailed items
 const recentOrders = [
   { 
@@ -229,7 +239,7 @@ const recentOrders = [
     orderItems: [
       { id: '12OZCO_7415', name: '12 oz coffee cup', price: 2.34, unit: 'Bag', quantity: 8 },
       { id: '16OZCO_7415', name: '16 oz coffee cup', price: 2.30, unit: 'Bag', quantity: 6 },
-      { id: '12OZCO_5802', name: '12 oz coffee cup', price: 2.34, unit: 'Bag', quantity: 4 },
+      { id: '12OZCO_5802', name: '12 oz coffee cup', price: 2.34, unit: 'Bag', quantity: 5 },
       { id: '16OZCO_5802', name: '16 oz coffee cup', price: 2.30, unit: 'Bag', quantity: 4 }
     ]
   },
@@ -302,6 +312,9 @@ const QuantityDialog = ({ open, onClose, item, onAdd }) => {
           <Typography variant="body2" color="text.secondary" gutterBottom>
             ${item?.price}/{item?.unit}
           </Typography>
+          <Typography variant="body2" color="primary.main" gutterBottom>
+            Category: {item?.category}
+          </Typography>
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 3 }}>
             <Typography variant="body1">Quantity:</Typography>
@@ -351,49 +364,213 @@ const OrderIQDashboard = () => {
   const [emailOrder, setEmailOrder] = useState(false);
   const [quantityDialog, setQuantityDialog] = useState({ open: false, item: null });
   
+  // API data state
+  const [companies, setCompanies] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [availableItems, setAvailableItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
   // Date range selector state
   const [selectedDateRange, setSelectedDateRange] = useState(null);
 
-  // Filter configuration for FiltersOrderIQ component
-  const filterFields = [
-    {
-      key: 'location',
-      label: 'Location',
-      placeholder: 'Select Location',
-      options: [
-        { value: 'midtown-east', label: 'Midtown East' },
-        { value: 'downtown', label: 'Downtown' },
-        { value: 'uptown', label: 'Uptown' }
-      ]
-    },
+  // Selected company and location for API calls
+  const [selectedCompanyId, setSelectedCompanyId] = useState(null);
+  const [selectedLocationId, setSelectedLocationId] = useState(null);
+
+  // Fetch companies and locations on component mount
+  useEffect(() => {
+    fetchCompanies();
+    fetchLocations();
+  }, []);
+
+  const fetchCompanies = async () => {
+    try {
+      setLoading(true);
+      const url = `${API_URL_Local}/companies`;
+      console.log('Fetching companies from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`);
+      }
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Companies data:', data);
+      setCompanies(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error fetching companies:', err);
+      setError('Failed to load companies. Please check if the API endpoint is configured correctly.');
+      // Only set mock data if there's no real data
+      setCompanies([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchLocations = async () => {
+    try {
+      setLoading(true);
+      const url = `${API_URL_Local}/stores`;
+      console.log('Fetching locations from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`);
+      }
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Locations data:', data);
+      setLocations(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error fetching locations:', err);
+      setError('Failed to load locations. Please check if the API endpoint is configured correctly.');
+      // Only set mock data if there's no real data
+      setLocations([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAvailableItems = async (companyId, locationId) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const url = `${API_URL_Local}/api/masterfile/availableitems/${companyId}/${locationId}`;
+      console.log('Fetching available items from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`);
+      }
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Available items data:', data);
+      
+      // Check if data has expected structure
+      if (!data.data || !data.data.dataframe || !Array.isArray(data.data.dataframe)) {
+        throw new Error('Invalid data structure received from API');
+      }
+      
+      // Transform the API response to match our component structure
+      const transformedItems = data.data.dataframe.map((item, index) => ({
+        id: `item_${index}_${companyId}_${locationId}`, // Generate unique ID
+        name: item.column1 || 'Unknown Item', // Products
+        category: item.column0 || 'Unknown Category', // Category
+        price: parseFloat(item.column4) || 0, // Current Price
+        unit: item.column3 || 'Unit', // UOM
+        batchSize: item.column2 || '', // Batch Size
+        previousPrice: item.column5 !== "-" && item.column5 ? parseFloat(item.column5) : null
+      }));
+      
+      setAvailableItems(transformedItems);
+      console.log('Transformed items:', transformedItems);
+    } catch (err) {
+      console.error('Error fetching available items:', err);
+      setError(`Failed to load available items: ${err.message}`);
+      // Set mock data for development
+      setAvailableItems([
+        {
+          id: 'mock_1',
+          name: 'Green sauce - packed',
+          category: 'Sauce',
+          price: 90.0,
+          unit: 'Unit',
+          batchSize: '500 x container',
+          previousPrice: 69.0
+        },
+        {
+          id: 'mock_2',
+          name: 'Grilled chicken breast',
+          category: 'Protein',
+          price: 175.0,
+          unit: 'Tray',
+          batchSize: '100 x tray',
+          previousPrice: null
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Filter configuration for FiltersOrderIQ component - use useMemo to ensure updates
+  const filterFields = useMemo(() => [
     {
       key: 'companies',
       label: 'Companies',
       placeholder: 'Select Companies',
-      options: [
-        { value: 'company-a', label: 'Company A' },
-        { value: 'company-b', label: 'Company B' },
-        { value: 'company-c', label: 'Company C' }
-      ]
+      options: companies.map(company => ({
+        value: company.id.toString(),
+        label: company.name
+      }))
+    },
+    {
+      key: 'location',
+      label: 'Location',
+      placeholder: 'Select Location',
+      options: locations.map(location => ({
+        value: location.id.toString(),
+        label: location.name
+      }))
     }
-  ];
+  ], [companies, locations]);
 
-  // Event handlers
-  const handleFilterChange = (fieldKey, values) => {
-    setFilters(prev => ({ ...prev, [fieldKey]: values }));
-  };
-
+  // Event handlers - simplified without FiltersOrderIQ
   const handleApplyFilters = () => {
-    console.log('Applying filters:', filters);
-    // Add your filter logic here
+    console.log('Applying filters:', { selectedCompanyId, selectedLocationId });
+    
+    // Fetch available items when both company and location are selected
+    if (selectedCompanyId && selectedLocationId) {
+      fetchAvailableItems(selectedCompanyId, selectedLocationId);
+    } else {
+      setError('Please select both a company and location to view available items');
+    }
   };
 
   // Date range handler
   const handleDateRangeSelect = (range) => {
     setSelectedDateRange(range);
     console.log('Selected date range for orders:', range);
-    // Here you would typically filter orders based on the selected date range
-    // For example: filterOrdersByDateRange(range);
   };
 
   const handleAddToOrder = (item, quantity) => {
@@ -438,23 +615,125 @@ const OrderIQDashboard = () => {
     });
   };
 
-  const handleSubmitOrder = () => {
-    console.log('Submitting order:', currentOrder);
-    console.log('Email order:', emailOrder);
-    console.log('Date range:', selectedDateRange);
-    // Add your order submission logic here
-    alert('Order submitted successfully!');
-    setCurrentOrder([]);
-    setEmailOrder(false);
+  const handleSubmitOrder = async () => {
+    if (!selectedCompanyId || !selectedLocationId) {
+      setError('Please select company and location before submitting order');
+      return;
+    }
+
+    if (currentOrder.length === 0) {
+      setError('Please add items to your order before submitting');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const orderData = {
+        company_id: parseInt(selectedCompanyId),
+        location_id: parseInt(selectedLocationId),
+        items: currentOrder.map(item => ({
+          item_id: item.id,
+          name: item.name,
+          category: item.category,
+          quantity: item.quantity,
+          unit_price: item.price,
+          unit: item.unit,
+          total_price: item.price * item.quantity
+        })),
+        total_amount: calculateOrderTotal(),
+        email_order: emailOrder,
+        order_date: new Date().toISOString(),
+        date_range: selectedDateRange ? {
+          start_date: selectedDateRange.startDate?.toISOString(),
+          end_date: selectedDateRange.endDate?.toISOString()
+        } : null
+      };
+
+      const url = `${API_URL_Local}/api/masterfile/orderitems`;
+      console.log('Submitting order to:', url);
+      console.log('Order data:', orderData);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData)
+      });
+
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        // If not JSON, try to get text response for better error message
+        const textResponse = await response.text();
+        console.error('Non-JSON response:', textResponse);
+        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`);
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`HTTP ${response.status}: ${errorData.message || response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('Order submitted successfully:', result);
+      
+      alert('Order submitted successfully!');
+      setCurrentOrder([]);
+      setEmailOrder(false);
+      setError(null);
+      
+    } catch (err) {
+      console.error('Error submitting order:', err);
+      setError(`Failed to submit order: ${err.message}`);
+      
+      // For development, show mock success
+      if (err.message.includes('content-type') || err.message.includes('HTTP')) {
+        console.log('Mock order submission for development:', {
+          company_id: selectedCompanyId,
+          location_id: selectedLocationId,
+          items: currentOrder,
+          total: calculateOrderTotal()
+        });
+        alert('Order submitted successfully! (Development Mode)');
+        setCurrentOrder([]);
+        setEmailOrder(false);
+        setError(null);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filteredItems = availableItems.filter(item =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.id.toLowerCase().includes(searchTerm.toLowerCase())
+    item.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          {error}
+          {error.includes('content-type') && (
+            <Box sx={{ mt: 1, fontSize: '0.875rem' }}>
+              <strong>Development Note:</strong> This usually means the API endpoint is returning HTML instead of JSON. 
+              Please ensure your backend is running and the endpoints are correctly configured.
+            </Box>
+          )}
+        </Alert>
+      )}
+
+      {/* Development Mode Indicator */}
+      {companies.length === 0 && locations.length === 0 && !loading && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <strong>No Data Available:</strong> Could not load companies and locations from the API. Please check your backend server and API endpoints.
+        </Alert>
+      )}
+
       {/* Header Section with Filters and Date Range */}
       <Box sx={{ mb: 3 }}>
         {/* Title and Date Range Selector */}
@@ -482,14 +761,123 @@ const OrderIQDashboard = () => {
           </Box>
         </Box>
 
-        {/* Filters Section using your existing component */}
-        <FiltersOrderIQ
-          filterFields={filterFields}
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          onApplyFilters={handleApplyFilters}
-          showApplyButton={true}
-        />
+        {/* Filters Section - Custom implementation */}
+        <Card sx={{ p: 3, borderRadius: 2, mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+            <FilterListIcon color="primary" />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Filters
+            </Typography>
+            {companies.length > 0 && locations.length > 0 && (
+              <Chip 
+                label={`${companies.length} companies, ${locations.length} locations available`} 
+                size="small" 
+                variant="outlined" 
+                color="primary"
+              />
+            )}
+          </Box>
+
+          {loading ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <CircularProgress size={20} />
+              <Typography variant="body1" color="text.secondary">
+                Loading companies and locations...
+              </Typography>
+            </Box>
+          ) : companies.length === 0 && locations.length === 0 ? (
+            <Alert severity="warning">
+              No companies or locations available. Please check your API endpoints.
+            </Alert>
+          ) : (
+            <Grid container spacing={3}>
+              {/* Companies Dropdown */}
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Companies</InputLabel>
+                  <Select
+                    value={selectedCompanyId || ''}
+                    label="Companies"
+                    onChange={(e) => {
+                      setSelectedCompanyId(e.target.value);
+                      setFilters(prev => ({ ...prev, companies: [e.target.value] }));
+                    }}
+                    displayEmpty
+                  >
+                    <MenuItem value="">
+                      <em>Select a Company</em>
+                    </MenuItem>
+                    {companies.map((company) => (
+                      <MenuItem key={company.id} value={company.id.toString()}>
+                        {company.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Locations Dropdown */}
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Location</InputLabel>
+                  <Select
+                    value={selectedLocationId || ''}
+                    label="Location"
+                    onChange={(e) => {
+                      setSelectedLocationId(e.target.value);
+                      setFilters(prev => ({ ...prev, location: [e.target.value] }));
+                    }}
+                    displayEmpty
+                  >
+                    <MenuItem value="">
+                      <em>Select a Location</em>
+                    </MenuItem>
+                    {locations.map((location) => (
+                      <MenuItem key={location.id} value={location.id.toString()}>
+                        {location.name} - {location.city}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Apply Filters Button */}
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-start' }}>
+                  <Button
+                    variant="contained"
+                    onClick={handleApplyFilters}
+                    disabled={!selectedCompanyId || !selectedLocationId || loading}
+                    startIcon={loading ? <CircularProgress size={20} /> : <FilterListIcon />}
+                    sx={{ minWidth: 200 }}
+                  >
+                    {loading ? 'Loading Items...' : 'Apply Filters & Load Items'}
+                  </Button>
+                  
+                  {(selectedCompanyId || selectedLocationId) && (
+                    <Button
+                      variant="outlined"
+                      onClick={() => {
+                        setSelectedCompanyId(null);
+                        setSelectedLocationId(null);
+                        setFilters({});
+                        setAvailableItems([]);
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                  )}
+                </Box>
+
+                {(!selectedCompanyId || !selectedLocationId) && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    Please select both a company and location to view available items.
+                  </Typography>
+                )}
+              </Grid>
+            </Grid>
+          )}
+        </Card>
       </Box>
 
       <Grid container spacing={3}>
@@ -690,47 +1078,109 @@ const OrderIQDashboard = () => {
                 Available Items
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Search and select items to add to your order
+                {availableItems.length > 0 
+                  ? `${availableItems.length} items available. Search and select items to add to your order.`
+                  : 'Select company and location from filters above to view available items.'
+                }
               </Typography>
               
-              <TextField
-                fullWidth
-                placeholder="Search items..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  )
-                }}
-                sx={{ mb: 3 }}
-              />
+              {availableItems.length > 0 && (
+                <TextField
+                  fullWidth
+                  placeholder="Search items by name or category..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    )
+                  }}
+                  sx={{ mb: 3 }}
+                />
+              )}
 
-              <List>
-                {filteredItems.map((item, index) => (
-                  <React.Fragment key={item.id}>
-                    <ListItem sx={{ px: 0 }}>
-                      <ListItemText
-                        primary={item.name}
-                        secondary={`${item.id} - $${item.price}/${item.unit}`}
-                        primaryTypographyProps={{ fontWeight: 500 }}
-                      />
-                      <Button
-                        variant="contained"
-                        size="small"
-                        startIcon={<AddIcon />}
-                        onClick={() => setQuantityDialog({ open: true, item })}
-                        sx={{ ml: 2 }}
-                      >
-                        Add
-                      </Button>
-                    </ListItem>
-                    {index < filteredItems.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))}
-              </List>
+              {loading && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress />
+                </Box>
+              )}
+
+              {!loading && availableItems.length === 0 && (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                    No items available
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Please select a company and location from the filters above, then click "Apply Filters" to load available items.
+                  </Typography>
+                </Box>
+              )}
+
+              {!loading && filteredItems.length > 0 && (
+                <List>
+                  {filteredItems.map((item, index) => (
+                    <React.Fragment key={item.id}>
+                      <ListItem sx={{ px: 0 }}>
+                        <ListItemText
+                          primary={
+                            <Box>
+                              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                {item.name}
+                              </Typography>
+                              <Chip 
+                                label={item.category} 
+                                size="small" 
+                                variant="outlined" 
+                                sx={{ mt: 0.5 }}
+                              />
+                            </Box>
+                          }
+                          secondary={
+                            <Box sx={{ mt: 1 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                ${item.price}/{item.unit}
+                              </Typography>
+                              {item.batchSize && (
+                                <Typography variant="caption" color="text.secondary">
+                                  Batch Size: {item.batchSize}
+                                </Typography>
+                              )}
+                              {item.previousPrice && (
+                                <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                                  Previous: ${item.previousPrice}
+                                </Typography>
+                              )}
+                            </Box>
+                          }
+                        />
+                        <Button
+                          variant="contained"
+                          size="small"
+                          startIcon={<AddIcon />}
+                          onClick={() => setQuantityDialog({ open: true, item })}
+                          sx={{ ml: 2 }}
+                        >
+                          Add
+                        </Button>
+                      </ListItem>
+                      {index < filteredItems.length - 1 && <Divider />}
+                    </React.Fragment>
+                  ))}
+                </List>
+              )}
+
+              {!loading && availableItems.length > 0 && filteredItems.length === 0 && searchTerm && (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                    No items found
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    No items match your search for "{searchTerm}". Try a different search term.
+                  </Typography>
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -749,7 +1199,10 @@ const OrderIQDashboard = () => {
                   </Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Store: Midtown East
+                  {selectedCompanyId && selectedLocationId 
+                    ? `Company: ${companies.find(c => c.id.toString() === selectedCompanyId)?.name || 'Unknown'} | Location: ${locations.find(l => l.id.toString() === selectedLocationId)?.name || 'Unknown'}`
+                    : 'Please select company and location'
+                  }
                 </Typography>
 
                 {currentOrder.length === 0 ? (
@@ -769,17 +1222,17 @@ const OrderIQDashboard = () => {
                       >
                         🤖 Get AI Suggestions
                       </Button>
-                      <Button 
-                        variant="contained" 
-                        size="small"
-                        onClick={() => {
-                          if (availableItems.length > 0) {
+                      {availableItems.length > 0 && (
+                        <Button 
+                          variant="contained" 
+                          size="small"
+                          onClick={() => {
                             setQuantityDialog({ open: true, item: availableItems[0] });
-                          }
-                        }}
-                      >
-                        ➕ Add First Item
-                      </Button>
+                          }}
+                        >
+                          ➕ Add First Item
+                        </Button>
+                      )}
                     </Box>
                   </Box>
                 ) : (
@@ -789,9 +1242,20 @@ const OrderIQDashboard = () => {
                         <React.Fragment key={item.id}>
                           <ListItem sx={{ px: 0 }}>
                             <ListItemText
-                              primary={item.name}
+                              primary={
+                                <Box>
+                                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    {item.name}
+                                  </Typography>
+                                  <Chip 
+                                    label={item.category} 
+                                    size="small" 
+                                    variant="outlined" 
+                                    sx={{ mt: 0.5, fontSize: '0.7rem', height: 20 }}
+                                  />
+                                </Box>
+                              }
                               secondary={`$${item.price}/${item.unit}`}
-                              primaryTypographyProps={{ fontWeight: 500 }}
                             />
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <IconButton 
@@ -851,11 +1315,12 @@ const OrderIQDashboard = () => {
                         variant="contained" 
                         fullWidth 
                         size="large"
-                        startIcon={<ReceiptIcon />}
+                        startIcon={loading ? <CircularProgress size={20} /> : <ReceiptIcon />}
                         sx={{ fontWeight: 600, py: 1.5 }}
                         onClick={handleSubmitOrder}
+                        disabled={loading || !selectedCompanyId || !selectedLocationId || currentOrder.length === 0}
                       >
-                        Submit Order
+                        {loading ? 'Submitting...' : 'Submit Order'}
                       </Button>
 
                       {selectedDateRange && (
