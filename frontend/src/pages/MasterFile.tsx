@@ -2042,7 +2042,7 @@ const MasterFile = () => {
         {/* Pagination */}
         <Box style={{ borderTop: "1px solid #e0e0e0" }}>
           <TablePagination
-            rowsPerPageOptions={[5, 10, 25, 50]}
+            rowsPerPageOptions={[5, 10, 25, 50,100, 200]}
             component="div"
             count={filteredItems.length}
             rowsPerPage={rowsPerPage}
