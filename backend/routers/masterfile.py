@@ -380,70 +380,7 @@ def get_masterfile_details(
     return {"data": data}
 
 
-# Alternative approach if you want to keep all versions but mark duplicates
-@router.get("/availableitems1_with_versions/{company_id}/{location_id}")
-def get_masterfile_details_with_versions(
-    company_id: int, 
-    location_id: int, 
-    db: Session = Depends(get_db)
-): 
-    """Get masterfile details showing all versions of products"""
-    
-    masterfile = masterfile_crud.get_masterfile_by_company_and_location(db, company_id, location_id)
-    
-    if not masterfile:
-        return {"message": "Masterfile not found", "data": []}
-    
-    all_data = []
-    
-    for file_entry in masterfile:
-        # Access attributes directly from SQLAlchemy model
-        if not hasattr(file_entry, 'file_data') or not file_entry.file_data or 'data' not in file_entry.file_data:
-            continue
-            
-        file_data = file_entry.file_data['data']
-        upload_date = file_entry.file_data.get('upload_date', '')
-        updated_at = file_entry.file_data.get('updated_at', upload_date)
-        filename = getattr(file_entry, 'filename', 'unknown')
-        
-        for item in file_data:
-            item_copy = item.copy()
-            item_copy['source_file'] = filename
-            item_copy['upload_date'] = upload_date
-            item_copy['updated_at'] = updated_at
-            all_data.append(item_copy)
-    
-    if not all_data:
-        return {"message": "No data found in masterfiles", "data": []}
-    
-    df = pd.DataFrame(all_data)
-    
-    # Sort by Category, Products, and updated_at to show latest versions first
-    df = df.sort_values(['Category', 'Products', 'updated_at'], 
-                       ascending=[True, True, False])
-    
-    # Mark duplicates (keeping first occurrence as latest)
-    df['is_latest_version'] = ~df.duplicated(subset=['Category', 'Products'], keep='first')
-    
-    columns_dict = {f"column{i}": col for i, col in enumerate(df.columns)}
-    df_copy = df.copy()
-    df_copy.columns = [f"column{i}" for i in range(len(df.columns))]
-    
-    data = {
-        "totalColumns": len(df.columns),
-        "totalRows": len(df),
-        "columns": columns_dict,
-        "dataframe": df_copy.to_dict(orient='records'),
-        "summary": {
-            "total_records": len(df),
-            "unique_products": df['is_latest_version'].sum(),
-            "files_processed": len(masterfile)
-        }
-    }
-    
-    return {"data": data}
-
-
+# now i want to make an endpoint names as orderitems
 
 @router.post("/", response_model=masterfile_schema.MasterFile)
 def create_masterfile(masterfile: masterfile_schema.MasterFileCreate, db: Session = Depends(get_db)):
