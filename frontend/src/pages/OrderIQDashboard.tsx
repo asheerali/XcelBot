@@ -22,7 +22,13 @@ import {
   Badge,
   Paper,
   Chip,
-  Container
+  Container,
+  CircularProgress,
+  Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -34,11 +40,11 @@ import {
   Receipt as ReceiptIcon,
   FilterList as FilterListIcon,
   CalendarToday as CalendarTodayIcon,
-  Clear as ClearIcon
+  Clear as ClearIcon,
+  Place as PlaceIcon
 } from '@mui/icons-material';
 
-// Import your existing FiltersOrderIQ component and DateRangeSelector
-// import FiltersOrderIQ from '../components/FiltersOrderIQ'; // Commented out - using custom implementation
+// Import your existing DateRangeSelector component
 import DateRangeSelector from '../components/DateRangeSelector'; // Adjust the import path as needed
 import { API_URL_Local } from '../constants';
 
@@ -46,17 +52,15 @@ import { API_URL_Local } from '../constants';
  * API Configuration Notes:
  * 
  * This component expects the following API endpoints to be available:
- * 1. GET /companies - Returns array of company objects
- * 2. GET /stores - Returns array of store/location objects  
- * 3. GET /api/masterfile/availableitems/{company_id}/{location_id} - Returns available items
- * 4. POST /api/masterfile/orderitems - Accepts order submission
+ * 1. GET /company-locations/all - Returns array of company-location objects
+ * 2. GET /api/masterfile/availableitems/{company_id}/{location_id} - Returns available items
+ * 3. POST /api/masterfile/orderitems - Accepts order submission
  * 
- * Set REACT_APP_API_BASE_URL environment variable to configure the API base URL.
- * If endpoints are not available, the component will fall back to mock data for development.
+ * Set API_URL_Local in constants.tsx to configure the API base URL.
+ * If endpoints are not available, the component will show empty state.
  * 
  * Example API responses expected:
- * - Companies: [{"id": 1, "name": "Company Name", "email": "email@company.com"}, ...]
- * - Stores: [{"id": 1, "name": "Store Name", "city": "City", "company_id": 1}, ...]
+ * - Company-Locations: [{"company_id": 1, "company_name": "Company Name", "locations": [{"location_id": 1, "location_name": "Location Name"}]}, ...]
  * - Available Items: {"data": {"dataframe": [{"column0": "Category", "column1": "Product", ...}]}}
  */
 
@@ -365,8 +369,7 @@ const OrderIQDashboard = () => {
   const [quantityDialog, setQuantityDialog] = useState({ open: false, item: null });
   
   // API data state
-  const [companies, setCompanies] = useState([]);
-  const [locations, setLocations] = useState([]);
+  const [companyLocations, setCompanyLocations] = useState([]);
   const [availableItems, setAvailableItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -378,17 +381,26 @@ const OrderIQDashboard = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState(null);
   const [selectedLocationId, setSelectedLocationId] = useState(null);
 
-  // Fetch companies and locations on component mount
+  // Derived data for dropdowns
+  const companies = companyLocations.map(item => ({
+    id: item.company_id,
+    name: item.company_name
+  }));
+
+  const availableLocationsForCompany = selectedCompanyId 
+    ? companyLocations.find(item => item.company_id === parseInt(selectedCompanyId))?.locations || []
+    : [];
+
+  // Fetch company-locations data on component mount
   useEffect(() => {
-    fetchCompanies();
-    fetchLocations();
+    fetchCompanyLocations();
   }, []);
 
-  const fetchCompanies = async () => {
+  const fetchCompanyLocations = async () => {
     try {
       setLoading(true);
-      const url = `${API_URL_Local}/companies`;
-      console.log('Fetching companies from:', url);
+      const url = `${API_URL_Local}/company-locations/all`;
+      console.log('Fetching company-locations from:', url);
       
       const response = await fetch(url, {
         method: 'GET',
@@ -409,50 +421,11 @@ const OrderIQDashboard = () => {
       }
       
       const data = await response.json();
-      console.log('Companies data:', data);
-      setCompanies(Array.isArray(data) ? data : []);
+      console.log('Company-locations data:', data);
+      setCompanyLocations(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error fetching companies:', err);
-      setError('Failed to load companies. Please check if the API endpoint is configured correctly.');
-      // Only set mock data if there's no real data
-      setCompanies([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchLocations = async () => {
-    try {
-      setLoading(true);
-      const url = `${API_URL_Local}/stores`;
-      console.log('Fetching locations from:', url);
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      // Check if response is actually JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`);
-      }
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('Locations data:', data);
-      setLocations(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error('Error fetching locations:', err);
-      setError('Failed to load locations. Please check if the API endpoint is configured correctly.');
-      // Only set mock data if there's no real data
-      setLocations([]);
+      console.error('Error fetching company-locations:', err);
+      setError('Failed to load companies and locations. Please check if the API endpoint is configured correctly.');
     } finally {
       setLoading(false);
     }
@@ -533,29 +506,20 @@ const OrderIQDashboard = () => {
     }
   };
 
-  // Filter configuration for FiltersOrderIQ component - use useMemo to ensure updates
-  const filterFields = useMemo(() => [
-    {
-      key: 'companies',
-      label: 'Companies',
-      placeholder: 'Select Companies',
-      options: companies.map(company => ({
-        value: company.id.toString(),
-        label: company.name
-      }))
-    },
-    {
-      key: 'location',
-      label: 'Location',
-      placeholder: 'Select Location',
-      options: locations.map(location => ({
-        value: location.id.toString(),
-        label: location.name
-      }))
-    }
-  ], [companies, locations]);
+  // Event handlers
+  const handleCompanyChange = (companyId) => {
+    setSelectedCompanyId(companyId);
+    // Reset location when company changes
+    setSelectedLocationId(null);
+    setAvailableItems([]); // Clear available items
+    setFilters(prev => ({ ...prev, companies: [companyId], location: [] }));
+  };
 
-  // Event handlers - simplified without FiltersOrderIQ
+  const handleLocationChange = (locationId) => {
+    setSelectedLocationId(locationId);
+    setFilters(prev => ({ ...prev, location: [locationId] }));
+  };
+
   const handleApplyFilters = () => {
     console.log('Applying filters:', { selectedCompanyId, selectedLocationId });
     
@@ -728,7 +692,7 @@ const OrderIQDashboard = () => {
       )}
 
       {/* Development Mode Indicator */}
-      {companies.length === 0 && locations.length === 0 && !loading && (
+      {companyLocations.length === 0 && !loading && (
         <Alert severity="info" sx={{ mb: 3 }}>
           <strong>No Data Available:</strong> Could not load companies and locations from the API. Please check your backend server and API endpoints.
         </Alert>
@@ -768,9 +732,9 @@ const OrderIQDashboard = () => {
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
               Filters
             </Typography>
-            {companies.length > 0 && locations.length > 0 && (
+            {companyLocations.length > 0 && (
               <Chip 
-                label={`${companies.length} companies, ${locations.length} locations available`} 
+                label={`${companies.length} companies available`} 
                 size="small" 
                 variant="outlined" 
                 color="primary"
@@ -785,7 +749,7 @@ const OrderIQDashboard = () => {
                 Loading companies and locations...
               </Typography>
             </Box>
-          ) : companies.length === 0 && locations.length === 0 ? (
+          ) : companyLocations.length === 0 ? (
             <Alert severity="warning">
               No companies or locations available. Please check your API endpoints.
             </Alert>
@@ -798,10 +762,7 @@ const OrderIQDashboard = () => {
                   <Select
                     value={selectedCompanyId || ''}
                     label="Companies"
-                    onChange={(e) => {
-                      setSelectedCompanyId(e.target.value);
-                      setFilters(prev => ({ ...prev, companies: [e.target.value] }));
-                    }}
+                    onChange={(e) => handleCompanyChange(e.target.value)}
                     displayEmpty
                   >
                     <MenuItem value="">
@@ -816,34 +777,36 @@ const OrderIQDashboard = () => {
                 </FormControl>
               </Grid>
 
-              {/* Locations Dropdown */}
+              {/* Locations Dropdown - filtered by selected company */}
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
+                <FormControl fullWidth disabled={!selectedCompanyId}>
                   <InputLabel>Location</InputLabel>
                   <Select
                     value={selectedLocationId || ''}
                     label="Location"
-                    onChange={(e) => {
-                      setSelectedLocationId(e.target.value);
-                      setFilters(prev => ({ ...prev, location: [e.target.value] }));
-                    }}
+                    onChange={(e) => handleLocationChange(e.target.value)}
                     displayEmpty
                   >
                     <MenuItem value="">
-                      <em>Select a Location</em>
+                      <em>{!selectedCompanyId ? 'Select a company first' : 'Select a Location'}</em>
                     </MenuItem>
-                    {locations.map((location) => (
-                      <MenuItem key={location.id} value={location.id.toString()}>
-                        {location.name} - {location.city}
+                    {availableLocationsForCompany.map((location) => (
+                      <MenuItem key={location.location_id} value={location.location_id.toString()}>
+                        {location.location_name}
                       </MenuItem>
                     ))}
                   </Select>
+                  {selectedCompanyId && availableLocationsForCompany.length === 0 && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, ml: 1 }}>
+                      No locations available for this company
+                    </Typography>
+                  )}
                 </FormControl>
               </Grid>
 
               {/* Apply Filters Button */}
               <Grid item xs={12}>
-                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-start' }}>
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-start', alignItems: 'center', flexWrap: 'wrap' }}>
                   <Button
                     variant="contained"
                     onClick={handleApplyFilters}
@@ -867,11 +830,38 @@ const OrderIQDashboard = () => {
                       Clear Filters
                     </Button>
                   )}
+
+                  {/* Show selected company and location info */}
+                  {selectedCompanyId && (
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                      <Chip 
+                        label={`Company: ${companies.find(c => c.id.toString() === selectedCompanyId)?.name}`}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      />
+                      {selectedLocationId && (
+                        <Chip 
+                          label={`Location: ${availableLocationsForCompany.find(l => l.location_id.toString() === selectedLocationId)?.location_name}`}
+                          size="small"
+                          color="secondary"
+                          variant="outlined"
+                        />
+                      )}
+                    </Box>
+                  )}
                 </Box>
 
                 {(!selectedCompanyId || !selectedLocationId) && (
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                     Please select both a company and location to view available items.
+                  </Typography>
+                )}
+
+                {/* Show location count for selected company */}
+                {selectedCompanyId && availableLocationsForCompany.length > 0 && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    {availableLocationsForCompany.length} location{availableLocationsForCompany.length !== 1 ? 's' : ''} available for this company
                   </Typography>
                 )}
               </Grid>
@@ -1199,8 +1189,8 @@ const OrderIQDashboard = () => {
                   </Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  {selectedCompanyId && selectedLocationId 
-                    ? `Company: ${companies.find(c => c.id.toString() === selectedCompanyId)?.name || 'Unknown'} | Location: ${locations.find(l => l.id.toString() === selectedLocationId)?.name || 'Unknown'}`
+                  Store: {selectedCompanyId && selectedLocationId 
+                    ? `${companies.find(c => c.id.toString() === selectedCompanyId)?.name} - ${availableLocationsForCompany.find(l => l.location_id.toString() === selectedLocationId)?.location_name}`
                     : 'Please select company and location'
                   }
                 </Typography>
@@ -1255,7 +1245,7 @@ const OrderIQDashboard = () => {
                                   />
                                 </Box>
                               }
-                              secondary={`$${item.price}/${item.unit}`}
+                              secondary={`${item.price}/${item.unit}`}
                             />
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <IconButton 
