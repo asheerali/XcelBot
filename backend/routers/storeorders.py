@@ -405,7 +405,6 @@ def create_new_order_items(request: OrderItemsRequest, db: Session = Depends(get
         
         return {
             "message": "New store orders created successfully",
-            "order_id": new_order.id,
             "store_orders_id": new_order.id,
             "received_data": request.model_dump(),
             "items_ordered": items_ordered_data,
@@ -467,43 +466,168 @@ def get_recent_storeorders_details_by_location(
     }
     
     
-    
 
-# now i want to updated the recent orders on the basis of id
-@router.post("/orderupdate/{order_id}", response_model=storeorders_schema.StoreOrders)
-def update_recent_storeorders_items(
-    request: UpdateStoreOrdersRequest,
+# Updated function to update order by ID
+@router.post("/orderupdate/{order_id}")
+def update_storeorders_by_id(
     order_id: int,
+    request: UpdateStoreOrdersRequest,
     db: Session = Depends(get_db)
 ):
-    """Update items_ordered for the most recent store orders record"""
+    """Update items_ordered for a specific store orders record by ID"""
     
-    print("Received request to update recent store orders:", request)
+    print(f"Received request to update store order ID {order_id}:", request.model_dump())
     try:
+        # First, check if the order exists
+        existing_order = storeorders_crud.get_storeorders(db, order_id)
+        
+        if not existing_order:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Store order with ID {order_id} not found"
+            )
+        
+        # Optional: Verify that the order belongs to the specified company and location
+        if existing_order.company_id != request.company_id or existing_order.location_id != request.location_id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Order ID {order_id} does not belong to company {request.company_id} and location {request.location_id}"
+            )
+        
+        print(f"Found existing order with ID: {existing_order.id}")
+        print(f"Current items_ordered: {existing_order.items_ordered}")
+        print(f"New items_ordered: {request.items_ordered}")
+        
         # Create update object
         update_obj = storeorders_schema.StoreOrdersUpdate(items_ordered=request.items_ordered)
         
-        # Update by company and location
-        updated_storeorders = storeorders_crud.update_storeorders_by_location(
-            db, request.company_id, request.location_id, update_obj
-        )
+        # Update by order ID (this will automatically move current to prev and set new items)
+        updated_storeorders = storeorders_crud.update_storeorders(db, order_id, update_obj)
         
         if updated_storeorders:
-            print("Successfully updated recent store orders in database")
+            print("Successfully updated store order in database")
+            print(f"New items_ordered: {updated_storeorders.items_ordered}")
+            print(f"Previous items_ordered: {updated_storeorders.prev_items_ordered}")
+            
             return {
                 "status": "success", 
-                "message": "Recent store orders updated successfully",
-                "updated_at": updated_storeorders.updated_at.isoformat(),
-                "id": updated_storeorders.id
+                "message": f"Store order {order_id} updated successfully",
+                "order_id": updated_storeorders.id,
+                "company_id": updated_storeorders.company_id,
+                "location_id": updated_storeorders.location_id,
+                "updated_at": updated_storeorders.updated_at.isoformat() if updated_storeorders.updated_at else None,
+                "created_at": updated_storeorders.created_at.isoformat() if updated_storeorders.created_at else None,
+                "items_ordered": updated_storeorders.items_ordered,
+                "prev_items_ordered": updated_storeorders.prev_items_ordered,
+                "update_summary": {
+                    "previous_items_preserved": True if updated_storeorders.prev_items_ordered else False,
+                    "new_items_count": len(request.items_ordered.get('items', [])) if 'items' in request.items_ordered else 0
+                }
             }
         else:
-            raise HTTPException(status_code=404, detail="Recent store orders not found for the specified company and location")
+            raise HTTPException(status_code=500, detail="Failed to update store order")
         
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
     except Exception as e:
-        print(f"Error in update_recent_storeorders_items: {str(e)}")
+        print(f"Error in update_storeorders_by_id: {str(e)}")
         print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error updating recent store orders: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error updating store order: {str(e)}")
 
 
-
-
+@router.get("/analytics/{company_id}/{location_id}")
+def get_avg_daily_orders(
+    company_id: int, 
+    location_id: int, 
+    db: Session = Depends(get_db)
+):
+    """Get average daily orders, total orders, and top 2 items ordered for a company and location"""
+    
+    try:
+        # FIXED: Use get_storeorders_by_location() to get ALL orders, not just the latest one
+        storeorders = storeorders_crud.get_storeorders_by_location(db, location_id)
+        
+        # Filter by company_id since get_storeorders_by_location doesn't filter by company
+        storeorders = [order for order in storeorders if order.company_id == company_id]
+        
+        if not storeorders:
+            return {
+                "message": "No store orders found for this company and location", 
+                "data": {
+                    "total_orders": 0,
+                    "avg_daily_orders": 0,
+                    "date_range": None,
+                    "top_items": []
+                }
+            }
+        
+        total_orders = len(storeorders)
+        
+        # Calculate average daily orders
+        if total_orders > 0:
+            # Get valid dates only
+            valid_dates = [order.created_at for order in storeorders if order.created_at]
+            
+            if valid_dates:
+                first_order_date = min(valid_dates)
+                last_order_date = max(valid_dates)
+                days_difference = (last_order_date - first_order_date).days + 1  # Include the last day
+                
+                avg_daily_orders = round(total_orders / days_difference, 2) if days_difference > 0 else total_orders
+                date_range = {
+                    "first_order": first_order_date.strftime('%Y-%m-%d'),
+                    "last_order": last_order_date.strftime('%Y-%m-%d'),
+                    "total_days": days_difference
+                }
+            else:
+                avg_daily_orders = 0
+                date_range = None
+        else:
+            avg_daily_orders = 0
+            date_range = None
+        
+        # Aggregate items ordered
+        item_counts = {}
+        for order in storeorders:
+            if order.items_ordered and 'items' in order.items_ordered:
+                items_ordered = order.items_ordered.get('items', [])
+                for item in items_ordered:
+                    # Handle different possible item structure
+                    item_name = item.get('name') or item.get('product') or item.get('item_name', 'Unknown')
+                    item_quantity = item.get('quantity', 1)
+                    
+                    if item_name in item_counts:
+                        item_counts[item_name] += item_quantity
+                    else:
+                        item_counts[item_name] = item_quantity
+        
+        # Get top 2 items ordered
+        top_items = sorted(item_counts.items(), key=lambda x: x[1], reverse=True)[:2]
+        top_items_formatted = [{"name": name, "total_quantity": quantity} for name, quantity in top_items]
+        
+        # Get company and location names for response
+        company = db.query(Company).filter(Company.id == company_id).first()
+        location = db.query(Store).filter(Store.id == location_id).first()
+        
+        return {
+            "message": "Average daily orders and top items fetched successfully",
+            "data": {
+                "company_name": company.name if company else "Unknown",
+                "location_name": location.name if location else "Unknown",
+                "total_orders": total_orders,
+                "avg_daily_orders": avg_daily_orders,
+                "date_range": date_range,
+                "top_items": top_items_formatted,
+                "all_items_summary": {
+                    "unique_items_count": len(item_counts),
+                    "total_item_quantities": sum(item_counts.values())
+                }
+            }
+        }
+    
+    except Exception as e:
+        print(f"Error fetching average daily orders: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error fetching average daily orders: {str(e)}")
