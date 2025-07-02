@@ -536,7 +536,7 @@ def update_storeorders_by_id(
         raise HTTPException(status_code=500, detail=f"Error updating store order: {str(e)}")
 
 
-@router.get("/avg_daily_orders/{company_id}/{location_id}")
+@router.get("/analytics/{company_id}/{location_id}")
 def get_avg_daily_orders(
     company_id: int, 
     location_id: int, 
