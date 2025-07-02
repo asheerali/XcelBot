@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import {
   Box,
   Typography,
@@ -43,6 +44,14 @@ import {
   Clear as ClearIcon,
   Place as PlaceIcon
 } from '@mui/icons-material';
+
+// Import Redux actions and selectors
+import {
+  setSelectedCompanies,
+  setSelectedLocations,
+  selectSelectedCompanies,
+  selectSelectedLocations
+} from '../store/slices/masterFileSlice'; // Adjust path as needed
 
 // Import your existing DateRangeSelector component
 // import DateRangeSelector from '../components/DateRangeSelector'; // Adjust the import path as needed
@@ -286,6 +295,7 @@ const UpdateOrderDialog = ({ open, onClose, order, onConfirm }) => {
     </Dialog>
   );
 };
+
 const QuantityDialog = ({ open, onClose, item, onAdd }) => {
   const [quantity, setQuantity] = useState(1);
 
@@ -355,6 +365,11 @@ const QuantityDialog = ({ open, onClose, item, onAdd }) => {
 
 // Main OrderIQ Dashboard Component
 const OrderIQDashboard = () => {
+  // Redux hooks
+  const dispatch = useDispatch();
+  const reduxSelectedCompanies = useSelector(selectSelectedCompanies);
+  const reduxSelectedLocations = useSelector(selectSelectedLocations);
+
   // State management
   const [filters, setFilters] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -369,16 +384,23 @@ const OrderIQDashboard = () => {
   const [companyLocations, setCompanyLocations] = useState([]);
   const [availableItems, setAvailableItems] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
+  const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [error, setError] = useState(null);
   
   // Date range selector state
   const [selectedDateRange, setSelectedDateRange] = useState(null);
 
-  // Selected company and location for API calls
-  const [selectedCompanyId, setSelectedCompanyId] = useState(null);
-  const [selectedLocationId, setSelectedLocationId] = useState(null);
+  // Selected company and location for API calls - Initialize from Redux
+  const [selectedCompanyId, setSelectedCompanyId] = useState(() => {
+    return reduxSelectedCompanies.length > 0 ? reduxSelectedCompanies[0] : null;
+  });
+  
+  const [selectedLocationId, setSelectedLocationId] = useState(() => {
+    return reduxSelectedLocations.length > 0 ? reduxSelectedLocations[0] : null;
+  });
 
   // Derived data for dropdowns
   const companies = companyLocations.map(item => ({
@@ -390,12 +412,40 @@ const OrderIQDashboard = () => {
     ? companyLocations.find(item => item.company_id === parseInt(selectedCompanyId))?.locations || []
     : [];
 
+  // Initialize component state from Redux on mount
+  useEffect(() => {
+    if (reduxSelectedCompanies.length > 0) {
+      const companyId = reduxSelectedCompanies[0];
+      setSelectedCompanyId(companyId);
+      console.log('OrderIQ: Loaded company from Redux:', companyId);
+    }
+    
+    if (reduxSelectedLocations.length > 0) {
+      const locationId = reduxSelectedLocations[0];
+      setSelectedLocationId(locationId);
+      console.log('OrderIQ: Loaded location from Redux:', locationId);
+    }
+  }, [reduxSelectedCompanies, reduxSelectedLocations]);
+
+  // Auto-fetch data when both company and location are available and company-locations are loaded
+  useEffect(() => {
+    if (selectedCompanyId && selectedLocationId && companyLocations.length > 0 && availableItems.length === 0) {
+      console.log('OrderIQ: Auto-fetching data:', { 
+        companyId: selectedCompanyId, 
+        locationId: selectedLocationId 
+      });
+      
+      // Only auto-fetch if we don't already have data
+      fetchAvailableItems(selectedCompanyId, selectedLocationId);
+      fetchRecentOrders(selectedCompanyId, selectedLocationId);
+      fetchAnalytics(selectedCompanyId, selectedLocationId);
+    }
+  }, [selectedCompanyId, selectedLocationId, companyLocations.length]);
+
   // Fetch company-locations data on component mount
   useEffect(() => {
     fetchCompanyLocations();
   }, []);
-
-  // Don't auto-fetch recent orders - only fetch when user applies filters
 
   const fetchCompanyLocations = async () => {
     try {
@@ -469,18 +519,6 @@ const OrderIQDashboard = () => {
       
       setError(errorMessage);
       
-      // Set mock data for development only as a last resort
-      console.log('Setting mock data for development...');
-      setCompanyLocations([
-        {
-          company_id: 1,
-          company_name: "Demo Company",
-          locations: [
-            { location_id: 1, location_name: "Main Store" },
-            { location_id: 2, location_name: "Branch Store" }
-          ]
-        }
-      ]);
     } finally {
       setLoading(false);
     }
@@ -548,27 +586,49 @@ const OrderIQDashboard = () => {
     } catch (err) {
       console.error('Error fetching recent orders:', err);
       setError(`Failed to load recent orders: ${err.message}`);
-      
-      // Set mock data for development
-      setRecentOrders([
-        { 
-          id: 1, 
-          items: 3, 
-          total: 12.50, 
-          avg: 4.17, 
-          qty: 3, 
-          date: '02/07/2025',
-          company_name: 'Demo Company',
-          location_name: 'Main Store',
-          orderItems: [
-            { id: 'mock_1', name: 'Green sauce - packed', price: 5.49, unit: 'Box', quantity: 1, category: 'Cleaning Supplies' },
-            { id: 'mock_2', name: 'Steel scrubber', price: 6.49, unit: 'Box', quantity: 1, category: 'Cleaning Supplies' },
-            { id: 'mock_3', name: 'Bar mops', price: 0.52, unit: 'Unit', quantity: 1, category: 'Cleaning Supplies' }
-          ]
-        }
-      ]);
     } finally {
       setLoadingOrders(false);
+    }
+  };
+
+  const fetchAnalytics = async (companyId, locationId) => {
+    try {
+      setLoadingAnalytics(true);
+      const url = `${API_URL_Local}/api/storeorders/analytics/${companyId}/${locationId}`;
+      console.log('Fetching analytics from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`);
+      }
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      console.log('Analytics data:', result);
+      
+      if (!result.data) {
+        throw new Error('Invalid analytics data structure received from API');
+      }
+      
+      setAnalyticsData(result.data);
+      
+    } catch (err) {
+      console.error('Error fetching analytics:', err);
+      setError(`Failed to load analytics: ${err.message}`);
+      setAnalyticsData(null);
+    } finally {
+      setLoadingAnalytics(false);
     }
   };
 
@@ -621,55 +681,47 @@ const OrderIQDashboard = () => {
     } catch (err) {
       console.error('Error fetching available items:', err);
       setError(`Failed to load available items: ${err.message}`);
-      // Set mock data for development
-      setAvailableItems([
-        {
-          id: 'mock_1',
-          name: 'Green sauce - packed',
-          category: 'Sauce',
-          price: 90.0,
-          unit: 'Unit',
-          batchSize: '500 x container',
-          previousPrice: 69.0
-        },
-        {
-          id: 'mock_2',
-          name: 'Grilled chicken breast',
-          category: 'Protein',
-          price: 175.0,
-          unit: 'Tray',
-          batchSize: '100 x tray',
-          previousPrice: null
-        }
-      ]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Event handlers
+  // Event handlers - Updated to sync with Redux
   const handleCompanyChange = (companyId) => {
+    console.log('OrderIQ: Company changed to:', companyId);
+    
     setSelectedCompanyId(companyId);
     // Reset location when company changes
     setSelectedLocationId(null);
     setAvailableItems([]); // Clear available items
     setRecentOrders([]); // Clear recent orders
     setFilters(prev => ({ ...prev, companies: [companyId], location: [] }));
+    
+    // Update Redux - store as array to match the existing pattern
+    dispatch(setSelectedCompanies(companyId ? [companyId] : []));
+    dispatch(setSelectedLocations([])); // Clear locations when company changes
   };
 
   const handleLocationChange = (locationId) => {
+    console.log('OrderIQ: Location changed to:', locationId);
+    
     setSelectedLocationId(locationId);
     setFilters(prev => ({ ...prev, location: [locationId] }));
+    
+    // Update Redux - store as array to match the existing pattern
+    dispatch(setSelectedLocations(locationId ? [locationId] : []));
+    
     // Don't auto-fetch data - wait for user to click Apply Filters
   };
 
   const handleApplyFilters = () => {
-    console.log('Applying filters:', { selectedCompanyId, selectedLocationId });
+    console.log('OrderIQ: Applying filters:', { selectedCompanyId, selectedLocationId });
     
-    // Fetch both available items and recent orders when both company and location are selected
+    // Fetch available items, recent orders, and analytics when both company and location are selected
     if (selectedCompanyId && selectedLocationId) {
       fetchAvailableItems(selectedCompanyId, selectedLocationId);
       fetchRecentOrders(selectedCompanyId, selectedLocationId);
+      fetchAnalytics(selectedCompanyId, selectedLocationId);
     } else {
       setError('Please select both a company and location to view available items and recent orders');
     }
@@ -741,14 +793,13 @@ const OrderIQDashboard = () => {
     }));
     
     setCurrentOrder(orderItems);
-    setUpdateOrderDialog({ open: true, order: recentOrder });
+    // Remove the dialog popup - directly proceed to update mode
   };
 
   const handleCancelOrderUpdate = () => {
     setIsUpdatingOrder(false);
     setOrderToUpdate(null);
     setCurrentOrder([]);
-    setUpdateOrderDialog({ open: false, order: null });
   };
 
   const handleSubmitOrderUpdate = async () => {
@@ -820,9 +871,10 @@ const OrderIQDashboard = () => {
       handleCancelOrderUpdate();
       setError(null);
       
-      // Refresh recent orders after successful update
+      // Refresh recent orders and analytics after successful update
       if (selectedCompanyId && selectedLocationId) {
         fetchRecentOrders(selectedCompanyId, selectedLocationId);
+        fetchAnalytics(selectedCompanyId, selectedLocationId);
       }
       
     } catch (err) {
@@ -917,9 +969,10 @@ const OrderIQDashboard = () => {
       setEmailOrder(false);
       setError(null);
       
-      // Refresh recent orders after successful submission
+      // Refresh recent orders and analytics after successful submission
       if (selectedCompanyId && selectedLocationId) {
         fetchRecentOrders(selectedCompanyId, selectedLocationId);
+        fetchAnalytics(selectedCompanyId, selectedLocationId);
       }
       
     } catch (err) {
@@ -964,10 +1017,12 @@ const OrderIQDashboard = () => {
         </Alert>
       )}
 
+
+
       {/* Development Mode Indicator */}
-      {companyLocations.length === 1 && companyLocations[0].company_name === "Demo Company" && !loading && (
+      {companyLocations.length === 0 && !loading && (
         <Alert severity="warning" sx={{ mb: 3 }}>
-          <strong>Demo Mode:</strong> API connection failed. Using mock data. Please check:
+          <strong>No Data Available:</strong> API connection failed. Please check:
           <br />• Is your backend server running?
           <br />• Is the API_URL_Local configured correctly? (Currently: {API_URL_Local})
           <br />• Does the /company-locations/all endpoint exist and return JSON?
@@ -1102,6 +1157,10 @@ const OrderIQDashboard = () => {
                         setFilters({});
                         setAvailableItems([]);
                         setRecentOrders([]);
+                        
+                        // Clear Redux state
+                        dispatch(setSelectedCompanies([]));
+                        dispatch(setSelectedLocations([]));
                       }}
                     >
                       Clear Filters
@@ -1186,14 +1245,15 @@ const OrderIQDashboard = () => {
                     }}
                   >
                     <Typography variant="body2" color="text.secondary" gutterBottom>
-                      Avg Daily Order
+                      Avg Daily Orders
                     </Typography>
-                    <Typography variant="h4" sx={{ fontWeight: 700, color: '#1565c0' }}>
-                      ${recentOrders.length > 0 
-                        ? (recentOrders.reduce((sum, order) => sum + order.total, 0) / recentOrders.length).toFixed(2)
-                        : '0.00'
-                      }
-                    </Typography>
+                    {loadingAnalytics ? (
+                      <CircularProgress size={24} />
+                    ) : (
+                      <Typography variant="h4" sx={{ fontWeight: 700, color: '#1565c0' }}>
+                        {analyticsData?.avg_daily_orders?.toFixed(1) || '0.0'}
+                      </Typography>
+                    )}
                   </Paper>
                 </Grid>
                 
@@ -1209,9 +1269,13 @@ const OrderIQDashboard = () => {
                     <Typography variant="body2" color="text.secondary" gutterBottom>
                       Total Orders
                     </Typography>
-                    <Typography variant="h4" sx={{ fontWeight: 700, color: '#2e7d32' }}>
-                      {recentOrders.length}
-                    </Typography>
+                    {loadingAnalytics ? (
+                      <CircularProgress size={24} />
+                    ) : (
+                      <Typography variant="h4" sx={{ fontWeight: 700, color: '#2e7d32' }}>
+                        {analyticsData?.total_orders || '0'}
+                      </Typography>
+                    )}
                   </Paper>
                 </Grid>
               </Grid>
@@ -1236,43 +1300,31 @@ const OrderIQDashboard = () => {
               </Box>
               
               <List>
-                {recentOrders.length > 0 ? (
-                  // Calculate top items from recent orders
-                  (() => {
-                    const itemCounts = {};
-                    recentOrders.forEach(order => {
-                      order.orderItems.forEach(item => {
-                        const key = item.name;
-                        if (itemCounts[key]) {
-                          itemCounts[key].count += item.quantity;
-                          itemCounts[key].orders += 1;
-                        } else {
-                          itemCounts[key] = { count: item.quantity, orders: 1, name: item.name };
-                        }
-                      });
-                    });
-                    
-                    const sortedItems = Object.values(itemCounts)
-                      .sort((a, b) => b.count - a.count)
-                      .slice(0, 3);
-                    
-                    return sortedItems.map((item, index) => (
-                      <React.Fragment key={item.name}>
-                        <ListItem>
-                          <ListItemText 
-                            primary={`#${index + 1} ${item.name}`}
-                            secondary={`${item.count} units in ${item.orders} order${item.orders > 1 ? 's' : ''}`}
-                            primaryTypographyProps={{ fontWeight: 500 }}
-                          />
-                        </ListItem>
-                        {index < sortedItems.length - 1 && <Divider />}
-                      </React.Fragment>
-                    ));
-                  })()
+                {analyticsData?.top_items && analyticsData.top_items.length > 0 ? (
+                  analyticsData.top_items.slice(0, 3).map((item, index) => (
+                    <React.Fragment key={item.name}>
+                      <ListItem>
+                        <ListItemText 
+                          primary={`#${index + 1} ${item.name}`}
+                          secondary={`${item.total_quantity} units total`}
+                          primaryTypographyProps={{ fontWeight: 500 }}
+                        />
+                      </ListItem>
+                      {index < Math.min(analyticsData.top_items.length, 3) - 1 && <Divider />}
+                    </React.Fragment>
+                  ))
+                ) : loadingAnalytics ? (
+                  <ListItem>
+                    <CircularProgress size={20} sx={{ mr: 2 }} />
+                    <ListItemText 
+                      primary="Loading top items..."
+                      primaryTypographyProps={{ fontWeight: 500, color: 'text.secondary' }}
+                    />
+                  </ListItem>
                 ) : (
                   <ListItem>
                     <ListItemText 
-                      primary="No recent orders available"
+                      primary="No top items available"
                       secondary="Select a company and location to view top items"
                       primaryTypographyProps={{ fontWeight: 500, color: 'text.secondary' }}
                     />
@@ -1715,18 +1767,18 @@ const OrderIQDashboard = () => {
                           <Button 
                             variant="outlined" 
                             fullWidth 
-                            size="large"
+                            size="medium"
                             onClick={handleCancelOrderUpdate}
-                            sx={{ fontWeight: 600, py: 1.5 }}
+                            sx={{ fontWeight: 600, py: 1 }}
                           >
                             Cancel Update
                           </Button>
                           <Button 
                             variant="contained" 
                             fullWidth 
-                            size="large"
-                            startIcon={loading ? <CircularProgress size={20} /> : <ReceiptIcon />}
-                            sx={{ fontWeight: 600, py: 1.5 }}
+                            size="medium"
+                            startIcon={loading ? <CircularProgress size={16} /> : <ReceiptIcon />}
+                            sx={{ fontWeight: 600, py: 1 }}
                             onClick={handleSubmitOrderUpdate}
                             disabled={loading || currentOrder.length === 0}
                             color="secondary"
@@ -1738,9 +1790,9 @@ const OrderIQDashboard = () => {
                         <Button 
                           variant="contained" 
                           fullWidth 
-                          size="large"
-                          startIcon={loading ? <CircularProgress size={20} /> : <ReceiptIcon />}
-                          sx={{ fontWeight: 600, py: 1.5 }}
+                          size="medium"
+                          startIcon={loading ? <CircularProgress size={16} /> : <ReceiptIcon />}
+                          sx={{ fontWeight: 600, py: 1 }}
                           onClick={handleSubmitOrder}
                           disabled={loading || !selectedCompanyId || !selectedLocationId || currentOrder.length === 0}
                         >
@@ -1761,14 +1813,6 @@ const OrderIQDashboard = () => {
           </Box>
         </Grid>
       </Grid>
-
-      {/* Update Order Dialog */}
-      <UpdateOrderDialog
-        open={updateOrderDialog.open}
-        onClose={() => setUpdateOrderDialog({ open: false, order: null })}
-        order={updateOrderDialog.order}
-        onConfirm={() => setUpdateOrderDialog({ open: false, order: null })}
-      />
 
       {/* Quantity Selection Dialog */}
       <QuantityDialog

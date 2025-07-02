@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -21,7 +21,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  IconButton
+  IconButton,
+  CircularProgress
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
@@ -33,6 +34,18 @@ import ClearIcon from '@mui/icons-material/Clear';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import AnalyticsComponenet from '../components/AnalyticsComponenet';
 import DateRangeSelector from '../components/DateRangeSelector';
+
+// Import API base URL from constants
+import { API_URL_Local } from "../constants";
+
+// Import Redux hooks and actions
+import { useAppDispatch, useAppSelector } from '../typedHooks';
+import { 
+  selectSelectedCompanies,
+  selectSelectedLocations,
+  setSelectedCompanies,
+  setSelectedLocations
+} from '../store/slices/masterFileSlice';
 
 // DateRangeSelector Button Component
 const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
@@ -68,7 +81,6 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
 
   return (
     <>
-    
       <Button
         variant="outlined"
         startIcon={<CalendarTodayIcon />}
@@ -181,7 +193,7 @@ const ContentCard = styled(Card)(({ theme }) => ({
   minHeight: 500,
   background: theme.palette.background.paper,
   boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.08)}`,
-  overflow: 'hidden'
+  overflow: 'visible' // Changed from 'hidden' to 'visible'
 }));
 
 const ActiveFilterChip = styled(Chip)(({ theme }) => ({
@@ -198,38 +210,218 @@ const ActiveFilterChip = styled(Chip)(({ theme }) => ({
 
 const AnalyticsDashboard = () => {
   const theme = useTheme();
-  const [selectedLocations, setSelectedLocations] = useState([]);
-  const [selectedCompanies, setSelectedCompanies] = useState([]);
+  const dispatch = useAppDispatch();
+  
+  // Get Redux state
+  const reduxSelectedCompanies = useAppSelector(selectSelectedCompanies);
+  const reduxSelectedLocations = useAppSelector(selectSelectedLocations);
+  
+  // State for API data
+  const [companyLocationData, setCompanyLocationData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Filter states (for UI selections, not applied yet)
+  const [selectedCompanies, setSelectedCompaniesLocal] = useState([]);
+  const [selectedLocations, setSelectedLocationsLocal] = useState([]);
   const [selectedDateRange, setSelectedDateRange] = useState(null);
 
-  // Sample data - replace with your actual data
-  const availableLocations = ['Midtown East', 'Lenox Hill', 'Upper West Side', 'Downtown', 'Brooklyn Heights'];
-  const availableCompanies = ['TechCorp', 'BuildCorp', 'ZTech', 'InnovateCo', 'GlobalTech'];
+  // State for applied filters (what gets sent to AnalyticsComponent)
+  const [appliedFilters, setAppliedFilters] = useState({
+    companies: [],
+    locations: [],
+    dateRange: null
+  });
 
+  // Fetch company-location data from API
+  const fetchCompanyLocationData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Use the correct endpoint for company-locations
+      const response = await fetch(`${API_URL_Local}/company-locations/all`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          // Add any authentication headers if needed
+          // 'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setCompanyLocationData(data);
+    } catch (err) {
+      console.error('Error fetching company-location data:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load initial data and set from Redux on component mount
+  useEffect(() => {
+    fetchCompanyLocationData();
+  }, []);
+
+  // Initialize local state from Redux when component mounts or Redux state changes
+  useEffect(() => {
+    if (reduxSelectedCompanies.length > 0) {
+      console.log('Setting initial companies from Redux:', reduxSelectedCompanies);
+      setSelectedCompaniesLocal(reduxSelectedCompanies.map(id => parseInt(id)));
+    }
+  }, [reduxSelectedCompanies]);
+
+  useEffect(() => {
+    if (reduxSelectedLocations.length > 0) {
+      console.log('Setting initial locations from Redux:', reduxSelectedLocations);
+      setSelectedLocationsLocal(reduxSelectedLocations.map(id => parseInt(id)));
+    }
+  }, [reduxSelectedLocations]);
+
+  // Auto-apply filters when component loads with Redux data
+  useEffect(() => {
+    if (reduxSelectedCompanies.length > 0 && reduxSelectedLocations.length > 0 && companyLocationData.length > 0) {
+      console.log('Auto-applying filters from Redux state');
+      setAppliedFilters({
+        companies: reduxSelectedCompanies.map(id => parseInt(id)),
+        locations: reduxSelectedLocations.map(id => parseInt(id)),
+        dateRange: null
+      });
+    }
+  }, [reduxSelectedCompanies, reduxSelectedLocations, companyLocationData]);
+
+  // Get available companies
+  const availableCompanies = companyLocationData.map(item => ({
+    id: item.company_id,
+    name: item.company_name
+  }));
+
+  // Get available locations based on selected companies
+  const getAvailableLocations = () => {
+    // Only show locations if companies are selected
+    if (selectedCompanies.length === 0) {
+      return [];
+    } else {
+      // Show only locations for selected companies
+      const locations = companyLocationData
+        .filter(company => selectedCompanies.includes(company.company_id))
+        .reduce((acc, company) => {
+          return acc.concat(company.locations.map(location => ({
+            id: location.location_id,
+            name: location.location_name,
+            companyId: company.company_id,
+            companyName: company.company_name
+          })));
+        }, []);
+      
+      console.log('Available locations:', locations);
+      return locations;
+    }
+  };
+
+  const availableLocations = getAvailableLocations();
+
+  // Clear all filters
   const clearAllFilters = () => {
-    setSelectedLocations([]);
-    setSelectedCompanies([]);
+    setSelectedCompaniesLocal([]);
+    setSelectedLocationsLocal([]);
+    setSelectedDateRange(null);
+    
+    // Update Redux
+    dispatch(setSelectedCompanies([]));
+    dispatch(setSelectedLocations([]));
   };
 
-  const handleLocationChange = (event) => {
-    const value = event.target.value;
-    setSelectedLocations(typeof value === 'string' ? value.split(',') : value);
-  };
-
+  // Handle company selection
   const handleCompanyChange = (event) => {
     const value = event.target.value;
-    setSelectedCompanies(typeof value === 'string' ? value.split(',') : value);
+    const newSelectedCompanies = typeof value === 'string' ? value.split(',') : value;
+    
+    setSelectedCompaniesLocal(newSelectedCompanies);
+    
+    // Clear locations that don't belong to selected companies
+    if (newSelectedCompanies.length > 0) {
+      const validLocationIds = companyLocationData
+        .filter(company => newSelectedCompanies.includes(company.company_id))
+        .reduce((acc, company) => {
+          return acc.concat(company.locations.map(location => location.location_id));
+        }, []);
+      
+      setSelectedLocationsLocal(prev => prev.filter(locationId => validLocationIds.includes(locationId)));
+    }
   };
 
+  // Handle location selection
+  const handleLocationChange = (event) => {
+    const value = event.target.value;
+    console.log('Location selection event:', { value, type: typeof value });
+    
+    const newSelectedLocations = typeof value === 'string' ? value.split(',') : value;
+    console.log('New selected locations:', newSelectedLocations);
+    
+    setSelectedLocationsLocal(newSelectedLocations);
+  };
+
+  // Handle date range selection
   const handleDateRangeSelect = (range) => {
     setSelectedDateRange(range);
     console.log('Selected date range:', range);
   };
 
+  // Handle refresh
   const handleRefresh = () => {
-    console.log('Refreshing data...');
-    // Add your refresh logic here
+    fetchCompanyLocationData();
   };
+
+  // Get company name by ID
+  const getCompanyNameById = (companyId) => {
+    const company = companyLocationData.find(c => c.company_id === companyId);
+    return company ? company.company_name : '';
+  };
+
+  // Get location name by ID
+  const getLocationNameById = (locationId) => {
+    for (const company of companyLocationData) {
+      const location = company.locations.find(l => l.location_id === locationId);
+      if (location) return location.location_name;
+    }
+    return '';
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: 'linear-gradient(180deg, #fafafa 0%, #ffffff 100%)'
+      }}>
+        <CircularProgress size={50} />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: 'linear-gradient(180deg, #fafafa 0%, #ffffff 100%)'
+      }}>
+        <Typography color="error" variant="h6">
+          Error loading data: {error}
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ minHeight: '100vh', background: 'linear-gradient(180deg, #fafafa 0%, #ffffff 100%)' }}>
@@ -240,6 +432,7 @@ const AnalyticsDashboard = () => {
             variant="outlined"
             startIcon={<RefreshIcon />}
             onClick={handleRefresh}
+            disabled={loading}
             sx={{
               textTransform: 'none',
               borderRadius: 1,
@@ -262,246 +455,302 @@ const AnalyticsDashboard = () => {
       {/* Filters Section */}
       <Container maxWidth="xl">
         <StyledCard sx={{ p: 4, overflow: 'visible' }}>
-            {/* Filter Header */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-              <FilterListIcon sx={{ color: theme.palette.primary.main }} />
-              <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                Filters
-              </Typography>
-            </Box>
+          {/* Filter Header */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+            <FilterListIcon sx={{ color: theme.palette.primary.main }} />
+            <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+              Filters
+            </Typography>
+          </Box>
 
-            {/* Filter Controls */}
-            <Grid container spacing={3} sx={{ mb: 4, overflow: 'visible' }}>
-              {/* Location Filter */}
-              <Grid item xs={12} lg={6}>
-                <FormControl fullWidth>
-                  <InputLabel id="location-select-label">Location</InputLabel>
-                  <Select
-                    labelId="location-select-label"
-                    multiple
-                    value={selectedLocations}
-                    onChange={handleLocationChange}
-                    input={<OutlinedInput label="Location" />}
-                    renderValue={(selected) => 
-                      selected.length === 0 
-                        ? 'All locations initially selected'
-                        : `${selected.length} location(s) selected`
+          {/* Filter Controls */}
+          <Grid container spacing={3} sx={{ mb: 4, overflow: 'visible' }}>
+            {/* Company Filter */}
+            <Grid item xs={12} lg={6}>
+              <FormControl fullWidth>
+                <InputLabel id="company-select-label">Companies</InputLabel>
+                <Select
+                  labelId="company-select-label"
+                  multiple
+                  value={selectedCompanies}
+                  onChange={handleCompanyChange}
+                  input={<OutlinedInput label="Companies" />}
+                  renderValue={(selected) => 
+                    selected.length === 0 
+                      ? 'All companies initially selected'
+                      : `${selected.length} company(s) selected`
+                  }
+                  MenuProps={{
+                    PaperProps: {
+                      style: {
+                        maxHeight: 300,
+                        backgroundColor: '#ffffff',
+                        border: '2px solid #1976d2',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                      },
+                    },
+                    anchorOrigin: {
+                      vertical: 'bottom',
+                      horizontal: 'left',
+                    },
+                    transformOrigin: {
+                      vertical: 'top',
+                      horizontal: 'left',
+                    },
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      '&:hover fieldset': {
+                        borderColor: selectedCompanies.length === 0 ? '#d1d5db' : theme.palette.primary.main
+                      },
+                      '&.Mui-disabled': {
+                        backgroundColor: '#f9fafb'
+                      }
                     }
-                    MenuProps={{
-                      PaperProps: {
-                        style: {
-                          maxHeight: 300,
-                          backgroundColor: '#ffffff',
-                          border: '2px solid #1976d2',
-                          boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
-                        },
-                      },
-                      anchorOrigin: {
-                        vertical: 'bottom',
-                        horizontal: 'left',
-                      },
-                      transformOrigin: {
-                        vertical: 'top',
-                        horizontal: 'left',
-                      },
-                    }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2,
-                        '&:hover fieldset': {
-                          borderColor: theme.palette.primary.main
-                        }
+                  }}
+                >
+                  <MenuItem
+                    value=""
+                    onClick={() => {
+                      if (selectedCompanies.length === availableCompanies.length) {
+                        setSelectedCompaniesLocal([]);
+                        setSelectedLocationsLocal([]);
+                      } else {
+                        setSelectedCompaniesLocal(availableCompanies.map(c => c.id));
                       }
                     }}
+                    sx={{ 
+                      backgroundColor: '#ffffff',
+                      '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.04) }
+                    }}
                   >
-                    <MenuItem
-                      value=""
-                      onClick={() => {
-                        if (selectedLocations.length === availableLocations.length) {
-                          setSelectedLocations([]);
-                        } else {
-                          setSelectedLocations(availableLocations);
-                        }
-                      }}
+                    <Checkbox
+                      checked={selectedCompanies.length === availableCompanies.length}
+                      indeterminate={selectedCompanies.length > 0 && selectedCompanies.length < availableCompanies.length}
+                    />
+                    <ListItemText primary="Select All" />
+                  </MenuItem>
+                  {availableCompanies.map((company) => (
+                    <MenuItem 
+                      key={company.id} 
+                      value={company.id}
                       sx={{ 
                         backgroundColor: '#ffffff',
                         '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.04) }
                       }}
                     >
-                      <Checkbox
-                        checked={selectedLocations.length === availableLocations.length}
-                        indeterminate={selectedLocations.length > 0 && selectedLocations.length < availableLocations.length}
-                      />
-                      <ListItemText primary="Select All" />
+                      <Checkbox checked={selectedCompanies.indexOf(company.id) > -1} />
+                      <ListItemText primary={company.name} />
                     </MenuItem>
-                    {availableLocations.map((location) => (
-                      <MenuItem 
-                        key={location} 
-                        value={location}
-                        sx={{ 
-                          backgroundColor: '#ffffff',
-                          '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.04) }
-                        }}
-                      >
-                        <Checkbox checked={selectedLocations.indexOf(location) > -1} />
-                        <ListItemText primary={location} />
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {/* Company Filter */}
-              <Grid item xs={12} lg={6}>
-                <FormControl fullWidth>
-                  <InputLabel id="company-select-label">Companies</InputLabel>
-                  <Select
-                    labelId="company-select-label"
-                    multiple
-                    value={selectedCompanies}
-                    onChange={handleCompanyChange}
-                    input={<OutlinedInput label="Companies" />}
-                    renderValue={(selected) => 
-                      selected.length === 0 
-                        ? 'All companies initially selected'
-                        : `${selected.length} company(s) selected`
-                    }
-                    MenuProps={{
-                      PaperProps: {
-                        style: {
-                          maxHeight: 300,
-                          backgroundColor: '#ffffff',
-                          border: '2px solid #1976d2',
-                          boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
-                        },
-                      },
-                      anchorOrigin: {
-                        vertical: 'bottom',
-                        horizontal: 'left',
-                      },
-                      transformOrigin: {
-                        vertical: 'top',
-                        horizontal: 'left',
-                      },
-                    }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2,
-                        '&:hover fieldset': {
-                          borderColor: theme.palette.primary.main
-                        }
-                      }
-                    }}
-                  >
-                    <MenuItem
-                      value=""
-                      onClick={() => {
-                        if (selectedCompanies.length === availableCompanies.length) {
-                          setSelectedCompanies([]);
-                        } else {
-                          setSelectedCompanies(availableCompanies);
-                        }
-                      }}
-                      sx={{ 
-                        backgroundColor: '#ffffff',
-                        '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.04) }
-                      }}
-                    >
-                      <Checkbox
-                        checked={selectedCompanies.length === availableCompanies.length}
-                        indeterminate={selectedCompanies.length > 0 && selectedCompanies.length < availableCompanies.length}
-                      />
-                      <ListItemText primary="Select All" />
-                    </MenuItem>
-                    {availableCompanies.map((company) => (
-                      <MenuItem 
-                        key={company} 
-                        value={company}
-                        sx={{ 
-                          backgroundColor: '#ffffff',
-                          '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.04) }
-                        }}
-                      >
-                        <Checkbox checked={selectedCompanies.indexOf(company) > -1} />
-                        <ListItemText primary={company} />
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
 
-            {/* Active Filters */}
-            {(selectedLocations.length > 0 || selectedCompanies.length > 0) && (
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: theme.palette.text.primary }}>
-                  Active Filters:
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {selectedLocations.map((location) => (
-                    <ActiveFilterChip
-                      key={location}
-                      label={`Location: ${location}`}
-                      onDelete={() => setSelectedLocations(prev => prev.filter(l => l !== location))}
-                      deleteIcon={<CloseIcon />}
-                    />
-                  ))}
-                  {selectedCompanies.map((company) => (
-                    <ActiveFilterChip
-                      key={company}
-                      label={`Company: ${company}`}
-                      onDelete={() => setSelectedCompanies(prev => prev.filter(c => c !== company))}
-                      deleteIcon={<CloseIcon />}
-                    />
-                  ))}
-                  {(selectedLocations.length > 0 || selectedCompanies.length > 0) && (
-                    <Button
-                      size="small"
-                      onClick={clearAllFilters}
-                      sx={{ ml: 1, textTransform: 'none' }}
-                    >
-                      Clear All
-                    </Button>
+            {/* Location Filter */}
+            <Grid item xs={12} lg={6}>
+              <FormControl fullWidth>
+                <InputLabel id="location-select-label">Locations</InputLabel>
+                <Select
+                  labelId="location-select-label"
+                  multiple
+                  value={selectedLocations}
+                  onChange={handleLocationChange}
+                  input={<OutlinedInput label="Locations" />}
+                  disabled={selectedCompanies.length === 0}
+                  renderValue={(selected) => 
+                    selectedCompanies.length === 0
+                      ? 'Please select a company first'
+                      : selected.length === 0 
+                      ? 'Select locations'
+                      : `${selected.length} location(s) selected`
+                  }
+                  MenuProps={{
+                    PaperProps: {
+                      style: {
+                        maxHeight: 300,
+                        backgroundColor: '#ffffff',
+                        border: '2px solid #1976d2',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                      },
+                    },
+                    anchorOrigin: {
+                      vertical: 'bottom',
+                      horizontal: 'left',
+                    },
+                    transformOrigin: {
+                      vertical: 'top',
+                      horizontal: 'left',
+                    },
+                  }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      '&:hover fieldset': {
+                        borderColor: theme.palette.primary.main
+                      }
+                    }
+                  }}
+                >
+                  {selectedCompanies.length > 0 && availableLocations.length > 0 && (
+                    <>
+                      <MenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (selectedLocations.length === availableLocations.length) {
+                            setSelectedLocationsLocal([]);
+                          } else {
+                            setSelectedLocationsLocal(availableLocations.map(l => l.id));
+                          }
+                        }}
+                        sx={{ 
+                          backgroundColor: '#ffffff',
+                          '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.04) }
+                        }}
+                      >
+                        <Checkbox
+                          checked={availableLocations.length > 0 && selectedLocations.length === availableLocations.length}
+                          indeterminate={selectedLocations.length > 0 && selectedLocations.length < availableLocations.length}
+                        />
+                        <ListItemText primary="Select All" />
+                      </MenuItem>
+                      {availableLocations.map((location) => (
+                        <MenuItem 
+                          key={location.id} 
+                          value={location.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const currentIndex = selectedLocations.indexOf(location.id);
+                            const newSelectedLocations = [...selectedLocations];
+                            
+                            if (currentIndex === -1) {
+                              newSelectedLocations.push(location.id);
+                            } else {
+                              newSelectedLocations.splice(currentIndex, 1);
+                            }
+                            
+                            console.log('Individual location clicked:', location.id, 'New selection:', newSelectedLocations);
+                            setSelectedLocationsLocal(newSelectedLocations);
+                          }}
+                          sx={{ 
+                            backgroundColor: '#ffffff',
+                            '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.04) }
+                          }}
+                        >
+                          <Checkbox checked={selectedLocations.includes(location.id)} />
+                          <ListItemText 
+                            primary={location.name}
+                            secondary={location.companyName}
+                          />
+                        </MenuItem>
+                      ))}
+                    </>
                   )}
-                </Box>
+                  {selectedCompanies.length === 0 && (
+                    <MenuItem disabled>
+                      <ListItemText primary="Please select a company first" />
+                    </MenuItem>
+                  )}
+                  {selectedCompanies.length > 0 && availableLocations.length === 0 && (
+                    <MenuItem disabled>
+                      <ListItemText primary="No locations available for selected company" />
+                    </MenuItem>
+                  )}
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+
+          {/* Active Filters */}
+          {(selectedCompanies.length > 0 || selectedLocations.length > 0) && (
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: theme.palette.text.primary }}>
+                Active Filters:
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {selectedCompanies.map((companyId) => (
+                  <ActiveFilterChip
+                    key={companyId}
+                    label={`Company: ${getCompanyNameById(companyId)}`}
+                    onDelete={() => {
+                      const newCompanies = selectedCompanies.filter(id => id !== companyId);
+                      setSelectedCompaniesLocal(newCompanies);
+                      
+                      // Remove locations that belong to this company
+                      const companyLocations = companyLocationData
+                        .find(c => c.company_id === companyId)?.locations || [];
+                      const locationIdsToRemove = companyLocations.map(l => l.location_id);
+                      setSelectedLocationsLocal(prev => prev.filter(id => !locationIdsToRemove.includes(id)));
+                    }}
+                    deleteIcon={<CloseIcon />}
+                  />
+                ))}
+                {selectedLocations.map((locationId) => (
+                  <ActiveFilterChip
+                    key={locationId}
+                    label={`Location: ${getLocationNameById(locationId)}`}
+                    onDelete={() => setSelectedLocationsLocal(prev => prev.filter(id => id !== locationId))}
+                    deleteIcon={<CloseIcon />}
+                  />
+                ))}
+                {(selectedCompanies.length > 0 || selectedLocations.length > 0) && (
+                  <Button
+                    size="small"
+                    onClick={clearAllFilters}
+                    sx={{ ml: 1, textTransform: 'none' }}
+                  >
+                    Clear All
+                  </Button>
+                )}
               </Box>
-            )}
+            </Box>
+          )}
 
-            {/* Apply Filters Button */}
-            <Button 
-              variant="contained" 
-              size="large"
-              sx={{ 
-                px: 4, 
-                py: 1.5, 
-                borderRadius: 2,
-                textTransform: 'uppercase',
-                fontWeight: 600,
-                boxShadow: `0 4px 16px ${alpha(theme.palette.primary.main, 0.3)}`,
-                '&:hover': {
-                  boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`
-                }
-              }}
-              onClick={() => {
-                console.log('Applying filters:', {
-                  dateRange: selectedDateRange,
-                  locations: selectedLocations,
-                  companies: selectedCompanies
-                });
-              }}
-            >
-              Apply Filters
-            </Button>
-          </StyledCard>
-        </Container>
+          {/* Apply Filters Button */}
+          <Button 
+            variant="contained" 
+            size="large"
+            sx={{ 
+              px: 4, 
+              py: 1.5, 
+              borderRadius: 2,
+              textTransform: 'uppercase',
+              fontWeight: 600,
+              boxShadow: `0 4px 16px ${alpha(theme.palette.primary.main, 0.3)}`,
+              '&:hover': {
+                boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`
+              }
+            }}
+            onClick={() => {
+              console.log('Applying filters:', {
+                companies: selectedCompanies,
+                locations: selectedLocations,
+                dateRange: selectedDateRange
+              });
+              
+              // Update Redux with current selections
+              dispatch(setSelectedCompanies(selectedCompanies.map(id => id.toString())));
+              dispatch(setSelectedLocations(selectedLocations.map(id => id.toString())));
+              
+              // Apply the filters - this will trigger the analytics data fetch
+              setAppliedFilters({
+                companies: selectedCompanies,
+                locations: selectedLocations,
+                dateRange: selectedDateRange
+              });
+            }}
+          >
+            Apply Filters
+          </Button>
+        </StyledCard>
+      </Container>
 
-        {/* Analytics Content */}
-        <Container maxWidth="xl">
+      {/* Analytics Content */}
+      <Container maxWidth="xl">
         <ContentCard>
           <AnalyticsComponenet 
-            selectedLocations={selectedLocations}
-            selectedCompanies={selectedCompanies}
-            selectedDateRange={selectedDateRange}
+            appliedFilters={appliedFilters}
           />
         </ContentCard>
       </Container>

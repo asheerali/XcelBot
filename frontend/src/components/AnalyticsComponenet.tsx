@@ -1,387 +1,464 @@
-import React, { useState } from 'react';
-import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import Typography from '@mui/material/Typography';
-import Grid from '@mui/material/Grid';
-import Container from '@mui/material/Container';
-import { styled, alpha } from '@mui/material/styles';
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Grid,
+  useTheme,
+  alpha,
+  CircularProgress,
+  Alert
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, ComposedChart, ReferenceLine } from 'recharts';
+
+// Icons
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import PeopleIcon from '@mui/icons-material/People';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart, Bar } from 'recharts';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
 
-// Enhanced mock data
-const mockDailyOrdersData = [
-  { date: 'Jan 4', orders: 320, movingAvg: 310 },
-  { date: 'Jan 7', orders: 380, movingAvg: 315 },
-  { date: 'Jan 11', orders: 290, movingAvg: 320 },
-  { date: 'Jan 16', orders: 420, movingAvg: 325 },
-  { date: 'Jan 21', orders: 450, movingAvg: 340 },
-  { date: 'Jan 25', orders: 380, movingAvg: 345 },
-  { date: 'Feb 1', orders: 360, movingAvg: 350 },
-  { date: 'Feb 5', orders: 400, movingAvg: 355 },
-  { date: 'Feb 11', orders: 430, movingAvg: 365 },
-  { date: 'Feb 16', orders: 390, movingAvg: 370 },
-  { date: 'Feb 21', orders: 410, movingAvg: 375 },
-  { date: 'Mar 1', orders: 340, movingAvg: 370 },
-  { date: 'Mar 11', orders: 370, movingAvg: 365 },
-  { date: 'Mar 21', orders: 390, movingAvg: 360 },
-  { date: 'Apr 1', orders: 420, movingAvg: 365 },
-  { date: 'Apr 11', orders: 450, movingAvg: 375 },
-  { date: 'Apr 21', orders: 380, movingAvg: 380 },
-  { date: 'May 1', orders: 410, movingAvg: 385 },
-  { date: 'May 14', orders: 440, movingAvg: 390 },
-  { date: 'May 21', orders: 360, movingAvg: 385 },
-  { date: 'Jun 1', orders: 390, movingAvg: 380 },
-  { date: 'Jun 11', orders: 320, movingAvg: 375 }
-];
+// Import API base URL
+import { API_URL_Local } from "../constants";
 
-const mockAvgOrderData = [
-  { date: 'Jan 4', avgOrder: 45, movingAvg: 48 },
-  { date: 'Jan 7', avgOrder: 52, movingAvg: 49 },
-  { date: 'Jan 11', avgOrder: 38, movingAvg: 47 },
-  { date: 'Jan 16', avgOrder: 65, movingAvg: 50 },
-  { date: 'Jan 21', avgOrder: 71, movingAvg: 54 },
-  { date: 'Jan 25', avgOrder: 55, movingAvg: 55 },
-  { date: 'Feb 1', avgOrder: 48, movingAvg: 56 },
-  { date: 'Feb 5', avgOrder: 62, movingAvg: 57 },
-  { date: 'Feb 11', avgOrder: 58, movingAvg: 58 },
-  { date: 'Feb 16', avgOrder: 43, movingAvg: 56 },
-  { date: 'Feb 21', avgOrder: 69, movingAvg: 58 },
-  { date: 'Mar 1', avgOrder: 51, movingAvg: 57 },
-  { date: 'Mar 11', avgOrder: 44, movingAvg: 55 },
-  { date: 'Mar 21', avgOrder: 66, movingAvg: 57 },
-  { date: 'Apr 1', avgOrder: 59, movingAvg: 58 },
-  { date: 'Apr 11', avgOrder: 47, movingAvg: 57 },
-  { date: 'Apr 21', avgOrder: 63, movingAvg: 58 },
-  { date: 'May 1', avgOrder: 72, movingAvg: 61 },
-  { date: 'May 14', avgOrder: 54, movingAvg: 60 },
-  { date: 'May 21', avgOrder: 41, movingAvg: 58 },
-  { date: 'Jun 1', avgOrder: 67, movingAvg: 59 },
-  { date: 'Jun 11', avgOrder: 49, movingAvg: 58 }
-];
-
-const mockDailySalesData = [
-  { date: 'Jan 7', sales: 7800, movingAvg: 7200 },
-  { date: 'Jan 16', sales: 6800, movingAvg: 7000 },
-  { date: 'Jan 25', sales: 8200, movingAvg: 7100 },
-  { date: 'Feb 4', sales: 7600, movingAvg: 7200 },
-  { date: 'Feb 12', sales: 8800, movingAvg: 7400 },
-  { date: 'Feb 21', sales: 11200, movingAvg: 7800 },
-  { date: 'Mar 3', sales: 8400, movingAvg: 8000 },
-  { date: 'Mar 12', sales: 7200, movingAvg: 7900 },
-  { date: 'Mar 22', sales: 9200, movingAvg: 8100 },
-  { date: 'Apr 1', sales: 8600, movingAvg: 8200 },
-  { date: 'Apr 10', sales: 6800, movingAvg: 8000 },
-  { date: 'Apr 19', sales: 10800, movingAvg: 8300 },
-  { date: 'Apr 30', sales: 9600, movingAvg: 8500 },
-  { date: 'May 10', sales: 10400, movingAvg: 8700 },
-  { date: 'May 19', sales: 8800, movingAvg: 8600 },
-  { date: 'May 30', sales: 7400, movingAvg: 8400 },
-  { date: 'Jun 11', sales: 8200, movingAvg: 8300 }
-];
-
-const MetricCard = styled(Card)(({ theme }) => ({
-  borderRadius: '16px',
-  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-  background: `linear-gradient(145deg, 
-    ${theme.palette.background.paper} 0%, 
-    ${alpha(theme.palette.primary.main, 0.02)} 100%)`,
-  backdropFilter: 'blur(10px)',
-  boxShadow: `0 4px 16px ${alpha(theme.palette.primary.main, 0.08)}`,
+// Styled Components
+const StatsCard = styled(Card)(({ theme }) => ({
+  borderRadius: 16,
   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+  background: `linear-gradient(145deg, ${theme.palette.background.paper} 0%, ${alpha(theme.palette.background.paper, 0.8)} 100%)`,
+  boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.08)}`,
   '&:hover': {
-    transform: 'translateY(-6px)',
-    boxShadow: `0 12px 32px ${alpha(theme.palette.primary.main, 0.15)}`
+    transform: 'translateY(-2px)',
+    boxShadow: `0 16px 48px ${alpha(theme.palette.common.black, 0.12)}`
   }
 }));
 
-const WhiteChartCard = styled(Card)(({ theme }) => ({
-  borderRadius: '20px',
-  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+const ChartCard = styled(Card)(({ theme }) => ({
+  borderRadius: 16,
   background: theme.palette.background.paper,
-  backdropFilter: 'blur(10px)',
-  boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.1)}`,
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  '&:hover': {
-    transform: 'translateY(-4px)',
-    boxShadow: `0 16px 48px ${alpha(theme.palette.primary.main, 0.15)}`
-  }
+  boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.08)}`,
+  overflow: 'hidden',
+  height: '400px'
 }));
 
-// Metric Card Component
-const MetricCardComponent = ({ title, value, change, changeType, icon: Icon, color = 'primary' }) => {
-  const isPositive = changeType === 'positive';
-  
-  return (
-    <MetricCard>
-      <CardContent sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-          <Typography variant="h6" color="text.secondary" sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
-            {title}
-          </Typography>
-          <Box sx={{ 
-            p: 1, 
-            borderRadius: '50%', 
-            bgcolor: `${color}.50`, 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center' 
-          }}>
-            <Icon sx={{ fontSize: 20, color: `${color}.main` }} />
-          </Box>
-        </Box>
-        
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>
-          {value}
+const StatsContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: theme.spacing(3)
+}));
+
+const StatsContent = styled(Box)(() => ({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8
+}));
+
+const StatsIcon = styled(Box)(({ theme, color }) => ({
+  width: 60,
+  height: 60,
+  borderRadius: '50%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: `linear-gradient(135deg, ${color} 0%, ${alpha(color, 0.8)} 100%)`,
+  color: theme.palette.common.white,
+  boxShadow: `0 8px 16px ${alpha(color, 0.3)}`
+}));
+
+// Format currency
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(value);
+};
+
+// Format number with commas
+const formatNumber = (value) => {
+  return new Intl.NumberFormat('en-US').format(value);
+};
+
+// Custom Tooltip for Charts
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <Box
+        sx={{
+          backgroundColor: 'white',
+          border: '1px solid #ccc',
+          borderRadius: 1,
+          padding: 2,
+          boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+        }}
+      >
+        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+          {label}
         </Typography>
-        
-        {change && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            {isPositive ? (
-              <TrendingUpIcon sx={{ fontSize: 16, color: 'success.main' }} />
-            ) : (
-              <TrendingDownIcon sx={{ fontSize: 16, color: 'error.main' }} />
-            )}
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                color: isPositive ? 'success.main' : 'error.main',
-                fontWeight: 600 
-              }}
-            >
-              {change}% vs last period
-            </Typography>
-          </Box>
-        )}
-      </CardContent>
-    </MetricCard>
+        {payload.map((entry, index) => (
+          <Typography
+            key={index}
+            variant="body2"
+            sx={{ color: entry.color }}
+          >
+            {entry.name}: {typeof entry.value === 'number' && entry.name.toLowerCase().includes('sales') 
+              ? formatCurrency(entry.value) 
+              : formatNumber(entry.value)}
+          </Typography>
+        ))}
+      </Box>
+    );
+  }
+  return null;
+};
+
+const AnalyticsComponenet = ({ appliedFilters = { companies: [], locations: [], dateRange: null } }) => {
+  const theme = useTheme();
+  
+  // State for analytics data
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Extract applied filter values
+  const { companies: appliedCompanies, locations: appliedLocations, dateRange: appliedDateRange } = appliedFilters;
+
+  // Debug logging
+  console.log('AnalyticsComponenet appliedFilters:', appliedFilters);
+
+  // Fetch analytics data from API
+  const fetchAnalyticsData = async () => {
+    // Only fetch if we have both company and location applied
+    if (!appliedCompanies || !appliedLocations || appliedCompanies.length === 0 || appliedLocations.length === 0) {
+      console.log('Not fetching - no applied filters');
+      setAnalyticsData(null);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Use the first applied company and location
+      const companyId = appliedCompanies[0];
+      const locationId = appliedLocations[0];
+
+      console.log(`Fetching analytics data for company ${companyId}, location ${locationId}`);
+
+      const response = await fetch(
+        `${API_URL_Local}/api/storeorders/analyticsdashboard/${companyId}/${locationId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.data) {
+        setAnalyticsData(result.data);
+        console.log('Analytics data fetched successfully:', result.data);
+      } else {
+        throw new Error('No data received from API');
+      }
+    } catch (err) {
+      console.error('Error fetching analytics data:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch data when applied filters change
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, [appliedFilters]);
+
+  // Loading state
+  if (loading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: 400,
+        flexDirection: 'column',
+        gap: 2,
+        p: 4
+      }}>
+        <CircularProgress size={50} />
+        <Typography variant="body1">Loading analytics data...</Typography>
+      </Box>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">
+          Error loading analytics data: {error}
+        </Alert>
+      </Box>
+    );
+  }
+
+  // No applied filters state
+  if (!appliedCompanies || !appliedLocations || appliedCompanies.length === 0 || appliedLocations.length === 0) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: 400,
+        flexDirection: 'column',
+        gap: 2,
+        p: 4
+      }}>
+        <AnalyticsIcon sx={{ fontSize: 60, color: 'text.secondary' }} />
+        <Typography variant="h6" color="text.secondary" align="center">
+          Select company and location, then click "Apply Filters" to view analytics
+        </Typography>
+        <Typography variant="body2" color="text.secondary" align="center">
+          Use the filters above to choose a company and location, then click the Apply Filters button
+        </Typography>
+      </Box>
+    );
+  }
+
+  // No data state
+  if (!analyticsData) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: 400,
+        flexDirection: 'column',
+        gap: 2,
+        p: 4
+      }}>
+        <AnalyticsIcon sx={{ fontSize: 60, color: 'text.secondary' }} />
+        <Typography variant="h6" color="text.secondary" align="center">
+          No analytics data available for the selected filters
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ p: 3 }}>
+      {/* Header */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
+          Analytics Dashboard
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          {analyticsData.company_name} - {analyticsData.location_name}
+        </Typography>
+      </Box>
+
+      {/* Stats Cards - Only 3 cards, removed Total Guests */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {/* Total Sales */}
+        <Grid item xs={12} sm={6} md={4}>
+          <StatsCard>
+            <StatsContainer>
+              <StatsContent>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  Total Sales
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.success.main }}>
+                  {formatCurrency(analyticsData.total_sales)}
+                </Typography>
+              </StatsContent>
+              <StatsIcon color={theme.palette.success.main}>
+                <AttachMoneyIcon sx={{ fontSize: 28 }} />
+              </StatsIcon>
+            </StatsContainer>
+          </StatsCard>
+        </Grid>
+
+        {/* Total Orders */}
+        <Grid item xs={12} sm={6} md={4}>
+          <StatsCard>
+            <StatsContainer>
+              <StatsContent>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  Total Orders
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.info.main }}>
+                  {formatNumber(analyticsData.total_orders)}
+                </Typography>
+              </StatsContent>
+              <StatsIcon color={theme.palette.info.main}>
+                <ShoppingCartIcon sx={{ fontSize: 28 }} />
+              </StatsIcon>
+            </StatsContainer>
+          </StatsCard>
+        </Grid>
+
+        {/* Average Order Value */}
+        <Grid item xs={12} sm={6} md={4}>
+          <StatsCard>
+            <StatsContainer>
+              <StatsContent>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  Avg Order Value
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.warning.main }}>
+                  {formatCurrency(analyticsData.avg_order_value)}
+                </Typography>
+              </StatsContent>
+              <StatsIcon color={theme.palette.warning.main}>
+                <TrendingUpIcon sx={{ fontSize: 28 }} />
+              </StatsIcon>
+            </StatsContainer>
+          </StatsCard>
+        </Grid>
+      </Grid>
+
+      {/* Charts */}
+      <Grid container spacing={3}>
+        {/* Daily Orders Chart */}
+        <Grid item xs={12} md={6}>
+          <ChartCard>
+            <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                Daily Orders
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Daily order count with red moving average trend line
+              </Typography>
+              <Box sx={{ flexGrow: 1 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={analyticsData.daily_orders}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.divider, 0.3)} />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke={theme.palette.text.secondary}
+                      fontSize={11}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <YAxis stroke={theme.palette.text.secondary} fontSize={11} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar 
+                      dataKey="order_count" 
+                      fill="#7c4dff"
+                      name="Order Count"
+                      radius={[2, 2, 0, 0]}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="moving_avg" 
+                      stroke="#f44336"
+                      strokeWidth={2}
+                      dot={false}
+                      name="Moving Average"
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </Box>
+            </CardContent>
+          </ChartCard>
+        </Grid>
+
+        {/* Average Order Value Chart */}
+        <Grid item xs={12} md={6}>
+          <ChartCard>
+            <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                Average Order Value
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Line bar chart with red moving average trend line
+              </Typography>
+              <Box sx={{ flexGrow: 1 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={analyticsData.avg_order_value_table}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.divider, 0.3)} />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke={theme.palette.text.secondary}
+                      fontSize={11}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <YAxis stroke={theme.palette.text.secondary} fontSize={11} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar 
+                      dataKey="avg_order_value" 
+                      fill="#66bb6a"
+                      name="Avg Order Value"
+                      radius={[2, 2, 0, 0]}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="moving_avg" 
+                      stroke="#f44336"
+                      strokeWidth={2}
+                      dot={false}
+                      name="Moving Average"
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </Box>
+            </CardContent>
+          </ChartCard>
+        </Grid>
+
+        {/* Daily Sales Trend Chart */}
+        <Grid item xs={12}>
+          <ChartCard>
+            <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                Daily Sales Trends
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Daily sales with red moving average trend line
+              </Typography>
+              <Box sx={{ flexGrow: 1 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={analyticsData.daily_sales_trend}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={alpha(theme.palette.divider, 0.3)} />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke={theme.palette.text.secondary}
+                      fontSize={11}
+                      tick={{ fontSize: 11 }}
+                    />
+                    <YAxis stroke={theme.palette.text.secondary} fontSize={11} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar 
+                      dataKey="total_sales" 
+                      fill="#7c4dff"
+                      name="Total Sales"
+                      radius={[2, 2, 0, 0]}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="moving_avg" 
+                      stroke="#f44336"
+                      strokeWidth={2}
+                      dot={false}
+                      name="Moving Average"
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </Box>
+            </CardContent>
+          </ChartCard>
+        </Grid>
+      </Grid>
+    </Box>
   );
 };
 
-// Chart Card Component for white background charts
-const WhiteChartCardComponent = ({ title, subtitle, children, height = 300 }) => (
-  <WhiteChartCard>
-    <CardContent sx={{ p: 3 }}>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary', mb: 0.5 }}>
-          {title}
-        </Typography>
-        {subtitle && (
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            {subtitle}
-          </Typography>
-        )}
-      </Box>
-      <Box sx={{ height }}>
-        {children}
-      </Box>
-    </CardContent>
-  </WhiteChartCard>
-);
-
-// Main Analytics Dashboard Component
-export function AnalyticsComponent() {
-  return (
-    <Box sx={{ background: 'linear-gradient(180deg, #fafafa 0%, #ffffff 100%)', p: 2 }}>
-      <Container maxWidth="lg" sx={{ mb: 8 }}>
-        {/* Metrics Cards */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
-            <MetricCardComponent
-              title="Total Sales"
-              value="$968,878.9"
-              change={null}
-              changeType="positive"
-              icon={AttachMoneyIcon}
-              color="primary"
-            />
-          </Grid>
-          
-          <Grid item xs={12} sm={6} md={3}>
-            <MetricCardComponent
-              title="Total Orders"
-              value="47,088"
-              change={null}
-              changeType="positive"
-              icon={ShoppingCartIcon}
-              color="primary"
-            />
-          </Grid>
-          
-          <Grid item xs={12} sm={6} md={3}>
-            <MetricCardComponent
-              title="Avg Order Value"
-              value="$20.58"
-              change={null}
-              changeType="negative"
-              icon={BarChartIcon}
-              color="primary"
-            />
-          </Grid>
-          
-          <Grid item xs={12} sm={6} md={3}>
-            <MetricCardComponent
-              title="Total Guests"
-              value="47,088"
-              change={null}
-              changeType="positive"
-              icon={PeopleIcon}
-              color="primary"
-            />
-          </Grid>
-        </Grid>
-        
-        {/* Charts Row */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} md={6}>
-            <WhiteChartCardComponent
-              title="Daily Orders"
-              subtitle="Daily order count with red moving average trend line"
-              height={280}
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={mockDailyOrdersData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                  <XAxis 
-                    dataKey="date" 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#666', fontSize: 12 }}
-                  />
-                  <YAxis 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#666', fontSize: 12 }}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'white', 
-                      border: '1px solid #ddd', 
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                    }}
-                  />
-                  <Bar 
-                    dataKey="orders" 
-                    fill="#7B68EE"
-                    radius={[2, 2, 0, 0]}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="movingAvg" 
-                    stroke="#FF4444" 
-                    strokeWidth={3}
-                    dot={false}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </WhiteChartCardComponent>
-          </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <WhiteChartCardComponent
-              title="Average Order Value"
-              subtitle="Line bar chart with red moving average trend line"
-              height={280}
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={mockAvgOrderData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                  <XAxis 
-                    dataKey="date" 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#666', fontSize: 12 }}
-                  />
-                  <YAxis 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#666', fontSize: 12 }}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'white', 
-                      border: '1px solid #ddd', 
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                    }}
-                    formatter={(value, name) => [`$${value.toFixed(2)}`, name === 'avgOrder' ? 'Avg Order Value' : 'Moving Average']}
-                  />
-                  <Bar 
-                    dataKey="avgOrder" 
-                    fill="#90EE90"
-                    radius={[2, 2, 0, 0]}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="movingAvg" 
-                    stroke="#FF4444" 
-                    strokeWidth={3}
-                    dot={false}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </WhiteChartCardComponent>
-          </Grid>
-        </Grid>
-        
-        {/* Full Width Chart */}
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <WhiteChartCardComponent
-              title="Daily Sales Trends"
-              subtitle="Daily sales with red moving average trend line"
-              height={350}
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={mockDailySalesData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                  <XAxis 
-                    dataKey="date" 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#666', fontSize: 12 }}
-                  />
-                  <YAxis 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#666', fontSize: 12 }}
-                    tickFormatter={(value) => `${value/1000}k`}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'white', 
-                      border: '1px solid #ddd', 
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                    }}
-                    formatter={(value, name) => [`${value.toLocaleString()}`, name === 'sales' ? 'Sales' : 'Moving Average']}
-                  />
-                  <Bar 
-                    dataKey="sales" 
-                    fill="#7B68EE"
-                    radius={[2, 2, 0, 0]}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="movingAvg" 
-                    stroke="#FF4444" 
-                    strokeWidth={3}
-                    dot={false}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </WhiteChartCardComponent>
-          </Grid>
-        </Grid>
-      </Container>
-    </Box>
-  );
-}
-
-export default AnalyticsComponent;
+export default AnalyticsComponenet;
