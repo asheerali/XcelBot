@@ -54,7 +54,7 @@ import { API_URL_Local } from '../constants';
  * This component expects the following API endpoints to be available:
  * 1. GET /company-locations/all - Returns array of company-location objects
  * 2. GET /api/masterfile/availableitems/{company_id}/{location_id} - Returns available items
- * 3. POST /api/masterfile/orderitems - Accepts order submission
+ * 3. POST /api/storeorders/orderitems - Accepts order submission
  * 
  * Set API_URL_Local in constants.tsx to configure the API base URL.
  * If endpoints are not available, the component will show empty state.
@@ -614,7 +614,7 @@ const OrderIQDashboard = () => {
         } : null
       };
 
-      const url = `${API_URL_Local}/api/masterfile/orderitems`;
+      const url = `${API_URL_Local}/api/storeorders/orderitems`;
       console.log('Submitting order to:', url);
       console.log('Order data:', orderData);
 
@@ -1109,56 +1109,93 @@ const OrderIQDashboard = () => {
               )}
 
               {!loading && filteredItems.length > 0 && (
-                <List>
-                  {filteredItems.map((item, index) => (
-                    <React.Fragment key={item.id}>
-                      <ListItem sx={{ px: 0 }}>
-                        <ListItemText
-                          primary={
-                            <Box>
-                              <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                {item.name}
-                              </Typography>
-                              <Chip 
-                                label={item.category} 
-                                size="small" 
-                                variant="outlined" 
-                                sx={{ mt: 0.5 }}
-                              />
-                            </Box>
-                          }
-                          secondary={
-                            <Box sx={{ mt: 1 }}>
-                              <Typography variant="body2" color="text.secondary">
-                                ${item.price}/{item.unit}
-                              </Typography>
-                              {item.batchSize && (
-                                <Typography variant="caption" color="text.secondary">
-                                  Batch Size: {item.batchSize}
+                <Card 
+                  variant="outlined" 
+                  sx={{ 
+                    maxHeight: 600, 
+                    overflow: 'auto',
+                    borderRadius: 2,
+                    '&::-webkit-scrollbar': {
+                      width: '8px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      background: '#f1f1f1',
+                      borderRadius: '4px',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      background: '#c1c1c1',
+                      borderRadius: '4px',
+                      '&:hover': {
+                        background: '#a8a8a8',
+                      },
+                    },
+                  }}
+                >
+                  <List sx={{ pt: 0 }}>
+                    {filteredItems.map((item, index) => (
+                      <React.Fragment key={item.id}>
+                        <ListItem sx={{ px: 2, py: 1.5 }}>
+                          <ListItemText
+                            primary={
+                              <Box>
+                                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                  {item.name}
                                 </Typography>
-                              )}
-                              {item.previousPrice && (
-                                <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-                                  Previous: ${item.previousPrice}
+                                <Chip 
+                                  label={item.category} 
+                                  size="small" 
+                                  variant="outlined" 
+                                  sx={{ mt: 0.5 }}
+                                />
+                              </Box>
+                            }
+                            secondary={
+                              <Box sx={{ mt: 1 }}>
+                                <Typography variant="body2" color="text.secondary">
+                                  ${item.price}/{item.unit}
                                 </Typography>
-                              )}
-                            </Box>
-                          }
-                        />
-                        <Button
-                          variant="contained"
-                          size="small"
-                          startIcon={<AddIcon />}
-                          onClick={() => setQuantityDialog({ open: true, item })}
-                          sx={{ ml: 2 }}
-                        >
-                          Add
-                        </Button>
-                      </ListItem>
-                      {index < filteredItems.length - 1 && <Divider />}
-                    </React.Fragment>
-                  ))}
-                </List>
+                                {item.batchSize && (
+                                  <Typography variant="caption" color="text.secondary">
+                                    Batch Size: {item.batchSize}
+                                  </Typography>
+                                )}
+                                {item.previousPrice && (
+                                  <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                                    Previous: ${item.previousPrice}
+                                  </Typography>
+                                )}
+                              </Box>
+                            }
+                          />
+                          <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={<AddIcon />}
+                            onClick={() => setQuantityDialog({ open: true, item })}
+                            sx={{ ml: 2, minWidth: 80 }}
+                          >
+                            Add
+                          </Button>
+                        </ListItem>
+                        {index < filteredItems.length - 1 && <Divider />}
+                      </React.Fragment>
+                    ))}
+                  </List>
+                  
+                  {/* Scrollable items footer */}
+                  <Box sx={{ 
+                    p: 2, 
+                    borderTop: 1, 
+                    borderColor: 'divider', 
+                    backgroundColor: 'grey.50',
+                    textAlign: 'center'
+                  }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Showing {filteredItems.length} of {availableItems.length} items
+                      {searchTerm && ` (filtered by "${searchTerm}")`}
+                    </Typography>
+                  </Box>
+                </Card>
               )}
 
               {!loading && availableItems.length > 0 && filteredItems.length === 0 && searchTerm && (
