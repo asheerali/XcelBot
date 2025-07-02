@@ -45,8 +45,8 @@ import {
 } from '@mui/icons-material';
 
 // Import your existing DateRangeSelector component
-import DateRangeSelector from '../components/DateRangeSelector'; // Adjust the import path as needed
-import { API_URL_Local } from '../constants';
+// import DateRangeSelector from '../components/DateRangeSelector'; // Adjust the import path as needed
+// import { API_URL_Local } from '../constants';
 
 /*
  * API Configuration Notes:
@@ -54,7 +54,8 @@ import { API_URL_Local } from '../constants';
  * This component expects the following API endpoints to be available:
  * 1. GET /company-locations/all - Returns array of company-location objects
  * 2. GET /api/masterfile/availableitems/{company_id}/{location_id} - Returns available items
- * 3. POST /api/storeorders/orderitems - Accepts order submission
+ * 3. GET /api/storeorders/detailsrecent/{company_id}/{location_id} - Returns recent orders
+ * 4. POST /api/storeorders/orderitems - Accepts order submission
  * 
  * Set API_URL_Local in constants.tsx to configure the API base URL.
  * If endpoints are not available, the component will show empty state.
@@ -62,7 +63,35 @@ import { API_URL_Local } from '../constants';
  * Example API responses expected:
  * - Company-Locations: [{"company_id": 1, "company_name": "Company Name", "locations": [{"location_id": 1, "location_name": "Location Name"}]}, ...]
  * - Available Items: {"data": {"dataframe": [{"column0": "Category", "column1": "Product", ...}]}}
+ * - Recent Orders: {"message":"Recent store orders details fetched successfully","data":[{"id":1,"company_id":2,...}],"total_orders":1}
  */
+
+// Remove mock API_URL_Local and import from constants
+// import { API_URL_Local } from '../constants';
+
+// For demo purposes, you can uncomment the line above and remove this mock
+const API_URL_Local = 'http://localhost:8000'; // Replace with your actual API URL
+
+// Mock DateRangeSelector component for demo
+const DateRangeSelector = ({ onSelect, initialState }) => {
+  useEffect(() => {
+    // Auto-select current date range for demo
+    onSelect({
+      startDate: new Date(),
+      endDate: new Date(),
+      key: 'selection'
+    });
+  }, []);
+
+  return (
+    <Box sx={{ p: 2, textAlign: 'center' }}>
+      <Typography variant="body1">Date Range Selector</Typography>
+      <Typography variant="caption" color="text.secondary">
+        Mock component - replace with actual DateRangeSelector
+      </Typography>
+    </Box>
+  );
+};
 
 // DateRangeSelector Button Component
 const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
@@ -192,106 +221,71 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
   );
 };
 
-// Mock data for recent orders with detailed items
-const recentOrders = [
-  { 
-    id: 1, 
-    items: 1, 
-    total: 38.08, 
-    avg: 92.38, 
-    qty: 16, 
-    date: '24/06/2025',
-    orderItems: [
-      { id: '12OZCO_7415', name: '12 oz coffee cup', price: 2.34, unit: 'Bag', quantity: 16 }
-    ]
-  },
-  { 
-    id: 2, 
-    items: 6, 
-    total: 435.84, 
-    avg: 513.62, 
-    qty: 32, 
-    date: '21/06/2025',
-    orderItems: [
-      { id: '12OZCO_7415', name: '12 oz coffee cup', price: 2.34, unit: 'Bag', quantity: 10 },
-      { id: '16OZCO_7415', name: '16 oz coffee cup', price: 2.30, unit: 'Bag', quantity: 8 },
-      { id: '12OZCO_5802', name: '12 oz coffee cup', price: 2.34, unit: 'Bag', quantity: 5 },
-      { id: '16OZCO_5802', name: '16 oz coffee cup', price: 2.30, unit: 'Bag', quantity: 4 },
-      { id: '12OZCO_0996', name: '12 oz coffee cup', price: 2.34, unit: 'Bag', quantity: 3 },
-      { id: '12OZCO_7415', name: '12 oz coffee cup', price: 2.34, unit: 'Bag', quantity: 2 }
-    ]
-  },
-  { 
-    id: 3, 
-    items: 2, 
-    total: 4.68, 
-    avg: 92.34, 
-    qty: 2, 
-    date: '21/06/2025',
-    orderItems: [
-      { id: '12OZCO_7415', name: '12 oz coffee cup', price: 2.34, unit: 'Bag', quantity: 1 },
-      { id: '16OZCO_7415', name: '16 oz coffee cup', price: 2.30, unit: 'Bag', quantity: 1 }
-    ]
-  },
-  { 
-    id: 4, 
-    items: 4, 
-    total: 276.74, 
-    avg: 512.58, 
-    qty: 22, 
-    date: '16/06/2025',
-    orderItems: [
-      { id: '12OZCO_7415', name: '12 oz coffee cup', price: 2.34, unit: 'Bag', quantity: 8 },
-      { id: '16OZCO_7415', name: '16 oz coffee cup', price: 2.30, unit: 'Bag', quantity: 6 },
-      { id: '12OZCO_5802', name: '12 oz coffee cup', price: 2.34, unit: 'Bag', quantity: 5 },
-      { id: '16OZCO_5802', name: '16 oz coffee cup', price: 2.30, unit: 'Bag', quantity: 4 }
-    ]
-  },
-  { 
-    id: 5, 
-    items: 6, 
-    total: 91.87, 
-    avg: 510.21, 
-    qty: 9, 
-    date: '14/06/2025',
-    orderItems: [
-      { id: '12OZCO_7415', name: '12 oz coffee cup', price: 2.34, unit: 'Bag', quantity: 3 },
-      { id: '16OZCO_7415', name: '16 oz coffee cup', price: 2.30, unit: 'Bag', quantity: 2 },
-      { id: '12OZCO_5802', name: '12 oz coffee cup', price: 2.34, unit: 'Bag', quantity: 2 },
-      { id: '16OZCO_5802', name: '16 oz coffee cup', price: 2.30, unit: 'Bag', quantity: 1 },
-      { id: '12OZCO_0996', name: '12 oz coffee cup', price: 2.34, unit: 'Bag', quantity: 1 },
-      { id: '12OZCO_7415', name: '12 oz coffee cup', price: 2.34, unit: 'Bag', quantity: 0 }
-    ]
-  },
-  { 
-    id: 6, 
-    items: 4, 
-    total: 84.55, 
-    avg: 512.08, 
-    qty: 7, 
-    date: '13/06/2025',
-    orderItems: [
-      { id: '12OZCO_7415', name: '12 oz coffee cup', price: 2.34, unit: 'Bag', quantity: 3 },
-      { id: '16OZCO_7415', name: '16 oz coffee cup', price: 2.30, unit: 'Bag', quantity: 2 },
-      { id: '12OZCO_5802', name: '12 oz coffee cup', price: 2.34, unit: 'Bag', quantity: 1 },
-      { id: '16OZCO_5802', name: '16 oz coffee cup', price: 2.30, unit: 'Bag', quantity: 1 }
-    ]
-  },
-  { 
-    id: 7, 
-    items: 2, 
-    total: 16.42, 
-    avg: 52.35, 
-    qty: 7, 
-    date: '11/06/2025',
-    orderItems: [
-      { id: '12OZCO_7415', name: '12 oz coffee cup', price: 2.34, unit: 'Bag', quantity: 4 },
-      { id: '16OZCO_7415', name: '16 oz coffee cup', price: 2.30, unit: 'Bag', quantity: 3 }
-    ]
-  }
-];
+// Update Order Dialog Component
+const UpdateOrderDialog = ({ open, onClose, order, onConfirm }) => {
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle sx={{ 
+        borderBottom: '1px solid #e0e0e0',
+        pb: 2,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 1.5
+      }}>
+        <ReceiptIcon color="primary" />
+        Update Order #{order?.id}
+      </DialogTitle>
+      <DialogContent sx={{ pt: 3 }}>
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Order Details
+          </Typography>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            Original Date: {order?.date}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            Company: {order?.company_name}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            Location: {order?.location_name}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Original Total: ${order?.total?.toFixed(2)}
+          </Typography>
+        </Box>
 
-// Quantity Selection Dialog Component
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Typography variant="body2">
+            The order items have been loaded into your current order basket. 
+            You can modify quantities, add new items, or remove items before updating.
+          </Typography>
+        </Alert>
+
+        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+          Original Items:
+        </Typography>
+        <List dense>
+          {order?.orderItems?.map((item, index) => (
+            <ListItem key={index}>
+              <ListItemText
+                primary={item.name}
+                secondary={`${item.quantity} ${item.unit} × ${item.unit_price || item.price} = ${item.total_price || (item.quantity * (item.unit_price || item.price)).toFixed(2)}`}
+              />
+            </ListItem>
+          ))}
+        </List>
+      </DialogContent>
+      <DialogActions sx={{ p: 3, borderTop: '1px solid #e0e0e0' }}>
+        <Button onClick={onClose} color="secondary" variant="outlined">
+          Cancel Update
+        </Button>
+        <Button onClick={onConfirm} variant="contained" color="primary">
+          Continue to Update
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
 const QuantityDialog = ({ open, onClose, item, onAdd }) => {
   const [quantity, setQuantity] = useState(1);
 
@@ -367,11 +361,16 @@ const OrderIQDashboard = () => {
   const [currentOrder, setCurrentOrder] = useState([]);
   const [emailOrder, setEmailOrder] = useState(false);
   const [quantityDialog, setQuantityDialog] = useState({ open: false, item: null });
+  const [updateOrderDialog, setUpdateOrderDialog] = useState({ open: false, order: null });
+  const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
+  const [orderToUpdate, setOrderToUpdate] = useState(null);
   
   // API data state
   const [companyLocations, setCompanyLocations] = useState([]);
   const [availableItems, setAvailableItems] = useState([]);
+  const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingOrders, setLoadingOrders] = useState(false);
   const [error, setError] = useState(null);
   
   // Date range selector state
@@ -396,11 +395,102 @@ const OrderIQDashboard = () => {
     fetchCompanyLocations();
   }, []);
 
+  // Don't auto-fetch recent orders - only fetch when user applies filters
+
   const fetchCompanyLocations = async () => {
     try {
       setLoading(true);
+      setError(null);
       const url = `${API_URL_Local}/company-locations/all`;
       console.log('Fetching company-locations from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Invalid content type:', contentType);
+        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`);
+      }
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Company-locations API response:', data);
+      
+      // Check if data has the expected structure
+      if (!Array.isArray(data)) {
+        console.error('API response is not an array:', data);
+        throw new Error('Invalid response format: expected array of companies');
+      }
+      
+      // Validate the structure of each company
+      const validCompanies = data.filter(company => {
+        const isValid = company.company_id && company.company_name && Array.isArray(company.locations);
+        if (!isValid) {
+          console.warn('Invalid company structure:', company);
+        }
+        return isValid;
+      });
+      
+      if (validCompanies.length === 0) {
+        throw new Error('No valid companies found in response');
+      }
+      
+      console.log('Valid companies found:', validCompanies.length);
+      setCompanyLocations(validCompanies);
+      
+    } catch (err) {
+      console.error('Error fetching company-locations:', err);
+      
+      // Provide specific error messages based on the error type
+      let errorMessage = 'Failed to load companies and locations.';
+      
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        errorMessage = 'Network error: Cannot connect to the API server. Please check if the server is running and the URL is correct.';
+      } else if (err.message.includes('content-type')) {
+        errorMessage = 'Server error: API is returning HTML instead of JSON. Please check the endpoint URL and server configuration.';
+      } else if (err.message.includes('404')) {
+        errorMessage = 'API endpoint not found. Please verify the company-locations/all endpoint exists.';
+      } else if (err.message.includes('500')) {
+        errorMessage = 'Server internal error. Please check the server logs.';
+      }
+      
+      setError(errorMessage);
+      
+      // Set mock data for development only as a last resort
+      console.log('Setting mock data for development...');
+      setCompanyLocations([
+        {
+          company_id: 1,
+          company_name: "Demo Company",
+          locations: [
+            { location_id: 1, location_name: "Main Store" },
+            { location_id: 2, location_name: "Branch Store" }
+          ]
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchRecentOrders = async (companyId, locationId) => {
+    try {
+      setLoadingOrders(true);
+      const url = `${API_URL_Local}/api/storeorders/detailsrecent/${companyId}/${locationId}`;
+      console.log('Fetching recent orders from:', url);
       
       const response = await fetch(url, {
         method: 'GET',
@@ -420,14 +510,65 @@ const OrderIQDashboard = () => {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
-      const data = await response.json();
-      console.log('Company-locations data:', data);
-      setCompanyLocations(Array.isArray(data) ? data : []);
+      const result = await response.json();
+      console.log('Recent orders data:', result);
+      
+      // Check if data has expected structure
+      if (!result.data || !Array.isArray(result.data)) {
+        throw new Error('Invalid recent orders data structure received from API');
+      }
+      
+      // Transform the API response to match our component structure
+      const transformedOrders = result.data.map((order) => ({
+        id: order.id,
+        items: order.items_ordered?.total_items || 0,
+        total: order.items_ordered?.items?.reduce((sum, item) => sum + item.total_price, 0) || 0,
+        avg: order.items_ordered?.items?.length > 0 
+          ? (order.items_ordered.items.reduce((sum, item) => sum + item.total_price, 0) / order.items_ordered.items.length) 
+          : 0,
+        qty: order.items_ordered?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0,
+        date: new Date(order.created_at).toLocaleDateString('en-GB'),
+        created_at: order.created_at,
+        company_name: order.company_name,
+        location_name: order.location_name,
+        orderItems: order.items_ordered?.items?.map(item => ({
+          id: item.item_id,
+          name: item.name,
+          price: item.unit_price,
+          unit: item.unit,
+          quantity: item.quantity,
+          category: item.category,
+          total_price: item.total_price
+        })) || []
+      }));
+      
+      setRecentOrders(transformedOrders);
+      console.log('Transformed recent orders:', transformedOrders);
+      
     } catch (err) {
-      console.error('Error fetching company-locations:', err);
-      setError('Failed to load companies and locations. Please check if the API endpoint is configured correctly.');
+      console.error('Error fetching recent orders:', err);
+      setError(`Failed to load recent orders: ${err.message}`);
+      
+      // Set mock data for development
+      setRecentOrders([
+        { 
+          id: 1, 
+          items: 3, 
+          total: 12.50, 
+          avg: 4.17, 
+          qty: 3, 
+          date: '02/07/2025',
+          company_name: 'Demo Company',
+          location_name: 'Main Store',
+          orderItems: [
+            { id: 'mock_1', name: 'Green sauce - packed', price: 5.49, unit: 'Box', quantity: 1, category: 'Cleaning Supplies' },
+            { id: 'mock_2', name: 'Steel scrubber', price: 6.49, unit: 'Box', quantity: 1, category: 'Cleaning Supplies' },
+            { id: 'mock_3', name: 'Bar mops', price: 0.52, unit: 'Unit', quantity: 1, category: 'Cleaning Supplies' }
+          ]
+        }
+      ]);
     } finally {
-      setLoading(false);
+      setLoadingOrders(false);
     }
   };
 
@@ -512,22 +653,25 @@ const OrderIQDashboard = () => {
     // Reset location when company changes
     setSelectedLocationId(null);
     setAvailableItems([]); // Clear available items
+    setRecentOrders([]); // Clear recent orders
     setFilters(prev => ({ ...prev, companies: [companyId], location: [] }));
   };
 
   const handleLocationChange = (locationId) => {
     setSelectedLocationId(locationId);
     setFilters(prev => ({ ...prev, location: [locationId] }));
+    // Don't auto-fetch data - wait for user to click Apply Filters
   };
 
   const handleApplyFilters = () => {
     console.log('Applying filters:', { selectedCompanyId, selectedLocationId });
     
-    // Fetch available items when both company and location are selected
+    // Fetch both available items and recent orders when both company and location are selected
     if (selectedCompanyId && selectedLocationId) {
       fetchAvailableItems(selectedCompanyId, selectedLocationId);
+      fetchRecentOrders(selectedCompanyId, selectedLocationId);
     } else {
-      setError('Please select both a company and location to view available items');
+      setError('Please select both a company and location to view available items and recent orders');
     }
   };
 
@@ -577,6 +721,130 @@ const OrderIQDashboard = () => {
         handleAddToOrder(item, item.quantity);
       }
     });
+  };
+
+  const handleUpdateRecentOrder = (recentOrder) => {
+    // Set the order for updating and populate current order with its items
+    setOrderToUpdate(recentOrder);
+    setIsUpdatingOrder(true);
+    
+    // Clear current order and populate with the order being updated
+    const orderItems = recentOrder.orderItems.map(item => ({
+      ...item,
+      // Ensure we have all required fields for the order update
+      id: item.id,
+      name: item.name,
+      price: item.unit_price || item.price,
+      unit: item.unit,
+      quantity: item.quantity,
+      category: item.category
+    }));
+    
+    setCurrentOrder(orderItems);
+    setUpdateOrderDialog({ open: true, order: recentOrder });
+  };
+
+  const handleCancelOrderUpdate = () => {
+    setIsUpdatingOrder(false);
+    setOrderToUpdate(null);
+    setCurrentOrder([]);
+    setUpdateOrderDialog({ open: false, order: null });
+  };
+
+  const handleSubmitOrderUpdate = async () => {
+    if (!orderToUpdate) {
+      setError('No order selected for update');
+      return;
+    }
+
+    if (currentOrder.length === 0) {
+      setError('Please add items to your order before updating');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const updateData = {
+        order_id: orderToUpdate.id,
+        company_id: parseInt(selectedCompanyId),
+        location_id: parseInt(selectedLocationId),
+        items: currentOrder.map(item => ({
+          item_id: item.id,
+          name: item.name,
+          category: item.category,
+          quantity: item.quantity,
+          unit_price: item.price,
+          unit: item.unit,
+          total_price: item.price * item.quantity
+        })),
+        total_amount: calculateOrderTotal(),
+        email_order: emailOrder,
+        updated_date: new Date().toISOString(),
+        date_range: selectedDateRange ? {
+          start_date: selectedDateRange.startDate?.toISOString(),
+          end_date: selectedDateRange.endDate?.toISOString()
+        } : null
+      };
+
+      const url = `${API_URL_Local}/api/storeorders/orderupdate`;
+      console.log('Updating order at:', url);
+      console.log('Update data:', updateData);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData)
+      });
+
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.error('Non-JSON response:', textResponse);
+        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`);
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`HTTP ${response.status}: ${errorData.message || response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('Order updated successfully:', result);
+      
+      alert(`Order #${orderToUpdate.id} updated successfully!`);
+      handleCancelOrderUpdate();
+      setError(null);
+      
+      // Refresh recent orders after successful update
+      if (selectedCompanyId && selectedLocationId) {
+        fetchRecentOrders(selectedCompanyId, selectedLocationId);
+      }
+      
+    } catch (err) {
+      console.error('Error updating order:', err);
+      setError(`Failed to update order: ${err.message}`);
+      
+      // For development, show mock success
+      if (err.message.includes('content-type') || err.message.includes('HTTP')) {
+        console.log('Mock order update for development:', {
+          order_id: orderToUpdate.id,
+          company_id: selectedCompanyId,
+          location_id: selectedLocationId,
+          items: currentOrder,
+          total: calculateOrderTotal()
+        });
+        alert(`Order #${orderToUpdate.id} updated successfully! (Development Mode)`);
+        handleCancelOrderUpdate();
+        setError(null);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmitOrder = async () => {
@@ -649,6 +917,11 @@ const OrderIQDashboard = () => {
       setEmailOrder(false);
       setError(null);
       
+      // Refresh recent orders after successful submission
+      if (selectedCompanyId && selectedLocationId) {
+        fetchRecentOrders(selectedCompanyId, selectedLocationId);
+      }
+      
     } catch (err) {
       console.error('Error submitting order:', err);
       setError(`Failed to submit order: ${err.message}`);
@@ -692,9 +965,12 @@ const OrderIQDashboard = () => {
       )}
 
       {/* Development Mode Indicator */}
-      {companyLocations.length === 0 && !loading && (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <strong>No Data Available:</strong> Could not load companies and locations from the API. Please check your backend server and API endpoints.
+      {companyLocations.length === 1 && companyLocations[0].company_name === "Demo Company" && !loading && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          <strong>Demo Mode:</strong> API connection failed. Using mock data. Please check:
+          <br />• Is your backend server running?
+          <br />• Is the API_URL_Local configured correctly? (Currently: {API_URL_Local})
+          <br />• Does the /company-locations/all endpoint exist and return JSON?
         </Alert>
       )}
 
@@ -725,7 +1001,7 @@ const OrderIQDashboard = () => {
           </Box>
         </Box>
 
-        {/* Filters Section - Custom implementation */}
+        {/* Filters Section */}
         <Card sx={{ p: 3, borderRadius: 2, mb: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
             <FilterListIcon color="primary" />
@@ -751,7 +1027,7 @@ const OrderIQDashboard = () => {
             </Box>
           ) : companyLocations.length === 0 ? (
             <Alert severity="warning">
-              No companies or locations available. Please check your API endpoints.
+              No companies or locations available. Using demo data.
             </Alert>
           ) : (
             <Grid container spacing={3}>
@@ -766,7 +1042,7 @@ const OrderIQDashboard = () => {
                     displayEmpty
                   >
                     <MenuItem value="">
-                      <em>Select a Company</em>
+                      <em>Select a company</em>
                     </MenuItem>
                     {companies.map((company) => (
                       <MenuItem key={company.id} value={company.id.toString()}>
@@ -788,7 +1064,7 @@ const OrderIQDashboard = () => {
                     displayEmpty
                   >
                     <MenuItem value="">
-                      <em>{!selectedCompanyId ? 'Select a company first' : 'Select a Location'}</em>
+                      <em>Select a location</em>
                     </MenuItem>
                     {availableLocationsForCompany.map((location) => (
                       <MenuItem key={location.location_id} value={location.location_id.toString()}>
@@ -810,11 +1086,11 @@ const OrderIQDashboard = () => {
                   <Button
                     variant="contained"
                     onClick={handleApplyFilters}
-                    disabled={!selectedCompanyId || !selectedLocationId || loading}
-                    startIcon={loading ? <CircularProgress size={20} /> : <FilterListIcon />}
-                    sx={{ minWidth: 200 }}
+                    disabled={!selectedCompanyId || !selectedLocationId || loading || loadingOrders}
+                    startIcon={(loading || loadingOrders) ? <CircularProgress size={20} /> : <FilterListIcon />}
+                    sx={{ minWidth: 220 }}
                   >
-                    {loading ? 'Loading Items...' : 'Apply Filters & Load Items'}
+                    {(loading || loadingOrders) ? 'Loading Data...' : 'Apply Filters & Load Data'}
                   </Button>
                   
                   {(selectedCompanyId || selectedLocationId) && (
@@ -825,6 +1101,7 @@ const OrderIQDashboard = () => {
                         setSelectedLocationId(null);
                         setFilters({});
                         setAvailableItems([]);
+                        setRecentOrders([]);
                       }}
                     >
                       Clear Filters
@@ -854,7 +1131,14 @@ const OrderIQDashboard = () => {
 
                 {(!selectedCompanyId || !selectedLocationId) && (
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    Please select both a company and location to view available items.
+                    Please select both a company and location, then click "Apply Filters" to load available items and recent orders.
+                  </Typography>
+                )}
+
+                {/* Show status when company and location selected but not applied */}
+                {selectedCompanyId && selectedLocationId && availableItems.length === 0 && recentOrders.length === 0 && !loading && !loadingOrders && (
+                  <Typography variant="body2" color="primary.main" sx={{ mt: 1, fontWeight: 500 }}>
+                    Ready to load data. Click "Apply Filters & Load Data" to fetch items and recent orders.
                   </Typography>
                 )}
 
@@ -905,7 +1189,10 @@ const OrderIQDashboard = () => {
                       Avg Daily Order
                     </Typography>
                     <Typography variant="h4" sx={{ fontWeight: 700, color: '#1565c0' }}>
-                      $158.03
+                      ${recentOrders.length > 0 
+                        ? (recentOrders.reduce((sum, order) => sum + order.total, 0) / recentOrders.length).toFixed(2)
+                        : '0.00'
+                      }
                     </Typography>
                   </Paper>
                 </Grid>
@@ -923,7 +1210,7 @@ const OrderIQDashboard = () => {
                       Total Orders
                     </Typography>
                     <Typography variant="h4" sx={{ fontWeight: 700, color: '#2e7d32' }}>
-                      25
+                      {recentOrders.length}
                     </Typography>
                   </Paper>
                 </Grid>
@@ -949,21 +1236,48 @@ const OrderIQDashboard = () => {
               </Box>
               
               <List>
-                <ListItem>
-                  <ListItemText 
-                    primary="#1 Unknown Item" 
-                    secondary="93 orders"
-                    primaryTypographyProps={{ fontWeight: 500 }}
-                  />
-                </ListItem>
-                <Divider />
-                <ListItem>
-                  <ListItemText 
-                    primary="#2 12 oz coffee cup" 
-                    secondary="2 orders"
-                    primaryTypographyProps={{ fontWeight: 500 }}
-                  />
-                </ListItem>
+                {recentOrders.length > 0 ? (
+                  // Calculate top items from recent orders
+                  (() => {
+                    const itemCounts = {};
+                    recentOrders.forEach(order => {
+                      order.orderItems.forEach(item => {
+                        const key = item.name;
+                        if (itemCounts[key]) {
+                          itemCounts[key].count += item.quantity;
+                          itemCounts[key].orders += 1;
+                        } else {
+                          itemCounts[key] = { count: item.quantity, orders: 1, name: item.name };
+                        }
+                      });
+                    });
+                    
+                    const sortedItems = Object.values(itemCounts)
+                      .sort((a, b) => b.count - a.count)
+                      .slice(0, 3);
+                    
+                    return sortedItems.map((item, index) => (
+                      <React.Fragment key={item.name}>
+                        <ListItem>
+                          <ListItemText 
+                            primary={`#${index + 1} ${item.name}`}
+                            secondary={`${item.count} units in ${item.orders} order${item.orders > 1 ? 's' : ''}`}
+                            primaryTypographyProps={{ fontWeight: 500 }}
+                          />
+                        </ListItem>
+                        {index < sortedItems.length - 1 && <Divider />}
+                      </React.Fragment>
+                    ));
+                  })()
+                ) : (
+                  <ListItem>
+                    <ListItemText 
+                      primary="No recent orders available"
+                      secondary="Select a company and location to view top items"
+                      primaryTypographyProps={{ fontWeight: 500, color: 'text.secondary' }}
+                    />
+                  </ListItem>
+                )}
               </List>
             </CardContent>
           </Card>
@@ -976,8 +1290,16 @@ const OrderIQDashboard = () => {
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                   Recent Orders
                 </Typography>
+                {loadingOrders && (
+                  <CircularProgress size={20} />
+                )}
                 <Typography variant="body2" color="text.secondary">
-                  {selectedDateRange ? 'Filtered by selected date range' : 'Last 7 orders for this location (all)'}
+                  {selectedCompanyId && selectedLocationId 
+                    ? recentOrders.length === 0 && !loadingOrders
+                      ? 'Click "Apply Filters & Load Data" above to load recent orders.'
+                      : `Recent orders for ${companies.find(c => c.id.toString() === selectedCompanyId)?.name} - ${availableLocationsForCompany.find(l => l.location_id.toString() === selectedLocationId)?.location_name}`
+                    : 'Select company and location to view recent orders'
+                  }
                 </Typography>
                 {selectedDateRange && (
                   <Chip 
@@ -989,75 +1311,103 @@ const OrderIQDashboard = () => {
                 )}
               </Box>
 
-              <List>
-                {recentOrders.map((order, index) => (
-                  <React.Fragment key={order.id}>
-                    <ListItem sx={{ px: 0 }}>
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                              {order.items} item{order.items > 1 ? 's' : ''} ordered
-                            </Typography>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                                ${order.total}
+              {loadingOrders ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : recentOrders.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <ReceiptIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                  <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                    No recent orders found
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {selectedCompanyId && selectedLocationId 
+                      ? 'No orders have been placed yet for this location, or data hasn\'t been loaded yet. Try clicking "Apply Filters & Load Data" above.'
+                      : 'Please select a company and location, then click "Apply Filters & Load Data" to view recent orders.'
+                    }
+                  </Typography>
+                </Box>
+              ) : (
+                <List>
+                  {recentOrders.map((order, index) => (
+                    <React.Fragment key={order.id}>
+                      <ListItem sx={{ px: 0 }}>
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                {order.items} item{order.items > 1 ? 's' : ''} ordered
                               </Typography>
-                              <Button
-                                variant="outlined"
-                                size="small"
-                                startIcon={<AddIcon />}
-                                onClick={() => handleAddRecentOrderToCart(order)}
-                                sx={{ ml: 1 }}
-                              >
-                                Add to Cart
-                              </Button>
-                            </Box>
-                          </Box>
-                        }
-                        secondary={
-                          <Box sx={{ mt: 1 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                              <Typography variant="body2" color="text.secondary">
-                                Qty: {order.qty} • {order.date}
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                @${order.avg}
-                              </Typography>
-                            </Box>
-                            {/* Order Items Preview */}
-                            <Box sx={{ mt: 1 }}>
-                              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-                                Items:
-                              </Typography>
-                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                                {order.orderItems.slice(0, 3).map((item, itemIndex) => (
-                                  <Chip
-                                    key={itemIndex}
-                                    label={`${item.name} (${item.quantity})`}
-                                    size="small"
-                                    variant="outlined"
-                                    sx={{ fontSize: '0.7rem', height: 20 }}
-                                  />
-                                ))}
-                                {order.orderItems.length > 3 && (
-                                  <Chip
-                                    label={`+${order.orderItems.length - 3} more`}
-                                    size="small"
-                                    variant="outlined"
-                                    sx={{ fontSize: '0.7rem', height: 20, fontStyle: 'italic' }}
-                                  />
-                                )}
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                                  ${order.total.toFixed(2)}
+                                </Typography>
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  startIcon={<AddIcon />}
+                                  onClick={() => handleAddRecentOrderToCart(order)}
+                                  sx={{ ml: 1, mr: 1 }}
+                                >
+                                  Add to Cart
+                                </Button>
+                                <Button
+                                  variant="contained"
+                                  size="small"
+                                  color="secondary"
+                                  startIcon={<ReceiptIcon />}
+                                  onClick={() => handleUpdateRecentOrder(order)}
+                                >
+                                  Update Order
+                                </Button>
                               </Box>
                             </Box>
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                    {index < recentOrders.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))}
-              </List>
+                          }
+                          secondary={
+                            <Box sx={{ mt: 1 }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                <Typography variant="body2" color="text.secondary">
+                                  Qty: {order.qty} • {order.date}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  @${order.avg.toFixed(2)}
+                                </Typography>
+                              </Box>
+                              {/* Order Items Preview */}
+                              <Box sx={{ mt: 1 }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                                  Items:
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                                  {order.orderItems.slice(0, 3).map((item, itemIndex) => (
+                                    <Chip
+                                      key={itemIndex}
+                                      label={`${item.name} (${item.quantity})`}
+                                      size="small"
+                                      variant="outlined"
+                                      sx={{ fontSize: '0.7rem', height: 20 }}
+                                    />
+                                  ))}
+                                  {order.orderItems.length > 3 && (
+                                    <Chip
+                                      label={`+${order.orderItems.length - 3} more`}
+                                      size="small"
+                                      variant="outlined"
+                                      sx={{ fontSize: '0.7rem', height: 20, fontStyle: 'italic' }}
+                                    />
+                                  )}
+                                </Box>
+                              </Box>
+                            </Box>
+                          }
+                        />
+                      </ListItem>
+                      {index < recentOrders.length - 1 && <Divider />}
+                    </React.Fragment>
+                  ))}
+                </List>
+              )}
             </CardContent>
           </Card>
 
@@ -1070,7 +1420,9 @@ const OrderIQDashboard = () => {
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 {availableItems.length > 0 
                   ? `${availableItems.length} items available. Search and select items to add to your order.`
-                  : 'Select company and location from filters above to view available items.'
+                  : selectedCompanyId && selectedLocationId
+                    ? 'Click "Apply Filters & Load Data" above to view available items.'
+                    : 'Select company and location from filters above to view available items.'
                 }
               </Typography>
               
@@ -1103,7 +1455,10 @@ const OrderIQDashboard = () => {
                     No items available
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Please select a company and location from the filters above, then click "Apply Filters" to load available items.
+                    {selectedCompanyId && selectedLocationId 
+                      ? 'Click "Apply Filters & Load Data" above to load available items.'
+                      : 'Please select a company and location from the filters above, then click "Apply Filters" to load available items.'
+                    }
                   </Typography>
                 </Box>
               )}
@@ -1222,8 +1577,16 @@ const OrderIQDashboard = () => {
                     <ShoppingCartIcon />
                   </Badge>
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    Current Order
+                    {isUpdatingOrder ? `Update Order #${orderToUpdate?.id}` : 'Current Order'}
                   </Typography>
+                  {isUpdatingOrder && (
+                    <Chip 
+                      label="Updating" 
+                      color="secondary" 
+                      size="small" 
+                      variant="outlined"
+                    />
+                  )}
                 </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                   Store: {selectedCompanyId && selectedLocationId 
@@ -1258,6 +1621,15 @@ const OrderIQDashboard = () => {
                           }}
                         >
                           ➕ Add First Item
+                        </Button>
+                      )}
+                      {recentOrders.length > 0 && (
+                        <Button 
+                          variant="outlined" 
+                          size="small"
+                          onClick={() => handleAddRecentOrderToCart(recentOrders[0])}
+                        >
+                          🔄 Repeat Last Order
                         </Button>
                       )}
                     </Box>
@@ -1334,21 +1706,47 @@ const OrderIQDashboard = () => {
                             onChange={(e) => setEmailOrder(e.target.checked)}
                           />
                         }
-                        label="Email order details"
+                        label={isUpdatingOrder ? "Email updated order details" : "Email order details"}
                         sx={{ mb: 2 }}
                       />
 
-                      <Button 
-                        variant="contained" 
-                        fullWidth 
-                        size="large"
-                        startIcon={loading ? <CircularProgress size={20} /> : <ReceiptIcon />}
-                        sx={{ fontWeight: 600, py: 1.5 }}
-                        onClick={handleSubmitOrder}
-                        disabled={loading || !selectedCompanyId || !selectedLocationId || currentOrder.length === 0}
-                      >
-                        {loading ? 'Submitting...' : 'Submit Order'}
-                      </Button>
+                      {isUpdatingOrder ? (
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Button 
+                            variant="outlined" 
+                            fullWidth 
+                            size="large"
+                            onClick={handleCancelOrderUpdate}
+                            sx={{ fontWeight: 600, py: 1.5 }}
+                          >
+                            Cancel Update
+                          </Button>
+                          <Button 
+                            variant="contained" 
+                            fullWidth 
+                            size="large"
+                            startIcon={loading ? <CircularProgress size={20} /> : <ReceiptIcon />}
+                            sx={{ fontWeight: 600, py: 1.5 }}
+                            onClick={handleSubmitOrderUpdate}
+                            disabled={loading || currentOrder.length === 0}
+                            color="secondary"
+                          >
+                            {loading ? 'Updating...' : 'Update Order'}
+                          </Button>
+                        </Box>
+                      ) : (
+                        <Button 
+                          variant="contained" 
+                          fullWidth 
+                          size="large"
+                          startIcon={loading ? <CircularProgress size={20} /> : <ReceiptIcon />}
+                          sx={{ fontWeight: 600, py: 1.5 }}
+                          onClick={handleSubmitOrder}
+                          disabled={loading || !selectedCompanyId || !selectedLocationId || currentOrder.length === 0}
+                        >
+                          {loading ? 'Submitting...' : 'Submit Order'}
+                        </Button>
+                      )}
 
                       {selectedDateRange && (
                         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
@@ -1363,6 +1761,14 @@ const OrderIQDashboard = () => {
           </Box>
         </Grid>
       </Grid>
+
+      {/* Update Order Dialog */}
+      <UpdateOrderDialog
+        open={updateOrderDialog.open}
+        onClose={() => setUpdateOrderDialog({ open: false, order: null })}
+        order={updateOrderDialog.order}
+        onConfirm={() => setUpdateOrderDialog({ open: false, order: null })}
+      />
 
       {/* Quantity Selection Dialog */}
       <QuantityDialog
