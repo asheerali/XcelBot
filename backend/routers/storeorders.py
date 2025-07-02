@@ -536,5 +536,98 @@ def update_storeorders_by_id(
         raise HTTPException(status_code=500, detail=f"Error updating store order: {str(e)}")
 
 
-
-
+@router.get("/avg_daily_orders/{company_id}/{location_id}")
+def get_avg_daily_orders(
+    company_id: int, 
+    location_id: int, 
+    db: Session = Depends(get_db)
+):
+    """Get average daily orders, total orders, and top 2 items ordered for a company and location"""
+    
+    try:
+        # FIXED: Use get_storeorders_by_location() to get ALL orders, not just the latest one
+        storeorders = storeorders_crud.get_storeorders_by_location(db, location_id)
+        
+        # Filter by company_id since get_storeorders_by_location doesn't filter by company
+        storeorders = [order for order in storeorders if order.company_id == company_id]
+        
+        if not storeorders:
+            return {
+                "message": "No store orders found for this company and location", 
+                "data": {
+                    "total_orders": 0,
+                    "avg_daily_orders": 0,
+                    "date_range": None,
+                    "top_items": []
+                }
+            }
+        
+        total_orders = len(storeorders)
+        
+        # Calculate average daily orders
+        if total_orders > 0:
+            # Get valid dates only
+            valid_dates = [order.created_at for order in storeorders if order.created_at]
+            
+            if valid_dates:
+                first_order_date = min(valid_dates)
+                last_order_date = max(valid_dates)
+                days_difference = (last_order_date - first_order_date).days + 1  # Include the last day
+                
+                avg_daily_orders = round(total_orders / days_difference, 2) if days_difference > 0 else total_orders
+                date_range = {
+                    "first_order": first_order_date.strftime('%Y-%m-%d'),
+                    "last_order": last_order_date.strftime('%Y-%m-%d'),
+                    "total_days": days_difference
+                }
+            else:
+                avg_daily_orders = 0
+                date_range = None
+        else:
+            avg_daily_orders = 0
+            date_range = None
+        
+        # Aggregate items ordered
+        item_counts = {}
+        for order in storeorders:
+            if order.items_ordered and 'items' in order.items_ordered:
+                items_ordered = order.items_ordered.get('items', [])
+                for item in items_ordered:
+                    # Handle different possible item structure
+                    item_name = item.get('name') or item.get('product') or item.get('item_name', 'Unknown')
+                    item_quantity = item.get('quantity', 1)
+                    
+                    if item_name in item_counts:
+                        item_counts[item_name] += item_quantity
+                    else:
+                        item_counts[item_name] = item_quantity
+        
+        # Get top 2 items ordered
+        top_items = sorted(item_counts.items(), key=lambda x: x[1], reverse=True)[:2]
+        top_items_formatted = [{"name": name, "total_quantity": quantity} for name, quantity in top_items]
+        
+        # Get company and location names for response
+        company = db.query(Company).filter(Company.id == company_id).first()
+        location = db.query(Store).filter(Store.id == location_id).first()
+        
+        return {
+            "message": "Average daily orders and top items fetched successfully",
+            "data": {
+                "company_name": company.name if company else "Unknown",
+                "location_name": location.name if location else "Unknown",
+                "total_orders": total_orders,
+                "avg_daily_orders": avg_daily_orders,
+                "date_range": date_range,
+                "top_items": top_items_formatted,
+                "all_items_summary": {
+                    "unique_items_count": len(item_counts),
+                    "total_item_quantities": sum(item_counts.values())
+                }
+            }
+        }
+    
+    except Exception as e:
+        print(f"Error fetching average daily orders: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error fetching average daily orders: {str(e)}")
