@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
 from crud import company_locations as cl_crud
-from schemas.company_locations import CompanyLocation, CompanyLocationCreate
+from schemas.company_locations import CompanyLocation, CompanyLocationCreate, CompanyWithLocations
 
 router = APIRouter(
     prefix="/company-locations",
@@ -16,6 +16,11 @@ def create_company_location(data: CompanyLocationCreate, db: Session = Depends(g
 @router.get("/", response_model=list[CompanyLocation])
 def get_all_company_locations(db: Session = Depends(get_db)):
     return cl_crud.get_company_locations(db)
+
+@router.get("/all", response_model=list[CompanyWithLocations])
+def get_companies_with_locations(db: Session = Depends(get_db)):
+    """Get all companies with their associated locations in nested format"""
+    return cl_crud.get_companies_with_locations(db)
 
 @router.get("/{record_id}", response_model=CompanyLocation)
 def get_company_location(record_id: int, db: Session = Depends(get_db)):
