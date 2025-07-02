@@ -10,6 +10,6 @@ class StoreOrders(Base):
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=True, onupdate=datetime.utcnow)
     items_ordered = Column(JSON, nullable=False)
     prev_items_ordered = Column(JSON, nullable=True)

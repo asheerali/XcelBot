@@ -11,7 +11,9 @@ from database import get_db
 from crud.locations import get_store
 from pydantic import BaseModel
 from typing import Dict, Any
-
+from crud import storeorders as storeorders_crud
+from schemas import storeorders as storeorders_schema
+        
 router = APIRouter(
     prefix="/api/storeorders",
     tags=["Store Orders"]
@@ -354,13 +356,65 @@ def bulk_create_storeorders(storeorders: list[storeorders_schema.StoreOrdersCrea
 
 
 
-# now i want to make an endpoint names as orderitems in which i will get the request and i will print it and send the request in the response 
-@router.post("/orderitems") 
-def get_order_items(request, db: Session = Depends(get_db)):
-    """Get order items from masterfile"""
-    print("Received request in orderitems endpoint:", request)
+from pydantic import BaseModel
+from typing import Optional, List
+
+class OrderItemsRequest(BaseModel):
+    company_id: Optional[int] = None
+    location_id: Optional[int] = None
+    items: Optional[List[Dict[str, Any]]] = None
+    # Add other fields as neede
+
+# @router.post("/orderitems") 
+# def get_order_items(request: OrderItemsRequest, db: Session = Depends(get_db)):
+#     """Get order items from masterfile"""
+#     print("Received request in orderitems endpoint:", request.model_dump())
     
-    # Here you can process the request as needed
-    # For now, just return the request back in the response
+#     # Here you can process the request as needed
+#     # For now, just return the request back in the response
+#     return {
+#         "message": "Order items request received successfully",
+#         "received_data": request.model_dump()
+#     }
     
-    return {"received_request": request}
+    
+@router.post("/orderitems")
+def create_new_order_items(request: OrderItemsRequest, db: Session = Depends(get_db)):
+    """Create new store orders entry every time"""
+    print("Received request to create new order:", request.model_dump())
+    
+    try:
+        
+        # Prepare the items_ordered data
+        items_ordered_data = {
+            "total_items": len(request.items),
+            "items": request.items,
+        }
+        
+        # Always create new store orders entry
+        create_obj = storeorders_schema.StoreOrdersCreate(
+            company_id=request.company_id,
+            location_id=request.location_id,
+            created_at=datetime.datetime.utcnow(),  # Set current time as created_at
+            items_ordered=items_ordered_data
+        )
+        
+        new_order = storeorders_crud.create_storeorders(db, create_obj)
+        
+        return {
+            "message": "New store orders created successfully",
+            "store_orders_id": new_order.id,
+            "received_data": request.model_dump(),
+            "items_ordered": items_ordered_data,
+            "created_at": new_order.created_at.isoformat()
+        }
+        
+    except Exception as e:
+        print(f"Error creating new order: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error creating order: {str(e)}")    
+    
+    
+    
+    

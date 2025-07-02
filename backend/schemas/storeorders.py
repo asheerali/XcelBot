@@ -19,7 +19,7 @@ class StoreOrders(StoreOrdersBase):
     company_id: int = Field(..., ge=1)
     location_id: int = Field(..., ge=1)
     created_at: datetime = Field(..., description="Creation timestamp")
-    updated_at: datetime = Field(..., description="Last update timestamp")
+    updated_at: Optional[datetime] = Field(default=None, description="Last update timestamp")
     prev_items_ordered: Optional[Dict[str, Any]] = Field(default=None, description="Previous items ordered data")
 
     model_config = ConfigDict(from_attributes=True)
