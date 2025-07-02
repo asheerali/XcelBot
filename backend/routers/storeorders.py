@@ -405,6 +405,7 @@ def create_new_order_items(request: OrderItemsRequest, db: Session = Depends(get
         
         return {
             "message": "New store orders created successfully",
+            "order_id": new_order.id,
             "store_orders_id": new_order.id,
             "received_data": request.model_dump(),
             "items_ordered": items_ordered_data,
