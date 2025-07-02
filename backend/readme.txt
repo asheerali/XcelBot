@@ -40,6 +40,9 @@ api/masterfile/details/{company_id}/{location_id}/{filename}
 api/masterfile/updatefile
 
 
+for getting the companies with locations
+company-locations/all
+
 for the reports page
 api/logs/details/{company_id}
 
@@ -50,5 +53,8 @@ api/masterfile/availableitems/{company_id}/{location_id}
 for submitting the orders 
 /api/storeorders/orderitems
 
-for getting the companies with locations
-company-locations/all
+
+
+for getting the details of recent orders
+/api/storeorders/detailsrecent/{company_id}/{location_id}
+

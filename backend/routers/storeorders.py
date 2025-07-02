@@ -197,6 +197,7 @@ def get_storeorders_details_by_location(
     
     return {"message": "Store orders details fetched successfully", "data": data}
 
+
 @router.put("/updatelocation/{storeorders_id}/{new_location_id}", response_model=storeorders_schema.StoreOrders)
 def update_storeorders_location(
     storeorders_id: int,
@@ -415,6 +416,53 @@ def create_new_order_items(request: OrderItemsRequest, db: Session = Depends(get
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error creating order: {str(e)}")    
     
+
+
+
+# Updated router endpoint
+@router.get("/detailsrecent/{company_id}/{location_id}")
+def get_recent_storeorders_details_by_location(
+    company_id: int, 
+    location_id: int, 
+    db: Session = Depends(get_db)
+):
+    """Get 7 most recent store orders details by company ID and location ID"""
+    
+    # Get the recent store orders (returns a list)
+    storeorders_list = storeorders_crud.get_recent_storeorders_by_company_and_location(db, company_id, location_id)
+    
+    if not storeorders_list:
+        return {"message": "Store orders not found", "data": []}
+    
+    # Get company and location names (fetch once)
+    company = db.query(Company).filter(Company.id == company_id).first()
+    location = db.query(Store).filter(Store.id == location_id).first()
+    
+    # Process each order in the list
+    data = []
+    for storeorder in storeorders_list:
+        order_data = {
+            "id": storeorder.id,
+            "company_id": storeorder.company_id,
+            "company_name": company.name if company else "Unknown",
+            "location_id": storeorder.location_id,
+            "location_name": location.name if location else "Unknown",
+            "created_at": storeorder.created_at.isoformat() if storeorder.created_at else None,
+            "created_at_readable": storeorder.created_at.strftime('%Y-%m-%d %H:%M:%S') if storeorder.created_at else "Unknown",
+            "updated_at": storeorder.updated_at.isoformat() if storeorder.updated_at else None,
+            "updated_at_readable": storeorder.updated_at.strftime('%Y-%m-%d %H:%M:%S') if storeorder.updated_at else "Unknown",
+            "items_ordered": storeorder.items_ordered,
+            "prev_items_ordered": storeorder.prev_items_ordered,
+        }
+        data.append(order_data)
+    
+    return {
+        "message": "Recent store orders details fetched successfully", 
+        "data": data,
+        "total_orders": len(data),
+        "company_name": company.name if company else "Unknown",
+        "location_name": location.name if location else "Unknown"
+    }
     
     
-    
+

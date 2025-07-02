@@ -42,6 +42,15 @@ def get_storeorders_by_company_and_location(db: Session, company_id: int, locati
         StoreOrders.company_id == company_id,
         StoreOrders.location_id == location_id
     ).order_by(StoreOrders.updated_at.desc()).first()
+    
+# get the 7 most recent orders for a company and location
+def get_recent_storeorders_by_company_and_location(db: Session, company_id: int, location_id: int, limit: int = 7):
+    """Get the 7 most recent store orders records by company ID and location ID"""
+    return db.query(StoreOrders).filter(
+        StoreOrders.company_id == company_id,
+        StoreOrders.location_id == location_id
+    ).order_by(StoreOrders.updated_at.desc()).limit(limit).all()
+
 
 def update_storeorders(db: Session, storeorders_id: int, obj_in: StoreOrdersUpdate):
     """Update items_ordered for an existing store orders record"""
