@@ -380,7 +380,15 @@ def get_masterfile_details(
     return {"data": data}
 
 
-# now i want to make an endpoint names as orderitems
+# now i want to make an endpoint names as orderitems in which i will get the request and i will print it and send the request in the response 
+@router.post("/orderitems") 
+def get_order_items(request: dict, db: Session = Depends(get_db)):
+    """Get order items from masterfile"""
+    print("Received request in orderitems endpoint:", request)
+    
+    # Here you can process the request as needed
+    # For now, just return the request back in the response
+    return {"received_request": request}
 
 @router.post("/", response_model=masterfile_schema.MasterFile)
 def create_masterfile(masterfile: masterfile_schema.MasterFileCreate, db: Session = Depends(get_db)):
