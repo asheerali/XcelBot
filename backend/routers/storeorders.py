@@ -469,10 +469,11 @@ def get_recent_storeorders_details_by_location(
     
     
 
-# now i want to updated the recent orders the detail will be request
-@router.post("/orderupdate")
+# now i want to updated the recent orders on the basis of id
+@router.post("/orderupdate/{order_id}", response_model=storeorders_schema.StoreOrders)
 def update_recent_storeorders_items(
     request: UpdateStoreOrdersRequest,
+    order_id: int,
     db: Session = Depends(get_db)
 ):
     """Update items_ordered for the most recent store orders record"""
