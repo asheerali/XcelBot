@@ -107,6 +107,17 @@ def get_masterfile_by_filename_and_location(db: Session, company_id: int, locati
         MasterFile.filename == filename
     ).first()
 
+
+
+# crud/master_file.py - Add this new function
+def get_masterfile_by_company_and_location(db: Session, company_id: int, location_id: int):
+    """Get a masterfile record by company ID and location ID"""
+    return db.query(MasterFile).filter(
+        MasterFile.company_id == company_id,
+        MasterFile.location_id == location_id
+    ).all()
+
+
 # Update existing functions to include location_id
 def get_masterfile_by_location(db: Session, location_id: int, skip: int = 0, limit: int = 100):
     """Get masterfile records by location ID with pagination"""

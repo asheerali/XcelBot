@@ -291,49 +291,157 @@ def update_masterfile(
         raise HTTPException(status_code=500, detail=f"Error updating masterfile: {str(e)}")
 
 
-@router.get("/availableitems/{company_id}/{location_id}/{filename}")
+@router.get("/availableitems/{company_id}/{location_id}")
 def get_masterfile_details(
     company_id: int, 
     location_id: int, 
-    filename: str, 
     db: Session = Depends(get_db)
-):
-    """Get masterfile details by company ID, location ID, and filename"""
+): 
+    """Get masterfile details by company ID, location ID, and filename with merged data"""
     
     # Get the masterfile
-    masterfile = masterfile_crud.get_masterfile_by_filename_and_location(db, company_id, location_id, filename)
+    masterfile = masterfile_crud.get_masterfile_by_company_and_location(db, company_id, location_id)
+    print("i am here in masterfile printing the masterfile", masterfile)
     
     if not masterfile:
         return {"message": "Masterfile not found", "data": []}
     
-    # Check if file_data exists and has data
-    if not masterfile.file_data or 'data' not in masterfile.file_data or not masterfile.file_data['data']:
-        return {"message": "No data found in this masterfile", "data": []}
+    # Process and merge data from all files
+    merged_data = []
+    seen_products = {}  # Track products by Category + Products combination
     
-    # Convert file_data to DataFrame
-    df = pd.DataFrame(masterfile.file_data['data'])
+    for file_entry in masterfile:
+        # Access attributes directly from SQLAlchemy model
+        if not hasattr(file_entry, 'file_data') or not file_entry.file_data or 'data' not in file_entry.file_data:
+            continue
+            
+        file_data = file_entry.file_data['data']
+        upload_date = file_entry.file_data.get('upload_date', '')
+        updated_at = file_entry.file_data.get('updated_at', upload_date)
+        filename = getattr(file_entry, 'filename', 'unknown')
+        
+        for item in file_data:
+            # Create a unique key based on Category and Products
+            product_key = f"{item.get('Category', '')}-{item.get('Products', '')}"
+            
+            # If this product hasn't been seen before, add it
+            if product_key not in seen_products:
+                item_copy = item.copy()
+                item_copy['_source_file'] = filename
+                item_copy['_upload_date'] = upload_date
+                item_copy['_updated_at'] = updated_at
+                seen_products[product_key] = len(merged_data)
+                merged_data.append(item_copy)
+            else:
+                # Product already exists, check if this version is more recent
+                existing_index = seen_products[product_key]
+                existing_item = merged_data[existing_index]
+                
+                # Compare dates to keep the most recent version
+                existing_date = existing_item.get('_updated_at', existing_item.get('_upload_date', ''))
+                current_date = updated_at
+                
+                if current_date > existing_date:
+                    # Update with newer data
+                    item_copy = item.copy()
+                    item_copy['_source_file'] = filename
+                    item_copy['_upload_date'] = upload_date
+                    item_copy['_updated_at'] = updated_at
+                    merged_data[existing_index] = item_copy
     
-    # print("i am here in masterfile printing the dataframe","\n" ,df.head())
-    # df.columns = df.columns.str.strip()  # Strip whitespace from column names
-    columns_dict = {f"column{i}": col for i, col in enumerate(df.columns)}    
+    # Convert merged data to DataFrame for consistency with your existing code
+    if not merged_data:
+        return {"message": "No data found in masterfiles", "data": []}
     
-    # Create a copy of DataFrame with renamed columns
+    df = pd.DataFrame(merged_data)
+    
+    # Remove internal tracking columns before returning
+    columns_to_remove = ['_source_file', '_upload_date', '_updated_at']
+    df_clean = df.drop(columns=[col for col in columns_to_remove if col in df.columns])
+    
+    # Create columns mapping
+    columns_dict = {f"column{i}": col for i, col in enumerate(df_clean.columns)}
+    
+    # Create a copy with renamed columns for consistency
+    df_copy = df_clean.copy()
+    df_copy.columns = [f"column{i}" for i in range(len(df_clean.columns))]
+    
+    data = {
+        "totalColumns": len(df_clean.columns),
+        "totalRows": len(df_clean),
+        "columns": columns_dict,
+        "dataframe": df_copy.to_dict(orient='records'),
+        "summary": {
+            "unique_products": len(merged_data),
+            "files_processed": len(masterfile)
+        }
+    }
+    
+    return {"data": data}
+
+
+# Alternative approach if you want to keep all versions but mark duplicates
+@router.get("/availableitems1_with_versions/{company_id}/{location_id}")
+def get_masterfile_details_with_versions(
+    company_id: int, 
+    location_id: int, 
+    db: Session = Depends(get_db)
+): 
+    """Get masterfile details showing all versions of products"""
+    
+    masterfile = masterfile_crud.get_masterfile_by_company_and_location(db, company_id, location_id)
+    
+    if not masterfile:
+        return {"message": "Masterfile not found", "data": []}
+    
+    all_data = []
+    
+    for file_entry in masterfile:
+        # Access attributes directly from SQLAlchemy model
+        if not hasattr(file_entry, 'file_data') or not file_entry.file_data or 'data' not in file_entry.file_data:
+            continue
+            
+        file_data = file_entry.file_data['data']
+        upload_date = file_entry.file_data.get('upload_date', '')
+        updated_at = file_entry.file_data.get('updated_at', upload_date)
+        filename = getattr(file_entry, 'filename', 'unknown')
+        
+        for item in file_data:
+            item_copy = item.copy()
+            item_copy['source_file'] = filename
+            item_copy['upload_date'] = upload_date
+            item_copy['updated_at'] = updated_at
+            all_data.append(item_copy)
+    
+    if not all_data:
+        return {"message": "No data found in masterfiles", "data": []}
+    
+    df = pd.DataFrame(all_data)
+    
+    # Sort by Category, Products, and updated_at to show latest versions first
+    df = df.sort_values(['Category', 'Products', 'updated_at'], 
+                       ascending=[True, True, False])
+    
+    # Mark duplicates (keeping first occurrence as latest)
+    df['is_latest_version'] = ~df.duplicated(subset=['Category', 'Products'], keep='first')
+    
+    columns_dict = {f"column{i}": col for i, col in enumerate(df.columns)}
     df_copy = df.copy()
-    df_copy.columns = [f"column{i}" for i in range(len(df.columns))]    
-    # Check if DataFrame is empty
-    if df.empty:
-        return {"message": "Empty dataset found in masterfile", "data": []}
+    df_copy.columns = [f"column{i}" for i in range(len(df.columns))]
     
     data = {
         "totalColumns": len(df.columns),
+        "totalRows": len(df),
         "columns": columns_dict,
         "dataframe": df_copy.to_dict(orient='records'),
+        "summary": {
+            "total_records": len(df),
+            "unique_products": df['is_latest_version'].sum(),
+            "files_processed": len(masterfile)
+        }
     }
     
-    return {"data": data}        
-        
-
-
+    return {"data": data}
 
 
 
