@@ -16,7 +16,7 @@ from schemas import storeorders as storeorders_schema
 
 
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 class OrderItemsRequest(BaseModel):
     company_id: Optional[int] = None
@@ -30,10 +30,21 @@ router = APIRouter(
     tags=["Store Orders"]
 )
 
+# class UpdateStoreOrdersRequest(BaseModel):
+#     company_id: int
+#     location_id: int
+#     items_ordered: Dict[str, Any]
+#     order_id: Optional[int] = None  # Optional order ID to update, if not provided a new order will be created
+
 class UpdateStoreOrdersRequest(BaseModel):
+    order_id: int
     company_id: int
     location_id: int
-    items_ordered: Dict[str, Any]
+    items: Optional[List[Dict[str, Any]]] = None
+    items_ordered: Optional[Dict[str, Any]] = None
+    total_amount: Optional[Any] = None
+    email_order: Optional[Any] = False
+    updated_date: Optional[str] = None
 
 @router.get("/details")
 def get_storeorders_details_alt(db: Session = Depends(get_db)):
@@ -400,6 +411,8 @@ def create_new_order_items(request: OrderItemsRequest, db: Session = Depends(get
             created_at=datetime.datetime.utcnow(),  # Set current time as created_at
             items_ordered=items_ordered_data
         )
+        print(f"Creating new store items ordered with data: {items_ordered_data}")
+        
         
         new_order = storeorders_crud.create_storeorders(db, create_obj)
         
@@ -468,42 +481,48 @@ def get_recent_storeorders_details_by_location(
     
 
 # Updated function to update order by ID
-@router.post("/orderupdate/{order_id}")
+@router.post("/orderupdate")
 def update_storeorders_by_id(
-    order_id: int,
     request: UpdateStoreOrdersRequest,
     db: Session = Depends(get_db)
 ):
     """Update items_ordered for a specific store orders record by ID"""
-    
-    print(f"Received request to update store order ID {order_id}:", request.model_dump())
+
+    print(f"Received request to update store order  request.order_id:", request.model_dump())
     try:
         # First, check if the order exists
-        existing_order = storeorders_crud.get_storeorders(db, order_id)
-        
+        existing_order = storeorders_crud.get_storeorders(db, request.order_id)
+        print(f"Checking existing order with ID:", existing_order)    
+   
+    
         if not existing_order:
             raise HTTPException(
                 status_code=404, 
-                detail=f"Store order with ID {order_id} not found"
+                detail=f"Store order with ID {request.order_id} not found"
             )
         
         # Optional: Verify that the order belongs to the specified company and location
         if existing_order.company_id != request.company_id or existing_order.location_id != request.location_id:
             raise HTTPException(
                 status_code=400,
-                detail=f"Order ID {order_id} does not belong to company {request.company_id} and location {request.location_id}"
+                detail=f"Order ID {request.order_id} does not belong to company {request.company_id} and location {request.location_id}"
             )
         
         print(f"Found existing order with ID: {existing_order.id}")
         print(f"Current items_ordered: {existing_order.items_ordered}")
-        print(f"New items_ordered: {request.items_ordered}")
+                # Prepare the items_ordered data
+        new_items_ordered_data = {
+            "total_items": len(request.items),
+            "items": request.items,
+        }
+        print(f"New items_ordered: {new_items_ordered_data}")
         
         # Create update object
-        update_obj = storeorders_schema.StoreOrdersUpdate(items_ordered=request.items_ordered)
-        
+        update_obj = storeorders_schema.StoreOrdersUpdate(items_ordered=new_items_ordered_data)
+
         # Update by order ID (this will automatically move current to prev and set new items)
-        updated_storeorders = storeorders_crud.update_storeorders(db, order_id, update_obj)
-        
+        updated_storeorders = storeorders_crud.update_storeorders(db, request.order_id, update_obj)
+
         if updated_storeorders:
             print("Successfully updated store order in database")
             print(f"New items_ordered: {updated_storeorders.items_ordered}")
@@ -511,7 +530,7 @@ def update_storeorders_by_id(
             
             return {
                 "status": "success", 
-                "message": f"Store order {order_id} updated successfully",
+                "message": f"Store order {request.order_id} updated successfully",
                 "order_id": updated_storeorders.id,
                 "company_id": updated_storeorders.company_id,
                 "location_id": updated_storeorders.location_id,
@@ -521,7 +540,7 @@ def update_storeorders_by_id(
                 "prev_items_ordered": updated_storeorders.prev_items_ordered,
                 "update_summary": {
                     "previous_items_preserved": True if updated_storeorders.prev_items_ordered else False,
-                    "new_items_count": len(request.items_ordered.get('items', [])) if 'items' in request.items_ordered else 0
+                    # "new_items_count": len(request.items_ordered.get('items', [])) if 'items' in request.items_ordered else 0
                 }
             }
         else:
