@@ -940,4 +940,242 @@ def get_consolidated_production(company_id: int, db: Session = Depends(get_db)):
 
 
 
+@router.get("/financialsummary/{company_id}/{location_id}")
+def get_financial_summary(
+    company_id: int, 
+    location_id: int, 
+    db: Session = Depends(get_db)
+):
+    """Get total sales, total orders, average order value, and daily analytics tables"""
+    try:
+        storeorders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
+
+        if not storeorders:
+            return {
+                "message": "No store orders found for this company and location", 
+                "data": {
+                    "total_sales": 0,
+                    "total_orders": 0,
+                    "orders_cost_per_day": 0.0
+                }
+            }
+
+        if not isinstance(storeorders, list):
+            storeorders = [storeorders] if storeorders else []
+
+        total_orders = len(storeorders)
+        total_sales = 0.0
+
+        # Build rows with date and order_sales
+        rows = []
+        for order in storeorders:
+            created_date = order.created_at.date()
+            order_sales = 0.0
+            if order.items_ordered and "items" in order.items_ordered:
+                for item in order.items_ordered["items"]:
+                    total_price = item.get("total_price", 0)
+                    order_sales += float(total_price)
+            total_sales += order_sales
+            rows.append({"created_at": created_date, "order_sales": order_sales})
+
+        avg_order_value = round(total_sales / total_orders, 2) if total_orders > 0 else 0.0
+
+        df = pd.DataFrame(rows)
+        df["created_at"] = pd.to_datetime(df["created_at"])
+
+        # Daily Orders
+        daily_counts = df.groupby(df["created_at"].dt.date).size().reset_index(name="order_count")
+        daily_counts["created_at"] = pd.to_datetime(daily_counts["created_at"])
+        daily_counts = daily_counts.sort_values(by="created_at")
+        daily_counts["moving_avg"] = daily_counts["order_count"].rolling(window=5, min_periods=1).mean().round(2)
+
+        # Daily Sales and Avg Order Value
+        daily_sales = df.groupby(df["created_at"].dt.date).agg(
+            total_sales_per_day=("order_sales", "sum"),
+            order_count=("order_sales", "count")
+        ).reset_index()
+        daily_sales["created_at"] = pd.to_datetime(daily_sales["created_at"])
+        daily_sales["avg_order_value"] = (daily_sales["total_sales_per_day"] / daily_sales["order_count"]).round(2)
+        daily_sales = daily_sales.sort_values(by="created_at")
+        daily_sales["moving_avg"] = daily_sales["avg_order_value"].rolling(window=5, min_periods=1).mean().round(2)
+
+        # Daily Sales Trend (new)
+        daily_sales_trend_df = daily_sales[["created_at", "total_sales_per_day"]].copy()
+        daily_sales_trend_df = daily_sales_trend_df.sort_values(by="created_at")
+        daily_sales_trend_df["moving_avg"] = daily_sales_trend_df["total_sales_per_day"].rolling(window=5, min_periods=1).mean().round(2)
+
+        # Format dates
+        if platform.system() == "Windows":
+            date_format = "%b %#d"
+        else:
+            date_format = "%b %-d"
+
+        daily_counts = daily_counts.rename(columns={"created_at": "date"})
+        daily_counts["date"] = daily_counts["date"].dt.strftime(date_format)
+
+        daily_sales = daily_sales.rename(columns={"created_at": "date"})
+        daily_sales["date"] = daily_sales["date"].dt.strftime(date_format)
+
+        daily_sales_trend_df = daily_sales_trend_df.rename(columns={"created_at": "date", "total_sales_per_day": "total_sales"})
+        daily_sales_trend_df["date"] = daily_sales_trend_df["date"].dt.strftime(date_format)
+
+        # Company and Location Info
+        company = db.query(Company).filter(Company.id == company_id).first()
+        location = db.query(Store).filter(Store.id == location_id).first()
+        
+
+        # Step: Cost Breakdown by Category
+        category_costs = {}
+
+        for order in storeorders:
+            if order.items_ordered and "items" in order.items_ordered:
+                for item in order.items_ordered["items"]:
+                    category = item.get("category", "Uncategorized")
+                    cost = float(item.get("total_price", 0.0))
+                    category_costs[category] = category_costs.get(category, 0.0) + cost
+
+        # Convert to DataFrame
+        category_rows = [{"category": k, "cost": v} for k, v in category_costs.items()]
+        cost_breakdown_by_category_df = pd.DataFrame(category_rows)
+
+        if cost_breakdown_by_category_df.empty:
+            cost_breakdown_by_category_df = pd.DataFrame(columns=["category", "cost", "percentage"])
+        else:
+            total_category_cost = cost_breakdown_by_category_df["cost"].sum()
+            cost_breakdown_by_category_df["cost"] = cost_breakdown_by_category_df["cost"].round(2)
+            cost_breakdown_by_category_df["percentage"] = (
+                (cost_breakdown_by_category_df["cost"] / total_category_cost) * 100
+            ).round(2)
+
+
+        return {
+            "message": "Financial summary data fetched successfully",
+            "data": {
+                "company_name": company.name if company else "Unknown",
+                "location_name": location.name if location else "Unknown",
+                "total_sales": total_sales,
+                "total_orders": total_orders,
+                "orders_cost_per_day": round(total_sales / total_orders, 2) if total_orders > 0 else 0.0,
+                "cost_breakdown_by_category": cost_breakdown_by_category_df.to_dict(orient="records"),
+            }
+        }
+
+    except Exception as e:
+        print(f"Error fetching financial summary data: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error fetching analytics dashboard data: {str(e)}")
+
+
+
+@router.get("/companysummary/{company_id}")
+def get_company_summary(
+    company_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get cost breakdown by store and cost summary table (date vs store matrix)"""
+    try:
+        storeorders = storeorders_crud.get_storeorders_by_company(db, company_id)
+
+        if not storeorders:
+            return {
+                "message": "No store orders found for this company",
+                "data": {
+                    "cost_breakdown_by_store": [],
+                    "cost_summary": []
+                }
+            }
+
+        if not isinstance(storeorders, list):
+            storeorders = [storeorders]
+
+        # Lookup store names
+        location_ids = {order.location_id for order in storeorders if order.location_id}
+        locations = db.query(Store).filter(Store.id.in_(location_ids)).all()
+        location_lookup = {loc.id: loc.name for loc in locations}
+
+        # Initialize cost summary table
+        cost_matrix = {}
+
+        for order in storeorders:
+            if not order.created_at or not order.location_id:
+                continue
+
+            date = order.created_at.date()
+            store_id = order.location_id
+            store_name = location_lookup.get(store_id, f"Store {store_id}")
+
+            if date not in cost_matrix:
+                cost_matrix[date] = {}
+            if store_name not in cost_matrix[date]:
+                cost_matrix[date][store_name] = 0.0
+
+            if order.items_ordered and "items" in order.items_ordered:
+                for item in order.items_ordered["items"]:
+                    cost_matrix[date][store_name] += float(item.get("total_price", 0.0))
+
+        # Normalize data: Get all unique store names
+        all_stores = sorted({store for store_data in cost_matrix.values() for store in store_data})
+
+        # Build cost_summary table
+        cost_summary = []
+        for date in sorted(cost_matrix.keys(), reverse=True):  # latest date first
+            row = {"date": str(date)}
+            daily_total = 0.0
+            for store in all_stores:
+                cost = cost_matrix[date].get(store, 0.0)
+                row[store] = round(cost, 2)
+                daily_total += cost
+            row["daily_total"] = round(daily_total, 2)
+            cost_summary.append(row)
+
+        # Optional: Add period total row
+        period_totals = {"date": "Period Total:"}
+        grand_total = 0.0
+        for store in all_stores:
+            total = sum(row[store] for row in cost_summary)
+            period_totals[store] = round(total, 2)
+            grand_total += total
+        period_totals["daily_total"] = round(grand_total, 2)
+        cost_summary.append(period_totals)
+
+        # Prepare cost breakdown by store
+        store_costs = {}
+        for row in cost_summary:
+            if row["date"] == "Period Total:":
+                continue
+            for store in all_stores:
+                store_costs[store] = store_costs.get(store, 0.0) + row[store]
+
+        total_cost = sum(store_costs.values())
+        cost_breakdown_by_store = [
+            {
+                "store_name": store,
+                "cost": round(cost, 2),
+                "percentage": round((cost / total_cost * 100) if total_cost > 0 else 0.0, 2)
+            }
+            for store, cost in store_costs.items()
+        ]
+        cost_breakdown_by_store.sort(key=lambda x: x["cost"], reverse=True)
+
+        # Get company name
+        company = db.query(Company).filter(Company.id == company_id).first()
+
+        return {
+            "message": "Company cost summary and breakdown fetched successfully",
+            "data": {
+                "company_name": company.name if company else "Unknown",
+                "cost_breakdown_by_store": cost_breakdown_by_store,
+                "cost_summary": cost_summary
+            }
+        }
+
+    except Exception as e:
+        print(f"Error fetching financial summary data: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching analytics dashboard data: {str(e)}"
+        )
 
