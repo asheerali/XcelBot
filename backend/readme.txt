@@ -104,6 +104,10 @@ it will return this
 }
 
 
+for the store summary dashboard
+/api/storeorders/allordersinvoices/{company_id}/{location_id}
+/api/storeorders/consolidatedproduction/{company_id}
 
-
-
+for the financila summary dashboard
+/api/storeorders
+/api/storeorders

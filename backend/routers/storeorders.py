@@ -1,4 +1,5 @@
 # routers/storeorders.py
+from collections import defaultdict
 import datetime
 import platform
 import traceback
@@ -843,28 +844,39 @@ def get_analytics_dashboard(
         if not isinstance(storeorders, list):
             storeorders = [storeorders] if storeorders else []
 
-        total_orders = len(storeorders)
         total_sales = 0.0
-
         # Build rows with date and order_sales
         rows = []
         for order in storeorders:
             created_date = order.created_at.date()
-            order_sales = 0.0
-            if order.items_ordered and "items" in order.items_ordered:
-                for item in order.items_ordered["items"]:
+            total_amount = 0.0
+            total_quantity = 0
+
+            if order.items_ordered:
+                items = order.items_ordered.get("items", [])
+                for item in items:
                     total_price = item.get("total_price", 0)
-                    order_sales += float(total_price)
-            total_sales += order_sales
+                    quantity = item.get("quantity", 0)
+                    total_amount += float(total_price)
+                    total_quantity += int(quantity)
+
+                items_count = order.items_ordered.get("total_items", len(items))
+            else:
+                items_count = 0
+
+            total_sales += total_amount
             rows.append({
                 "order_id": order.id,
                 "created_at": created_date,
-                "order_sales": order_sales
+                "items_count": items_count,
+                "total_quantity": total_quantity,
+                "total_amount": total_amount,
             })
 
         return {
             "message": "Analytics dashboard data fetched successfully",
-            "data": rows
+            "data": rows,
+            "total": total_sales
         }
 
     except Exception as e:
@@ -872,5 +884,60 @@ def get_analytics_dashboard(
         import traceback
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error fetching analytics dashboard data: {str(e)}")
+
+
+
+@router.get("/consolidatedproduction/{company_id}")
+def get_consolidated_production(company_id: int, db: Session = Depends(get_db)):
+    try:
+        storeorders = storeorders_crud.get_storeorders_by_company(db, company_id)
+        if not storeorders:
+            return {"message": "No store orders found for this company", "data": []}
+
+        # Get all unique locations
+        location_ids = list(set(order.location_id for order in storeorders if order.location_id))
+        locations = db.query(Store).filter(Store.id.in_(location_ids)).all()
+        location_lookup = {loc.id: loc.name for loc in locations}
+
+        # Build item-location-quantity matrix
+        item_data = defaultdict(lambda: defaultdict(int))  # item_data[item_name][location_name] = quantity
+        item_units = {}  # item_data[item_name] = unit
+
+        for order in storeorders:
+            location_name = location_lookup.get(order.location_id, f"Location {order.location_id}")
+            if not order.items_ordered or "items" not in order.items_ordered:
+                continue
+
+            for item in order.items_ordered["items"]:
+                name = item.get("name")
+                quantity = item.get("quantity", 0)
+                unit = item.get("unit", "")
+                item_data[name][location_name] += quantity
+                item_units[name] = unit
+
+        # Format final table rows
+        all_location_names = sorted(location_lookup.values())
+        table_rows = []
+        for item_name, location_qtys in item_data.items():
+            row = {"Item": item_name}
+            total_required = 0
+            for loc in all_location_names:
+                qty = location_qtys.get(loc, 0)
+                row[loc] = qty
+                total_required += qty
+            row["Total Required"] = total_required
+            row["Unit"] = item_units.get(item_name, "")
+            table_rows.append(row)
+
+        return {
+            "message": "Consolidated production table generated successfully",
+            "columns": ["Item"] + all_location_names + ["Total Required", "Unit"],
+            "data": table_rows
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching consolidated production: {str(e)}")
+
+
 
 
