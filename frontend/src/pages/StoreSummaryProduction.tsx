@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -25,7 +25,10 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  CircularProgress,
+  Alert,
+  Skeleton
 } from '@mui/material';
 import {
   Print as PrintIcon,
@@ -40,9 +43,48 @@ import {
   Clear as ClearIcon
 } from '@mui/icons-material';
 
-// Import your existing FiltersOrderIQ component and DateRangeSelector
-import FiltersOrderIQ from '../components/FiltersOrderIQ'; // Adjust the import path as needed
+// Import your existing components
 import DateRangeSelector from '../components/DateRangeSelector'; // Adjust the import path as needed
+import { API_URL_Local } from '../constants'; // Import API base URL
+
+// API response interfaces
+interface OrderData {
+  order_id: number;
+  created_at: string;
+  items_count: number;
+  total_quantity: number;
+  total_amount: number;
+}
+
+interface OrdersApiResponse {
+  message: string;
+  data: OrderData[];
+  total: number;
+}
+
+interface ConsolidatedProductionItem {
+  Item: string;
+  [locationName: string]: string | number; // Dynamic location columns
+  'Total Required': number;
+  Unit: string;
+}
+
+interface ConsolidatedProductionResponse {
+  message: string;
+  columns: string[];
+  data: ConsolidatedProductionItem[];
+}
+
+interface Company {
+  company_id: number;
+  company_name: string;
+  locations: Location[];
+}
+
+interface Location {
+  location_id: number;
+  location_name: string;
+}
 
 // DateRangeSelector Button Component
 const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
@@ -172,234 +214,185 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
   );
 };
 
-// Mock data for orders by location with detailed items
-const ordersData = [
-  {
-    orderDate: '24/06/2025',
-    orderNumber: '#24',
-    itemsCount: 1,
-    totalQuantity: 16,
-    totalAmount: 38.08,
-    items: [
-      { name: 'Unknown Item', code: 'N/A', quantity: 16.00, unit: 'unit', unitCost: 2.38, totalCost: 38.08 }
-    ]
-  },
-  {
-    orderDate: '21/06/2025',
-    orderNumber: '#21',
-    itemsCount: 6,
-    totalQuantity: 32,
-    totalAmount: 435.84,
-    items: [
-      { name: '12 oz coffee cup', code: '12OZCO_7415', quantity: 10.00, unit: 'Bag', unitCost: 2.34, totalCost: 23.40 },
-      { name: '16 oz coffee cup', code: '16OZCO_7415', quantity: 8.00, unit: 'Bag', unitCost: 2.30, totalCost: 18.40 },
-      { name: '12 oz coffee cup', code: '12OZCO_5802', quantity: 5.00, unit: 'Bag', unitCost: 2.34, totalCost: 11.70 },
-      { name: '16 oz coffee cup', code: '16OZCO_5802', quantity: 4.00, unit: 'Bag', unitCost: 2.30, totalCost: 9.20 },
-      { name: '12 oz coffee cup', code: '12OZCO_0996', quantity: 3.00, unit: 'Bag', unitCost: 2.34, totalCost: 7.02 },
-      { name: 'Unknown Item', code: 'N/A', quantity: 2.00, unit: 'unit', unitCost: 2.38, totalCost: 4.76 }
-    ]
-  },
-  {
-    orderDate: '20/06/2025',
-    orderNumber: '#20',
-    itemsCount: 2,
-    totalQuantity: 2,
-    totalAmount: 4.68,
-    items: [
-      { name: '12 oz coffee cup', code: '12OZCO_7415', quantity: 1.00, unit: 'Bag', unitCost: 2.34, totalCost: 2.34 },
-      { name: '16 oz coffee cup', code: '16OZCO_7415', quantity: 1.00, unit: 'Bag', unitCost: 2.34, totalCost: 2.34 }
-    ]
-  },
-  {
-    orderDate: '16/06/2025',
-    orderNumber: '#16',
-    itemsCount: 4,
-    totalQuantity: 22,
-    totalAmount: 276.74,
-    items: [
-      { name: '12 oz coffee cup', code: '12OZCO_7415', quantity: 8.00, unit: 'Bag', unitCost: 2.34, totalCost: 18.72 },
-      { name: '16 oz coffee cup', code: '16OZCO_7415', quantity: 6.00, unit: 'Bag', unitCost: 2.30, totalCost: 13.80 },
-      { name: '12 oz coffee cup', code: '12OZCO_5802', quantity: 4.00, unit: 'Bag', unitCost: 2.34, totalCost: 9.36 },
-      { name: '16 oz coffee cup', code: '16OZCO_5802', quantity: 4.00, unit: 'Bag', unitCost: 2.30, totalCost: 9.20 }
-    ]
-  },
-  {
-    orderDate: '14/06/2025',
-    orderNumber: '#14',
-    itemsCount: 6,
-    totalQuantity: 9,
-    totalAmount: 91.87,
-    items: [
-      { name: '12 oz coffee cup', code: '12OZCO_7415', quantity: 3.00, unit: 'Bag', unitCost: 2.34, totalCost: 7.02 },
-      { name: '16 oz coffee cup', code: '16OZCO_7415', quantity: 2.00, unit: 'Bag', unitCost: 2.30, totalCost: 4.60 },
-      { name: '12 oz coffee cup', code: '12OZCO_5802', quantity: 2.00, unit: 'Bag', unitCost: 2.34, totalCost: 4.68 },
-      { name: '16 oz coffee cup', code: '16OZCO_5802', quantity: 1.00, unit: 'Bag', unitCost: 2.30, totalCost: 2.30 },
-      { name: '12 oz coffee cup', code: '12OZCO_0996', quantity: 1.00, unit: 'Bag', unitCost: 2.34, totalCost: 2.34 },
-      { name: 'Unknown Item', code: 'N/A', quantity: 0.00, unit: 'unit', unitCost: 2.38, totalCost: 0.00 }
-    ]
-  },
-  {
-    orderDate: '13/06/2025',
-    orderNumber: '#13',
-    itemsCount: 4,
-    totalQuantity: 7,
-    totalAmount: 84.55,
-    items: [
-      { name: '12 oz coffee cup', code: '12OZCO_7415', quantity: 3.00, unit: 'Bag', unitCost: 2.34, totalCost: 7.02 },
-      { name: '16 oz coffee cup', code: '16OZCO_7415', quantity: 2.00, unit: 'Bag', unitCost: 2.30, totalCost: 4.60 },
-      { name: '12 oz coffee cup', code: '12OZCO_5802', quantity: 1.00, unit: 'Bag', unitCost: 2.34, totalCost: 2.34 },
-      { name: '16 oz coffee cup', code: '16OZCO_5802', quantity: 1.00, unit: 'Bag', unitCost: 2.30, totalCost: 2.30 }
-    ]
-  },
-  {
-    orderDate: '11/06/2025',
-    orderNumber: '#11',
-    itemsCount: 2,
-    totalQuantity: 7,
-    totalAmount: 16.42,
-    items: [
-      { name: '12 oz coffee cup', code: '12OZCO_7415', quantity: 4.00, unit: 'Bag', unitCost: 2.34, totalCost: 9.36 },
-      { name: '16 oz coffee cup', code: '16OZCO_7415', quantity: 3.00, unit: 'Bag', unitCost: 2.30, totalCost: 6.90 }
-    ]
-  }
-];
-
-// Mock data for store locations
-const storeLocations = [
-  {
-    name: 'Downtown Brooklyn',
-    status: 'Active',
-    lastUpdated: 'Last Updated: No orders',
-    itemsOrdered: 0,
-    totalValue: 0.00
-  },
-  {
-    name: 'tst7 Store',
-    status: 'Active',
-    lastUpdated: 'Last Updated: No orders',
-    itemsOrdered: 0,
-    totalValue: 0.00
-  },
-  {
-    name: 'Test 8',
-    status: 'Active',
-    lastUpdated: 'Last Updated: No orders',
-    itemsOrdered: 0,
-    totalValue: 0.00
-  },
-  {
-    name: 'All 2',
-    status: 'Active',
-    lastUpdated: 'Last Updated: No orders',
-    itemsOrdered: 0,
-    totalValue: 0.00
-  },
-  {
-    name: 'Midtown East',
-    status: 'Active',
-    lastUpdated: 'Last Updated: 4:00:00 AM',
-    itemsOrdered: 12,
-    totalValue: 717.26
-  },
-  {
-    name: '25',
-    status: 'Active',
-    lastUpdated: 'Last Updated: No orders',
-    itemsOrdered: 0,
-    totalValue: 0.00
-  }
-];
-
-// Mock data for consolidated production requirements
-const consolidatedData = [
-  {
-    item: '12 oz coffee cup',
-    locations: {
-      'Downtown Brooklyn': 0,
-      'tst7 Store': 0,
-      'Test 8': 0,
-      'All 2': 0,
-      'Midtown East': 1,
-      '25': 0
-    },
-    totalRequired: 1,
-    unit: 'Bag'
-  },
-  {
-    item: '12 oz coffee cup',
-    locations: {
-      'Downtown Brooklyn': 0,
-      'tst7 Store': 0,
-      'Test 8': 0,
-      'All 2': 0,
-      'Midtown East': 1,
-      '25': 0
-    },
-    totalRequired: 1,
-    unit: 'Bag'
-  }
-];
-
 const StoreSummaryProduction = () => {
-  // State management
-  const [filters, setFilters] = useState({});
+  // State management for filters
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
   const [printDialog, setPrintDialog] = useState({ open: false, order: null, type: 'print' });
   const [emailDialog, setEmailDialog] = useState({ open: false, order: null, email: '' });
-  const [viewDetailsDialog, setViewDetailsDialog] = useState({ open: false, store: null, orders: [] });
   
   // Date range selector state
   const [selectedDateRange, setSelectedDateRange] = useState(null);
 
-  // Filter configuration for FiltersOrderIQ component
-  const filterFields = [
-    {
-      key: 'location',
-      label: 'Location',
-      placeholder: 'Select Location',
-      options: [
-        { value: 'midtown-east', label: 'Midtown East' },
-        { value: 'downtown-brooklyn', label: 'Downtown Brooklyn' },
-        { value: 'tst7-store', label: 'tst7 Store' },
-        { value: 'test-8', label: 'Test 8' },
-        { value: 'all-2', label: 'All 2' },
-        { value: '25', label: '25' }
-      ]
-    },
-    {
-      key: 'companies',
-      label: 'Companies',
-      placeholder: 'Select Companies',
-      options: [
-        { value: 'company-1', label: 'Company 1' },
-        { value: 'company-2', label: 'Company 2' },
-        { value: 'company-3', label: 'Company 3' }
-      ]
-    }
-  ];
+  // API data state
+  const [ordersData, setOrdersData] = useState<OrderData[]>([]);
+  const [consolidatedData, setConsolidatedData] = useState<ConsolidatedProductionItem[]>([]);
+  const [consolidatedColumns, setConsolidatedColumns] = useState<string[]>([]);
+  const [ordersTotal, setOrdersTotal] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [companiesData, setCompaniesData] = useState<Company[]>([]);
 
-  // Event handlers
-  const handleFilterChange = (fieldKey, values) => {
-    setFilters(prev => ({ ...prev, [fieldKey]: values }));
+  // Fetch companies data for display names
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const response = await fetch(`${API_URL_Local}/company-locations/all`);
+        if (response.ok) {
+          const data: Company[] = await response.json();
+          setCompaniesData(data);
+        }
+      } catch (err) {
+        console.error('Error fetching companies:', err);
+      }
+    };
+    fetchCompanies();
+  }, []);
+
+  // Get available locations based on selected companies
+  const getAvailableLocations = () => {
+    if (selectedCompanies.length === 0) {
+      return [];
+    }
+    
+    const selectedCompanyIds = selectedCompanies.map(id => parseInt(id));
+    return companiesData
+      .filter(company => selectedCompanyIds.includes(company.company_id))
+      .flatMap(company => company.locations);
   };
 
-  const handleApplyFilters = () => {
-    console.log('Applying filters:', filters);
-    // Add your filter logic here
+  // Get company and location names for display
+  const getCompanyName = (companyId: string) => {
+    const company = companiesData.find(c => c.company_id.toString() === companyId);
+    return company?.company_name || `Company ${companyId}`;
+  };
+
+  const getLocationName = (companyId: string, locationId: string) => {
+    const company = companiesData.find(c => c.company_id.toString() === companyId);
+    const location = company?.locations.find(l => l.location_id.toString() === locationId);
+    return location?.location_name || `Location ${locationId}`;
+  };
+
+  // Fetch orders data
+  const fetchOrdersData = async (companyId: string, locationId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch(`${API_URL_Local}/api/storeorders/allordersinvoices/${companyId}/${locationId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result: OrdersApiResponse = await response.json();
+      setOrdersData(result.data);
+      setOrdersTotal(result.total);
+      
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch orders data');
+      setOrdersData([]);
+      setOrdersTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch consolidated production data
+  const fetchConsolidatedData = async (companyId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch(`${API_URL_Local}/api/storeorders/consolidatedproduction/${companyId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result: ConsolidatedProductionResponse = await response.json();
+      setConsolidatedData(result.data);
+      setConsolidatedColumns(result.columns);
+      
+    } catch (err) {
+      console.error('Error fetching consolidated data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch consolidated production data');
+      setConsolidatedData([]);
+      setConsolidatedColumns([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Event handlers for filters
+  const handleLocationChange = (values: string[]) => {
+    // Only allow locations that are available for selected companies
+    const availableLocationIds = getAvailableLocations().map(loc => loc.location_id.toString());
+    const validValues = values.filter(value => availableLocationIds.includes(value));
+    setSelectedLocations(validValues);
+  };
+
+  const handleCompanyChange = (values: string[]) => {
+    setSelectedCompanies(values);
+    // Clear location selection when company changes
+    setSelectedLocations([]);
+    // Clear data when company changes
+    setOrdersData([]);
+    setConsolidatedData([]);
+    setConsolidatedColumns([]);
+    setOrdersTotal(0);
+  };
+
+  const handleApplyFilters = async () => {
+    console.log('Applying filters:', {
+      companies: selectedCompanies,
+      locations: selectedLocations,
+      dateRange: selectedDateRange
+    });
+
+    if (selectedCompanies.length === 0) {
+      setError('Please select at least one company');
+      return;
+    }
+
+    if (selectedLocations.length === 0) {
+      setError('Please select at least one location');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // For now, we'll use the first selected company and location
+      // You can modify this logic to handle multiple selections
+      const companyId = selectedCompanies[0];
+      const locationId = selectedLocations[0];
+
+      // Fetch both orders and consolidated data
+      await Promise.all([
+        fetchOrdersData(companyId, locationId),
+        fetchConsolidatedData(companyId)
+      ]);
+
+    } catch (err) {
+      console.error('Error applying filters:', err);
+      setError('Failed to fetch data. Please try again.');
+    }
   };
 
   // Date range handler
   const handleDateRangeSelect = (range) => {
     setSelectedDateRange(range);
     console.log('Selected date range for production reports:', range);
-    // Here you would typically filter orders and production data based on the selected date range
-    // For example: filterProductionDataByDateRange(range);
   };
 
-  const handlePrintOrder = (order) => {
+  const handlePrintOrder = (order: OrderData) => {
     setPrintDialog({ open: true, order, type: 'print' });
   };
 
-  const handleEmailOrder = (order) => {
+  const handleEmailOrder = (order: OrderData) => {
     setEmailDialog({ open: true, order, email: '' });
   };
 
@@ -418,24 +411,13 @@ const StoreSummaryProduction = () => {
       // Email configuration
       const emailData = {
         to: email,
-        from: 'asheerali1997@gmail.com',
-        subject: `Order Report - ${order.orderNumber} - Company 2`,
+        from: 'system@company.com',
+        subject: `Order Report - Order #${order.order_id} - ${getCompanyName(selectedCompanies[0])}`,
         html: orderReport,
-        // You can also add a plain text version
-        text: `Order Report for ${order.orderNumber}\nOrder Date: ${order.orderDate}\nTotal Items: ${order.totalQuantity}\nTotal Amount: ${order.totalAmount.toFixed(2)}`
+        text: `Order Report for Order #${order.order_id}\nOrder Date: ${new Date(order.created_at).toLocaleDateString()}\nTotal Items: ${order.items_count}\nTotal Amount: ${order.total_amount.toFixed(2)}`
       };
 
-      // Here you would typically send to your backend API
       console.log('Sending email with data:', emailData);
-      
-      // For demo purposes, we'll just show success
-      // In real implementation, you'd call your email API:
-      // const response = await fetch('/api/send-email', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(emailData)
-      // });
-      
       alert(`Email sent successfully to ${email}`);
       setEmailDialog({ open: false, order: null, email: '' });
       
@@ -454,15 +436,11 @@ const StoreSummaryProduction = () => {
       printWindow.document.write(printContent);
       printWindow.document.close();
       printWindow.print();
-    } else {
-      // Handle email - you can integrate with your email service
-      console.log('Sending email for order:', order.orderNumber);
-      alert(`Email sent for order ${order.orderNumber}`);
     }
     setPrintDialog({ open: false, order: null, type: 'print' });
   };
 
-  const generateOrderReport = (order) => {
+  const generateOrderReport = (order: OrderData) => {
     const currentDate = new Date().toLocaleString('en-GB', {
       day: '2-digit',
       month: '2-digit',
@@ -474,13 +452,18 @@ const StoreSummaryProduction = () => {
 
     const dateRangeText = selectedDateRange 
       ? `${selectedDateRange.startDate.toLocaleDateString()} to ${selectedDateRange.endDate.toLocaleDateString()}`
-      : '06/15/2025 to 06/22/2025';
+      : 'All time';
+
+    const companyName = selectedCompanies.length > 0 ? getCompanyName(selectedCompanies[0]) : 'Selected Company';
+    const locationName = selectedLocations.length > 0 && selectedCompanies.length > 0 
+      ? getLocationName(selectedCompanies[0], selectedLocations[0]) 
+      : 'Selected Location';
 
     return `
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Order Report - ${order.orderNumber}</title>
+        <title>Order Report - Order #${order.order_id}</title>
         <style>
           body { 
             font-family: Arial, sans-serif; 
@@ -519,117 +502,51 @@ const StoreSummaryProduction = () => {
           .order-summary strong { 
             font-weight: 600; 
           }
-          table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin-bottom: 20px; 
-          }
-          th, td { 
-            border: 1px solid #ddd; 
-            padding: 12px; 
-            text-align: left; 
-          }
-          th { 
-            background-color: #f5f5f5; 
-            font-weight: 600; 
-          }
-          .total-row { 
-            font-weight: bold; 
-            background-color: #f8f9fa; 
-          }
           .footer { 
             text-align: center; 
             margin-top: 40px; 
             font-size: 12px; 
             color: #666; 
           }
-          .amount { 
-            text-align: right; 
+          .summary-box {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+          }
+          .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 16px;
+          }
+          .summary-value {
+            font-weight: bold;
+            color: #1976d2;
           }
         </style>
       </head>
       <body>
         <div class="header">
-          <div class="company-name">Company 2</div>
-          <div class="location">Midtown East</div>
+          <div class="company-name">${companyName}</div>
+          <div class="location">${locationName}</div>
           <div class="date-range">Report Period: ${dateRangeText}</div>
         </div>
         
         <div class="order-summary">
-          <div><strong>Order Date:</strong> ${order.orderDate}</div>
-          <div><strong>Total Items:</strong> ${order.totalQuantity}</div>
-          <div><strong>Total Amount:</strong> $${order.totalAmount.toFixed(2)}</div>
+          <div><strong>Order ID:</strong> ${order.order_id}</div>
+          <div><strong>Order Date:</strong> ${new Date(order.created_at).toLocaleDateString()}</div>
+          <div><strong>Items Count:</strong> ${order.items_count}</div>
+          <div><strong>Total Quantity:</strong> ${order.total_quantity}</div>
+          <div><strong>Total Amount:</strong> $${order.total_amount.toFixed(2)}</div>
         </div>
         
-        <table>
-          <thead>
-            <tr>
-              <th>Item Name</th>
-              <th>Item Code</th>
-              <th>Quantity</th>
-              <th>Unit</th>
-              <th>Unit Cost</th>
-              <th>Total Cost</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${order.items.map(item => `
-              <tr>
-                <td>${item.name}</td>
-                <td>${item.code}</td>
-                <td>${item.quantity.toFixed(2)}</td>
-                <td>${item.unit}</td>
-                <td class="amount">$${item.unitCost.toFixed(2)}</td>
-                <td class="amount">$${item.totalCost.toFixed(2)}</td>
-              </tr>
-            `).join('')}
-            <tr class="total-row">
-              <td colspan="5"><strong>Total</strong></td>
-              <td class="amount"><strong>$${order.totalAmount.toFixed(2)}</strong></td>
-            </tr>
-          </tbody>
-        </table>
-        
         <div class="footer">
-          Generated on ${currentDate}
+          Generated on ${currentDate} | ${companyName} Order Management System
         </div>
       </body>
       </html>
     `;
-  };
-
-  const handleViewDetails = (storeName) => {
-    // Find store details
-    const storeData = storeLocations.find(store => store.name === storeName);
-    
-    // Generate mock order details for the store
-    let storeOrders = [];
-    
-    if (storeName === 'Downtown Brooklyn') {
-      storeOrders = [
-        { name: 'Unknown Item', code: 'N/A', quantity: 6.00, unit: 'unit', unitCost: 2.34, totalCost: 14.04 },
-        { name: 'Unknown Item', code: 'N/A', quantity: 1.00, unit: 'unit', unitCost: 2.38, totalCost: 2.38 },
-        { name: 'Unknown Item', code: 'N/A', quantity: 1.00, unit: 'unit', unitCost: 2.35, totalCost: 2.35 },
-        { name: 'Unknown Item', code: 'N/A', quantity: 4.00, unit: 'unit', unitCost: 2.38, totalCost: 9.52 },
-        { name: 'Unknown Item', code: 'N/A', quantity: 1.00, unit: 'unit', unitCost: 21.95, totalCost: 21.95 },
-        { name: 'Unknown Item', code: 'N/A', quantity: 1.00, unit: 'unit', unitCost: 50.73, totalCost: 50.73 },
-        { name: 'Unknown Item', code: 'N/A', quantity: 3.00, unit: 'unit', unitCost: 2.38, totalCost: 7.14 },
-        { name: 'Unknown Item', code: 'N/A', quantity: 1.00, unit: 'unit', unitCost: 2.35, totalCost: 2.35 },
-        { name: 'Unknown Item', code: 'N/A', quantity: 1.00, unit: 'unit', unitCost: 50.73, totalCost: 50.73 },
-        { name: 'Unknown Item', code: 'N/A', quantity: 1.00, unit: 'unit', unitCost: 22.01, totalCost: 22.01 },
-        { name: 'Unknown Item', code: 'N/A', quantity: 1.00, unit: 'unit', unitCost: 1.16, totalCost: 1.16 },
-        { name: 'Unknown Item', code: 'N/A', quantity: 2.00, unit: 'unit', unitCost: 4.24, totalCost: 8.48 },
-        { name: 'Unknown Item', code: 'N/A', quantity: 5.00, unit: 'unit', unitCost: 2.38, totalCost: 11.90 }
-      ];
-    } else if (storeName === 'Midtown East') {
-      // Use existing order data for Midtown East
-      storeOrders = ordersData.flatMap(order => order.items);
-    } else {
-      // For other stores with no orders
-      storeOrders = [];
-    }
-    
-    setViewDetailsDialog({ open: true, store: storeData, orders: storeOrders });
   };
 
   const handlePrintConsolidated = () => {
@@ -652,13 +569,15 @@ const StoreSummaryProduction = () => {
 
     const dateRangeText = selectedDateRange 
       ? `${selectedDateRange.startDate.toLocaleDateString()} to ${selectedDateRange.endDate.toLocaleDateString()}`
-      : '06/15/2025 to 06/22/2025';
+      : 'All time';
+
+    const companyName = selectedCompanies.length > 0 ? getCompanyName(selectedCompanies[0]) : 'Selected Company';
 
     return `
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Consolidated Production Requirements - Company 2</title>
+        <title>Consolidated Production Requirements - ${companyName}</title>
         <style>
           body { 
             font-family: Arial, sans-serif; 
@@ -737,7 +656,7 @@ const StoreSummaryProduction = () => {
       </head>
       <body>
         <div class="header">
-          <div class="company-name">Company 2</div>
+          <div class="company-name">${companyName}</div>
           <div class="report-title">Consolidated Production Requirements</div>
           <div class="date-range">Total quantities needed for production • ${dateRangeText}</div>
         </div>
@@ -751,82 +670,29 @@ const StoreSummaryProduction = () => {
         <div class="summary-section">
           <h3>Production Summary</h3>
           <p><strong>Total Unique Items:</strong> ${consolidatedData.length}</p>
-          <p><strong>Total Quantity Required:</strong> ${consolidatedData.reduce((sum, item) => sum + item.totalRequired, 0)} units</p>
-          <p><strong>Active Locations:</strong> ${Object.keys(consolidatedData[0]?.locations || {}).length}</p>
+          <p><strong>Total Quantity Required:</strong> ${consolidatedData.reduce((sum, item) => sum + (item['Total Required'] || 0), 0)} units</p>
+          <p><strong>Active Locations:</strong> ${consolidatedColumns.length - 3}</p>
           <p><strong>Report Period:</strong> ${dateRangeText}</p>
         </div>
         
-        <table>
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th class="center">Downtown Brooklyn</th>
-              <th class="center">tst7 Store</th>
-              <th class="center">Test 8</th>
-              <th class="center">All 2</th>
-              <th class="center">Midtown East</th>
-              <th class="center">25</th>
-              <th class="center total-column">Total Required</th>
-              <th class="center">Unit</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${consolidatedData.map(item => `
-              <tr>
-                <td><strong>${item.item}</strong></td>
-                <td class="center">${item.locations['Downtown Brooklyn']}</td>
-                <td class="center">${item.locations['tst7 Store']}</td>
-                <td class="center">${item.locations['Test 8']}</td>
-                <td class="center">${item.locations['All 2']}</td>
-                <td class="center ${item.locations['Midtown East'] > 0 ? 'highlight' : ''}">${item.locations['Midtown East']}</td>
-                <td class="center">${item.locations['25']}</td>
-                <td class="center total-column">${item.totalRequired}</td>
-                <td class="center">${item.unit}</td>
-              </tr>
-            `).join('')}
-            <tr style="border-top: 2px solid #333;">
-              <td colspan="7" style="text-align: right; font-weight: bold; background-color: #f8f9fa;">
-                <strong>GRAND TOTAL:</strong>
-              </td>
-              <td class="center total-column" style="font-weight: bold; font-size: 16px;">
-                ${consolidatedData.reduce((sum, item) => sum + item.totalRequired, 0)}
-              </td>
-              <td class="center" style="background-color: #f8f9fa;">
-                <strong>Units</strong>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div style="margin-top: 30px; padding: 15px; background-color: #e7f3ff; border-radius: 8px;">
-          <h4 style="margin-top: 0; color: #1565c0;">Production Notes:</h4>
-          <ul style="margin-bottom: 0;">
-            <li>Items with quantities > 0 require immediate production</li>
-            <li>Highlighted locations (Midtown East) have active orders</li>
-            <li>Contact production team for items requiring special handling</li>
-            <li>Update inventory systems after production completion</li>
-            ${selectedDateRange ? '<li><strong>Note:</strong> This report is filtered by the selected date range</li>' : ''}
-          </ul>
-        </div>
-        
         <div class="footer">
-          Generated on ${currentDate} | Company 2 Production Planning System
+          Generated on ${currentDate} | ${companyName} Production Planning System
         </div>
       </body>
       </html>
     `;
   };
 
-  const totalOrdersFound = ordersData.length;
-  const totalOrderValue = ordersData.reduce((sum, order) => sum + order.totalAmount, 0);
-
   // Get date range display text
   const getDateRangeText = () => {
     if (selectedDateRange) {
       return `${selectedDateRange.startDate.toLocaleDateString()} to ${selectedDateRange.endDate.toLocaleDateString()}`;
     }
-    return '06/15/2025 to 06/22/2025';
+    return 'All time';
   };
+
+  // Show empty state when no data
+  const showEmptyState = !loading && ordersData.length === 0 && selectedCompanies.length > 0 && selectedLocations.length > 0;
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
@@ -857,199 +723,416 @@ const StoreSummaryProduction = () => {
           </Box>
         </Box>
 
-        {/* Filters Section using FiltersOrderIQ component */}
-        <FiltersOrderIQ
-          filterFields={filterFields}
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          onApplyFilters={handleApplyFilters}
-          showApplyButton={true}
-        />
-      </Box>
-
-      {/* All Orders/Invoices by Location */}
-      <Card sx={{ mb: 3, borderRadius: 2 }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <DescriptionIcon color="primary" />
-              <Box>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  All Orders/Invoices by Location
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Complete listing of all orders with timestamps by store location ({getDateRangeText()})
-                </Typography>
-              </Box>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {selectedDateRange && (
-                <Chip 
-                  label="Date Filtered" 
-                  size="small" 
-                  variant="outlined" 
-                  color="primary"
-                />
-              )}
-              <Chip 
-                label={`${totalOrdersFound} orders found`} 
-                color="primary" 
+        {/* Active Filter Display */}
+        {(selectedCompanies.length > 0 || selectedLocations.length > 0) && (
+          <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {selectedCompanies.length > 0 && (
+              <Chip
+                label={`${selectedCompanies.length === 1 ? getCompanyName(selectedCompanies[0]) : `${selectedCompanies.length} companies selected`}`}
+                color="primary"
                 variant="outlined"
+                size="small"
               />
-            </Box>
+            )}
+            {selectedLocations.length > 0 && selectedCompanies.length > 0 && (
+              <Chip
+                label={`${selectedLocations.length === 1 ? getLocationName(selectedCompanies[0], selectedLocations[0]) : `${selectedLocations.length} locations selected`}`}
+                color="secondary"
+                variant="outlined"
+                size="small"
+              />
+            )}
+          </Box>
+        )}
+
+        {/* Error Display */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+
+        {/* Filters Section with Company and Location Dropdowns */}
+        <Box sx={{ mb: 3, p: 3, border: '1px solid #e0e0e0', borderRadius: 2, backgroundColor: '#ffffff' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Filters
+            </Typography>
           </Box>
 
-          {/* Midtown East Orders */}
-          <Box sx={{ mb: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, p: 2, backgroundColor: '#f8f9fa', borderRadius: 1 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 3, 
+            mb: 3,
+            flexDirection: { xs: 'column', md: 'row' },
+            alignItems: { xs: 'stretch', md: 'flex-start' }
+          }}>
+            {/* Companies Filter */}
+            <FormControl 
+              sx={{ 
+                minWidth: 200,
+                flex: 1
+              }}
+            >
+              <InputLabel>Companies</InputLabel>
+              <Select
+                multiple
+                value={selectedCompanies}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  const newValues = typeof value === 'string' ? value.split(',') : value;
+                  handleCompanyChange(newValues);
+                }}
+                label="Companies"
+                renderValue={(selected) => {
+                  if (selected.length === 0) {
+                    return 'All companies';
+                  }
+                  if (selected.length === 1) {
+                    const company = companiesData.find(opt => opt.company_id.toString() === selected[0]);
+                    return company?.company_name || 'Unknown';
+                  }
+                  return `${selected.length} companies selected`;
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    style: {
+                      maxHeight: 300
+                    }
+                  }
+                }}
+              >
+                {companiesData.map((company) => (
+                  <MenuItem key={company.company_id} value={company.company_id.toString()}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedCompanies.includes(company.company_id.toString())}
+                        onChange={() => {}}
+                        style={{ marginRight: 8 }}
+                      />
+                      <Typography>{company.company_name}</Typography>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {/* Location Filter */}
+            <FormControl 
+              sx={{ 
+                minWidth: 200,
+                flex: 1,
+                opacity: selectedCompanies.length === 0 ? 0.6 : 1
+              }}
+              disabled={selectedCompanies.length === 0}
+            >
+              <InputLabel>Location</InputLabel>
+              <Select
+                multiple
+                value={selectedLocations}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  const newValues = typeof value === 'string' ? value.split(',') : value;
+                  handleLocationChange(newValues);
+                }}
+                label="Location"
+                renderValue={(selected) => {
+                  if (selectedCompanies.length === 0) {
+                    return 'Select company first';
+                  }
+                  if (selected.length === 0) {
+                    return getAvailableLocations().length > 0 ? 'All locations' : 'No locations available';
+                  }
+                  if (selected.length === 1) {
+                    const location = getAvailableLocations().find(opt => opt.location_id.toString() === selected[0]);
+                    return location?.location_name || 'Unknown';
+                  }
+                  return `${selected.length} locations selected`;
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    style: {
+                      maxHeight: 300
+                    }
+                  }
+                }}
+              >
+                {selectedCompanies.length === 0 ? (
+                  <MenuItem disabled>
+                    <Typography sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
+                      Please select a company first to view locations
+                    </Typography>
+                  </MenuItem>
+                ) : getAvailableLocations().length > 0 ? (
+                  getAvailableLocations().map((location) => (
+                    <MenuItem key={location.location_id} value={location.location_id.toString()}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedLocations.includes(location.location_id.toString())}
+                          onChange={() => {}}
+                          style={{ marginRight: 8 }}
+                        />
+                        <Typography>{location.location_name}</Typography>
+                      </Box>
+                    </MenuItem>
+                  ))
+                ) : (
+                  <MenuItem disabled>
+                    <Typography sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
+                      No locations available for selected companies
+                    </Typography>
+                  </MenuItem>
+                )}
+              </Select>
+            </FormControl>
+          </Box>
+
+          <Button 
+            variant="contained" 
+            onClick={handleApplyFilters}
+            disabled={selectedCompanies.length === 0 || selectedLocations.length === 0}
+            sx={{ 
+              textTransform: 'uppercase',
+              fontWeight: 600,
+              px: 3,
+              py: 1
+            }}
+          >
+            Apply Filters
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Loading State */}
+      {loading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+          <CircularProgress sx={{ mr: 2 }} />
+          <Typography>Loading data...</Typography>
+        </Box>
+      )}
+
+      {/* Empty State */}
+      {showEmptyState && (
+        <Card sx={{ mb: 3, borderRadius: 2 }}>
+          <CardContent sx={{ textAlign: 'center', py: 6 }}>
+            <DescriptionIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+            <Typography variant="h6" sx={{ mb: 1 }}>
+              No Data Available
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Please select a company and location, then click "Apply Filters" to load data.
+            </Typography>
+            <Button 
+              variant="contained" 
+              onClick={handleApplyFilters}
+              disabled={selectedCompanies.length === 0 || selectedLocations.length === 0}
+            >
+              Load Data
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* All Orders/Invoices by Location */}
+      {!loading && ordersData.length > 0 && (
+        <Card sx={{ mb: 3, borderRadius: 2 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <DescriptionIcon color="primary" />
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    All Orders/Invoices by Location
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Complete listing of all orders with timestamps by store location ({getDateRangeText()})
+                  </Typography>
+                </Box>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {selectedDateRange && (
+                  <Chip 
+                    label="Date Filtered" 
+                    size="small" 
+                    variant="outlined" 
+                    color="primary"
+                  />
+                )}
+                <Chip 
+                  label={`${ordersData.length} orders found`} 
+                  color="primary" 
+                  variant="outlined"
+                />
+              </Box>
+            </Box>
+
+            {/* Location Orders */}
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, p: 2, backgroundColor: '#f8f9fa', borderRadius: 1 }}>
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    {selectedLocations.length > 0 && selectedCompanies.length > 0 
+                      ? getLocationName(selectedCompanies[0], selectedLocations[0])
+                      : 'Selected Location'
+                    }
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {selectedCompanies.length > 0 ? getCompanyName(selectedCompanies[0]) : 'Selected Company'} • {ordersData.length} orders • {getDateRangeText()}
+                  </Typography>
+                </Box>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    Total: ${ordersTotal.toFixed(2)}
+                  </Typography>
+                  {selectedDateRange && (
+                    <Typography variant="caption" color="text.secondary">
+                      Filtered by date range
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+
+              <TableContainer component={Paper} variant="outlined">
+                <Table>
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                      <TableCell sx={{ fontWeight: 600 }}>Order ID</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Order Date</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Items Count</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Total Quantity</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Total Amount</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {ordersData.map((order) => (
+                      <TableRow key={order.order_id} hover>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            #{order.order_id}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {new Date(order.created_at).toLocaleDateString()}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{order.items_count}</TableCell>
+                        <TableCell>{order.total_quantity}</TableCell>
+                        <TableCell>
+                          <Typography sx={{ color: 'success.main', fontWeight: 600 }}>
+                            ${order.total_amount.toFixed(2)}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handlePrintOrder(order)}
+                              title="Print"
+                            >
+                              <PrintIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton 
+                              size="small" 
+                              onClick={() => handleEmailOrder(order)}
+                              title="Email"
+                            >
+                              <EmailIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Consolidated Production Requirements */}
+      {!loading && consolidatedData.length > 0 && (
+        <Card sx={{ borderRadius: 2 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
               <Box>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Midtown East
+                  Consolidated Production Requirements
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Company 2 • 7 orders • {getDateRangeText()}
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: 'right' }}>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Total: ${totalOrderValue.toFixed(2)}
+                  Total quantities needed for production • {getDateRangeText()}
                 </Typography>
                 {selectedDateRange && (
-                  <Typography variant="caption" color="text.secondary">
-                    Filtered by date range
-                  </Typography>
+                  <Chip 
+                    label="📅 Date range applied to production calculations" 
+                    size="small" 
+                    variant="outlined" 
+                    color="primary"
+                    sx={{ mt: 1 }}
+                  />
                 )}
               </Box>
+              <Button
+                variant="contained"
+                startIcon={<PrintIcon />}
+                onClick={handlePrintConsolidated}
+              >
+                Print
+              </Button>
             </Box>
 
             <TableContainer component={Paper} variant="outlined">
               <Table>
                 <TableHead>
                   <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                    <TableCell sx={{ fontWeight: 600 }}>Order Date</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Items Count</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Total Quantity</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Total Amount</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+                    {consolidatedColumns.map((column, index) => (
+                      <TableCell 
+                        key={index}
+                        sx={{ 
+                          fontWeight: 600,
+                          backgroundColor: column === 'Total Required' ? '#e8f5e8' : 'inherit'
+                        }}
+                      >
+                        {column}
+                      </TableCell>
+                    ))}
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {ordersData.map((order, index) => (
+                  {consolidatedData.map((item, index) => (
                     <TableRow key={index} hover>
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            {order.orderDate}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Order {order.orderNumber}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>{order.itemsCount}</TableCell>
-                      <TableCell>{order.totalQuantity}</TableCell>
-                      <TableCell>
-                        <Typography sx={{ color: 'success.main', fontWeight: 600 }}>
-                          ${order.totalAmount}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <IconButton 
-                            size="small" 
-                            onClick={() => handlePrintOrder(order)}
-                            title="Print"
+                      {consolidatedColumns.map((column, colIndex) => {
+                        const value = item[column];
+                        const isTotal = column === 'Total Required';
+                        const isNumeric = typeof value === 'number' && column !== 'Item' && column !== 'Unit';
+                        
+                        return (
+                          <TableCell 
+                            key={colIndex}
+                            sx={{ 
+                              fontWeight: column === 'Item' || isTotal ? 600 : 400,
+                              color: isTotal ? 'success.main' : 'inherit',
+                              backgroundColor: isTotal ? '#e8f5e8' : (isNumeric && value > 0 ? '#fff3cd' : 'inherit')
+                            }}
                           >
-                            <PrintIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton 
-                            size="small" 
-                            onClick={() => handleEmailOrder(order)}
-                            title="Email"
-                          >
-                            <EmailIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
-                      </TableCell>
+                            {value}
+                          </TableCell>
+                        );
+                      })}
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </TableContainer>
-          </Box>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Consolidated Production Requirements */}
-      <Card sx={{ borderRadius: 2 }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Box>
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Consolidated Production Requirements
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Total quantities needed for production • {getDateRangeText()}
-              </Typography>
-              {selectedDateRange && (
-                <Chip 
-                  label="📅 Date range applied to production calculations" 
-                  size="small" 
-                  variant="outlined" 
-                  color="primary"
-                  sx={{ mt: 1 }}
-                />
-              )}
-            </Box>
-            <Button
-              variant="contained"
-              startIcon={<PrintIcon />}
-              onClick={handlePrintConsolidated}
-            >
-              Print
-            </Button>
-          </Box>
-
-          <TableContainer component={Paper} variant="outlined">
-            <Table>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                  <TableCell sx={{ fontWeight: 600 }}>Item</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Downtown Brooklyn</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>tst7 Store</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Test 8</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>All 2</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Midtown East</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>25</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Total Required</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Unit</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {consolidatedData.map((item, index) => (
-                  <TableRow key={index} hover>
-                    <TableCell sx={{ fontWeight: 500 }}>{item.item}</TableCell>
-                    <TableCell>{item.locations['Downtown Brooklyn']}</TableCell>
-                    <TableCell>{item.locations['tst7 Store']}</TableCell>
-                    <TableCell>{item.locations['Test 8']}</TableCell>
-                    <TableCell>{item.locations['All 2']}</TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: 'primary.main' }}>
-                      {item.locations['Midtown East']}
-                    </TableCell>
-                    <TableCell>{item.locations['25']}</TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: 'success.main' }}>
-                      {item.totalRequired}
-                    </TableCell>
-                    <TableCell>{item.unit}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
-
-      {/* Print/Email Confirmation Dialog */}
+      {/* Print Dialog */}
       <Dialog 
         open={printDialog.open} 
         onClose={() => setPrintDialog({ open: false, order: null, type: 'print' })}
@@ -1076,10 +1159,10 @@ const StoreSummaryProduction = () => {
               
               <Paper variant="outlined" sx={{ p: 2, mb: 2, backgroundColor: '#f8f9fa' }}>
                 <Typography variant="subtitle2" sx={{ mb: 1 }}>Order Details:</Typography>
-                <Typography variant="body2"><strong>Order:</strong> {printDialog.order.orderNumber}</Typography>
-                <Typography variant="body2"><strong>Date:</strong> {printDialog.order.orderDate}</Typography>
-                <Typography variant="body2"><strong>Items:</strong> {printDialog.order.itemsCount}</Typography>
-                <Typography variant="body2"><strong>Total:</strong> ${printDialog.order.totalAmount.toFixed(2)}</Typography>
+                <Typography variant="body2"><strong>Order ID:</strong> #{printDialog.order.order_id}</Typography>
+                <Typography variant="body2"><strong>Date:</strong> {new Date(printDialog.order.created_at).toLocaleDateString()}</Typography>
+                <Typography variant="body2"><strong>Items:</strong> {printDialog.order.items_count}</Typography>
+                <Typography variant="body2"><strong>Total:</strong> ${printDialog.order.total_amount.toFixed(2)}</Typography>
                 {selectedDateRange && (
                   <Typography variant="body2"><strong>Report Period:</strong> {getDateRangeText()}</Typography>
                 )}
@@ -1131,10 +1214,10 @@ const StoreSummaryProduction = () => {
               
               <Paper variant="outlined" sx={{ p: 2, mb: 3, backgroundColor: '#f8f9fa' }}>
                 <Typography variant="subtitle2" sx={{ mb: 1 }}>Order Details:</Typography>
-                <Typography variant="body2"><strong>Order:</strong> {emailDialog.order.orderNumber}</Typography>
-                <Typography variant="body2"><strong>Date:</strong> {emailDialog.order.orderDate}</Typography>
-                <Typography variant="body2"><strong>Items:</strong> {emailDialog.order.itemsCount}</Typography>
-                <Typography variant="body2"><strong>Total:</strong> ${emailDialog.order.totalAmount.toFixed(2)}</Typography>
+                <Typography variant="body2"><strong>Order ID:</strong> #{emailDialog.order.order_id}</Typography>
+                <Typography variant="body2"><strong>Date:</strong> {new Date(emailDialog.order.created_at).toLocaleDateString()}</Typography>
+                <Typography variant="body2"><strong>Items:</strong> {emailDialog.order.items_count}</Typography>
+                <Typography variant="body2"><strong>Total:</strong> ${emailDialog.order.total_amount.toFixed(2)}</Typography>
                 {selectedDateRange && (
                   <Typography variant="body2"><strong>Report Period:</strong> {getDateRangeText()}</Typography>
                 )}
@@ -1152,8 +1235,8 @@ const StoreSummaryProduction = () => {
               />
 
               <Typography variant="body2" color="text.secondary">
-                <strong>From:</strong> asheerali1997@gmail.com<br />
-                <strong>Subject:</strong> Order Report - {emailDialog.order.orderNumber} - Company 2
+                <strong>From:</strong> system@company.com<br />
+                <strong>Subject:</strong> Order Report - Order #{emailDialog.order.order_id} - {selectedCompanies.length > 0 ? getCompanyName(selectedCompanies[0]) : 'Company'}
               </Typography>
             </Box>
           )}
@@ -1172,132 +1255,6 @@ const StoreSummaryProduction = () => {
             disabled={!emailDialog.email}
           >
             Send Email
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* View Details Dialog */}
-      <Dialog 
-        open={viewDetailsDialog.open} 
-        onClose={() => setViewDetailsDialog({ open: false, store: null, orders: [] })}
-        maxWidth="lg" 
-        fullWidth
-      >
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="h6">
-              {viewDetailsDialog.store?.name} - Order Details
-            </Typography>
-            <IconButton 
-              onClick={() => setViewDetailsDialog({ open: false, store: null, orders: [] })}
-              size="small"
-            >
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          {viewDetailsDialog.store && (
-            <Box sx={{ pt: 1 }}>
-              {/* Store Summary */}
-              <Grid container spacing={4} sx={{ mb: 3 }}>
-                <Grid item xs={3}>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Status:</Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'success.main' }} />
-                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                        {viewDetailsDialog.store.status}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Grid>
-                <Grid item xs={3}>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Items Ordered:</Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      {viewDetailsDialog.orders.reduce((sum, order) => sum + order.quantity, 0)}
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={3}>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Total Value:</Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      ${viewDetailsDialog.orders.reduce((sum, order) => sum + order.totalCost, 0).toFixed(2)}
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={3}>
-                  <Box>
-                    <Typography variant="body2" color="text.secondary">Last Updated:</Typography>
-                    <Typography variant="body1">
-                      {viewDetailsDialog.store.lastUpdated.replace('Last Updated: ', '')}
-                    </Typography>
-                  </Box>
-                </Grid>
-              </Grid>
-
-              {selectedDateRange && (
-                <Box sx={{ mb: 3, p: 2, backgroundColor: '#e3f2fd', borderRadius: 1 }}>
-                  <Typography variant="body2" color="primary.main" sx={{ fontWeight: 600 }}>
-                    📅 Date Filter: {getDateRangeText()}
-                  </Typography>
-                </Box>
-              )}
-
-              {/* Orders Table */}
-              {viewDetailsDialog.orders.length > 0 ? (
-                <TableContainer component={Paper} variant="outlined">
-                  <Table>
-                    <TableHead>
-                      <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                        <TableCell sx={{ fontWeight: 600 }}>Item Name</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Item Code</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Quantity</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Unit</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Unit Cost</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Total Cost</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {viewDetailsDialog.orders.map((item, index) => (
-                        <TableRow key={index} hover>
-                          <TableCell>{item.name}</TableCell>
-                          <TableCell>{item.code}</TableCell>
-                          <TableCell>{item.quantity.toFixed(2)}</TableCell>
-                          <TableCell>{item.unit}</TableCell>
-                          <TableCell>${item.unitCost.toFixed(2)}</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>
-                            ${item.totalCost.toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              ) : (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography variant="h6" color="text.secondary">
-                    No orders found
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {selectedDateRange 
-                      ? `This store has no orders for the selected date range (${getDateRangeText()}).`
-                      : 'This store has no order history.'
-                    }
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => setViewDetailsDialog({ open: false, store: null, orders: [] })}
-            variant="contained"
-          >
-            Close
           </Button>
         </DialogActions>
       </Dialog>
