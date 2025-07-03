@@ -109,5 +109,5 @@ for the store summary dashboard
 /api/storeorders/consolidatedproduction/{company_id}
 
 for the financila summary dashboard
-/api/storeorders
-/api/storeorders
+/api/storeorders/financialsummary/{company_id}/{location_id}
+/api/storeorders/companysummary/{company_id}
