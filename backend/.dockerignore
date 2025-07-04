@@ -1,75 +1,38 @@
-
-.env.local
-.env.development
-.env.test
-.env.production
-
-# Jupyter Notebook
-.ipynb_checkpoints
-test
-
-# Additional Python environments
-.venv
+# Python environments
+.venv/
 env/
 ENV/
-xcelbot/
 
-data/
-xcelbot/
-venv/
+# Python cache
+__pycache__/
+*.pyc
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Node
 node_modules/
 yarn.lock
-__pycache__/
-docker 
+
+# VS Code / IDE
+.vscode/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Excel / temp files (optional)
 *.xlsx
-# Additional environment files
+
+# Ignore docker and Git files if needed
+docker/
+.git/
+.gitignore
+.dockerignore
+
+# Environment files (only exclude if mounted manually at runtime)
 .env.local
 .env.development
 .env.test
 .env.production
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# Additional Python environments
-.venv
-env/
-ENV/
-# Additional environment files
-.env.local
-.env.development
-.env.test
-.env.production
-
-# Jupyter Notebook
-.ipynb_checkpoints
-test
-
-# Additional Python environments
-.venv
-env/
-ENV/
-xcelbot/
-
-
-data/
-xcelbot/
-venv/
-node_modules/
-yarn.lock
-__pycache__/
-docker 
-*.xlsx
-# Additional environment files
-.env.local
-.env.development
-.env.test
-.env.production
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# Additional Python environments
-.venv
-env/
-ENV/

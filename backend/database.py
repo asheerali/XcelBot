@@ -11,6 +11,9 @@ from dotenv import load_dotenv
 
 load_dotenv()  # Load from .env
 
+# Ensure the data directory exists
+os.makedirs("data", exist_ok=True)
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Extra connect args needed for SQLite (only for SQLite)
