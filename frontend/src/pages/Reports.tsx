@@ -39,6 +39,18 @@ import {
 import { styled, alpha } from '@mui/material/styles';
 import axios from 'axios';
 
+// Import Redux hooks
+import { useAppDispatch, useAppSelector } from "../typedHooks";
+import {
+  selectSelectedCompanies,
+  excelSlice,
+} from "../store/excelSlice";
+
+// Import masterFile selectors (don't modify masterFileSlice)
+import { selectSelectedCompanies as selectMasterFileCompanies } from "../store/slices/masterFileSlice";
+
+// Extract actions from the slice
+const { setLoading, setError } = excelSlice.actions;
 
 // Import your DateRangeSelector component
 import DateRangeSelector from "../components/DateRangeSelector";
@@ -408,6 +420,12 @@ const DateRangeModal = ({ isOpen, onClose, onSelect }) => {
 
 // Main Dashboard Component
 const Reports = () => {
+  const dispatch = useAppDispatch();
+  
+  // Redux selectors - get selected companies from masterFileSlice
+  const masterFileSelectedCompanies = useAppSelector(selectMasterFileCompanies);
+  
+  // Local state
   const [dateRangeOpen, setDateRangeOpen] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState({
     startDate: new Date(),
@@ -418,9 +436,11 @@ const Reports = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [priceChangeFilter, setPriceChangeFilter] = useState('all');
   
+  // Local company state for form display (not Redux)
+  const [selectedCompany, setSelectedCompany] = useState<number | string>('all');
+  
   // Companies state
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<number | string>('all');
   const [companiesLoading, setCompaniesLoading] = useState(false);
   const [companiesError, setCompaniesError] = useState<string | null>(null);
 
@@ -429,10 +449,28 @@ const Reports = () => {
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsError, setLogsError] = useState<string | null>(null);
 
-  // Fetch companies on component mount
+  // Initialize with masterFile Redux company on component mount
   useEffect(() => {
     fetchCompanies();
+    
+    // Initialize with masterFile Redux company value if it exists
+    if (masterFileSelectedCompanies && masterFileSelectedCompanies.length > 0) {
+      const firstSelectedCompany = masterFileSelectedCompanies[0];
+      console.log('🔄 Initializing with masterFile Redux company:', firstSelectedCompany);
+      setSelectedCompany(firstSelectedCompany);
+      fetchLogsData(parseInt(firstSelectedCompany));
+    }
   }, []);
+
+  // Watch for changes in masterFile selected companies
+  useEffect(() => {
+    if (masterFileSelectedCompanies && masterFileSelectedCompanies.length > 0) {
+      const firstSelectedCompany = masterFileSelectedCompanies[0];
+      console.log('🔄 masterFile Redux company changed:', firstSelectedCompany);
+      setSelectedCompany(firstSelectedCompany);
+      fetchLogsData(parseInt(firstSelectedCompany));
+    }
+  }, [masterFileSelectedCompanies]);
 
   const fetchCompanies = async () => {
     try {
@@ -506,7 +544,7 @@ const Reports = () => {
   const handleCompanyChange = (event) => {
     const companyId = event.target.value;
     setSelectedCompany(companyId);
-    console.log('Selected company:', companyId);
+    console.log('🏢 User selected company:', companyId);
     
     // Fetch logs data when a specific company is selected
     if (companyId !== 'all') {
@@ -515,6 +553,9 @@ const Reports = () => {
       // Clear logs data when "All Companies" is selected
       setLogsData(null);
     }
+    
+    // DO NOT update Redux here - only when user applies filters
+    // This maintains the requirement to not update Redux on filter change
   };
 
   const getSelectedCompanyName = () => {
@@ -972,6 +1013,11 @@ const Reports = () => {
                   }}
                 >
                   Currently viewing: {getSelectedCompanyName()}
+                  {masterFileSelectedCompanies.length > 0 && (
+                    <Typography component="span" sx={{ fontSize: '0.8rem', color: 'text.secondary', ml: 1 }}>
+                      (from master file selection)
+                    </Typography>
+                  )}
                 </Typography>
               )}
             </Box>

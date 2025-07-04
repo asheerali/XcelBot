@@ -43,6 +43,25 @@ import {
   Clear as ClearIcon
 } from '@mui/icons-material';
 
+// Import Redux hooks and selectors
+import { useAppDispatch, useAppSelector } from '../typedHooks';
+import {
+  setSelectedCompanies,
+  setSelectedLocations,
+  setSelectedFilenames,
+  clearSelections,
+  clearData,
+  clearError,
+  loadMasterFileData,
+  loadMultipleMasterFileData,
+  selectSelectedCompanies,
+  selectSelectedLocations,
+  selectSelectedFilenames,
+  selectLoading,
+  selectError,
+  selectLastAppliedFilters
+} from '../store/slices/masterFileSlice';
+
 // Import your existing components
 import DateRangeSelector from '../components/DateRangeSelector'; // Adjust the import path as needed
 import { API_URL_Local } from '../constants'; // Import API base URL
@@ -215,23 +234,31 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
 };
 
 const StoreSummaryProduction = () => {
-  // State management for filters
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
+  const dispatch = useAppDispatch();
+  
+  // Redux selectors
+  const selectedCompanies = useAppSelector(selectSelectedCompanies);
+  const selectedLocations = useAppSelector(selectSelectedLocations);
+  const selectedFilenames = useAppSelector(selectSelectedFilenames);
+  const lastAppliedFilters = useAppSelector(selectLastAppliedFilters);
+  const loading = useAppSelector(selectLoading);
+  const error = useAppSelector(selectError);
+
+  // Local state for print/email dialogs
   const [printDialog, setPrintDialog] = useState({ open: false, order: null, type: 'print' });
   const [emailDialog, setEmailDialog] = useState({ open: false, order: null, email: '' });
   
   // Date range selector state
   const [selectedDateRange, setSelectedDateRange] = useState(null);
 
-  // API data state
+  // API data state (not stored in Redux for this component)
   const [ordersData, setOrdersData] = useState<OrderData[]>([]);
   const [consolidatedData, setConsolidatedData] = useState<ConsolidatedProductionItem[]>([]);
   const [consolidatedColumns, setConsolidatedColumns] = useState<string[]>([]);
   const [ordersTotal, setOrdersTotal] = useState<number>(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [companiesData, setCompaniesData] = useState<Company[]>([]);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   // Fetch companies data for display names
   useEffect(() => {
@@ -248,6 +275,49 @@ const StoreSummaryProduction = () => {
     };
     fetchCompanies();
   }, []);
+
+  // Initialize with Redux values and load initial data on component mount
+  useEffect(() => {
+    console.log('StoreSummaryProduction - Component mounted with Redux state:', {
+      selectedCompanies,
+      selectedLocations,
+      lastAppliedFilters
+    });
+
+    // If we have values in Redux and they match last applied filters, load data automatically
+    if (selectedCompanies.length > 0 && selectedLocations.length > 0 && 
+        !dataLoaded && lastAppliedFilters.companies.length > 0) {
+      console.log('Auto-loading data from Redux state...');
+      loadDataFromReduxState();
+    }
+  }, [selectedCompanies, selectedLocations, lastAppliedFilters, dataLoaded]);
+
+  // Auto-load data when Redux values are available
+  const loadDataFromReduxState = async () => {
+    if (selectedCompanies.length === 0 || selectedLocations.length === 0) {
+      return;
+    }
+
+    try {
+      console.log('Loading initial data with Redux values:', {
+        companies: selectedCompanies,
+        locations: selectedLocations
+      });
+      
+      const companyId = selectedCompanies[0];
+      const locationId = selectedLocations[0];
+
+      await Promise.all([
+        fetchOrdersData(companyId, locationId),
+        fetchConsolidatedData(companyId)
+      ]);
+
+      setDataLoaded(true);
+    } catch (err) {
+      console.error('Error loading initial data:', err);
+      setLocalError('Failed to load initial data');
+    }
+  };
 
   // Get available locations based on selected companies
   const getAvailableLocations = () => {
@@ -276,8 +346,7 @@ const StoreSummaryProduction = () => {
   // Fetch orders data
   const fetchOrdersData = async (companyId: string, locationId: string) => {
     try {
-      setLoading(true);
-      setError(null);
+      setLocalError(null);
       
       const response = await fetch(`${API_URL_Local}/api/storeorders/allordersinvoices/${companyId}/${locationId}`);
       
@@ -291,19 +360,16 @@ const StoreSummaryProduction = () => {
       
     } catch (err) {
       console.error('Error fetching orders:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch orders data');
+      setLocalError(err instanceof Error ? err.message : 'Failed to fetch orders data');
       setOrdersData([]);
       setOrdersTotal(0);
-    } finally {
-      setLoading(false);
     }
   };
 
   // Fetch consolidated production data
   const fetchConsolidatedData = async (companyId: string) => {
     try {
-      setLoading(true);
-      setError(null);
+      setLocalError(null);
       
       const response = await fetch(`${API_URL_Local}/api/storeorders/consolidatedproduction/${companyId}`);
       
@@ -317,11 +383,9 @@ const StoreSummaryProduction = () => {
       
     } catch (err) {
       console.error('Error fetching consolidated data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch consolidated production data');
+      setLocalError(err instanceof Error ? err.message : 'Failed to fetch consolidated production data');
       setConsolidatedData([]);
       setConsolidatedColumns([]);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -330,18 +394,19 @@ const StoreSummaryProduction = () => {
     // Only allow locations that are available for selected companies
     const availableLocationIds = getAvailableLocations().map(loc => loc.location_id.toString());
     const validValues = values.filter(value => availableLocationIds.includes(value));
-    setSelectedLocations(validValues);
+    dispatch(setSelectedLocations(validValues));
   };
 
   const handleCompanyChange = (values: string[]) => {
-    setSelectedCompanies(values);
+    dispatch(setSelectedCompanies(values));
     // Clear location selection when company changes
-    setSelectedLocations([]);
+    dispatch(setSelectedLocations([]));
     // Clear data when company changes
     setOrdersData([]);
     setConsolidatedData([]);
     setConsolidatedColumns([]);
     setOrdersTotal(0);
+    setDataLoaded(false);
   };
 
   const handleApplyFilters = async () => {
@@ -352,21 +417,19 @@ const StoreSummaryProduction = () => {
     });
 
     if (selectedCompanies.length === 0) {
-      setError('Please select at least one company');
+      setLocalError('Please select at least one company');
       return;
     }
 
     if (selectedLocations.length === 0) {
-      setError('Please select at least one location');
+      setLocalError('Please select at least one location');
       return;
     }
 
     try {
-      setLoading(true);
-      setError(null);
+      setLocalError(null);
 
       // For now, we'll use the first selected company and location
-      // You can modify this logic to handle multiple selections
       const companyId = selectedCompanies[0];
       const locationId = selectedLocations[0];
 
@@ -376,9 +439,10 @@ const StoreSummaryProduction = () => {
         fetchConsolidatedData(companyId)
       ]);
 
+      setDataLoaded(true);
     } catch (err) {
       console.error('Error applying filters:', err);
-      setError('Failed to fetch data. Please try again.');
+      setLocalError('Failed to fetch data. Please try again.');
     }
   };
 
@@ -692,7 +756,10 @@ const StoreSummaryProduction = () => {
   };
 
   // Show empty state when no data
-  const showEmptyState = !loading && ordersData.length === 0 && selectedCompanies.length > 0 && selectedLocations.length > 0;
+  const showEmptyState = !loading && ordersData.length === 0 && selectedCompanies.length > 0 && selectedLocations.length > 0 && dataLoaded;
+
+  // Combined error from Redux and local state
+  const displayError = error || localError;
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
@@ -742,13 +809,24 @@ const StoreSummaryProduction = () => {
                 size="small"
               />
             )}
+            {lastAppliedFilters.companies.length > 0 && !dataLoaded && (
+              <Chip
+                label="Data available - click Apply to refresh"
+                color="info"
+                variant="outlined"
+                size="small"
+              />
+            )}
           </Box>
         )}
 
         {/* Error Display */}
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-            {error}
+        {displayError && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => {
+            setLocalError(null);
+            dispatch(clearError());
+          }}>
+            {displayError}
           </Alert>
         )}
 
@@ -758,6 +836,14 @@ const StoreSummaryProduction = () => {
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
               Filters
             </Typography>
+            {lastAppliedFilters.companies.length > 0 && (
+              <Chip 
+                label="Previously loaded data available" 
+                size="small" 
+                variant="outlined" 
+                color="info"
+              />
+            )}
           </Box>
 
           <Box sx={{ 
@@ -892,7 +978,7 @@ const StoreSummaryProduction = () => {
           <Button 
             variant="contained" 
             onClick={handleApplyFilters}
-            disabled={selectedCompanies.length === 0 || selectedLocations.length === 0}
+            disabled={selectedCompanies.length === 0 || selectedLocations.length === 0 || loading}
             sx={{ 
               textTransform: 'uppercase',
               fontWeight: 600,
@@ -900,6 +986,7 @@ const StoreSummaryProduction = () => {
               py: 1
             }}
           >
+            {loading ? <CircularProgress size={20} sx={{ mr: 1 }} /> : null}
             Apply Filters
           </Button>
         </Box>
