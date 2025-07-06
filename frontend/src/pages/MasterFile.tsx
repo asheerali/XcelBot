@@ -1164,65 +1164,155 @@ const MasterFile = () => {
   };
 
   // Handler for applying FiltersOrderIQ filters
-  const handleApplyOrderIQFilters = async () => {
-    console.log("Applied FiltersOrderIQ filters:", {
-      companies: selectedCompanies,
-      locations: selectedLocations,
-      filenames: selectedFilenames,
+// Handler for applying FiltersOrderIQ filters
+const handleApplyOrderIQFilters = async () => {
+  console.log("Applied FiltersOrderIQ filters:", {
+    companies: selectedCompanies,
+    locations: selectedLocations,
+    filenames: selectedFilenames,
+    dateRange: selectedDateRange,
+  });
+
+  // If no specific filters are selected, don't make API calls
+  if (selectedCompanies.length === 0) {
+    console.log("No companies selected, skipping API calls");
+    setPage(0);
+    return;
+  }
+
+  // Clear any previous errors
+  dispatch(clearError());
+
+  try {
+    // Prepare date range data for backend
+    const dateRangeParams = selectedDateRange ? {
+      start_date: selectedDateRange.startDate.toISOString().split('T')[0], // Format: YYYY-MM-DD
+      end_date: selectedDateRange.endDate.toISOString().split('T')[0]       // Format: YYYY-MM-DD
+    } : {};
+
+    // Single file scenario
+    if (
+      selectedCompanies.length === 1 &&
+      selectedLocations.length === 1 &&
+      selectedFilenames.length === 1
+    ) {
+      const apiParams = {
+        company_id: parseInt(selectedCompanies[0]),
+        location_id: parseInt(selectedLocations[0]),
+        filename: selectedFilenames[0],
+        ...dateRangeParams
+      };
+
+      console.log("Single file API params with date range:", apiParams);
+      dispatch(loadMasterFileData(apiParams));
+    } else {
+      // Multiple files scenario
+      await handleMultipleFilesLoadWithDateRange(
+        selectedCompanies,
+        selectedLocations,
+        selectedFilenames,
+        dateRangeParams
+      );
+    }
+
+    setUploadStatus({
+      type: "success",
+      message: `Successfully applied filters and loaded data${
+        selectedDateRange 
+          ? ` for period ${selectedDateRange.startDate.toLocaleDateString()} - ${selectedDateRange.endDate.toLocaleDateString()}` 
+          : ''
+      }`,
     });
 
-    // If no specific filters are selected, don't make API calls
-    if (selectedCompanies.length === 0) {
-      console.log("No companies selected, skipping API calls");
-      setPage(0);
-      return;
-    }
+    // Auto-clear success message after 3 seconds
+    setTimeout(() => setUploadStatus(null), 3000);
+  } catch (error) {
+    console.error("Error applying filters:", error);
+    setUploadStatus({
+      type: "error",
+      message: "Failed to load filtered data",
+    });
+    // Auto-clear error message after 5 seconds
+    setTimeout(() => setUploadStatus(null), 5000);
+  }
 
-    // Clear any previous errors
-    dispatch(clearError());
+  setPage(0); // Reset to first page when filters change
+};
 
-    try {
-      // Single file scenario
-      if (
-        selectedCompanies.length === 1 &&
-        selectedLocations.length === 1 &&
-        selectedFilenames.length === 1
-      ) {
-        dispatch(
-          loadMasterFileData({
-            company_id: parseInt(selectedCompanies[0]),
-            location_id: parseInt(selectedLocations[0]),
-            filename: selectedFilenames[0],
-          })
-        );
-      } else {
-        // Multiple files scenario
-        await handleMultipleFilesLoad(
-          selectedCompanies,
-          selectedLocations,
-          selectedFilenames
-        );
-      }
+// Updated helper function to handle multiple files loading with date range
+const handleMultipleFilesLoadWithDateRange = async (companies, locations, filenames, dateRangeParams) => {
+  // Create filter combinations
+  let filteredDetails = masterFileDetails;
 
-      setUploadStatus({
-        type: "success",
-        message: `Successfully applied filters and loaded data`,
-      });
+  if (companies.length > 0) {
+    filteredDetails = filteredDetails.filter((item) =>
+      companies.includes(item.company_id.toString())
+    );
+  }
 
-      // Auto-clear success message after 3 seconds
-      setTimeout(() => setUploadStatus(null), 3000);
-    } catch (error) {
-      console.error("Error applying filters:", error);
-      setUploadStatus({
-        type: "error",
-        message: "Failed to load filtered data",
-      });
-      // Auto-clear error message after 5 seconds
-      setTimeout(() => setUploadStatus(null), 5000);
-    }
+  if (locations.length > 0) {
+    filteredDetails = filteredDetails.filter((item) =>
+      locations.includes(item.location_id.toString())
+    );
+  }
 
-    setPage(0); // Reset to first page when filters change
-  };
+  if (filenames.length > 0) {
+    filteredDetails = filteredDetails.filter((item) =>
+      filenames.includes(item.filename)
+    );
+  }
+
+  if (filteredDetails.length > 0) {
+    // Add date range parameters to each file request
+    const filteredDetailsWithDateRange = filteredDetails.map(detail => ({
+      ...detail,
+      ...dateRangeParams
+    }));
+
+    console.log("Multiple files API params with date range:", filteredDetailsWithDateRange);
+    dispatch(loadMultipleMasterFileData(filteredDetailsWithDateRange));
+  }
+};
+
+// Alternative: If you need to make individual API calls for each file with date range
+const handleMultipleFilesLoadWithDateRangeIndividual = async (companies, locations, filenames, dateRangeParams) => {
+  // Create filter combinations
+  let filteredDetails = masterFileDetails;
+
+  if (companies.length > 0) {
+    filteredDetails = filteredDetails.filter((item) =>
+      companies.includes(item.company_id.toString())
+    );
+  }
+
+  if (locations.length > 0) {
+    filteredDetails = filteredDetails.filter((item) =>
+      locations.includes(item.location_id.toString())
+    );
+  }
+
+  if (filenames.length > 0) {
+    filteredDetails = filteredDetails.filter((item) =>
+      filenames.includes(item.filename)
+    );
+  }
+
+  // Make individual API calls for each file with date range
+  const apiCalls = filteredDetails.map(detail => {
+    const apiParams = {
+      company_id: detail.company_id,
+      location_id: detail.location_id,
+      filename: detail.filename,
+      ...dateRangeParams
+    };
+    
+    console.log("Individual file API params with date range:", apiParams);
+    return dispatch(loadMasterFileData(apiParams));
+  });
+
+  // Wait for all API calls to complete
+  await Promise.all(apiCalls);
+};
 
   // Apply filters to items - Updated for dynamic data
   const applyFilters = (itemsList) => {
