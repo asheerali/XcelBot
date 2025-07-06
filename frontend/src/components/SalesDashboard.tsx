@@ -860,7 +860,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
                 marginBottom: "12px",
               }}
             >
-              Daily Sales Overview
+              Daily Sales Overview (Latest selected week)
             </div>
 
             {/* Enhanced Bar Chart using table13 data */}

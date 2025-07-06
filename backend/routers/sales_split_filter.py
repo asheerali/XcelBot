@@ -63,6 +63,37 @@ async def filter_excel_data(
             end_date_pd = pd.to_datetime(end_date_original)
             print(f"Converted end_date to pandas datetime: {end_date_pd}")
         
+        
+        if end_date_original:
+            print("i am here in the sales split filter checking the start_date_original and end_date_original", start_date_original, end_date_original)
+            print("i am here in the sales split filter checking", f"Start date pd: {start_date_pd}, End date pd: {end_date_pd}")
+            print("-------------------------------------------------------------------------------------")
+            print(f"  Start date pd: {start_date_pd} (Day: {start_date_pd.day}, Month: {start_date_pd.month})")
+            print(f"  End date pd:   {end_date_pd} (Day: {end_date_pd.day}, Month: {end_date_pd.month})")
+            
+            
+            # Add one day
+            # start_date_plus_one = start_date_pd + timedelta(days=1)
+            end_date_plus_one = end_date_pd + timedelta(days=1) if end_date_pd else None
+            print(f"End date plus one day: {end_date_plus_one}")
+            end_date_pd = end_date_plus_one if end_date_plus_one else None
+
+            days_to_add = 6 - end_date_pd.weekday()
+            end_date_pd = end_date_pd + pd.Timedelta(days=days_to_add)
+            print(f"end date end of the week: {end_date_pd}")
+            
+            # monday_this_week = end_date_pd - pd.Timedelta(days=end_date_pd.weekday())
+
+            # start_date_pd = monday_this_week - pd.Timedelta(weeks=1)
+            
+                    
+            # Get the most recent after the end_date
+            # last_sunday = sunday_of_week - pd.Timedelta(days=(end_date_pd.weekday() + 1))
+
+            # Monday of that week
+            start_date_pd = end_date_pd - pd.Timedelta(days=91)
+
+            print(f"Start date pd: {start_date_pd} (Day: {start_date_pd.day}, Month: {start_date_pd.month})")
         # Process categories filter
         raw_categories = request.categories
         if raw_categories in [None, '']:
