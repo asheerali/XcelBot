@@ -1130,7 +1130,7 @@ const ExcelUploadPage: React.FC = () => {
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="Select Company"
+              
                     variant="outlined"
                     fullWidth
                     error={!!companiesError}
@@ -1179,28 +1179,7 @@ const ExcelUploadPage: React.FC = () => {
                 }}
               />
 
-              {selectedCompany && (
-                <Box
-                  sx={{
-                    mt: 2,
-                    p: 2,
-                    bgcolor: "primary.light",
-                    borderRadius: 2,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                  }}
-                >
-                  <CheckCircleIcon color="primary" />
-                  <Typography
-                    variant="body2"
-                    color="primary.dark"
-                    fontWeight={500}
-                  >
-                    Selected: {selectedCompany.name} (ID: {selectedCompany.id})
-                  </Typography>
-                </Box>
-              )}
+         
             </Box>
           </CardContent>
         </CompanySelectionCard>

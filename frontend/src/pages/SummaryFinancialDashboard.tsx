@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import DateRangeSelector from "../components/DateRangeSelector";
 import {
@@ -346,7 +346,9 @@ const SummaryFinancialDashboard = () => {
   // Filter configuration
   const filterFields = getFilterFields();
 
-  const handleFilterChange = (fieldKey, values) => {
+  const handleFilterChange = useCallback((fieldKey, values) => {
+    console.log('🔄 Filter change triggered:', { fieldKey, values, timestamp: Date.now() });
+    
     if (fieldKey === "companies") {
       dispatch(setSelectedCompanies(values));
       
@@ -357,7 +359,7 @@ const SummaryFinancialDashboard = () => {
     } else if (fieldKey === "location") {
       dispatch(setSelectedLocations(values));
     }
-  };
+  }, [dispatch]);
 
   const handleApplyFilters = async () => {
     console.log("Applying filters:", { companies: selectedCompanies, locations: selectedLocations });
@@ -609,16 +611,41 @@ const SummaryFinancialDashboard = () => {
   const dailyData = getDailyData();
   const periodTotal = getPeriodTotal();
 
-  // Multi-select filter component
-  const MultiSelectFilter = ({ field, currentValues, onValuesChange }) => {
+  // Modal-style Multi-select filter component
+  const ModalMultiSelectFilter = ({ field, currentValues, onValuesChange }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
+    const [buttonPosition, setButtonPosition] = useState({ top: 0, left: 0, width: 0 });
+    const buttonRef = useRef(null);
+
+    const isDisabled = field.options.length === 0 || field.disabled;
 
     const filteredOptions = field.options.filter(option =>
       option.label.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const handleOptionToggle = (value) => {
+    const openDropdown = () => {
+      if (!isDisabled && buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        setButtonPosition({
+          top: rect.bottom + window.scrollY,
+          left: rect.left + window.scrollX,
+          width: rect.width
+        });
+        setIsOpen(true);
+        setSearchTerm("");
+        console.log('Modal dropdown opened');
+      }
+    };
+
+    const closeDropdown = () => {
+      setIsOpen(false);
+      setSearchTerm("");
+      console.log('Modal dropdown closed');
+    };
+
+    const handleOptionSelect = (value) => {
+      console.log('Option selected:', value, '- keeping modal open');
       const newValues = currentValues.includes(value)
         ? currentValues.filter(v => v !== value)
         : [...currentValues, value];
@@ -626,6 +653,7 @@ const SummaryFinancialDashboard = () => {
     };
 
     const handleSelectAll = () => {
+      console.log('Select all clicked - keeping modal open');
       if (currentValues.length === field.options.length) {
         onValuesChange([]);
       } else {
@@ -633,145 +661,256 @@ const SummaryFinancialDashboard = () => {
       }
     };
 
-    const isDisabled = loading || field.options.length === 0 || field.disabled;
-
     return (
-      <div style={{ position: "relative", minWidth: "250px" }}>
-        <div
-          onClick={() => !isDisabled && setIsOpen(!isOpen)}
-          style={{
-            border: "2px solid #e0e0e0",
-            borderRadius: "8px",
-            padding: "12px 16px",
-            backgroundColor: isDisabled ? "#f5f5f5" : "white",
-            cursor: isDisabled ? "not-allowed" : "pointer",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            minHeight: "48px",
-            transition: "border-color 0.2s",
-            borderColor: isOpen ? "#1976d2" : "#e0e0e0",
-            opacity: isDisabled ? 0.6 : 1,
-          }}
-        >
-          <span style={{ fontSize: "14px", color: isDisabled ? "#999" : "#333" }}>
-            {isDisabled 
-              ? field.disabled 
-                ? field.key === "location" 
-                  ? "Select company first"
-                  : `Loading ${field.label.toLowerCase()}...`
-                : `Loading ${field.label.toLowerCase()}...`
-              : currentValues.length === 0 
-                ? `Select ${field.label}` 
-                : `${currentValues.length} ${field.label.toLowerCase()} selected`}
-          </span>
-          <span style={{ 
-            transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", 
-            transition: "transform 0.2s",
-            color: isDisabled ? "#999" : "#333"
-          }}>
-            ▼
-          </span>
-        </div>
-
-        {isOpen && !isDisabled && (
+      <>
+        {/* Dropdown Trigger Button */}
+        <div style={{ position: "relative", minWidth: "250px" }}>
           <div
+            ref={buttonRef}
+            onClick={openDropdown}
             style={{
-              position: "absolute",
-              top: "100%",
-              left: 0,
-              right: 0,
-              backgroundColor: "white",
               border: "2px solid #e0e0e0",
               borderRadius: "8px",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-              zIndex: 1000,
-              maxHeight: "300px",
-              overflowY: "auto",
-              marginTop: "4px",
+              padding: "12px 16px",
+              backgroundColor: isDisabled ? "#f5f5f5" : "white",
+              cursor: isDisabled ? "not-allowed" : "pointer",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              minHeight: "48px",
+              transition: "border-color 0.2s",
+              borderColor: isOpen ? "#1976d2" : "#e0e0e0",
+              opacity: isDisabled ? 0.6 : 1,
+              userSelect: "none",
             }}
           >
-            {/* Search input */}
-            <div style={{ padding: "12px", borderBottom: "1px solid #f0f0f0" }}>
-              <input
-                type="text"
-                placeholder={`Search ${field.label.toLowerCase()}...`}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  border: "1px solid #e0e0e0",
-                  borderRadius: "4px",
-                  fontSize: "14px",
-                  outline: "none",
-                }}
-              />
-            </div>
+            <span style={{ fontSize: "14px", color: isDisabled ? "#999" : "#333" }}>
+              {isDisabled 
+                ? field.disabled 
+                  ? field.key === "location" 
+                    ? "Select company first"
+                    : `Loading ${field.label.toLowerCase()}...`
+                  : `Loading ${field.label.toLowerCase()}...`
+                : currentValues.length === 0 
+                  ? `Select ${field.label}` 
+                  : `${currentValues.length} ${field.label.toLowerCase()} selected`}
+            </span>
+            <span style={{ 
+              transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", 
+              transition: "transform 0.2s",
+              color: isDisabled ? "#999" : "#333"
+            }}>
+              ▼
+            </span>
+          </div>
+        </div>
 
-            {/* Select All option */}
-            {field.options.length > 0 && (
-              <div
-                onClick={handleSelectAll}
-                style={{
-                  padding: "12px 16px",
-                  cursor: "pointer",
-                  borderBottom: "1px solid #f0f0f0",
-                  backgroundColor: "#f8f9fa",
-                  fontWeight: "500",
-                  fontSize: "14px",
-                  color: "#1976d2",
-                }}
-              >
-                {currentValues.length === field.options.length ? "Deselect All" : "Select All"}
-              </div>
-            )}
-
-            {/* Options */}
-            {filteredOptions.map((option) => (
-              <div
-                key={option.value}
-                onClick={() => handleOptionToggle(option.value)}
-                style={{
-                  padding: "12px 16px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  backgroundColor: currentValues.includes(option.value) ? "#e3f2fd" : "white",
-                  borderBottom: "1px solid #f0f0f0",
-                  fontSize: "14px",
-                  transition: "background-color 0.2s",
-                }}
-              >
-                <div
+        {/* Modal Dropdown */}
+        {isOpen && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(0, 0, 0, 0.1)",
+              zIndex: 50000,
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "flex-start",
+            }}
+            onClick={closeDropdown}
+          >
+            {/* Dropdown Content */}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: "absolute",
+                top: buttonPosition.top + 4,
+                left: buttonPosition.left,
+                width: Math.max(buttonPosition.width, 300),
+                backgroundColor: "white",
+                border: "2px solid #e0e0e0",
+                borderRadius: "8px",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+                maxHeight: "400px",
+                overflowY: "auto",
+              }}
+            >
+              {/* Header */}
+              <div style={{ 
+                padding: "16px", 
+                borderBottom: "1px solid #f0f0f0",
+                backgroundColor: "#f8f9fa",
+                borderRadius: "6px 6px 0 0",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
+              }}>
+                <span style={{ fontWeight: "600", color: "#333" }}>
+                  Select {field.label}
+                </span>
+                <button
+                  onClick={closeDropdown}
                   style={{
-                    width: "16px",
-                    height: "16px",
-                    border: "2px solid #1976d2",
-                    borderRadius: "3px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: currentValues.includes(option.value) ? "#1976d2" : "white",
+                    background: "none",
+                    border: "none",
+                    fontSize: "18px",
+                    cursor: "pointer",
+                    color: "#666",
+                    padding: "4px",
+                    borderRadius: "4px",
                   }}
                 >
-                  {currentValues.includes(option.value) && (
-                    <span style={{ color: "white", fontSize: "12px" }}>✓</span>
-                  )}
-                </div>
-                {option.label}
+                  ×
+                </button>
               </div>
-            ))}
 
-            {filteredOptions.length === 0 && (
-              <div style={{ padding: "12px 16px", color: "#666", fontSize: "14px" }}>
-                {field.options.length === 0 ? "No options available" : "No options found"}
+              {/* Search Input */}
+              <div style={{ padding: "16px", borderBottom: "1px solid #f0f0f0" }}>
+                <input
+                  type="text"
+                  placeholder={`Search ${field.label.toLowerCase()}...`}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  autoFocus
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    border: "1px solid #e0e0e0",
+                    borderRadius: "4px",
+                    fontSize: "14px",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
               </div>
-            )}
+
+              {/* Select All Button */}
+              {field.options.length > 0 && (
+                <div
+                  onClick={handleSelectAll}
+                  style={{
+                    padding: "12px 16px",
+                    cursor: "pointer",
+                    borderBottom: "1px solid #f0f0f0",
+                    backgroundColor: "#f8f9fa",
+                    fontWeight: "500",
+                    fontSize: "14px",
+                    color: "#1976d2",
+                    userSelect: "none",
+                    transition: "background-color 0.2s",
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = "#e8f4f8"}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = "#f8f9fa"}
+                >
+                  {currentValues.length === field.options.length ? "Deselect All" : "Select All"}
+                  <span style={{ float: "right", color: "#666", fontSize: "12px" }}>
+                    {currentValues.length}/{field.options.length}
+                  </span>
+                </div>
+              )}
+
+              {/* Options List */}
+              <div style={{ maxHeight: "250px", overflowY: "auto" }}>
+                {filteredOptions.map((option) => (
+                  <div
+                    key={option.value}
+                    onClick={() => handleOptionSelect(option.value)}
+                    style={{
+                      padding: "12px 16px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      backgroundColor: currentValues.includes(option.value) ? "#e3f2fd" : "white",
+                      borderBottom: "1px solid #f0f0f0",
+                      fontSize: "14px",
+                      userSelect: "none",
+                      transition: "background-color 0.2s",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!currentValues.includes(option.value)) {
+                        e.target.style.backgroundColor = "#f5f5f5";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!currentValues.includes(option.value)) {
+                        e.target.style.backgroundColor = "white";
+                      }
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "18px",
+                        height: "18px",
+                        border: "2px solid #1976d2",
+                        borderRadius: "4px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: currentValues.includes(option.value) ? "#1976d2" : "white",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {currentValues.includes(option.value) && (
+                        <span style={{ color: "white", fontSize: "12px", fontWeight: "bold" }}>✓</span>
+                      )}
+                    </div>
+                    <span style={{ flex: 1 }}>{option.label}</span>
+                  </div>
+                ))}
+
+                {/* No Options Message */}
+                {filteredOptions.length === 0 && (
+                  <div 
+                    style={{ 
+                      padding: "20px 16px", 
+                      color: "#666", 
+                      fontSize: "14px",
+                      textAlign: "center",
+                      fontStyle: "italic"
+                    }}
+                  >
+                    {field.options.length === 0 ? "No options available" : "No options found"}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div style={{ 
+                padding: "12px 16px", 
+                borderTop: "1px solid #f0f0f0",
+                backgroundColor: "#f8f9fa",
+                borderRadius: "0 0 6px 6px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center"
+              }}>
+                <span style={{ fontSize: "12px", color: "#666" }}>
+                  {currentValues.length} selected
+                </span>
+                <button
+                  onClick={closeDropdown}
+                  style={{
+                    backgroundColor: "#1976d2",
+                    color: "white",
+                    border: "none",
+                    padding: "6px 16px",
+                    borderRadius: "4px",
+                    fontSize: "14px",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                  }}
+                >
+                  Done
+                </button>
+              </div>
+            </div>
           </div>
         )}
-      </div>
+      </>
     );
   };
 
@@ -1161,6 +1300,7 @@ const SummaryFinancialDashboard = () => {
           marginBottom: "32px",
           boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
         }}
+        onClick={(e) => e.stopPropagation()} // Catch any bubbling events
       >
         <div style={{ 
           display: "flex", 
@@ -1248,7 +1388,7 @@ const SummaryFinancialDashboard = () => {
           gap: "20px" 
         }}>
           {filterFields.map((field) => (
-            <MultiSelectFilter
+            <ModalMultiSelectFilter
               key={field.key}
               field={field}
               currentValues={field.key === "companies" ? selectedCompanies : selectedLocations}

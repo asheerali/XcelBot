@@ -643,7 +643,7 @@ const Reports = () => {
                   Price Change Filter
                 </Typography>
                 <PriceChangeFilterSelect>
-                  <InputLabel>Filter</InputLabel>
+                 
                   <Select
                     value={priceChangeFilter}
                     onChange={handlePriceFilterChange}
@@ -1030,7 +1030,7 @@ const Reports = () => {
                   Company
                 </Typography>
                 <StyledFormControl size="small">
-                  <InputLabel>Company</InputLabel>
+            
                   <Select
                     value={selectedCompany}
                     onChange={handleCompanyChange}

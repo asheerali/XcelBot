@@ -1097,7 +1097,7 @@ const OrderIQDashboard = () => {
                     displayEmpty
                   >
                     <MenuItem value="">
-                      <em>Select a company</em>
+                 
                     </MenuItem>
                     {companies.map((company) => (
                       <MenuItem key={company.id} value={company.id.toString()}>
@@ -1109,17 +1109,18 @@ const OrderIQDashboard = () => {
               </Grid>
 
               {/* Locations Dropdown - filtered by selected company */}
-              <Grid item xs={12} md={6}>
+               <Grid item xs={12} md={6}>
                 <FormControl fullWidth disabled={!selectedCompanyId}>
-                  <InputLabel>Location</InputLabel>
+                  <InputLabel shrink>Location</InputLabel>
                   <Select
                     value={selectedLocationId || ''}
                     label="Location"
                     onChange={(e) => handleLocationChange(e.target.value)}
                     displayEmpty
+                    notched
                   >
                     <MenuItem value="">
-                      <em>Select a location</em>
+                      <em>Select Location</em>
                     </MenuItem>
                     {availableLocationsForCompany.map((location) => (
                       <MenuItem key={location.location_id} value={location.location_id.toString()}>

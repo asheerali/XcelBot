@@ -1211,12 +1211,7 @@ export function Financials() {
             )}
             
             <FormControl fullWidth size="small" disabled={companiesLoading}>
-              <InputLabel id="company-select-label">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <BusinessIcon fontSize="small" />
-                  Choose a company for financial analysis
-                </Box>
-              </InputLabel>
+           
               <Select
                 labelId="company-select-label"
                 value={selectedCompanyId}
@@ -1263,7 +1258,7 @@ export function Financials() {
             {currentCompanyId && currentCompanyId !== selectedCompanyId && (
               <Alert severity="info" sx={{ mt: 2 }}>
                 <Typography variant="body2">
-                  <strong>Note:</strong> Your uploaded files are associated with Company ID: {currentCompanyId}. 
+                  <strong>Note:</strong> Your uploaded files are associated with <b>{selectedCompanyName}</b>. 
                   Select a different company above to override this for new operations.
                 </Typography>
               </Alert>

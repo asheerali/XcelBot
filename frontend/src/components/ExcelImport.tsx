@@ -1264,12 +1264,7 @@ export function ExcelImport() {
               )}
               
               <FormControl fullWidth size="small" disabled={companiesLoading}>
-                <InputLabel id="company-select-label">
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <BusinessIcon fontSize="small" />
-                    Choose a company for your data analysis
-                  </Box>
-                </InputLabel>
+          
                 <Select
                   labelId="company-select-label"
                   value={selectedCompanyId}
@@ -1316,7 +1311,7 @@ export function ExcelImport() {
               {currentCompanyId && currentCompanyId !== selectedCompanyId && (
                 <Alert severity="info" sx={{ mt: 2 }}>
                   <Typography variant="body2">
-                    <strong>Note:</strong> Your uploaded files are associated with Company ID: {currentCompanyId}. 
+                    <strong>Note:</strong> Your uploaded files are associated with Company ID: <b> {selectedCompanyName}</b> . 
                     Select a different company above to override this for new operations.
                   </Typography>
                 </Alert>
@@ -1366,35 +1361,10 @@ export function ExcelImport() {
               </Grid>
             ) : (
               <>
-                {/* File Summary */}
-                <Grid item xs={12}>
-                  <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
-                    <Box>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                        Data Sources Active
-                        {/* Show active company info in data sources */}
-                        {activeCompanyId && (
-                          <CompanyInfoChip
-                            icon={<BusinessIcon />}
-                            label={`Company: ${selectedCompanyName}`}
-                            size="small"
-                            sx={{ ml: 2 }}
-                          />
-                        )}
-                      </Typography>
-                   
-                    </Box>
-                  </Box>
-                </Grid>
-                
+  
                 {/* Filter Section - FIXED with new callback */}
                 <Grid item xs={12} sx={{ mt: 2 }}>
-                  <Paper sx={{ 
-                    p: 3, 
-                    borderRadius: 2,
-                    background: '#ffffff',
-                    border: '1px solid #e0e0e0'
-                  }}>
+               
                     <FilterSection 
                       dateRangeType={dateRangeType}
                       availableDateRanges={availableDateRanges}
@@ -1410,7 +1380,7 @@ export function ExcelImport() {
                       onApplyFilters={handleApplyFilters}
                       onApplyFiltersWithDates={handleApplyFiltersWithDates} // FIXED: New callback
                     />
-                  </Paper>
+                
                 </Grid>
               </>
             )}

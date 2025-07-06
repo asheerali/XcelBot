@@ -1327,10 +1327,7 @@ export default function SalesDashboard() {
             
             <FormControl fullWidth size="small" disabled={companiesLoading}>
               <InputLabel id="company-select-label">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <BusinessIcon fontSize="small" />
-                  Choose a company for sales analysis
-                </Box>
+              
               </InputLabel>
               <Select
                 labelId="company-select-label"
