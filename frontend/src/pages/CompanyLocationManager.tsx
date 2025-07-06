@@ -2274,6 +2274,7 @@ const CompanyLocationManager: React.FC = () => {
               </Grid>
 
               {/* Simplified Permissions */}
+                {userForm.role !== "admin" && (
               <Grid item xs={12}>
                 <Typography variant="h6" sx={{ 
                   fontWeight: 700,
@@ -2322,76 +2323,82 @@ const CompanyLocationManager: React.FC = () => {
                   </Grid>
                 </Box>
               </Grid>
+      )}
 
+
+          
               {/* Assigned Locations */}
-              <Grid item xs={12}>
-                <Typography variant="h6" sx={{ 
-                  fontWeight: 700,
-                  color: "#1976d2",
-                  mb: 2,
-                  display: "flex",
-                  alignItems: "center"
-                }}>
-                  📍 Assigned Locations
-                </Typography>
-                {selectedCompany?.locations && selectedCompany.locations.length > 0 ? (
-                  <Box sx={{ 
-                    maxHeight: 200, 
-                    overflowY: "auto",
-                    border: "2px solid rgba(25, 118, 210, 0.2)",
-                    borderRadius: 2,
-                    p: 2,
-                    backgroundColor: "rgba(25, 118, 210, 0.05)"
-                  }}>
-                    <Grid container spacing={1}>
-                      {selectedCompany.locations.map((location) => (
-                        <Grid item xs={12} sm={6} key={location.id}>
-                          <FormControlLabel
-                            control={
-                              <Checkbox
-                                checked={userForm.assignedLocations.some(al => al.location_id === location.id)}
-                                onChange={() => handleLocationAssignmentToggle(location.id, location.name)}
-                                sx={{
-                                  color: "#f093fb",
-                                  "&.Mui-checked": {
-                                    color: "#f093fb",
-                                  },
-                                }}
-                              />
-                            }
-                            label={
-                              <Box>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                  {location.name}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {location.city}, {location.state}
-                                </Typography>
-                              </Box>
-                            }
-                          />
-                        </Grid>
-                      ))}
-                    </Grid>
+            {/* Assigned Locations */}
+{userForm.role !== "admin" && (
+  <Grid item xs={12}>
+    <Typography variant="h6" sx={{
+      fontWeight: 700,
+      color: "#1976d2",
+      mb: 2,
+      display: "flex",
+      alignItems: "center"
+    }}>
+      📍 Assigned Locations
+    </Typography>
+    {selectedCompany?.locations && selectedCompany.locations.length > 0 ? (
+      <Box sx={{
+        maxHeight: 200,
+        overflowY: "auto",
+        border: "2px solid rgba(25, 118, 210, 0.2)",
+        borderRadius: 2,
+        p: 2,
+        backgroundColor: "rgba(25, 118, 210, 0.05)"
+      }}>
+        <Grid container spacing={1}>
+          {selectedCompany.locations.map((location) => (
+            <Grid item xs={12} sm={6} key={location.id}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={userForm.assignedLocations.some(al => al.location_id === location.id)}
+                    onChange={() => handleLocationAssignmentToggle(location.id, location.name)}
+                    sx={{
+                      color: "#f093fb",
+                      "&.Mui-checked": {
+                        color: "#f093fb",
+                      },
+                    }}
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {location.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {location.city}, {location.state}
+                    </Typography>
                   </Box>
-                ) : (
-                  <Paper sx={{ 
-                    p: 3, 
-                    textAlign: "center", 
-                    backgroundColor: "rgba(25, 118, 210, 0.05)",
-                    borderRadius: 2,
-                    border: "2px dashed rgba(25, 118, 210, 0.3)"
-                  }}>
-                    <LocationOnIcon sx={{ fontSize: 48, color: "#1976d2", mb: 1 }} />
-                    <Typography variant="body1" sx={{ color: "#1976d2", fontWeight: 600 }}>
-                      No locations available for this company
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Add locations to the company first to assign them to users.
-                    </Typography>
-                  </Paper>
-                )}
-              </Grid>
+                }
+              />
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+    ) : (
+      <Paper sx={{
+        p: 3,
+        textAlign: "center",
+        backgroundColor: "rgba(25, 118, 210, 0.05)",
+        borderRadius: 2,
+        border: "2px dashed rgba(25, 118, 210, 0.3)"
+      }}>
+        <LocationOnIcon sx={{ fontSize: 48, color: "#1976d2", mb: 1 }} />
+        <Typography variant="body1" sx={{ color: "#1976d2", fontWeight: 600 }}>
+          No locations available for this company
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Add locations to the company first to assign them to users.
+        </Typography>
+      </Paper>
+    )}
+  </Grid>
+)}
 
               <Grid item xs={12}>
                 <FormControlLabel
