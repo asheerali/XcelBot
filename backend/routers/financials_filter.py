@@ -74,6 +74,8 @@ async def filter_financials_data(
         # Handle year filter
         year_filter = request.year if request.year else None
         
+        print("-----------------------------------------------------------")
+        print("i am here in the financials filter endpoint print startDate", request.startDate, " endDate", request.endDate, "location", request.locations)
         # Convert dates to pandas datetime objects for consistent handling
         start_date_original = request.startDate if request.startDate else None
         end_date_original = request.endDate if request.endDate else None
@@ -82,11 +84,13 @@ async def filter_financials_data(
         end_date_pd = None
         
         if start_date_original:
-            start_date_pd = pd.to_datetime(start_date_original)
+            # start_date_pd = pd.to_datetime(start_date_original)
+            start_date_pd = pd.to_datetime(start_date_original).date()
             print(f"Converted start_date to pandas datetime: {start_date_pd}")
         
         if end_date_original:
-            end_date_pd = pd.to_datetime(end_date_original)
+            # end_date_pd = pd.to_datetime(end_date_original)
+            end_date_pd = pd.to_datetime(end_date_original).date()
             print(f"Converted end_date to pandas datetime: {end_date_pd}")
         
         print(f"Filters applied - Location: {location_filter}, Year: {year_filter}, Start: {start_date_pd}, End: {end_date_pd}")
@@ -105,17 +109,17 @@ async def filter_financials_data(
         # Build the base query for financials
         financials_query = db.query(FinancialsCompanyWide).filter(FinancialsCompanyWide.company_id == company_id)
         
-        # Apply year filter
-        if year_filter and year_filter != "All":
-            financials_query = financials_query.filter(FinancialsCompanyWide.Year == year_filter)
+        # # Apply year filter
+        # if year_filter and year_filter != "All":
+        #     financials_query = financials_query.filter(FinancialsCompanyWide.Year == year_filter)
         
         # Apply date filters using Ly_Date if available
         if start_date_pd is not None:
-            financials_query = financials_query.filter(FinancialsCompanyWide.Ly_Date >= start_date_pd)
+            financials_query = financials_query.filter(FinancialsCompanyWide.Date >= start_date_pd)
             
         if end_date_pd is not None:
             end_datetime = end_date_pd + timedelta(days=1)  # Include end date
-            financials_query = financials_query.filter(FinancialsCompanyWide.Ly_Date < end_datetime)
+            financials_query = financials_query.filter(FinancialsCompanyWide.Date < end_datetime)
         
         # Apply location filter
         if location_filter != "All" and location_filter:

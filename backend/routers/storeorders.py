@@ -25,6 +25,9 @@ class OrderItemsRequest(BaseModel):
     company_id: Optional[int] = None
     location_id: Optional[int] = None
     items: Optional[List[Dict[str, Any]]] = None
+    # add email_order optional bool
+    email_order: Optional[bool] = None
+
     # Add other fields as neede
 
         
@@ -379,19 +382,6 @@ def delete_storeorders(storeorders_id: int, db: Session = Depends(get_db)):
 def bulk_create_storeorders(storeorders: list[storeorders_schema.StoreOrdersCreate], db: Session = Depends(get_db)):
     """Bulk create multiple store orders records"""
     return storeorders_crud.bulk_create_storeorders(db, storeorders)
-
-
-# @router.post("/orderitems") 
-# def get_order_items(request: OrderItemsRequest, db: Session = Depends(get_db)):
-#     """Get order items from masterfile"""
-#     print("Received request in orderitems endpoint:", request.model_dump())
-    
-#     # Here you can process the request as needed
-#     # For now, just return the request back in the response
-#     return {
-#         "message": "Order items request received successfully",
-#         "received_data": request.model_dump()
-#     }
     
     
 @router.post("/orderitems")
@@ -406,6 +396,12 @@ def create_new_order_items(request: OrderItemsRequest, db: Session = Depends(get
             "total_items": len(request.items),
             "items": request.items,
         }
+        
+        if request.email_order:
+            print("ponka is true")
+            company_id=request.company_id
+            
+        
         
         # Always create new store orders entry
         create_obj = storeorders_schema.StoreOrdersCreate(
@@ -839,7 +835,6 @@ def get_analytics_dashboard(
     try:
         storeorders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
 
-       
 
         if not isinstance(storeorders, list):
             storeorders = [storeorders] if storeorders else []
@@ -848,6 +843,7 @@ def get_analytics_dashboard(
         # Build rows with date and order_sales
         rows = []
         for order in storeorders:
+            print("i am here in the store orders printing the _items_ordered_", order)
             created_date = order.created_at.date()
             total_amount = 0.0
             total_quantity = 0
@@ -856,7 +852,12 @@ def get_analytics_dashboard(
                 items = order.items_ordered.get("items", [])
                 for item in items:
                     total_price = item.get("total_price", 0)
+                    if total_price is None:
+                        total_price = 0
+
                     quantity = item.get("quantity", 0)
+                    if quantity is None:
+                        quantity = 0
                     total_amount += float(total_price)
                     total_quantity += int(quantity)
 
@@ -946,6 +947,7 @@ def get_financial_summary(
     location_id: int, 
     db: Session = Depends(get_db)
 ):
+    
     """Get total sales, total orders, average order value, and daily analytics tables"""
     try:
         storeorders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
@@ -972,8 +974,12 @@ def get_financial_summary(
             created_date = order.created_at.date()
             order_sales = 0.0
             if order.items_ordered and "items" in order.items_ordered:
+                print("i am here in the store orders printing the items_ordered_", order.items_ordered["items"]) 
+                
                 for item in order.items_ordered["items"]:
                     total_price = item.get("total_price", 0)
+                    if total_price is None:
+                        total_price = 0
                     order_sales += float(total_price)
             total_sales += order_sales
             rows.append({"created_at": created_date, "order_sales": order_sales})
@@ -1031,7 +1037,10 @@ def get_financial_summary(
             if order.items_ordered and "items" in order.items_ordered:
                 for item in order.items_ordered["items"]:
                     category = item.get("category", "Uncategorized")
-                    cost = float(item.get("total_price", 0.0))
+                    cost = item.get("total_price", 0.0)
+                    if cost is None:
+                        cost = 0.0
+                    cost = float(cost)
                     category_costs[category] = category_costs.get(category, 0.0) + cost
 
         # Convert to DataFrame
@@ -1112,7 +1121,10 @@ def get_company_summary(
 
             if order.items_ordered and "items" in order.items_ordered:
                 for item in order.items_ordered["items"]:
-                    cost_matrix[date][store_name] += float(item.get("total_price", 0.0))
+                    matrix = item.get("total_price", 0.0)
+                    if matrix is None:
+                        matrix = 0.0
+                    cost_matrix[date][store_name] += float(matrix)
 
         # Normalize data: Get all unique store names
         all_stores = sorted({store for store_data in cost_matrix.values() for store in store_data})
