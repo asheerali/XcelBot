@@ -53,33 +53,10 @@ import {
   selectSelectedLocations
 } from '../store/slices/masterFileSlice'; // Adjust path as needed
 
-// Import your existing DateRangeSelector component
-// import DateRangeSelector from '../components/DateRangeSelector'; // Adjust the import path as needed
-// import { API_URL_Local } from '../constants';
 
-/*
- * API Configuration Notes:
- * 
- * This component expects the following API endpoints to be available:
- * 1. GET /company-locations/all - Returns array of company-location objects
- * 2. GET /api/masterfile/availableitems/{company_id}/{location_id} - Returns available items
- * 3. GET /api/storeorders/detailsrecent/{company_id}/{location_id} - Returns recent orders
- * 4. POST /api/storeorders/orderitems - Accepts order submission
- * 
- * Set API_URL_Local in constants.tsx to configure the API base URL.
- * If endpoints are not available, the component will show empty state.
- * 
- * Example API responses expected:
- * - Company-Locations: [{"company_id": 1, "company_name": "Company Name", "locations": [{"location_id": 1, "location_name": "Location Name"}]}, ...]
- * - Available Items: {"data": {"dataframe": [{"column0": "Category", "column1": "Product", ...}]}}
- * - Recent Orders: {"message":"Recent store orders details fetched successfully","data":[{"id":1,"company_id":2,...}],"total_orders":1}
- */
+import { API_URL_Local } from '../constants';
+import apiClient from "../api/axiosConfig";
 
-// Remove mock API_URL_Local and import from constants
-// import { API_URL_Local } from '../constants';
-
-// For demo purposes, you can uncomment the line above and remove this mock
-const API_URL_Local = 'http://localhost:8000'; // Replace with your actual API URL
 
 // Mock DateRangeSelector component for demo
 const DateRangeSelector = ({ onSelect, initialState }) => {

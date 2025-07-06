@@ -16,6 +16,8 @@ from typing import Dict, Any
 from crud import storeorders as storeorders_crud
 import pandas as pd
 from schemas import storeorders as storeorders_schema
+from models.users import User
+from dependencies.auth import get_current_active_user
 
 
 from pydantic import BaseModel
@@ -385,7 +387,9 @@ def bulk_create_storeorders(storeorders: list[storeorders_schema.StoreOrdersCrea
     
     
 @router.post("/orderitems")
-def create_new_order_items(request: OrderItemsRequest, db: Session = Depends(get_db)):
+def create_new_order_items(request: OrderItemsRequest,
+                           db: Session = Depends(get_db)
+                           ,current_user: User = Depends(get_current_active_user),):
     """Create new store orders entry every time"""
     print("Received request to create new order:", request.model_dump())
     
@@ -398,8 +402,10 @@ def create_new_order_items(request: OrderItemsRequest, db: Session = Depends(get
         }
         
         if request.email_order:
-            print("ponka is true")
             company_id=request.company_id
+            current_user_id = current_user.id   
+            print("Email order is enabled. Company ID:", company_id, "Current User ID:", current_user_id)
+            
             
         
         
