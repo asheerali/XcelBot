@@ -18,6 +18,9 @@ import pandas as pd
 from schemas import storeorders as storeorders_schema
 from models.users import User
 from dependencies.auth import get_current_active_user
+from fastapi import BackgroundTasks
+from utils.email import send_order_confirmation_email
+from crud.users import get_user 
 
 
 from pydantic import BaseModel
@@ -388,8 +391,10 @@ def bulk_create_storeorders(storeorders: list[storeorders_schema.StoreOrdersCrea
     
 @router.post("/orderitems")
 def create_new_order_items(request: OrderItemsRequest,
-                           db: Session = Depends(get_db)
-                           ,current_user: User = Depends(get_current_active_user),):
+                           background_tasks: BackgroundTasks,
+                           db: Session = Depends(get_db),
+                           current_user: User = Depends(get_current_active_user),
+                           ):
     """Create new store orders entry every time"""
     print("Received request to create new order:", request.model_dump())
     
@@ -400,14 +405,7 @@ def create_new_order_items(request: OrderItemsRequest,
             "total_items": len(request.items),
             "items": request.items,
         }
-        
-        if request.email_order:
-            company_id=request.company_id
-            current_user_id = current_user.id   
-            print("Email order is enabled. Company ID:", company_id, "Current User ID:", current_user_id)
-            
-            
-        
+
         
         # Always create new store orders entry
         create_obj = storeorders_schema.StoreOrdersCreate(
@@ -421,6 +419,30 @@ def create_new_order_items(request: OrderItemsRequest,
         
         new_order = storeorders_crud.create_storeorders(db, create_obj)
         
+        if request.email_order:
+            company_id = request.company_id
+            current_user_id = current_user.id   
+            # print("Email order is enabled. Company ID:", company_id, "Current User ID:", current_user_id)
+            
+            # Get user details from user ID
+            user_details = get_user(db, current_user_id)
+            
+            if user_details and user_details.email:
+                # Send order confirmation email in background
+                background_tasks.add_task(
+                    send_order_confirmation_email,
+                    user_details.email,
+                    user_details.first_name,
+                    new_order.id,
+                    items_ordered_data,
+                    new_order.created_at
+                )
+                print(f"Order confirmation email queued for {user_details.email}")
+            else:
+                print("Warning: Could not find user email for order confirmation")
+            
+        
+
         return {
             "message": "New store orders created successfully",
             "store_orders_id": new_order.id,
@@ -485,15 +507,121 @@ def get_recent_storeorders_details_by_location(
     
     
 
+# # Updated function to update order by ID
+# @router.post("/orderupdate")
+# def update_storeorders_by_id(
+#     request: UpdateStoreOrdersRequest,
+#     background_tasks: BackgroundTasks,
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(get_current_active_user),
+# ):
+#     """Update items_ordered for a specific store orders record by ID"""
+
+#     print(f"Received request to update store order  request.order_id:", request.model_dump())
+#     try:
+#         # First, check if the order exists
+#         existing_order = storeorders_crud.get_storeorders(db, request.order_id)
+#         print(f"Checking existing order with ID:", existing_order)    
+   
+    
+#         if not existing_order:
+#             raise HTTPException(
+#                 status_code=404, 
+#                 detail=f"Store order with ID {request.order_id} not found"
+#             )
+        
+#         # Optional: Verify that the order belongs to the specified company and location
+#         if existing_order.company_id != request.company_id or existing_order.location_id != request.location_id:
+#             raise HTTPException(
+#                 status_code=400,
+#                 detail=f"Order ID {request.order_id} does not belong to company {request.company_id} and location {request.location_id}"
+#             )
+        
+#         print(f"Found existing order with ID: {existing_order.id}")
+#         print(f"Current items_ordered: {existing_order.items_ordered}")
+        
+            
+#                 # Prepare the items_ordered data
+#         new_items_ordered_data = {
+#             "total_items": len(request.items),
+#             "items": request.items,
+#         }
+#         print(f"New items_ordered: {new_items_ordered_data}")
+        
+#         # Create update object
+#         update_obj = storeorders_schema.StoreOrdersUpdate(items_ordered=new_items_ordered_data)
+
+#         # Update by order ID (this will automatically move current to prev and set new items)
+#         updated_storeorders = storeorders_crud.update_storeorders(db, request.order_id, update_obj)
+
+#         if updated_storeorders:
+#             print("Successfully updated store order in database")
+#             print(f"New items_ordered: {updated_storeorders.items_ordered}")
+#             print(f"Previous items_ordered: {updated_storeorders.prev_items_ordered}")
+            
+#         if request.email_order:
+#             company_id = request.company_id
+#             current_user_id = current_user.id   
+#             # print("Email order is enabled. Company ID:", company_id, "Current User ID:", current_user_id)
+            
+#             # Get user details from user ID
+#             user_details = get_user(db, current_user_id)
+            
+#             if user_details and user_details.email:
+#                 # Send order confirmation email in background
+#                 background_tasks.add_task(
+#                     send_order_confirmation_email,
+#                     user_details.email,
+#                     user_details.first_name,
+#                     new_items_ordered_data,
+#                     updated_storeorders.items_ordered,
+#                     new_items_ordered_data
+#                 )
+#                 print(f"Order confirmation email queued for {user_details.email}")
+#             else:
+#                 print("Warning: Could not find user email for order confirmation")
+            
+        
+
+            
+#             return {
+#                 "status": "success", 
+#                 "message": f"Store order {request.order_id} updated successfully",
+#                 "order_id": updated_storeorders.id,
+#                 "company_id": updated_storeorders.company_id,
+#                 "location_id": updated_storeorders.location_id,
+#                 "updated_at": updated_storeorders.updated_at.isoformat() if updated_storeorders.updated_at else None,
+#                 "created_at": updated_storeorders.created_at.isoformat() if updated_storeorders.created_at else None,
+#                 "items_ordered": updated_storeorders.items_ordered,
+#                 "prev_items_ordered": updated_storeorders.prev_items_ordered,
+#                 "update_summary": {
+#                     "previous_items_preserved": True if updated_storeorders.prev_items_ordered else False,
+#                     # "new_items_count": len(request.items_ordered.get('items', [])) if 'items' in request.items_ordered else 0
+#                 }
+#             }
+#         else:
+#             raise HTTPException(status_code=500, detail="Failed to update store order")
+        
+#     except HTTPException:
+#         # Re-raise HTTP exceptions as-is
+#         raise
+#     except Exception as e:
+#         print(f"Error in update_storeorders_by_id: {str(e)}")
+#         print(traceback.format_exc())
+#         raise HTTPException(status_code=500, detail=f"Error updating store order: {str(e)}")
+
+
 # Updated function to update order by ID
 @router.post("/orderupdate")
 def update_storeorders_by_id(
     request: UpdateStoreOrdersRequest,
-    db: Session = Depends(get_db)
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """Update items_ordered for a specific store orders record by ID"""
 
-    print(f"Received request to update store order  request.order_id:", request.model_dump())
+    print(f"Received request to update store order request.order_id:", request.model_dump())
     try:
         # First, check if the order exists
         existing_order = storeorders_crud.get_storeorders(db, request.order_id)
@@ -515,7 +643,9 @@ def update_storeorders_by_id(
         
         print(f"Found existing order with ID: {existing_order.id}")
         print(f"Current items_ordered: {existing_order.items_ordered}")
-                # Prepare the items_ordered data
+        
+            
+        # Prepare the items_ordered data
         new_items_ordered_data = {
             "total_items": len(request.items),
             "items": request.items,
@@ -528,28 +658,52 @@ def update_storeorders_by_id(
         # Update by order ID (this will automatically move current to prev and set new items)
         updated_storeorders = storeorders_crud.update_storeorders(db, request.order_id, update_obj)
 
-        if updated_storeorders:
-            print("Successfully updated store order in database")
-            print(f"New items_ordered: {updated_storeorders.items_ordered}")
-            print(f"Previous items_ordered: {updated_storeorders.prev_items_ordered}")
-            
-            return {
-                "status": "success", 
-                "message": f"Store order {request.order_id} updated successfully",
-                "order_id": updated_storeorders.id,
-                "company_id": updated_storeorders.company_id,
-                "location_id": updated_storeorders.location_id,
-                "updated_at": updated_storeorders.updated_at.isoformat() if updated_storeorders.updated_at else None,
-                "created_at": updated_storeorders.created_at.isoformat() if updated_storeorders.created_at else None,
-                "items_ordered": updated_storeorders.items_ordered,
-                "prev_items_ordered": updated_storeorders.prev_items_ordered,
-                "update_summary": {
-                    "previous_items_preserved": True if updated_storeorders.prev_items_ordered else False,
-                    # "new_items_count": len(request.items_ordered.get('items', [])) if 'items' in request.items_ordered else 0
-                }
-            }
-        else:
+        if not updated_storeorders:
             raise HTTPException(status_code=500, detail="Failed to update store order")
+            
+        print("Successfully updated store order in database")
+        print(f"New items_ordered: {updated_storeorders.items_ordered}")
+        print(f"Previous items_ordered: {updated_storeorders.prev_items_ordered}")
+        
+        # Handle email notification AFTER successful update
+        if request.email_order:
+            company_id = request.company_id
+            current_user_id = current_user.id   
+            print("Email order is enabled. Company ID:", company_id, "Current User ID:", current_user_id)
+            
+            # Get user details from user ID
+            user_details = get_user(db, current_user_id)
+            
+            if user_details and user_details.email:
+                # Send order confirmation email in background
+                background_tasks.add_task(
+                    send_order_confirmation_email,
+                    user_details.email,
+                    user_details.first_name,
+                    updated_storeorders.id,  # Use the order ID instead of new_items_ordered_data
+                    new_items_ordered_data,
+                    updated_storeorders.updated_at  # Use updated_at instead of created_at
+                )
+                print(f"Order confirmation email queued for {user_details.email}")
+            else:
+                print("Warning: Could not find user email for order confirmation")
+        
+        # Return the response
+        return {
+            "status": "success", 
+            "message": f"Store order {request.order_id} updated successfully",
+            "order_id": updated_storeorders.id,
+            "company_id": updated_storeorders.company_id,
+            "location_id": updated_storeorders.location_id,
+            "updated_at": updated_storeorders.updated_at.isoformat() if updated_storeorders.updated_at else None,
+            "created_at": updated_storeorders.created_at.isoformat() if updated_storeorders.created_at else None,
+            "items_ordered": updated_storeorders.items_ordered,
+            "prev_items_ordered": updated_storeorders.prev_items_ordered,
+            "update_summary": {
+                "previous_items_preserved": True if updated_storeorders.prev_items_ordered else False,
+                # "new_items_count": len(request.items_ordered.get('items', [])) if 'items' in request.items_ordered else 0
+            }
+        }
         
     except HTTPException:
         # Re-raise HTTP exceptions as-is
@@ -558,7 +712,7 @@ def update_storeorders_by_id(
         print(f"Error in update_storeorders_by_id: {str(e)}")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error updating store order: {str(e)}")
-
+    
 
 @router.get("/analytics/{company_id}/{location_id}")
 def get_avg_daily_orders(

@@ -9,6 +9,12 @@ def create_user_location_mapping(db: Session, data: UserCompanyCompanyLocationCr
     db.refresh(mapping)
     return mapping
 
+# def delete_user_location_mappings(db: Session, user_id: int):
+#     db.query(UserCompanyCompanyLocation).filter_by(user_id=user_id).delete()
+#     db.commit()
+
 def delete_user_location_mappings(db: Session, user_id: int):
-    db.query(UserCompanyCompanyLocation).filter_by(user_id=user_id).delete()
+    db.query(UserCompanyCompanyLocation).filter(
+        UserCompanyCompanyLocation.user_id == user_id
+    ).delete()
     db.commit()

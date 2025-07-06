@@ -87,9 +87,11 @@ import CloseIcon from "@mui/icons-material/Close";
 
 // Import API base URL
 import { API_URL_Local } from "../constants";
+import apiClient from "../api/axiosConfig";
 
 // API endpoints - Using the working endpoints without /api/ prefix
-const COMPANY_OVERVIEW_API_URL = `${API_URL_Local}/company-overview/`;
+// const COMPANY_OVERVIEW_API_URL = `${API_URL_Local}/company-overview/`;
+const COMPANY_OVERVIEW_API_URL = `/company-overview/`; // Relative path for apiClient
 const COMPANY_API_URL = `${API_URL_Local}/companies/`;
 const LOCATION_API_URL = `${API_URL_Local}/stores/`;
 const USER_API_URL = `${API_URL_Local}/users/`;
@@ -113,7 +115,7 @@ interface User {
   last_name?: string;  // Made optional to handle API inconsistencies
   name?: string;       // API sometimes returns this instead
   email: string;
-  phone?: string;
+  phone_number?: string;
   role: string;
   permissions: string[];
   assignedLocations: AssignedLocation[];
@@ -127,7 +129,7 @@ interface Location {
   city: string;
   state: string;
   postcode: string;
-  phone?: string;
+  phone_number?: string;
   email?: string;
   manager?: string;
   createdAt: Date;
@@ -140,7 +142,7 @@ interface Company {
   address: string;
   state: string;
   postcode: string;
-  phone: string;
+  phone_number: string;
   email?: string;
   website?: string;
   createdAt: Date;
@@ -218,7 +220,7 @@ const CompanyLocationManager: React.FC = () => {
     address: "",
     state: "",
     postcode: "",
-    phone: "",
+    phone_number: "",
     email: "",
     website: "",
   });
@@ -229,7 +231,7 @@ const CompanyLocationManager: React.FC = () => {
     city: "",
     state: "",
     postcode: "",
-    phone: "",
+    phone_number: "",
     email: "",
     company_id: 0,
   });
@@ -238,7 +240,7 @@ const CompanyLocationManager: React.FC = () => {
     first_name: "",
     last_name: "",
     email: "",
-    phone: "",
+    phone_number: "",
     role: "",
     permissions: [] as string[],
     assignedLocations: [] as AssignedLocation[],
@@ -268,8 +270,8 @@ const CompanyLocationManager: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const response = await axios.get(COMPANY_OVERVIEW_API_URL);
-      
+      // const response = await axios.get(COMPANY_OVERVIEW_API_URL);
+      const response = await apiClient.get(COMPANY_OVERVIEW_API_URL);
       if (response.status === 200) {
         console.log('📊 Raw API Response:', response.data);
         
@@ -577,7 +579,7 @@ const CompanyLocationManager: React.FC = () => {
       address: "",
       state: "",
       postcode: "",
-      phone: "",
+      phone_number: "",
       email: "",
       website: "",
     });
@@ -588,7 +590,7 @@ const CompanyLocationManager: React.FC = () => {
       city: "",
       state: "",
       postcode: "",
-      phone: "",
+      phone_number: "",
       email: "",
       company_id: 0,
     });
@@ -597,7 +599,7 @@ const CompanyLocationManager: React.FC = () => {
       first_name: "",
       last_name: "",
       email: "",
-      phone: "",
+      phone_number: "",
       role: "",
       permissions: [],
       assignedLocations: [],
@@ -696,7 +698,7 @@ const CompanyLocationManager: React.FC = () => {
       address: company.address,
       state: company.state,
       postcode: company.postcode,
-      phone: company.phone,
+      phone_number: company.phone_number,
       email: company.email || "",
       website: company.website || "",
     });
@@ -722,7 +724,7 @@ const CompanyLocationManager: React.FC = () => {
       !companyForm.address.trim() ||
       !companyForm.state.trim() ||
       !companyForm.postcode.trim() ||
-      !companyForm.phone.trim()
+      !companyForm.phone_number.trim()
     ) {
       showNotification("All required fields must be filled", "error");
       return;
@@ -756,7 +758,7 @@ const CompanyLocationManager: React.FC = () => {
       city: "",
       state: "",
       postcode: "",
-      phone: "",
+      phone_number: "",
       email: "",
       company_id: company_id,
     });
@@ -774,7 +776,7 @@ const CompanyLocationManager: React.FC = () => {
       city: location.city,
       state: location.state,
       postcode: location.postcode,
-      phone: location.phone || "",
+      phone_number: location.phone_number || "",
       email: location.email || "",
       company_id: company_id,
     });
@@ -835,7 +837,7 @@ const CompanyLocationManager: React.FC = () => {
       first_name: "",
       last_name: "",
       email: "",
-      phone: "",
+      phone_number: "",
       role: "",
       permissions: [],
       assignedLocations: [],
@@ -873,7 +875,7 @@ const CompanyLocationManager: React.FC = () => {
       first_name: firstName,
       last_name: lastName,
       email: user.email || "",
-      phone: user.phone || "",
+      phone_number: user.phone_number || "",
       role: user.role || "",
       permissions: Array.isArray(user.permissions) ? user.permissions : [],
       assignedLocations: Array.isArray(user.assignedLocations) ? user.assignedLocations : [],
@@ -918,7 +920,7 @@ const CompanyLocationManager: React.FC = () => {
     // Transform assigned locations to just send location IDs to backend
     const userDataForBackend = {
       ...userForm,
-      assigned_location_ids: userForm.assignedLocations.map(al => al.location_id), // Send only location IDs
+      assigned_location: userForm.assignedLocations.map(al => al.location_id), // Send only location IDs
       assignedLocations: undefined // Remove the full objects
     };
 
@@ -929,7 +931,7 @@ const CompanyLocationManager: React.FC = () => {
     console.log('📋 User Form Data (Original):', userForm);
     console.log('📤 User Data for Backend:', userDataForBackend);
     console.log('🏢 Associated Company:', selectedCompany?.name, '(ID:', selectedCompany?.id, ')');
-    console.log('📍 Assigned Location IDs:', userDataForBackend.assigned_location_ids);
+    console.log('📍 Assigned Location IDs:', userDataForBackend.assigned_location);
     console.log('🔐 Permissions:', userForm.permissions);
 
     try {
@@ -1299,7 +1301,7 @@ const CompanyLocationManager: React.FC = () => {
                       <Box>
                         <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
                           <PhoneIcon sx={{ mr: 0.5, fontSize: 16, color: "#4caf50" }} />
-                          <Typography variant="body2">{company.phone}</Typography>
+                          <Typography variant="body2">{company.phone_number}</Typography>
                         </Box>
                         {company.email && (
                           <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -1484,10 +1486,10 @@ const CompanyLocationManager: React.FC = () => {
                                         </TableCell>
                                         
                                         <TableCell>
-                                          {location.phone && (
+                                          {location.phone_number && (
                                             <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
                                               <PhoneIcon sx={{ mr: 0.5, fontSize: 14, color: "#4caf50" }} />
-                                              <Typography variant="body2" sx={{ fontWeight: 600 }}>{location.phone}</Typography>
+                                              <Typography variant="body2" sx={{ fontWeight: 600 }}>{location.phone_number}</Typography>
                                             </Box>
                                           )}
                                           {location.email && (
@@ -1696,10 +1698,10 @@ const CompanyLocationManager: React.FC = () => {
                                             <EmailIcon sx={{ mr: 0.5, fontSize: 14, color: "#2196f3" }} />
                                             <Typography variant="body2" sx={{ fontWeight: 600 }}>{user.email}</Typography>
                                           </Box>
-                                          {user.phone && (
+                                          {user.phone_number && (
                                             <Box sx={{ display: "flex", alignItems: "center" }}>
                                               <PhoneIcon sx={{ mr: 0.5, fontSize: 14, color: "#4caf50" }} />
-                                              <Typography variant="body2" sx={{ fontWeight: 600 }}>{user.phone}</Typography>
+                                              <Typography variant="body2" sx={{ fontWeight: 600 }}>{user.phone_number}</Typography>
                                             </Box>
                                           )}
                                         </TableCell>
@@ -2026,8 +2028,8 @@ const CompanyLocationManager: React.FC = () => {
                 <TextField
                   fullWidth
                   label="📞 Phone *"
-                  value={companyForm.phone}
-                  onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
+                  value={companyForm.phone_number}
+                  onChange={(e) => setCompanyForm({ ...companyForm, phone_number: e.target.value })}
                   sx={{
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 2,
@@ -2149,8 +2151,8 @@ const CompanyLocationManager: React.FC = () => {
                 <TextField
                   fullWidth
                   label="📞 Phone"
-                  value={locationForm.phone}
-                  onChange={(e) => setLocationForm({ ...locationForm, phone: e.target.value })}
+                  value={locationForm.phone_number}
+                  onChange={(e) => setLocationForm({ ...locationForm, phone_number: e.target.value })}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -2229,8 +2231,8 @@ const CompanyLocationManager: React.FC = () => {
                 <TextField
                   fullWidth
                   label="📞 Phone"
-                  value={userForm.phone}
-                  onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
+                  value={userForm.phone_number}
+                  onChange={(e) => setUserForm({ ...userForm, phone_number: e.target.value })}
                 />
               </Grid>
               <Grid item xs={12}>
