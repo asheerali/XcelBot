@@ -2174,7 +2174,7 @@ const CompanyLocationManager: React.FC = () => {
               {/* Debug info for troubleshooting API structure */}
               {dialogMode === "edit" && selectedUser && (
                 <Grid item xs={12}>
-                  <Box sx={{ 
+                  {/* <Box sx={{ 
                     p: 2, 
                     backgroundColor: "rgba(255, 193, 7, 0.1)", 
                     borderRadius: 1,
@@ -2190,7 +2190,7 @@ const CompanyLocationManager: React.FC = () => {
                     <Typography variant="caption" sx={{ display: "block", mt: 1 }}>
                       Form Data: {JSON.stringify(userForm, null, 2)}
                     </Typography>
-                  </Box>
+                  </Box> */}
                 </Grid>
               )}
               
@@ -2269,7 +2269,7 @@ const CompanyLocationManager: React.FC = () => {
                   borderRadius: 1,
                   border: "1px solid rgba(25, 118, 210, 0.2)"
                 }}>
-                  🏢 Company: {selectedCompany?.name} (ID: {userForm.company_id})
+                  🏢 Company: <b>{selectedCompany?.name} </b>
                 </Typography>
               </Grid>
 
