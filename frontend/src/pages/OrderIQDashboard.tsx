@@ -53,10 +53,8 @@ import {
   selectSelectedLocations
 } from '../store/slices/masterFileSlice'; // Adjust path as needed
 
-
 import { API_URL_Local } from '../constants';
 import apiClient from "../api/axiosConfig";
-
 
 // Mock DateRangeSelector component for demo
 const DateRangeSelector = ({ onSelect, initialState }) => {
@@ -428,42 +426,21 @@ const OrderIQDashboard = () => {
     try {
       setLoading(true);
       setError(null);
-      const url = `${API_URL_Local}/company-locations/all`;
-      console.log('Fetching company-locations from:', url);
       
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-      });
+      console.log('Fetching company-locations...');
       
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
+      const response = await apiClient.get('/company-locations/all');
       
-      // Check if response is actually JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        console.error('Invalid content type:', contentType);
-        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`);
-      }
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('Company-locations API response:', data);
+      console.log('Company-locations API response:', response.data);
       
       // Check if data has the expected structure
-      if (!Array.isArray(data)) {
-        console.error('API response is not an array:', data);
+      if (!Array.isArray(response.data)) {
+        console.error('API response is not an array:', response.data);
         throw new Error('Invalid response format: expected array of companies');
       }
       
       // Validate the structure of each company
-      const validCompanies = data.filter(company => {
+      const validCompanies = response.data.filter(company => {
         const isValid = company.company_id && company.company_name && Array.isArray(company.locations);
         if (!isValid) {
           console.warn('Invalid company structure:', company);
@@ -484,14 +461,16 @@ const OrderIQDashboard = () => {
       // Provide specific error messages based on the error type
       let errorMessage = 'Failed to load companies and locations.';
       
-      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-        errorMessage = 'Network error: Cannot connect to the API server. Please check if the server is running and the URL is correct.';
-      } else if (err.message.includes('content-type')) {
-        errorMessage = 'Server error: API is returning HTML instead of JSON. Please check the endpoint URL and server configuration.';
-      } else if (err.message.includes('404')) {
+      if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Access forbidden. You do not have permission to view companies and locations.';
+      } else if (err.response?.status === 404) {
         errorMessage = 'API endpoint not found. Please verify the company-locations/all endpoint exists.';
-      } else if (err.message.includes('500')) {
+      } else if (err.response?.status === 500) {
         errorMessage = 'Server internal error. Please check the server logs.';
+      } else if (err.code === 'NETWORK_ERROR' || err.message.includes('Network Error')) {
+        errorMessage = 'Network error: Cannot connect to the API server. Please check if the server is running and the URL is correct.';
       }
       
       setError(errorMessage);
@@ -504,37 +483,20 @@ const OrderIQDashboard = () => {
   const fetchRecentOrders = async (companyId, locationId) => {
     try {
       setLoadingOrders(true);
-      const url = `${API_URL_Local}/api/storeorders/detailsrecent/${companyId}/${locationId}`;
-      console.log('Fetching recent orders from:', url);
       
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-      });
+      console.log('Fetching recent orders...');
       
-      // Check if response is actually JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`);
-      }
+      const response = await apiClient.get(`/api/storeorders/detailsrecent/${companyId}/${locationId}`);
       
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      console.log('Recent orders data:', result);
+      console.log('Recent orders data:', response.data);
       
       // Check if data has expected structure
-      if (!result.data || !Array.isArray(result.data)) {
+      if (!response.data.data || !Array.isArray(response.data.data)) {
         throw new Error('Invalid recent orders data structure received from API');
       }
       
       // Transform the API response to match our component structure
-      const transformedOrders = result.data.map((order) => ({
+      const transformedOrders = response.data.data.map((order) => ({
         id: order.id,
         items: order.items_ordered?.total_items || 0,
         total: order.items_ordered?.items?.reduce((sum, item) => sum + item.total_price, 0) || 0,
@@ -562,7 +524,15 @@ const OrderIQDashboard = () => {
       
     } catch (err) {
       console.error('Error fetching recent orders:', err);
-      setError(`Failed to load recent orders: ${err.message}`);
+      let errorMessage = 'Failed to load recent orders.';
+      
+      if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Access forbidden. You do not have permission to view recent orders.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoadingOrders(false);
     }
@@ -571,38 +541,30 @@ const OrderIQDashboard = () => {
   const fetchAnalytics = async (companyId, locationId) => {
     try {
       setLoadingAnalytics(true);
-      const url = `${API_URL_Local}/api/storeorders/analytics/${companyId}/${locationId}`;
-      console.log('Fetching analytics from:', url);
       
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-      });
+      console.log('Fetching analytics...');
       
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`);
-      }
+      const response = await apiClient.get(`/api/storeorders/analytics/${companyId}/${locationId}`);
       
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+      console.log('Analytics data:', response.data);
       
-      const result = await response.json();
-      console.log('Analytics data:', result);
-      
-      if (!result.data) {
+      if (!response.data.data) {
         throw new Error('Invalid analytics data structure received from API');
       }
       
-      setAnalyticsData(result.data);
+      setAnalyticsData(response.data.data);
       
     } catch (err) {
       console.error('Error fetching analytics:', err);
-      setError(`Failed to load analytics: ${err.message}`);
+      let errorMessage = 'Failed to load analytics.';
+      
+      if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Access forbidden. You do not have permission to view analytics.';
+      }
+      
+      setError(errorMessage);
       setAnalyticsData(null);
     } finally {
       setLoadingAnalytics(false);
@@ -613,37 +575,20 @@ const OrderIQDashboard = () => {
     try {
       setLoading(true);
       setError(null);
-      const url = `${API_URL_Local}/api/masterfile/availableitems/${companyId}/${locationId}`;
-      console.log('Fetching available items from:', url);
       
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-      });
+      console.log('Fetching available items...');
       
-      // Check if response is actually JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`);
-      }
+      const response = await apiClient.get(`/api/masterfile/availableitems/${companyId}/${locationId}`);
       
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('Available items data:', data);
+      console.log('Available items data:', response.data);
       
       // Check if data has expected structure
-      if (!data.data || !data.data.dataframe || !Array.isArray(data.data.dataframe)) {
+      if (!response.data.data || !response.data.data.dataframe || !Array.isArray(response.data.data.dataframe)) {
         throw new Error('Invalid data structure received from API');
       }
       
       // Transform the API response to match our component structure
-      const transformedItems = data.data.dataframe.map((item, index) => ({
+      const transformedItems = response.data.data.dataframe.map((item, index) => ({
         id: `item_${index}_${companyId}_${locationId}`, // Generate unique ID
         name: item.column1 || 'Unknown Item', // Products
         category: item.column0 || 'Unknown Category', // Category
@@ -657,7 +602,15 @@ const OrderIQDashboard = () => {
       console.log('Transformed items:', transformedItems);
     } catch (err) {
       console.error('Error fetching available items:', err);
-      setError(`Failed to load available items: ${err.message}`);
+      let errorMessage = 'Failed to load available items.';
+      
+      if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Access forbidden. You do not have permission to view available items.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -815,34 +768,11 @@ const OrderIQDashboard = () => {
         } : null
       };
 
-      const url = `${API_URL_Local}/api/storeorders/orderupdate`;
-      console.log('Updating order at:', url);
-      console.log('Update data:', updateData);
+      console.log('Updating order with data:', updateData);
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updateData)
-      });
+      const response = await apiClient.post('/api/storeorders/orderupdate', updateData);
 
-      // Check if response is actually JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const textResponse = await response.text();
-        console.error('Non-JSON response:', textResponse);
-        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`);
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`HTTP ${response.status}: ${errorData.message || response.statusText}`);
-      }
-
-      const result = await response.json();
-      console.log('Order updated successfully:', result);
+      console.log('Order updated successfully:', response.data);
       
       alert(`Order #${orderToUpdate.id} updated successfully!`);
       handleCancelOrderUpdate();
@@ -856,21 +786,18 @@ const OrderIQDashboard = () => {
       
     } catch (err) {
       console.error('Error updating order:', err);
-      setError(`Failed to update order: ${err.message}`);
+      let errorMessage = 'Failed to update order.';
       
-      // For development, show mock success
-      if (err.message.includes('content-type') || err.message.includes('HTTP')) {
-        console.log('Mock order update for development:', {
-          order_id: orderToUpdate.id,
-          company_id: selectedCompanyId,
-          location_id: selectedLocationId,
-          items: currentOrder,
-          total: calculateOrderTotal()
-        });
-        alert(`Order #${orderToUpdate.id} updated successfully! (Development Mode)`);
-        handleCancelOrderUpdate();
-        setError(null);
+      if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Access forbidden. You do not have permission to update orders.';
+      } else if (err.response?.data?.message) {
+        errorMessage = `Failed to update order: ${err.response.data.message}`;
       }
+      
+      setError(errorMessage);
+      
     } finally {
       setLoading(false);
     }
@@ -911,35 +838,11 @@ const OrderIQDashboard = () => {
         } : null
       };
 
-      const url = `${API_URL_Local}/api/storeorders/orderitems`;
-      console.log('Submitting order to:', url);
-      console.log('Order data:', orderData);
+      console.log('Submitting order with data:', orderData);
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData)
-      });
+      const response = await apiClient.post('/api/storeorders/orderitems', orderData);
 
-      // Check if response is actually JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        // If not JSON, try to get text response for better error message
-        const textResponse = await response.text();
-        console.error('Non-JSON response:', textResponse);
-        throw new Error(`Expected JSON response but got ${contentType || 'unknown content type'}`);
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`HTTP ${response.status}: ${errorData.message || response.statusText}`);
-      }
-
-      const result = await response.json();
-      console.log('Order submitted successfully:', result);
+      console.log('Order submitted successfully:', response.data);
       
       alert('Order submitted successfully!');
       setCurrentOrder([]);
@@ -954,21 +857,18 @@ const OrderIQDashboard = () => {
       
     } catch (err) {
       console.error('Error submitting order:', err);
-      setError(`Failed to submit order: ${err.message}`);
+      let errorMessage = 'Failed to submit order.';
       
-      // For development, show mock success
-      if (err.message.includes('content-type') || err.message.includes('HTTP')) {
-        console.log('Mock order submission for development:', {
-          company_id: selectedCompanyId,
-          location_id: selectedLocationId,
-          items: currentOrder,
-          total: calculateOrderTotal()
-        });
-        alert('Order submitted successfully! (Development Mode)');
-        setCurrentOrder([]);
-        setEmailOrder(false);
-        setError(null);
+      if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Access forbidden. You do not have permission to submit orders.';
+      } else if (err.response?.data?.message) {
+        errorMessage = `Failed to submit order: ${err.response.data.message}`;
       }
+      
+      setError(errorMessage);
+      
     } finally {
       setLoading(false);
     }
@@ -985,16 +885,13 @@ const OrderIQDashboard = () => {
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
           {error}
-          {error.includes('content-type') && (
+          {error.includes('Authentication failed') && (
             <Box sx={{ mt: 1, fontSize: '0.875rem' }}>
-              <strong>Development Note:</strong> This usually means the API endpoint is returning HTML instead of JSON. 
-              Please ensure your backend is running and the endpoints are correctly configured.
+              <strong>Note:</strong> Your session may have expired. Please try logging in again.
             </Box>
           )}
         </Alert>
       )}
-
-
 
       {/* Development Mode Indicator */}
       {companyLocations.length === 0 && !loading && (
@@ -1003,6 +900,7 @@ const OrderIQDashboard = () => {
           <br />• Is your backend server running?
           <br />• Is the API_URL_Local configured correctly? (Currently: {API_URL_Local})
           <br />• Does the /company-locations/all endpoint exist and return JSON?
+          <br />• Are you properly authenticated?
         </Alert>
       )}
 
@@ -1059,7 +957,7 @@ const OrderIQDashboard = () => {
             </Box>
           ) : companyLocations.length === 0 ? (
             <Alert severity="warning">
-              No companies or locations available. Using demo data.
+              No companies or locations available. Please check your authentication or contact support.
             </Alert>
           ) : (
             <Grid container spacing={3}>
@@ -1074,7 +972,7 @@ const OrderIQDashboard = () => {
                     displayEmpty
                   >
                     <MenuItem value="">
-                 
+                      <em>Select Company</em>
                     </MenuItem>
                     {companies.map((company) => (
                       <MenuItem key={company.id} value={company.id.toString()}>
