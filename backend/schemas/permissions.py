@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from uuid import UUID
 
 class PermissionBase(BaseModel):
-    company_id: UUID
+    company_id: int
     user_id: int
     upload_excel: bool = False
     d1: bool = False

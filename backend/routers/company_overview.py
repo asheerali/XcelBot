@@ -74,6 +74,7 @@ def get_company_overview(db: Session = Depends(get_db)):
                 "id": user.id,
                 "name": f"{user.first_name} {user.last_name}".strip(),
                 "email": user.email,
+                "phone_number": user.phone_number or "",
                 "role": user.role.name.capitalize() if user.role else "Unknown",
                 "permissions": permissions_list,
                 "assignedLocations": assigned_locations,

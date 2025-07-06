@@ -23,6 +23,8 @@ def create_user(
     user: user_schema.UserCreate,
     db: Session = Depends(get_db),
 ):
+
+    print("Creating_user:", background_tasks, user, db)
     return user_crud.create_user(db, user, background_tasks=background_tasks)
 
 
