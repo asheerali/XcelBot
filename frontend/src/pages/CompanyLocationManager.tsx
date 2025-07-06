@@ -87,9 +87,11 @@ import CloseIcon from "@mui/icons-material/Close";
 
 // Import API base URL
 import { API_URL_Local } from "../constants";
+import apiClient from "../api/axiosConfig";
 
 // API endpoints - Using the working endpoints without /api/ prefix
-const COMPANY_OVERVIEW_API_URL = `${API_URL_Local}/company-overview/`;
+// const COMPANY_OVERVIEW_API_URL = `${API_URL_Local}/company-overview/`;
+const COMPANY_OVERVIEW_API_URL = `/company-overview/`; // Relative path for apiClient
 const COMPANY_API_URL = `${API_URL_Local}/companies/`;
 const LOCATION_API_URL = `${API_URL_Local}/stores/`;
 const USER_API_URL = `${API_URL_Local}/users/`;
@@ -268,8 +270,8 @@ const CompanyLocationManager: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const response = await axios.get(COMPANY_OVERVIEW_API_URL);
-      
+      // const response = await axios.get(COMPANY_OVERVIEW_API_URL);
+      const response = await apiClient.get(COMPANY_OVERVIEW_API_URL);
       if (response.status === 200) {
         console.log('📊 Raw API Response:', response.data);
         

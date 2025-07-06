@@ -68,41 +68,6 @@ avg daily -  order total order - top 2 items
 for the analytics dashboard
 /api/storeorders/analyticsdashboard/{company_id}/{location_id}
 
-it will return this 
-{
-  "message": "Analytics dashboard data fetched successfully",
-  "data": {
-    "company_name": "Default Company",
-    "location_name": "Default Store B",
-    "total_sales": 43,
-    "total_orders": 3,
-    "avg_order_value": 14.33,
-    "daily_orders": [
-      {
-        "date": "Jul 2",
-        "order_count": 3,
-        "moving_avg": 3
-      }
-    ],
-    "avg_order_value_table": [
-      {
-        "date": "Jul 2",
-        "total_sales_per_day": 43,
-        "order_count": 3,
-        "avg_order_value": 14.33,
-        "moving_avg": 14.33
-      }
-    ],
-    "daily_sales_trend": [
-      {
-        "date": "Jul 2",
-        "total_sales": 43,
-        "moving_avg": 43
-      }
-    ]
-  }
-}
-
 
 for the store summary dashboard
 /api/storeorders/allordersinvoices/{company_id}/{location_id}
