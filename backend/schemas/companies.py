@@ -1,22 +1,22 @@
+# 1. FIXED SCHEMA (schemas/companies.py)
 from pydantic import BaseModel, EmailStr
-from uuid import UUID
 from datetime import datetime
 from typing import Optional
 
 class CompanyBase(BaseModel):
     name: str
+    address: str  # Made required to match model
     state: str
     postcode: str
-    address: Optional[str] = None  # New field
-    phone: str
-    email: EmailStr
+    phone_number: str  # Changed from 'phone' to match frontend
+    email: Optional[EmailStr] = None  # Made optional to match frontend
     website: Optional[str] = None
 
 class CompanyCreate(CompanyBase):
     pass
 
 class Company(CompanyBase):
-    id: int  # Changed from UUID to int
+    id: int
     created_at: datetime
 
     class Config:
