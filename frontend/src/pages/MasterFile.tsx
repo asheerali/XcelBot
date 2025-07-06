@@ -95,6 +95,16 @@ interface FilterOption {
   label: string;
 }
 
+// Company Location interface for the new API structure
+interface CompanyLocation {
+  company_id: number;
+  company_name: string;
+  locations: Array<{
+    location_id: number;
+    location_name: string;
+  }>;
+}
+
 // DateRangeSelector Button Component
 const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -947,8 +957,10 @@ const MasterFile = () => {
   const [masterFileDetails, setMasterFileDetails] = useState<
     MasterFileDetail[]
   >([]);
-  const [companies, setCompanies] = useState([]); // For upload dialog
-  const [locations, setLocations] = useState([]); // For upload dialog
+  
+  // Updated: Single state for company-locations data
+  const [companyLocations, setCompanyLocations] = useState<CompanyLocation[]>([]);
+  
   const [loadingMasterFileDetails, setLoadingMasterFileDetails] =
     useState(false);
   const [uploadDialog, setUploadDialog] = useState(false);
@@ -1101,30 +1113,17 @@ const MasterFile = () => {
     }
   };
 
-  // Fetch companies data (for upload dialog)
-  const fetchCompanies = async () => {
+  // Updated: Fetch company-locations data (for upload dialog)
+  const fetchCompanyLocations = async () => {
     try {
-      const response = await apiClient.get("/companies"); // Keep original endpoint
-      setCompanies(response.data);
+      const response = await apiClient.get("/company-locations/all");
+      setCompanyLocations(response.data);
+      console.log("Company locations data:", response.data);
     } catch (error) {
-      console.error("Error fetching companies:", error);
+      console.error("Error fetching company locations:", error);
       setUploadStatus({
         type: "error",
-        message: "Failed to fetch companies data",
-      });
-    }
-  };
-
-  // Fetch locations/stores data (for upload dialog)
-  const fetchLocations = async () => {
-    try {
-      const response = await apiClient.get("/stores"); // Keep original endpoint
-      setLocations(response.data);
-    } catch (error) {
-      console.error("Error fetching stores:", error);
-      setUploadStatus({
-        type: "error",
-        message: "Failed to fetch stores data",
+        message: "Failed to fetch company and location data",
       });
     }
   };
@@ -1132,17 +1131,29 @@ const MasterFile = () => {
   // Load data on component mount
   useEffect(() => {
     fetchMasterFileDetails(); // For filters
-    fetchCompanies(); // For upload dialog
-    fetchLocations(); // For upload dialog
+    fetchCompanyLocations(); // For upload dialog (updated)
   }, []);
 
-  // Get companies and locations for upload dialog (from original endpoints)
+  // Updated: Get companies for upload dialog
   const getCompaniesForUpload = () => {
-    return companies || [];
+    return companyLocations.map(item => ({
+      id: item.company_id,
+      name: item.company_name
+    }));
   };
 
+  // Updated: Get locations for upload dialog based on selected company
   const getLocationsForUpload = () => {
-    return locations || [];
+    if (!selectedCompanyId) return [];
+    
+    const selectedCompany = companyLocations.find(
+      company => company.company_id.toString() === selectedCompanyId
+    );
+    
+    return selectedCompany ? selectedCompany.locations.map(location => ({
+      id: location.location_id,
+      name: location.location_name
+    })) : [];
   };
 
   // Handler for FiltersOrderIQ filter changes
@@ -1714,6 +1725,12 @@ const handleMultipleFilesLoadWithDateRangeIndividual = async (companies, locatio
     }
   };
 
+  // Updated: Handle company selection change and reset location
+  const handleUploadCompanyChange = (companyId) => {
+    setSelectedCompanyId(companyId);
+    setSelectedLocationId(""); // Reset location when company changes
+  };
+
   // Updated upload function with location_id
   const handleUploadFile = async () => {
     if (!selectedFile || !selectedCompanyId || !selectedLocationId) {
@@ -1742,16 +1759,17 @@ const handleMultipleFilesLoadWithDateRangeIndividual = async (companies, locatio
       // Send to API using apiClient (will include auth token automatically)
       const response = await apiClient.post("/api/master/upload", uploadData);
 
-      const selectedCompany = companies.find(
-        (c) => c.id.toString() === selectedCompanyId
+      // Updated: Get company and location names from the new data structure
+      const selectedCompany = companyLocations.find(
+        (c) => c.company_id.toString() === selectedCompanyId
       );
-      const selectedLocation = locations.find(
-        (l) => l.id.toString() === selectedLocationId
+      const selectedLocation = selectedCompany?.locations.find(
+        (l) => l.location_id.toString() === selectedLocationId
       );
 
       setUploadStatus({
         type: "success",
-        message: `Successfully uploaded ${selectedFile.name} for ${selectedCompany?.name} - ${selectedLocation?.name}`,
+        message: `Successfully uploaded ${selectedFile.name} for ${selectedCompany?.company_name} - ${selectedLocation?.location_name}`,
       });
 
       // Refresh master file details after successful upload
@@ -1885,8 +1903,7 @@ const handleMultipleFilesLoadWithDateRangeIndividual = async (companies, locatio
                   style={{ backgroundColor: "#e3f2fd" }}
                   onClick={() => {
                     fetchMasterFileDetails(); // For filters
-                    fetchCompanies(); // For upload dialog
-                    fetchLocations(); // For upload dialog
+                    fetchCompanyLocations(); // For upload dialog (updated)
                   }}
                 >
                   <RefreshIcon />
@@ -2132,7 +2149,7 @@ const handleMultipleFilesLoadWithDateRangeIndividual = async (companies, locatio
         {/* Pagination */}
         <Box style={{ borderTop: "1px solid #e0e0e0" }}>
           <TablePagination
-            rowsPerPageOptions={[5, 10, 25, 50,100, 200]}
+            rowsPerPageOptions={[5, 10, 25, 50, 100, 200]}
             component="div"
             count={filteredItems.length}
             rowsPerPage={rowsPerPage}
@@ -2143,7 +2160,7 @@ const handleMultipleFilesLoadWithDateRangeIndividual = async (companies, locatio
         </Box>
       </Paper>
 
-      {/* Excel Upload Dialog */}
+      {/* Updated Excel Upload Dialog */}
       <Dialog
         open={uploadDialog}
         onClose={handleCloseUploadDialog}
@@ -2167,29 +2184,29 @@ const handleMultipleFilesLoadWithDateRangeIndividual = async (companies, locatio
               Expected columns: Code, Name, Current Price, Unit, Stock
             </Typography>
 
-            {/* Company Selection */}
+            {/* Updated Company Selection */}
             <FormControl fullWidth style={{ marginBottom: 16 }}>
               <InputLabel>Select Company *</InputLabel>
               <Select
                 value={selectedCompanyId}
                 label="Select Company *"
-                onChange={(e) => setSelectedCompanyId(e.target.value)}
+                onChange={(e) => handleUploadCompanyChange(e.target.value)}
                 startAdornment={
                   <InputAdornment position="start">
                     <BusinessIcon />
                   </InputAdornment>
                 }
-                disabled={companies.length === 0}
+                disabled={companyLocations.length === 0}
               >
-                {companies.map((company) => (
+                {getCompaniesForUpload().map((company) => (
                   <MenuItem key={company.id} value={company.id.toString()}>
-                    {company.name} {company.code && `(${company.code})`}
+                    {company.name}
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
 
-            {/* Location Selection */}
+            {/* Updated Location Selection */}
             <FormControl fullWidth style={{ marginBottom: 16 }}>
               <InputLabel>Select Location *</InputLabel>
               <Select
@@ -2201,14 +2218,22 @@ const handleMultipleFilesLoadWithDateRangeIndividual = async (companies, locatio
                     <LocationOnIcon />
                   </InputAdornment>
                 }
-                disabled={locations.length === 0}
+                disabled={!selectedCompanyId || getLocationsForUpload().length === 0}
               >
-                {locations.map((location) => (
+                {getLocationsForUpload().map((location) => (
                   <MenuItem key={location.id} value={location.id.toString()}>
-                    {location.name} {location.code && `(${location.code})`}
+                    {location.name}
                   </MenuItem>
                 ))}
               </Select>
+              {selectedCompanyId && getLocationsForUpload().length === 0 && (
+                <Typography
+                  variant="caption"
+                  style={{ color: "#ff9800", marginTop: 4 }}
+                >
+                  No locations available for selected company
+                </Typography>
+              )}
             </FormControl>
 
             <input
