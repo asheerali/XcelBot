@@ -110,12 +110,13 @@ interface AssignedLocation {
 }
 
 interface User {
+  phone_number: string;
   id: number;
   first_name?: string; // Made optional to handle API inconsistencies
   last_name?: string;  // Made optional to handle API inconsistencies
   name?: string;       // API sometimes returns this instead
   email: string;
-  phone_number?: string;
+  phone?: string;
   role: string;
   permissions: string[];
   assignedLocations: AssignedLocation[];
@@ -123,6 +124,7 @@ interface User {
 }
 
 interface Location {
+  phone: string;
   id: number;
   name: string;
   address: string;
@@ -142,7 +144,7 @@ interface Company {
   address: string;
   state: string;
   postcode: string;
-  phone_number: string;
+  phone: string;
   email?: string;
   website?: string;
   createdAt: Date;
@@ -220,7 +222,7 @@ const CompanyLocationManager: React.FC = () => {
     address: "",
     state: "",
     postcode: "",
-    phone_number: "",
+    phone: "",
     email: "",
     website: "",
   });
@@ -231,7 +233,7 @@ const CompanyLocationManager: React.FC = () => {
     city: "",
     state: "",
     postcode: "",
-    phone_number: "",
+    phone: "",
     email: "",
     company_id: 0,
   });
@@ -579,7 +581,7 @@ const CompanyLocationManager: React.FC = () => {
       address: "",
       state: "",
       postcode: "",
-      phone_number: "",
+      phone: "",
       email: "",
       website: "",
     });
@@ -590,7 +592,7 @@ const CompanyLocationManager: React.FC = () => {
       city: "",
       state: "",
       postcode: "",
-      phone_number: "",
+      phone: "",
       email: "",
       company_id: 0,
     });
@@ -698,7 +700,7 @@ const CompanyLocationManager: React.FC = () => {
       address: company.address,
       state: company.state,
       postcode: company.postcode,
-      phone_number: company.phone_number,
+      phone: company.phone,
       email: company.email || "",
       website: company.website || "",
     });
@@ -724,7 +726,7 @@ const CompanyLocationManager: React.FC = () => {
       !companyForm.address.trim() ||
       !companyForm.state.trim() ||
       !companyForm.postcode.trim() ||
-      !companyForm.phone_number.trim()
+      !companyForm.phone.trim()
     ) {
       showNotification("All required fields must be filled", "error");
       return;
@@ -758,7 +760,7 @@ const CompanyLocationManager: React.FC = () => {
       city: "",
       state: "",
       postcode: "",
-      phone_number: "",
+      phone: "",
       email: "",
       company_id: company_id,
     });
@@ -776,7 +778,7 @@ const CompanyLocationManager: React.FC = () => {
       city: location.city,
       state: location.state,
       postcode: location.postcode,
-      phone_number: location.phone_number || "",
+      phone: location.phone || "",
       email: location.email || "",
       company_id: company_id,
     });
@@ -803,6 +805,7 @@ const CompanyLocationManager: React.FC = () => {
       !locationForm.city.trim() ||
       !locationForm.state.trim() ||
       !locationForm.postcode.trim() ||
+      !locationForm.phone.trim() ||
       !selectedCompany
     ) {
       showNotification("All required fields must be filled", "error");
@@ -1301,7 +1304,7 @@ const CompanyLocationManager: React.FC = () => {
                       <Box>
                         <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
                           <PhoneIcon sx={{ mr: 0.5, fontSize: 16, color: "#4caf50" }} />
-                          <Typography variant="body2">{company.phone_number}</Typography>
+                          <Typography variant="body2">{company.phone}</Typography>
                         </Box>
                         {company.email && (
                           <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -1486,10 +1489,10 @@ const CompanyLocationManager: React.FC = () => {
                                         </TableCell>
                                         
                                         <TableCell>
-                                          {location.phone_number && (
+                                          {location.phone && (
                                             <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
                                               <PhoneIcon sx={{ mr: 0.5, fontSize: 14, color: "#4caf50" }} />
-                                              <Typography variant="body2" sx={{ fontWeight: 600 }}>{location.phone_number}</Typography>
+                                              <Typography variant="body2" sx={{ fontWeight: 600 }}>{location.phone}</Typography>
                                             </Box>
                                           )}
                                           {location.email && (
@@ -2028,8 +2031,8 @@ const CompanyLocationManager: React.FC = () => {
                 <TextField
                   fullWidth
                   label="📞 Phone *"
-                  value={companyForm.phone_number}
-                  onChange={(e) => setCompanyForm({ ...companyForm, phone_number: e.target.value })}
+                  value={companyForm.phone}
+                  onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
                   sx={{
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 2,
@@ -2151,8 +2154,8 @@ const CompanyLocationManager: React.FC = () => {
                 <TextField
                   fullWidth
                   label="📞 Phone"
-                  value={locationForm.phone_number}
-                  onChange={(e) => setLocationForm({ ...locationForm, phone_number: e.target.value })}
+                  value={locationForm.phone}
+                  onChange={(e) => setLocationForm({ ...locationForm, phone: e.target.value })}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
