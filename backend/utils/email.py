@@ -240,27 +240,50 @@ async def send_account_email(email: str, username: str, password: str):
 async def send_order_confirmation_email(email: str, username: str, order_id: int, items_ordered: dict, order_date):
     subject = "Order Confirmation - KPI360.ai"
     
+    print("Sending email with items:", items_ordered, "to", email, "for user", username, "with order ID", order_id)
+
     # Format the order date
     formatted_date = order_date.strftime("%B %d, %Y at %I:%M %p")
     
-    # Create items list for display
+    # # Create items list for display
+    # items_list = ""
+    # for item in items_ordered.get("items", []):
+    #     items_list += f"""
+    #     <div style="padding: 10px; border-bottom: 1px solid #e2e8f0; margin-bottom: 8px;">
+    #         <strong>{item.get('name', 'Item')}</strong><br>
+    #         <span style="color: #718096; font-size: 14px;">
+    #             Quantity: {item.get('quantity', 'N/A')} | 
+    #             Price: ${item.get('price', '0.00')} | 
+    #             Total: ${float(item.get('price', 0)) * int(item.get('quantity', 0)):.2f}
+    #         </span>
+    #     </div>
+    #     """
+    
     items_list = ""
     for item in items_ordered.get("items", []):
+        unit_price = float(item.get('unit_price', 0))
+        quantity = int(item.get('quantity', 0))
+        total_price = float(item.get('total_price', unit_price * quantity))
+
         items_list += f"""
         <div style="padding: 10px; border-bottom: 1px solid #e2e8f0; margin-bottom: 8px;">
             <strong>{item.get('name', 'Item')}</strong><br>
             <span style="color: #718096; font-size: 14px;">
-                Quantity: {item.get('quantity', 'N/A')} | 
-                Price: ${item.get('price', '0.00')} | 
-                Total: ${float(item.get('price', 0)) * int(item.get('quantity', 0)):.2f}
+                Quantity: {quantity} | 
+                Price: ${unit_price:.2f} | 
+                Total: ${total_price:.2f}
             </span>
         </div>
         """
+
     
-    # Calculate total amount
-    total_amount = sum(float(item.get('price', 0)) * int(item.get('quantity', 0)) 
-                      for item in items_ordered.get("items", []))
+    # # Calculate total amount
+    # total_amount = sum(float(item.get('price', 0)) * int(item.get('quantity', 0)) 
+    #                   for item in items_ordered.get("items", []))
     
+    total_amount = sum(float(item.get('total_price', float(item.get('unit_price', 0)) * int(item.get('quantity', 0)))) 
+                   for item in items_ordered.get("items", []))
+
     # HTML email template
     html_body = f"""
     <!DOCTYPE html>
