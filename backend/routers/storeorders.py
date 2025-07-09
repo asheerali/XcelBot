@@ -434,7 +434,8 @@ def create_new_order_items(request: OrderItemsRequest,
                     user_details.first_name,
                     new_order.id,
                     items_ordered_data,
-                    new_order.created_at
+                    new_order.created_at,
+                    False
                 )
                 print(f"Order confirmation email queued for {user_details.email}")
             else:
@@ -578,7 +579,8 @@ def update_storeorders_by_id(
                     user_details.first_name,
                     updated_storeorders.id,  # Use the order ID instead of new_items_ordered_data
                     new_items_ordered_data,
-                    updated_storeorders.updated_at  # Use updated_at instead of created_at
+                    updated_storeorders.updated_at,  # Use updated_at instead of created_at
+                    True
                 )
                 print(f"Order confirmation email queued for {user_details.email}")
             else:
