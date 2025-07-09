@@ -95,7 +95,7 @@ const CustomSidebar = ({ onSignOut }) => {
   // OrderIQ dropdown items
   const orderiqItems = [
     {
-      title: "AnalyticsDashboard",
+      title: "Analytics Dashboard",
       path: "/AnalyticsDashboard",
       icon: <PieChartIcon />,
     },
