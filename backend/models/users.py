@@ -1,5 +1,3 @@
-# model/users.py
-
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Enum as SQLAEnum
 from datetime import datetime
 from database import Base
@@ -30,6 +28,7 @@ class User(Base):
     phone_number = Column(String(20), nullable=True)
     # theme = Column(Boolean, default=False)
     role = Column(SQLAEnum(RoleEnum), nullable=False)
+    isActive = Column(Boolean, default=True, nullable=False)  # ✅ Added isActive column
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     # company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=True)
@@ -37,4 +36,3 @@ class User(Base):
 
 
     uploaded_files = relationship("UploadedFile", back_populates="uploader", cascade="all, delete-orphan")
-

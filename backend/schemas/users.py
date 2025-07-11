@@ -1,5 +1,3 @@
-# schemas/users.py
-
 from pydantic import BaseModel, EmailStr
 from enum import Enum
 from datetime import datetime
@@ -22,8 +20,10 @@ class UserBase(BaseModel):
     # theme: bool = False
     role: RoleEnum
     company_id: Optional[int] = None  # Now optional
+    isActive: Optional[bool] = True  # ✅ Added isActive field with default True
     # assigned_location_ids: Optional[List[int]] = None  # ✅ new 
     permissions: Optional[List[str]] = None  # ✅ new
+
 class UserCreate(UserBase):
     # password: str  # Plain password for registration
     password: Optional[str] = None  # Make optional
