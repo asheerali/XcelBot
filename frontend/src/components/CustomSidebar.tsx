@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import {
   Box,
   Drawer,
@@ -16,8 +17,19 @@ import {
   alpha,
   Tooltip,
   Collapse,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import { Link, useLocation } from "react-router-dom";
+import { API_URL_Local } from "../constants";
+import { 
+  setSelectedCompanies, 
+  setSelectedLocations,
+  selectSelectedCompanies,
+  selectSelectedLocations 
+} from "../store/slices/masterFileSlice";
 import NewspaperIcon from "@mui/icons-material/Newspaper";
 import MenuIcon from "@mui/icons-material/Menu";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
@@ -41,6 +53,7 @@ import InventoryIcon from "@mui/icons-material/Inventory";
 import FactoryIcon from "@mui/icons-material/Factory";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import BusinessIcon from "@mui/icons-material/Business";
+import LocationOnIcon from "@mui/icons-material/LocationOn";
 
 const drawerWidth = 260;
 const gradientBackground = "linear-gradient(180deg, #050b1b 0%, #150949 100%)";
@@ -74,11 +87,25 @@ const CustomLogo = ({ size = 32 }) => (
 const CustomSidebar = ({ onSignOut }) => {
   const theme = useTheme();
   const location = useLocation();
+  const dispatch = useDispatch();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [open, setOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [insightiqOpen, setInsightiqOpen] = useState(false);
   const [orderiqOpen, setOrderiqOpen] = useState(false);
+  
+  // Redux state for selected companies and locations
+  const selectedCompanies = useSelector(selectSelectedCompanies);
+  const selectedLocations = useSelector(selectSelectedLocations);
+  
+  // Local state for companies data and API loading
+  const [companies, setCompanies] = useState([]);
+  const [availableLocations, setAvailableLocations] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Get single selected values for dropdowns (assuming single selection for dropdowns)
+  const selectedCompany = selectedCompanies.length > 0 ? selectedCompanies[0] : '';
+  const selectedLocation = selectedLocations.length > 0 ? selectedLocations[0] : '';
 
   // Define your app name here
   const appName = "KPI360";
@@ -120,13 +147,10 @@ const CustomSidebar = ({ onSignOut }) => {
       path: "/Reports",
       icon: <PieChartIcon />,
     },
-    
- 
   ];
 
   // Other navigation items (removed items that are now in OrderIQ dropdown)
   const navItems = [
-    // { title: 'Analytics Dashboard', path: '/AnalyticsDashboard', icon: <DashboardIcon /> },
     { title: "Payments", path: "/Payments", icon: <PaymentIcon /> },
     { title: "Help Center", path: "/HelpCenter", icon: <HelpIcon /> },
     {
@@ -134,8 +158,55 @@ const CustomSidebar = ({ onSignOut }) => {
       path: "/CompanyLocationManager",
       icon: <BusinessIcon />,
     },
-    // { title: "Admin", path: "/Admin", icon: <AdminPanelSettingsIcon /> },
   ];
+
+  // Fetch companies and locations data
+  useEffect(() => {
+    const fetchCompaniesAndLocations = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`${API_URL_Local}/company-locations/all`);
+        if (response.ok) {
+          const data = await response.json();
+          setCompanies(data);
+        } else {
+          console.error('Failed to fetch companies and locations');
+        }
+      } catch (error) {
+        console.error('Error fetching companies and locations:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCompaniesAndLocations();
+  }, []);
+
+  // Update available locations when selected company changes
+  useEffect(() => {
+    if (selectedCompany && companies.length > 0) {
+      const selectedCompanyData = companies.find(company => company.company_id.toString() === selectedCompany.toString());
+      setAvailableLocations(selectedCompanyData ? selectedCompanyData.locations : []);
+    } else {
+      setAvailableLocations([]);
+    }
+  }, [selectedCompany, companies]);
+
+  // Handle company selection
+  const handleCompanyChange = (event) => {
+    const companyId = event.target.value;
+    // Update Redux state with selected company
+    dispatch(setSelectedCompanies([companyId]));
+    // Clear location selection when company changes
+    dispatch(setSelectedLocations([]));
+  };
+
+  // Handle location selection
+  const handleLocationChange = (event) => {
+    const locationId = event.target.value;
+    // Update Redux state with selected location
+    dispatch(setSelectedLocations([locationId]));
+  };
 
   // Check if any INSIGHTIQ item is currently selected
   const isInsightiqSelected = insightiqItems.some(
@@ -346,6 +417,164 @@ const CustomSidebar = ({ onSignOut }) => {
     </ListItem>
   );
 
+  // Company and Location Dropdowns Component
+  const renderCompanyLocationDropdowns = () => {
+    if (!open) return null; // Hide dropdowns when sidebar is collapsed
+
+    return (
+      <Box sx={{ px: 2, pb: 2 }}>
+        {/* Company Dropdown */}
+        <FormControl 
+          fullWidth 
+          size="small" 
+          sx={{ 
+            mb: 1.5,
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: alpha('#ffffff', 0.1),
+              borderRadius: '8px',
+              '& fieldset': {
+                borderColor: alpha('#ffffff', 0.3),
+              },
+              '&:hover fieldset': {
+                borderColor: alpha('#ffffff', 0.5),
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: '#ffffff',
+              },
+              '& .MuiSelect-select': {
+                color: '#ffffff',
+                fontSize: '0.875rem',
+              },
+              '& .MuiSelect-icon': {
+                color: '#ffffff',
+              },
+            },
+            '& .MuiInputLabel-root': {
+              color: alpha('#ffffff', 0.7),
+              fontSize: '0.875rem',
+              '&.Mui-focused': {
+                color: '#ffffff',
+              },
+            },
+          }}
+        >
+          <InputLabel>Select Company *</InputLabel>
+          <Select
+            value={selectedCompany}
+            onChange={handleCompanyChange}
+            label="Select Company *"
+            disabled={loading}
+            startAdornment={
+              <BusinessIcon sx={{ color: alpha('#ffffff', 0.7), mr: 1, fontSize: '1rem' }} />
+            }
+            MenuProps={{
+              PaperProps: {
+                sx: {
+                  bgcolor: '#1a1a1a',
+                  color: '#ffffff',
+                  '& .MuiMenuItem-root': {
+                    '&:hover': {
+                      backgroundColor: alpha('#ffffff', 0.1),
+                    },
+                    '&.Mui-selected': {
+                      backgroundColor: alpha('#667eea', 0.3),
+                      '&:hover': {
+                        backgroundColor: alpha('#667eea', 0.4),
+                      },
+                    },
+                  },
+                },
+              },
+            }}
+          >
+            {companies.map((company) => (
+              <MenuItem key={company.company_id} value={company.company_id.toString()}>
+                {company.company_name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {/* Location Dropdown */}
+        <FormControl 
+          fullWidth 
+          size="small"
+          disabled={!selectedCompany || availableLocations.length === 0}
+          sx={{ 
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: alpha('#ffffff', 0.1),
+              borderRadius: '8px',
+              '& fieldset': {
+                borderColor: alpha('#ffffff', 0.3),
+              },
+              '&:hover fieldset': {
+                borderColor: alpha('#ffffff', 0.5),
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: '#ffffff',
+              },
+              '&.Mui-disabled fieldset': {
+                borderColor: alpha('#ffffff', 0.2),
+              },
+              '& .MuiSelect-select': {
+                color: '#ffffff',
+                fontSize: '0.875rem',
+              },
+              '& .MuiSelect-icon': {
+                color: '#ffffff',
+              },
+            },
+            '& .MuiInputLabel-root': {
+              color: alpha('#ffffff', 0.7),
+              fontSize: '0.875rem',
+              '&.Mui-focused': {
+                color: '#ffffff',
+              },
+              '&.Mui-disabled': {
+                color: alpha('#ffffff', 0.4),
+              },
+            },
+          }}
+        >
+          <InputLabel>Select Location *</InputLabel>
+          <Select
+            value={selectedLocation}
+            onChange={handleLocationChange}
+            label="Select Location *"
+            startAdornment={
+              <LocationOnIcon sx={{ color: alpha('#ffffff', 0.7), mr: 1, fontSize: '1rem' }} />
+            }
+            MenuProps={{
+              PaperProps: {
+                sx: {
+                  bgcolor: '#1a1a1a',
+                  color: '#ffffff',
+                  '& .MuiMenuItem-root': {
+                    '&:hover': {
+                      backgroundColor: alpha('#ffffff', 0.1),
+                    },
+                    '&.Mui-selected': {
+                      backgroundColor: alpha('#667eea', 0.3),
+                      '&:hover': {
+                        backgroundColor: alpha('#667eea', 0.4),
+                      },
+                    },
+                  },
+                },
+              },
+            }}
+          >
+            {availableLocations.map((location) => (
+              <MenuItem key={location.location_id} value={location.location_id.toString()}>
+                {location.location_name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
+    );
+  };
+
   const drawerContent = (
     <>
       {/* Header Section - Aligned with navigation items */}
@@ -401,6 +630,9 @@ const CustomSidebar = ({ onSignOut }) => {
           />
         </ListItemButton>
       </Box>
+
+      {/* Company and Location Dropdowns */}
+      {renderCompanyLocationDropdowns()}
 
       {/* Navigation Items */}
       <List sx={{ p: 1, mt: 1, flexGrow: 1 }}>
