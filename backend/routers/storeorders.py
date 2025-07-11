@@ -13,7 +13,6 @@ from database import get_db
 from crud.locations import get_store
 from pydantic import BaseModel
 from typing import Dict, Any
-from crud import storeorders as storeorders_crud
 import pandas as pd
 from schemas import storeorders as storeorders_schema
 from models.users import User

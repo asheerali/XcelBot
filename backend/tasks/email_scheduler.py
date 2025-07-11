@@ -16,6 +16,8 @@ def check_and_send_scheduled_emails():
                 to=mail.receiver_email,
                 name=mail.receiver_name
             )
+            
+        
             print(f"Sent scheduled email to {mail.receiver_email} at {now}")
 
     except Exception as e:

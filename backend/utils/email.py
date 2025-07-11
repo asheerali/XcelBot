@@ -1,6 +1,8 @@
+from fastapi import Depends, HTTPException
 from fastapi_mail import MessageSchema
 from models.email_config import fm
 import asyncio
+from fastapi_mail import MessageSchema
 
 async def send_account_email(email: str, username: str, password: str):
     subject = "Welcome to KPI360.ai - Your Account Credentials"
@@ -512,60 +514,70 @@ from sqlalchemy.orm import Session
 from datetime import time
 from crud.mails import create_mail_record_simple
 from database import get_db
+from crud import storeorders as storeorders_crud
+from models.locations import Store
+from collections import defaultdict
 
 
-# async def send_account_email(email: str, first_name: str, password: str, scheduled_time: time = time(9, 0, 0)):
-#     """
-#     Send account creation email and log it to the mails table
-#     Default scheduled time is 9:00 AM if not specified
-#     """
+def get_consolidated_production(company_id: int, db: Session = Depends(get_db)):
+    try:
+        storeorders = storeorders_crud.get_storeorders_by_company(db, company_id)
+        if not storeorders:
+            return {"message": "No store orders found for this company", "data": []}
+
+        # Get all unique locations
+        location_ids = list(set(order.location_id for order in storeorders if order.location_id))
+        locations = db.query(Store).filter(Store.id.in_(location_ids)).all()
+        location_lookup = {loc.id: loc.name for loc in locations}
+
+        # Build item-location-quantity matrix
+        item_data = defaultdict(lambda: defaultdict(int))  # item_data[item_name][location_name] = quantity
+        item_units = {}  # item_data[item_name] = unit
+
+        for order in storeorders:
+            location_name = location_lookup.get(order.location_id, f"Location {order.location_id}")
+            if not order.items_ordered or "items" not in order.items_ordered:
+                continue
+
+            for item in order.items_ordered["items"]:
+                name = item.get("name")
+                quantity = item.get("quantity", 0)
+                unit = item.get("unit", "")
+                item_data[name][location_name] += quantity
+                item_units[name] = unit
+
+        # Format final table rows
+        all_location_names = sorted(location_lookup.values())
+        table_rows = []
+        for item_name, location_qtys in item_data.items():
+            row = {"Item": item_name}
+            total_required = 0
+            for loc in all_location_names:
+                qty = location_qtys.get(loc, 0)
+                row[loc] = qty
+                total_required += qty
+            row["Total Required"] = total_required
+            row["Unit"] = item_units.get(item_name, "")
+            table_rows.append(row)
+
+        return {
+            "message": "Consolidated production table generated successfully",
+            "columns": ["Item"] + all_location_names + ["Total Required", "Unit"],
+            "data": table_rows
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching consolidated production: {str(e)}")
+
+
+
+
+def send_actual_email(to: str, name: str, company_id: int = None):
     
-#     # Send the actual email (your existing email sending logic)
-#     try:
-#         # Your email sending code here
-#         print(f"Email scheduled for {email} at {scheduled_time}")  # Replace with actual email scheduling
-        
-#         # Log the email to the database with scheduled time
-#         db = next(get_db())
-#         create_mail_record_simple(
-#             db=db,
-#             receiver_name=first_name,
-#             receiver_email=email,
-#             receiving_time=scheduled_time
-#         )
-        
-#     except Exception as e:
-#         print(f"Error scheduling email: {e}")
-#         # Still log the email attempt even if scheduling fails
-#         db = next(get_db())
-#         create_mail_record_simple(
-#             db=db,
-#             receiver_name=first_name,
-#             receiver_email=email,
-#             receiving_time=scheduled_time
-#         )
-
-
-# def send_actual_email(to: str, name: str):
-#     subject = "Your Account Details"
-#     content = f"Hello {name}, your account has been created."
+    data =  get_consolidated_production(company_id)
     
-#     # Replace this with your real email sending logic
-#     print(f"Sending email to {to} with subject: '{subject}' and content: '{content}'")
-
-
-# def send_actual_email(to: str, name: str):
-#     password = "temporary-password"  # Use the actual password if you want
-#     try:
-#         asyncio.run(send_account_email(to, name, password))
-#         print(f"Email sent successfully to {to}")
-#     except Exception as e:
-#         print(f"Failed to send email to {to}: {e}")
-
-
-from fastapi_mail import MessageSchema
-
-def send_actual_email(to: str, name: str):
+    print("this is the data which i want to print",data)
+    
     subject = "Demo Mail from KPI360.ai"
     html_body = f"""
     <html>
