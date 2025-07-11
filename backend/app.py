@@ -18,8 +18,15 @@ from models import (users,user_company_companylocation ,
                     logs, storeorders, mails
                     )
 from database import get_db
+from tasks.email_scheduler import start_scheduler
+
 # Initialize FastAPI app
 app = FastAPI()
+
+@app.on_event("startup")
+def start_email_scheduler():
+    start_scheduler()
+
 users.Base.metadata.create_all(bind=engine)
 user_company_companylocation.Base.metadata.create_all(bind=engine)
 user_dashboard_permissions.Base.metadata.create_all(bind=engine)
