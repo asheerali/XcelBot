@@ -2,6 +2,7 @@
 data/
 xcelbot/
 venv/
+donwloads/
 node_modules/
 yarn.lock
 __pycache__/
