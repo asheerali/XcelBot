@@ -92,3 +92,7 @@ to get the list of emails with in the companyid for the user suggestions
 /mails/mailslist/{company_id}
 to update the emails by mail id
 mail/updatemail/{mail_id}
+
+
+email schduller button shows list of enters from /mails
+

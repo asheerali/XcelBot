@@ -28,7 +28,15 @@ import {
   DialogActions,
   CircularProgress,
   Alert,
-  Skeleton
+  Skeleton,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  Checkbox,
+  FormControlLabel,
+  RadioGroup,
+  Radio
 } from '@mui/material';
 import {
   Print as PrintIcon,
@@ -40,7 +48,13 @@ import {
   CheckCircle as CheckCircleIcon,
   Close as CloseIcon,
   CalendarToday as CalendarTodayIcon,
-  Clear as ClearIcon
+  Clear as ClearIcon,
+  Schedule as ScheduleIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  Add as AddIcon,
+  Send as SendIcon,
+  PersonAdd as PersonAddIcon
 } from '@mui/icons-material';
 
 // Import Redux hooks and selectors
@@ -104,6 +118,34 @@ interface Location {
   location_id: number;
   location_name: string;
 }
+
+interface ScheduledEmail {
+  id: number;
+  receiver_name: string;
+  receiver_email: string;
+  receiving_time: string;
+}
+
+interface EmailListItem {
+  email: string;
+  selected: boolean;
+  name: string;
+  nameMode: 'auto' | 'manual';
+  time: string;
+}
+
+// Helper function to format time to HH:MM
+const formatTimeToHHMM = (timeString: string) => {
+  if (!timeString) return '';
+  // Extract HH:MM from various time formats
+  const timeMatch = timeString.match(/(\d{2}):(\d{2})/);
+  return timeMatch ? `${timeMatch[1]}:${timeMatch[2]}` : timeString;
+};
+
+// Helper function to generate auto name from email
+const generateAutoName = (email: string) => {
+  return 'default name selected';
+};
 
 // DateRangeSelector Button Component
 const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
@@ -248,6 +290,20 @@ const StoreSummaryProduction = () => {
   const [printDialog, setPrintDialog] = useState({ open: false, order: null, type: 'print' });
   const [emailDialog, setEmailDialog] = useState({ open: false, order: null, email: '' });
   
+  // Email scheduler state
+  const [emailSchedulerDialog, setEmailSchedulerDialog] = useState(false);
+  const [scheduledEmails, setScheduledEmails] = useState<ScheduledEmail[]>([]);
+  const [emailSchedulerLoading, setEmailSchedulerLoading] = useState(false);
+  const [editEmailDialog, setEditEmailDialog] = useState({ open: false, email: null });
+  
+  // Create mails state
+  const [createMailsDialog, setCreateMailsDialog] = useState(false);
+  const [emailsList, setEmailsList] = useState<string[]>([]);
+  const [emailListItems, setEmailListItems] = useState<EmailListItem[]>([]);
+  const [createMailsLoading, setCreateMailsLoading] = useState(false);
+  const [customEmail, setCustomEmail] = useState('');
+  const [selectAll, setSelectAll] = useState(false);
+  
   // Date range selector state
   const [selectedDateRange, setSelectedDateRange] = useState(null);
 
@@ -386,6 +442,262 @@ const StoreSummaryProduction = () => {
       setLocalError(err instanceof Error ? err.message : 'Failed to fetch consolidated production data');
       setConsolidatedData([]);
       setConsolidatedColumns([]);
+    }
+  };
+
+  // Email Scheduler functions
+  const fetchScheduledEmails = async () => {
+    setEmailSchedulerLoading(true);
+    try {
+      const response = await fetch(`${API_URL_Local}/mails`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const emails: ScheduledEmail[] = await response.json();
+      setScheduledEmails(emails);
+    } catch (err) {
+      console.error('Error fetching scheduled emails:', err);
+      setLocalError('Failed to fetch scheduled emails');
+    } finally {
+      setEmailSchedulerLoading(false);
+    }
+  };
+
+  const handleDeleteScheduledEmail = async (email: string) => {
+    if (!window.confirm(`Are you sure you want to delete the scheduled email for ${email}?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL_Local}/mails/deleteschedule/${email}`, {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      // Refresh the list
+      await fetchScheduledEmails();
+      
+    } catch (err) {
+      console.error('Error deleting scheduled email:', err);
+      setLocalError('Failed to delete scheduled email');
+    }
+  };
+
+  const handleEditScheduledEmail = (emailData: ScheduledEmail) => {
+    setEditEmailDialog({ open: true, email: emailData });
+  };
+
+  const handleUpdateScheduledEmail = async (mailId: number, updatedData: any) => {
+    try {
+      const requestBody = {
+        mail_id: mailId,
+        ...updatedData
+      };
+
+      const updateUrl = `${API_URL_Local}/mails/updatemail/${mailId}`;
+      console.log('Update URL:', updateUrl);
+      console.log('Request Body:', requestBody);
+
+      const response = await fetch(updateUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+      
+      if (!response.ok) {
+        console.error('Response status:', response.status);
+        console.error('Response statusText:', response.statusText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      // Refresh the list
+      await fetchScheduledEmails();
+      setEditEmailDialog({ open: false, email: null });
+      
+    } catch (err) {
+      console.error('Error updating scheduled email:', err);
+      setLocalError('Failed to update scheduled email');
+    }
+  };
+
+  const handleOpenEmailScheduler = () => {
+    setEmailSchedulerDialog(true);
+    fetchScheduledEmails();
+  };
+
+  // Create Mails functions
+  const fetchEmailsList = async (companyId: string) => {
+    setCreateMailsLoading(true);
+    try {
+      const response = await fetch(`${API_URL_Local}/mails/mailslist/${companyId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const emails: string[] = await response.json();
+      setEmailsList(emails);
+      
+      // Initialize email list items
+      const items: EmailListItem[] = emails.map(email => ({
+        email,
+        selected: false,
+        name: generateAutoName(email),
+        nameMode: 'auto',
+        time: '09:00'
+      }));
+      setEmailListItems(items);
+      
+    } catch (err) {
+      console.error('Error fetching emails list:', err);
+      setLocalError('Failed to fetch emails list');
+    } finally {
+      setCreateMailsLoading(false);
+    }
+  };
+
+  const handleOpenCreateMails = () => {
+    if (selectedCompanies.length === 0) {
+      setLocalError('Please select a company first');
+      return;
+    }
+    // Keep the Email Scheduler dialog open in the background
+    setCreateMailsDialog(true);
+    fetchEmailsList(selectedCompanies[0]);
+  };
+
+  const handleSelectAllEmails = (checked: boolean) => {
+    setSelectAll(checked);
+    setEmailListItems(prev => prev.map(item => ({ ...item, selected: checked })));
+  };
+
+  const handleEmailSelection = (index: number, checked: boolean) => {
+    setEmailListItems(prev => {
+      const newItems = [...prev];
+      newItems[index].selected = checked;
+      return newItems;
+    });
+    
+    // Update select all state
+    const allSelected = emailListItems.every((item, idx) => 
+      idx === index ? checked : item.selected
+    );
+    setSelectAll(allSelected);
+  };
+
+  const handleNameModeChange = (index: number, mode: 'auto' | 'manual') => {
+    setEmailListItems(prev => {
+      const newItems = [...prev];
+      newItems[index].nameMode = mode;
+      if (mode === 'auto') {
+        newItems[index].name = generateAutoName(newItems[index].email);
+      }
+      return newItems;
+    });
+  };
+
+  const handleNameChange = (index: number, name: string) => {
+    setEmailListItems(prev => {
+      const newItems = [...prev];
+      newItems[index].name = name;
+      return newItems;
+    });
+  };
+
+  const handleTimeChange = (index: number, time: string) => {
+    setEmailListItems(prev => {
+      const newItems = [...prev];
+      newItems[index].time = time;
+      return newItems;
+    });
+  };
+
+  const handleAddCustomEmail = () => {
+    if (!customEmail || !customEmail.includes('@')) {
+      setLocalError('Please enter a valid email address');
+      return;
+    }
+    
+    // Check if email already exists
+    if (emailListItems.some(item => item.email === customEmail)) {
+      setLocalError('Email already exists in the list');
+      return;
+    }
+
+    const newItem: EmailListItem = {
+      email: customEmail,
+      selected: true,
+      name: generateAutoName(customEmail),
+      nameMode: 'auto',
+      time: '09:00'
+    };
+
+    setEmailListItems(prev => [...prev, newItem]);
+    setCustomEmail('');
+    setLocalError(null);
+  };
+
+  const handleCreateMails = async () => {
+    const selectedItems = emailListItems.filter(item => item.selected);
+    
+    if (selectedItems.length === 0) {
+      setLocalError('Please select at least one email');
+      return;
+    }
+
+    try {
+      setCreateMailsLoading(true);
+      
+      // Prepare data for API - send as array directly
+      const mailsData = selectedItems.map(item => ({
+        receiver_name: item.name,
+        receiver_email: item.email,
+        receiving_time: item.time
+      }));
+
+      console.log('=== CREATE MAILS REQUEST ===');
+      console.log('URL:', `${API_URL_Local}/mails/createmails`);
+      console.log('Request Body:', JSON.stringify(mailsData, null, 2));
+
+      const response = await fetch(`${API_URL_Local}/mails/createmails`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(mailsData)
+      });
+
+      console.log('=== CREATE MAILS RESPONSE ===');
+      console.log('Response Status:', response.status);
+      console.log('Response StatusText:', response.statusText);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Log response body
+      const responseData = await response.json();
+      console.log('Response Body:', responseData);
+
+      // Success
+      setCreateMailsDialog(false);
+      setEmailListItems([]);
+      setCustomEmail('');
+      setSelectAll(false);
+      
+      // Refresh the scheduled emails list
+      await fetchScheduledEmails();
+      
+      alert(`Successfully created ${selectedItems.length} scheduled emails!`);
+      
+    } catch (err) {
+      console.error('Error creating mails:', err);
+      setLocalError('Failed to create scheduled emails');
+    } finally {
+      setCreateMailsLoading(false);
     }
   };
 
@@ -621,7 +933,7 @@ const StoreSummaryProduction = () => {
     printWindow.print();
   };
 
-  const generateConsolidatedReport = () => {
+const generateConsolidatedReport = () => {
     const currentDate = new Date().toLocaleString('en-GB', {
       day: '2-digit',
       month: '2-digit',
@@ -636,6 +948,41 @@ const StoreSummaryProduction = () => {
       : 'All time';
 
     const companyName = selectedCompanies.length > 0 ? getCompanyName(selectedCompanies[0]) : 'Selected Company';
+
+    // Generate table HTML
+    const generateTableHTML = () => {
+      if (consolidatedColumns.length === 0 || consolidatedData.length === 0) {
+        return '<p>No data available to display.</p>';
+      }
+
+      let tableHTML = `
+        <table>
+          <thead>
+            <tr>
+              ${consolidatedColumns.map(column => `
+                <th class="${column === 'Total Required' ? 'total-column' : ''}">${column}</th>
+              `).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${consolidatedData.map(item => `
+              <tr>
+                ${consolidatedColumns.map(column => {
+                  const value = item[column];
+                  const isTotal = column === 'Total Required';
+                  const isNumeric = typeof value === 'number' && column !== 'Item' && column !== 'Unit';
+                  const shouldHighlight = isNumeric && value > 0;
+                  
+                  return `<td class="${isTotal ? 'total-column' : ''} ${shouldHighlight ? 'highlight' : ''}">${value}</td>`;
+                }).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+      
+      return tableHTML;
+    };
 
     return `
       <!DOCTYPE html>
@@ -671,20 +1018,21 @@ const StoreSummaryProduction = () => {
             width: 100%; 
             border-collapse: collapse; 
             margin-bottom: 20px; 
+            font-size: 12px;
           }
           th, td { 
             border: 1px solid #ddd; 
-            padding: 12px; 
+            padding: 8px; 
             text-align: left; 
           }
           th { 
             background-color: #f5f5f5; 
             font-weight: 600; 
-            font-size: 14px;
+            font-size: 12px;
           }
           .total-column { 
             font-weight: bold; 
-            background-color: #e8f5e8; 
+            background-color: #e8f5e8 !important; 
           }
           .footer { 
             text-align: center; 
@@ -696,7 +1044,7 @@ const StoreSummaryProduction = () => {
             text-align: center; 
           }
           .highlight { 
-            background-color: #fff3cd; 
+            background-color: #fff3cd !important; 
             font-weight: 600; 
           }
           .summary-section {
@@ -715,6 +1063,21 @@ const StoreSummaryProduction = () => {
             border-radius: 8px;
             margin-bottom: 20px;
             border-left: 4px solid #1976d2;
+          }
+          .table-section {
+            margin-bottom: 30px;
+          }
+          .table-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2c3e50;
+          }
+          @media print {
+            body { margin: 20px; }
+            .summary-section { break-inside: avoid; }
+            table { font-size: 10px; }
+            th, td { padding: 6px; }
           }
         </style>
       </head>
@@ -735,8 +1098,12 @@ const StoreSummaryProduction = () => {
           <h3>Production Summary</h3>
           <p><strong>Total Unique Items:</strong> ${consolidatedData.length}</p>
           <p><strong>Total Quantity Required:</strong> ${consolidatedData.reduce((sum, item) => sum + (item['Total Required'] || 0), 0)} units</p>
-          <p><strong>Active Locations:</strong> ${consolidatedColumns.length - 3}</p>
           <p><strong>Report Period:</strong> ${dateRangeText}</p>
+        </div>
+
+        <div class="table-section">
+          <div class="table-title">Production Requirements by Location</div>
+          ${generateTableHTML()}
         </div>
         
         <div class="footer">
@@ -1163,13 +1530,23 @@ const StoreSummaryProduction = () => {
                   />
                 )}
               </Box>
-              <Button
-                variant="contained"
-                startIcon={<PrintIcon />}
-                onClick={handlePrintConsolidated}
-              >
-                Print
-              </Button>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<ScheduleIcon />}
+                  onClick={handleOpenEmailScheduler}
+                  sx={{ mr: 1 }}
+                >
+                  Email Scheduler
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<PrintIcon />}
+                  onClick={handlePrintConsolidated}
+                >
+                  Print
+                </Button>
+              </Box>
             </Box>
 
             <TableContainer component={Paper} variant="outlined">
@@ -1218,6 +1595,423 @@ const StoreSummaryProduction = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Create Mails Dialog */}
+      <Dialog 
+        open={createMailsDialog} 
+        onClose={() => {
+          setCreateMailsDialog(false);
+          setEmailListItems([]);
+          setCustomEmail('');
+          setSelectAll(false);
+        }}
+        maxWidth="lg" 
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <PersonAddIcon color="primary" />
+              <Typography variant="h6">Create Scheduled Emails</Typography>
+              {selectedCompanies.length > 0 && (
+                <Chip 
+                  label={getCompanyName(selectedCompanies[0])} 
+                  size="small" 
+                  variant="outlined" 
+                  color="primary"
+                />
+              )}
+            </Box>
+            <IconButton 
+              onClick={() => {
+                setCreateMailsDialog(false);
+                setEmailListItems([]);
+                setCustomEmail('');
+                setSelectAll(false);
+              }}
+              size="small"
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {createMailsLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Box>
+              {/* Add Custom Email Section */}
+              <Box sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                  Add Custom Email
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <TextField
+                    label="Email Address"
+                    type="email"
+                    value={customEmail}
+                    onChange={(e) => setCustomEmail(e.target.value)}
+                    placeholder="Enter email address"
+                    sx={{ flex: 1 }}
+                    size="small"
+                  />
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={handleAddCustomEmail}
+                    disabled={!customEmail}
+                  >
+                    Add
+                  </Button>
+                </Box>
+              </Box>
+
+              {/* Emails Table */}
+              {emailListItems.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <PersonAddIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                  <Typography variant="h6" sx={{ mb: 1 }}>
+                    No Emails Available
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Add custom emails or check if the company has any emails configured.
+                  </Typography>
+                </Box>
+              ) : (
+                <Box>
+                  {/* Select All */}
+                  <Box sx={{ mb: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={selectAll}
+                          onChange={(e) => handleSelectAllEmails(e.target.checked)}
+                          indeterminate={
+                            emailListItems.some(item => item.selected) && 
+                            !emailListItems.every(item => item.selected)
+                          }
+                        />
+                      }
+                      label={
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          Select All Emails ({emailListItems.filter(item => item.selected).length} of {emailListItems.length} selected)
+                        </Typography>
+                      }
+                    />
+                  </Box>
+
+                  {/* Emails Table */}
+                  <TableContainer component={Paper} variant="outlined">
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                          <TableCell sx={{ fontWeight: 600 }}>Select</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Email Address</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Name Mode</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>Time (HH:MM)</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {emailListItems.map((item, index) => (
+                          <TableRow key={index} hover>
+                            <TableCell>
+                              <Checkbox
+                                checked={item.selected}
+                                onChange={(e) => handleEmailSelection(index, e.target.checked)}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                {item.email}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                value={item.name}
+                                onChange={(e) => handleNameChange(index, e.target.value)}
+                                disabled={item.nameMode === 'auto'}
+                                size="small"
+                                sx={{ minWidth: 150 }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <FormControl size="small" sx={{ minWidth: 120 }}>
+                                <RadioGroup
+                                  row
+                                  value={item.nameMode}
+                                  onChange={(e) => handleNameModeChange(index, e.target.value as 'auto' | 'manual')}
+                                >
+                                  <FormControlLabel
+                                    value="auto"
+                                    control={<Radio size="small" />}
+                                    label="Auto"
+                                    sx={{ '& .MuiFormControlLabel-label': { fontSize: '0.875rem' } }}
+                                  />
+                                  <FormControlLabel
+                                    value="manual"
+                                    control={<Radio size="small" />}
+                                    label="Manual"
+                                    sx={{ '& .MuiFormControlLabel-label': { fontSize: '0.875rem' } }}
+                                  />
+                                </RadioGroup>
+                              </FormControl>
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                type="time"
+                                value={item.time}
+                                onChange={(e) => handleTimeChange(index, e.target.value)}
+                                size="small"
+                                sx={{ minWidth: 130 }}
+                                InputLabelProps={{
+                                  shrink: true,
+                                }}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 3, borderTop: '1px solid #e0e0e0' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              {emailListItems.filter(item => item.selected).length} emails selected for scheduling
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button 
+                onClick={() => {
+                  setCreateMailsDialog(false);
+                  setEmailListItems([]);
+                  setCustomEmail('');
+                  setSelectAll(false);
+                }}
+                variant="outlined"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCreateMails}
+                variant="contained"
+                startIcon={createMailsLoading ? <CircularProgress size={16} /> : <SendIcon />}
+                disabled={createMailsLoading || emailListItems.filter(item => item.selected).length === 0}
+              >
+                {createMailsLoading ? 'Creating...' : 'Create Scheduled Emails'}
+              </Button>
+            </Box>
+          </Box>
+        </DialogActions>
+      </Dialog>
+
+      {/* Email Scheduler Dialog */}
+      <Dialog 
+        open={emailSchedulerDialog} 
+        onClose={() => setEmailSchedulerDialog(false)}
+        maxWidth="md" 
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <ScheduleIcon color="primary" />
+              <Typography variant="h6">Email Scheduler</Typography>
+            </Box>
+            <IconButton 
+              onClick={() => setEmailSchedulerDialog(false)}
+              size="small"
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {emailSchedulerLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : scheduledEmails.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <ScheduleIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                No Scheduled Emails
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                There are no emails currently scheduled.
+              </Typography>
+            </Box>
+          ) : (
+            <List>
+              {scheduledEmails.map((email, index) => (
+                <React.Fragment key={email.id}>
+                  <ListItem
+                    sx={{
+                      border: '1px solid #e0e0e0',
+                      borderRadius: 1,
+                      mb: 1,
+                      backgroundColor: '#f9f9f9'
+                    }}
+                  >
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                            {email.receiver_name}
+                          </Typography>
+                          <Chip label={email.receiver_email} size="small" variant="outlined" />
+                        </Box>
+                      }
+                      secondary={
+                        <Typography variant="body2" color="text.secondary">
+                          Scheduled Time: {formatTimeToHHMM(email.receiving_time)}
+                        </Typography>
+                      }
+                    />
+                    <ListItemSecondaryAction>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleEditScheduledEmail(email)}
+                          title="Edit"
+                          color="primary"
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleDeleteScheduledEmail(email.receiver_email)}
+                          title="Delete"
+                          color="error"
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                  {index < scheduledEmails.length - 1 && <Divider sx={{ my: 1 }} />}
+                </React.Fragment>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+            <Button
+              variant="contained"
+              startIcon={<PersonAddIcon />}
+              onClick={handleOpenCreateMails}
+              color="secondary"
+            >
+              Create New Mails
+            </Button>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button 
+                onClick={() => setEmailSchedulerDialog(false)}
+                variant="outlined"
+              >
+                Close
+              </Button>
+              <Button 
+                onClick={fetchScheduledEmails}
+                variant="contained"
+                startIcon={<RefreshIcon />}
+              >
+                Refresh
+              </Button>
+            </Box>
+          </Box>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Email Dialog */}
+      <Dialog 
+        open={editEmailDialog.open} 
+        onClose={() => setEditEmailDialog({ open: false, email: null })}
+        maxWidth="sm" 
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <EditIcon color="primary" />
+            <Typography variant="h6">Edit Scheduled Email</Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {editEmailDialog.email && (
+            <Box sx={{ pt: 2 }}>
+              <TextField
+                fullWidth
+                label="Receiver Name"
+                defaultValue={editEmailDialog.email.receiver_name}
+                sx={{ mb: 2 }}
+                id="edit-receiver-name"
+              />
+              <TextField
+                fullWidth
+                label="Receiver Email"
+                type="email"
+                defaultValue={editEmailDialog.email.receiver_email}
+                sx={{ mb: 2 }}
+                id="edit-receiver-email"
+              />
+              <TextField
+                fullWidth
+                label="Receiving Time"
+                type="time"
+                defaultValue={formatTimeToHHMM(editEmailDialog.email.receiving_time)}
+                sx={{ mb: 2 }}
+                id="edit-receiving-time"
+                helperText="Format: HH:MM (24-hour format)"
+                InputLabelProps={{
+                  shrink: true,
+                }}
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setEditEmailDialog({ open: false, email: null })}
+            variant="outlined"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => {
+              if (editEmailDialog.email) {
+                const nameInput = document.getElementById('edit-receiver-name') as HTMLInputElement;
+                const emailInput = document.getElementById('edit-receiver-email') as HTMLInputElement;
+                const timeInput = document.getElementById('edit-receiving-time') as HTMLInputElement;
+                
+                // Convert HH:MM to HH:MM:SS format if needed
+                const timeValue = timeInput.value;
+                const formattedTime = timeValue.includes(':') && timeValue.split(':').length === 2 
+                  ? `${timeValue}:00` 
+                  : timeValue;
+                
+                const updatedData = {
+                  receiver_name: nameInput.value,
+                  receiver_email: emailInput.value,
+                  receiving_time: formattedTime
+                };
+                
+                handleUpdateScheduledEmail(editEmailDialog.email.id, updatedData);
+              }
+            }}
+            variant="contained"
+            startIcon={<EditIcon />}
+          >
+            Update
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Print Dialog */}
       <Dialog 

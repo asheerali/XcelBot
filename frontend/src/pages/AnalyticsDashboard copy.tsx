@@ -47,11 +47,30 @@ import {
   setSelectedLocations
 } from '../store/slices/masterFileSlice';
 
+// Import Date Range Redux actions and selectors
+import {
+  setAnalyticsDashboardDateRange,
+  clearAnalyticsDashboardDateRange,
+  selectAnalyticsDashboardDateRange,
+  selectAnalyticsDashboardHasDateRange
+} from '../store/slices/dateRangeSlice';
+
 // DateRangeSelector Button Component
-const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
+const DateRangeSelectorButton = ({ onDateRangeSelect, currentDateRange, onClearDateRange }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedRange, setSelectedRange] = useState('Select Date Range');
   const [tempRange, setTempRange] = useState(null);
+
+  // Generate display text from current Redux date range
+  const getDisplayText = () => {
+    if (currentDateRange && currentDateRange.startDate && currentDateRange.endDate) {
+      const startDate = new Date(currentDateRange.startDate).toLocaleDateString();
+      const endDate = new Date(currentDateRange.endDate).toLocaleDateString();
+      return `${startDate} - ${endDate}`;
+    }
+    return 'Select Date Range';
+  };
+
+  const selectedRange = getDisplayText();
 
   const handleOpen = () => setIsOpen(true);
   const handleClose = () => {
@@ -65,9 +84,6 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
 
   const handleApply = () => {
     if (tempRange) {
-      const startDate = tempRange.startDate.toLocaleDateString();
-      const endDate = tempRange.endDate.toLocaleDateString();
-      setSelectedRange(`${startDate} - ${endDate}`);
       onDateRangeSelect(tempRange);
     }
     setIsOpen(false);
@@ -75,8 +91,7 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
 
   const handleClear = (event) => {
     event.stopPropagation();
-    setSelectedRange('Select Date Range');
-    onDateRangeSelect(null);
+    onClearDateRange();
   };
 
   return (
@@ -216,6 +231,10 @@ const AnalyticsDashboard = () => {
   const reduxSelectedCompanies = useAppSelector(selectSelectedCompanies);
   const reduxSelectedLocations = useAppSelector(selectSelectedLocations);
   
+  // Get Analytics Dashboard date range from Redux
+  const reduxDateRange = useAppSelector(selectAnalyticsDashboardDateRange);
+  const hasDateRange = useAppSelector(selectAnalyticsDashboardHasDateRange);
+  
   // State for API data
   const [companyLocationData, setCompanyLocationData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -224,7 +243,6 @@ const AnalyticsDashboard = () => {
   // Filter states (for UI selections, not applied yet)
   const [selectedCompanies, setSelectedCompaniesLocal] = useState([]);
   const [selectedLocations, setSelectedLocationsLocal] = useState([]);
-  const [selectedDateRange, setSelectedDateRange] = useState(null);
 
   // State for applied filters (what gets sent to AnalyticsComponent)
   const [appliedFilters, setAppliedFilters] = useState({
@@ -232,50 +250,6 @@ const AnalyticsDashboard = () => {
     locations: [],
     dateRange: null
   });
-
-  // Auto-apply filters when locations change
-  useEffect(() => {
-    if (selectedLocations.length > 0) {
-      console.log('Auto-applying filters due to location change:', {
-        companies: selectedCompanies,
-        locations: selectedLocations,
-        dateRange: selectedDateRange
-      });
-      
-      // Update Redux with current selections
-      dispatch(setSelectedCompanies(selectedCompanies.map(id => id.toString())));
-      dispatch(setSelectedLocations(selectedLocations.map(id => id.toString())));
-      
-      // Apply the filters - this will trigger the analytics data fetch
-      setAppliedFilters({
-        companies: selectedCompanies,
-        locations: selectedLocations,
-        dateRange: selectedDateRange
-      });
-    }
-  }, [selectedLocations, selectedCompanies, selectedDateRange, dispatch]);
-
-  // Auto-apply filters when date range changes
-  useEffect(() => {
-    if (selectedDateRange) {
-      console.log('Auto-applying filters due to date range change:', {
-        companies: selectedCompanies,
-        locations: selectedLocations,
-        dateRange: selectedDateRange
-      });
-      
-      // Update Redux with current selections
-      dispatch(setSelectedCompanies(selectedCompanies.map(id => id.toString())));
-      dispatch(setSelectedLocations(selectedLocations.map(id => id.toString())));
-      
-      // Apply the filters - this will trigger the analytics data fetch
-      setAppliedFilters({
-        companies: selectedCompanies,
-        locations: selectedLocations,
-        dateRange: selectedDateRange
-      });
-    }
-  }, [selectedDateRange, selectedCompanies, selectedLocations, dispatch]);
 
   // Fetch company-location data from API
   const fetchCompanyLocationData = async () => {
@@ -327,17 +301,17 @@ const AnalyticsDashboard = () => {
     }
   }, [reduxSelectedLocations]);
 
-  // Auto-apply filters when component loads with Redux data
+  // Auto-apply filters when component loads with Redux data (initial load only)
   useEffect(() => {
     if (reduxSelectedCompanies.length > 0 && reduxSelectedLocations.length > 0 && companyLocationData.length > 0) {
-      console.log('Auto-applying filters from Redux state');
+      console.log('Auto-applying filters from Redux state on initial load');
       setAppliedFilters({
         companies: reduxSelectedCompanies.map(id => parseInt(id)),
         locations: reduxSelectedLocations.map(id => parseInt(id)),
-        dateRange: null
+        dateRange: hasDateRange ? reduxDateRange : null
       });
     }
-  }, [reduxSelectedCompanies, reduxSelectedLocations, companyLocationData]);
+  }, [companyLocationData]);
 
   // Get available companies
   const availableCompanies = companyLocationData.map(item => ({
@@ -374,9 +348,11 @@ const AnalyticsDashboard = () => {
   const clearAllFilters = () => {
     setSelectedCompaniesLocal([]);
     setSelectedLocationsLocal([]);
-    setSelectedDateRange(null);
     
-    // Update Redux
+    // Clear Redux date range for Analytics Dashboard
+    dispatch(clearAnalyticsDashboardDateRange());
+    
+    // Update Redux company and location selections
     dispatch(setSelectedCompanies([]));
     dispatch(setSelectedLocations([]));
   };
@@ -400,7 +376,7 @@ const AnalyticsDashboard = () => {
     }
   };
 
-  // Handle location selection
+  // Handle location selection - now with auto-apply
   const handleLocationChange = (event) => {
     const value = event.target.value;
     console.log('Location selection event:', { value, type: typeof value });
@@ -409,12 +385,72 @@ const AnalyticsDashboard = () => {
     console.log('New selected locations:', newSelectedLocations);
     
     setSelectedLocationsLocal(newSelectedLocations);
+
+    // Auto-apply when locations are selected
+    if (newSelectedLocations.length > 0) {
+      setTimeout(() => {
+        console.log('Auto-applying filters due to location change');
+        
+        // Update Redux
+        dispatch(setSelectedCompanies(selectedCompanies.map(id => id.toString())));
+        dispatch(setSelectedLocations(newSelectedLocations.map(id => id.toString())));
+        
+        // Apply filters
+        setAppliedFilters({
+          companies: selectedCompanies,
+          locations: newSelectedLocations,
+          dateRange: hasDateRange ? reduxDateRange : null
+        });
+      }, 0);
+    }
   };
 
-  // Handle date range selection
+  // Handle date range selection - now using Redux with auto-apply
   const handleDateRangeSelect = (range) => {
-    setSelectedDateRange(range);
-    console.log('Selected date range:', range);
+    if (range && range.startDate && range.endDate) {
+      // Convert dates to ISO strings for Redux storage
+      const dateRange = {
+        startDate: range.startDate.toISOString(),
+        endDate: range.endDate.toISOString()
+      };
+      
+      console.log('Selected date range for Analytics Dashboard:', dateRange);
+      
+      // Dispatch to Redux store for Analytics Dashboard
+      dispatch(setAnalyticsDashboardDateRange(dateRange));
+
+      // Auto-apply when date range is set
+      setTimeout(() => {
+        console.log('Auto-applying filters due to date range change');
+        
+        // Update Redux
+        dispatch(setSelectedCompanies(selectedCompanies.map(id => id.toString())));
+        dispatch(setSelectedLocations(selectedLocations.map(id => id.toString())));
+        
+        // Apply filters
+        setAppliedFilters({
+          companies: selectedCompanies,
+          locations: selectedLocations,
+          dateRange: dateRange
+        });
+      }, 0);
+    } else {
+      // Clear date range if null
+      console.log('Clearing date range for Analytics Dashboard');
+      dispatch(clearAnalyticsDashboardDateRange());
+
+      // Auto-apply when date range is cleared
+      if (selectedLocations.length > 0) {
+        setTimeout(() => {
+          console.log('Auto-applying filters due to date range clear');
+          setAppliedFilters({
+            companies: selectedCompanies,
+            locations: selectedLocations,
+            dateRange: null
+          });
+        }, 0);
+      }
+    }
   };
 
   // Handle refresh
@@ -492,7 +528,11 @@ const AnalyticsDashboard = () => {
           >
             Refresh
           </Button>
-          <DateRangeSelectorButton onDateRangeSelect={handleDateRangeSelect} />
+          <DateRangeSelectorButton 
+            onDateRangeSelect={handleDateRangeSelect}
+            currentDateRange={reduxDateRange}
+            onClearDateRange={() => dispatch(clearAnalyticsDashboardDateRange())}
+          />
         </Box>
       </Container>
 
@@ -707,7 +747,7 @@ const AnalyticsDashboard = () => {
           </Grid>
 
           {/* Active Filters */}
-          {(selectedCompanies.length > 0 || selectedLocations.length > 0) && (
+          {(selectedCompanies.length > 0 || selectedLocations.length > 0 || hasDateRange) && (
             <Box sx={{ mb: 4 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: theme.palette.text.primary }}>
                 Active Filters:
@@ -738,7 +778,14 @@ const AnalyticsDashboard = () => {
                     deleteIcon={<CloseIcon />}
                   />
                 ))}
-                {(selectedCompanies.length > 0 || selectedLocations.length > 0) && (
+                {hasDateRange && (
+                  <ActiveFilterChip
+                    label={`Date Range: ${new Date(reduxDateRange.startDate).toLocaleDateString()} - ${new Date(reduxDateRange.endDate).toLocaleDateString()}`}
+                    onDelete={() => dispatch(clearAnalyticsDashboardDateRange())}
+                    deleteIcon={<CloseIcon />}
+                  />
+                )}
+                {(selectedCompanies.length > 0 || selectedLocations.length > 0 || hasDateRange) && (
                   <Button
                     size="small"
                     onClick={clearAllFilters}
