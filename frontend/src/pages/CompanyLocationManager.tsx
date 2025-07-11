@@ -94,7 +94,8 @@ import apiClient from "../api/axiosConfig";
 const COMPANY_OVERVIEW_API_URL = `/company-overview/`; // Relative path for apiClient
 const COMPANY_API_URL = `${API_URL_Local}/companies/`;
 const LOCATION_API_URL = `${API_URL_Local}/stores/`;
-const USER_API_URL = `${API_URL_Local}/users/`;
+// const USER_API_URL = `${API_URL_Local}/users/`;
+const USER_API_URL = `/users/`;
 
 // Interface definitions based on new API structure
 interface Permission {
@@ -448,7 +449,9 @@ const CompanyLocationManager: React.FC = () => {
       setLoading(true);
       console.log('👤 Creating User - Data being sent to backend:', userData);
       
-      const response = await axios.post(USER_API_URL, userData);
+      // const response = await axios.post(USER_API_URL, userData);
+      const response = await apiClient.post(USER_API_URL, userData);
+
       
       if (response.status === 200 || response.status === 201) {
         console.log('✅ User created successfully - Response:', response.data);
@@ -472,7 +475,9 @@ const CompanyLocationManager: React.FC = () => {
       setLoading(true);
       console.log('👤 Updating User - ID:', userId, 'Data being sent to backend:', userData);
       
-      const response = await axios.put(`${USER_API_URL}${userId}/`, userData);
+      // const response = await axios.put(`${USER_API_URL}${userId}/`, userData);
+      const response = await apiClient.put(`${USER_API_URL}${userId}/`, userData);
+
       
       if (response.status === 200) {
         console.log('✅ User updated successfully - Response:', response.data);
@@ -496,7 +501,9 @@ const CompanyLocationManager: React.FC = () => {
       setLoading(true);
       console.log('🗑️ Deleting User - ID being sent to backend:', userId);
       
-      const response = await axios.delete(`${USER_API_URL}${userId}/`);
+      // const response = await axios.delete(`${USER_API_URL}${userId}/`);
+      const response = await apiClient.delete(`${USER_API_URL}${userId}/`);
+
       
       if (response.status === 200 || response.status === 204) {
         console.log('✅ User deleted successfully');
