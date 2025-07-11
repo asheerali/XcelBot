@@ -29,7 +29,8 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Tooltip
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -345,6 +346,7 @@ const OrderIQDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [loadingAISuggestions, setLoadingAISuggestions] = useState(false);
   const [error, setError] = useState(null);
   
   // Date range selector state
@@ -615,6 +617,75 @@ const OrderIQDashboard = () => {
       setError(errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // AI Suggestions function
+  const fetchAISuggestions = async () => {
+    if (!selectedCompanyId || !selectedLocationId) {
+      setError('Please select company and location to get AI suggestions');
+      return;
+    }
+
+    try {
+      setLoadingAISuggestions(true);
+      setError(null);
+      
+      console.log('Fetching AI suggestions...', { 
+        companyId: selectedCompanyId, 
+        locationId: selectedLocationId 
+      });
+      
+      const response = await apiClient.get(`/api/storeorders/aisuggestions/${selectedCompanyId}/${selectedLocationId}`);
+      
+      console.log('AI suggestions response:', response.data);
+      
+      // Check if data has expected structure
+      if (!response.data.data || !response.data.data.items_ordered || !Array.isArray(response.data.data.items_ordered.items)) {
+        throw new Error('Invalid AI suggestions data structure received from API');
+      }
+      
+      // Transform the API response to match our current order structure
+      const suggestedItems = response.data.data.items_ordered.items.map((item) => ({
+        id: item.item_id,
+        name: item.name,
+        category: item.category,
+        price: item.unit_price,
+        unit: item.unit,
+        quantity: item.quantity
+      }));
+      
+      console.log('Transformed AI suggestions:', suggestedItems);
+      
+      // Add suggested items to current order
+      if (suggestedItems.length > 0) {
+        // Replace current order with AI suggestions
+        setCurrentOrder(suggestedItems);
+        
+        // Show success message
+        alert(`🤖 AI suggested ${suggestedItems.length} item${suggestedItems.length > 1 ? 's' : ''} based on your order history!`);
+      } else {
+        alert('🤖 No AI suggestions available at the moment. Try placing some orders first!');
+      }
+      
+    } catch (err) {
+      console.error('Error fetching AI suggestions:', err);
+      let errorMessage = 'Failed to load AI suggestions.';
+      
+      if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Access forbidden. You do not have permission to access AI suggestions.';
+      } else if (err.response?.status === 404) {
+        errorMessage = 'AI suggestions not available. No order history found for this location.';
+      } else if (err.response?.data?.message) {
+        errorMessage = `AI suggestions error: ${err.response.data.message}`;
+      }
+      
+      setError(errorMessage);
+      
+    } finally {
+      setLoadingAISuggestions(false);
     }
   };
 
@@ -1585,13 +1656,25 @@ const OrderIQDashboard = () => {
                       Start adding items from the Available Items section to build your order
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
-                      <Button 
-                        variant="outlined" 
-                        size="small"
-                        onClick={() => alert('AI suggestions feature coming soon!')}
-                      >
-                        🤖 Get AI Suggestions
-                      </Button>
+                      <Tooltip title="Get personalized item suggestions based on your order history">
+                        <span>
+                          <Button 
+                            variant="outlined" 
+                            size="small"
+                            onClick={fetchAISuggestions}
+                            disabled={loadingAISuggestions || !selectedCompanyId || !selectedLocationId}
+                            startIcon={loadingAISuggestions ? <CircularProgress size={16} /> : null}
+                            sx={{ 
+                              minWidth: 140,
+                              '&:disabled': {
+                                opacity: 0.6
+                              }
+                            }}
+                          >
+                            {loadingAISuggestions ? 'Getting Suggestions...' : '🤖 Get AI Suggestions'}
+                          </Button>
+                        </span>
+                      </Tooltip>
                       {availableItems.length > 0 && (
                         <Button 
                           variant="contained" 
