@@ -508,6 +508,9 @@ def get_recent_storeorders_details_by_location(
     
 
 
+
+
+
 # Updated function to update order by ID
 @router.post("/orderupdate")
 def update_storeorders_by_id(

@@ -86,13 +86,23 @@ def get_mails(
 
 
 
-@router.post("/createmails", response_model=mail_schema.Mail)
-def create_mail_with_company(
-    mail: mail_schema.MailCreate,
+# @router.post("/createmails", response_model=mail_schema.Mail)
+# def create_mail_with_company(
+#     mail: mail_schema.MailCreate,
+#     db: Session = Depends(get_db),
+# ):
+#     """Create a new mail record with scheduled receiving time"""
+#     return mail_crud.create_mail_record_from_mail(db, mail)
+
+
+
+@router.post("/createmails", response_model=List[mail_schema.Mail])
+def create_mails_with_company(
+    mails: List[mail_schema.MailCreate],
     db: Session = Depends(get_db),
 ):
-    """Create a new mail record with scheduled receiving time"""
-    return mail_crud.create_mail_record_from_mail(db, mail)
+    """Create multiple mail records with scheduled receiving time"""
+    return mail_crud.create_multiple_mail_records(db, mails)
 
 
 

@@ -1,6 +1,7 @@
 # crud/mails.py
 
 from datetime import time
+from typing import List
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from models.companies import Company
@@ -131,6 +132,36 @@ def create_mail_record_from_mail(db: Session, mail: MailCreate):
 
 
 
+def create_multiple_mail_records(db: Session, mails: List[MailCreate]):
+    """Create multiple mail records"""
+    created_mails = []
+
+    for mail in mails:
+        # Check for duplicate entry
+        existing_mail = db.query(Mail).filter(Mail.receiver_email == mail.receiver_email).first()
+        if existing_mail:
+            continue  # Skip duplicates silently; or you could collect and report skipped entries
+
+        mail_data = mail.dict()
+
+        # Assign name based on email
+        user = db.query(User).filter(User.email == mail.receiver_email).first()
+        if user:
+            mail_data["receiver_name"] = user.last_name
+        else:
+            company = db.query(Company).filter(Company.email == mail.receiver_email).first()
+            if company:
+                mail_data["receiver_name"] = company.name
+            else:
+                mail_data["receiver_name"] = "user"
+
+        db_mail = Mail(**mail_data)
+        db.add(db_mail)
+        db.commit()
+        db.refresh(db_mail)
+        created_mails.append(db_mail)
+
+    return created_mails
 
 
 def update_mail(db: Session, mail_id: int, update_data: MailUpdate):

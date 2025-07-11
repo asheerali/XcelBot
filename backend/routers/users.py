@@ -28,10 +28,6 @@ def create_user(
     return user_crud.create_user(db, user, background_tasks=background_tasks)
 
 
-# @router.get("/", response_model=list[user_schema.User])
-# def get_users(db: Session = Depends(get_db)):
-#     return user_crud.get_users(db)
-
 @router.get("/", response_model=list[user_schema.User])
 def get_users(
     db: Session = Depends(get_db),
