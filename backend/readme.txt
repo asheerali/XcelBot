@@ -76,3 +76,19 @@ for the store summary dashboard
 for the financila summary dashboard
 /api/storeorders/financialsummary/{company_id}/{location_id}
 /api/storeorders/companysummary/{company_id}
+
+
+
+
+
+for the mails schedule logic:
+to show the list of entries in the db
+/mails
+to create emails only email and time in hours and minutes
+/mails/createmails
+Delete entries by emails
+/mails/deleteschedule/{email}
+to get the list of emails with in the companyid for the user suggestions
+/mails/mailslist/{company_id}
+to update the emails by mail id
+mail/updatemail/{mail_id}

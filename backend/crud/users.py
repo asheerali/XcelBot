@@ -20,9 +20,6 @@ from crud.user_company_companylocation import (
     create_user_location_mapping,
     delete_user_location_mappings
 )
-
-
-
 import asyncio
 
 # # def create_user(db: Session, user: user_schema.UserCreate):

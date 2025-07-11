@@ -15,7 +15,7 @@ from models import (users,user_company_companylocation ,
                     permissions, user_company, payments, 
                     subscriptions, dashboards, user_dashboard_permissions, 
                     uploaded_files, file_permissions, companies, master_file, 
-                    logs, storeorders
+                    logs, storeorders, mails
                     )
 from database import get_db
 # Initialize FastAPI app
@@ -35,6 +35,7 @@ company_locations.Base.metadata.create_all(bind=engine)
 master_file.Base.metadata.create_all(bind=engine)
 logs.Base.metadata.create_all(bind=engine)
 storeorders.Base.metadata.create_all(bind=engine)
+mails.Base.metadata.create_all(bind=engine)
 
         
 db_dependency = Annotated[Session, Depends(get_db)]
@@ -71,6 +72,7 @@ app.include_router(health.router)
 app.include_router(master_upload.router)
 app.include_router(masterfile.router)
 
+
 # for the databases
 from routers import (users, 
                      company_locations,
@@ -86,7 +88,8 @@ from routers import (users,
                      file_permissions,
                      company_overview, 
                      logs,
-                     storeorders
+                     storeorders,
+                     mails
                      )
 
 app.include_router(users.router)
@@ -105,6 +108,7 @@ app.include_router(company_locations.router)
 app.include_router(company_overview.router)
 app.include_router(logs.router)
 app.include_router(storeorders.router)
+app.include_router(mails.router)
 
 
 

@@ -1249,3 +1249,7 @@ def get_company_summary(
             detail=f"Error fetching analytics dashboard data: {str(e)}"
         )
 
+
+
+
+

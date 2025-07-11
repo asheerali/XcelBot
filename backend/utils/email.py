@@ -1042,3 +1042,46 @@ async def send_order_confirmation_email(email: str, username: str, order_id: int
     await fm.send_message(message)
 
     
+
+
+
+# Updated utils/email.py - Add mail logging
+
+from sqlalchemy.orm import Session
+from datetime import time
+from crud.mails import create_mail_record_simple
+from database import get_db
+
+
+async def send_account_email(email: str, first_name: str, password: str, scheduled_time: time = time(9, 0, 0)):
+    """
+    Send account creation email and log it to the mails table
+    Default scheduled time is 9:00 AM if not specified
+    """
+    
+    # Send the actual email (your existing email sending logic)
+    try:
+        # Your email sending code here
+        print(f"Email scheduled for {email} at {scheduled_time}")  # Replace with actual email scheduling
+        
+        # Log the email to the database with scheduled time
+        db = next(get_db())
+        create_mail_record_simple(
+            db=db,
+            receiver_name=first_name,
+            receiver_email=email,
+            receiving_time=scheduled_time
+        )
+        
+    except Exception as e:
+        print(f"Error scheduling email: {e}")
+        # Still log the email attempt even if scheduling fails
+        db = next(get_db())
+        create_mail_record_simple(
+            db=db,
+            receiver_name=first_name,
+            receiver_email=email,
+            receiving_time=scheduled_time
+        )
+
+
