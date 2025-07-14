@@ -26,7 +26,10 @@ def create_user(db: Session, user: user_schema.UserCreate, background_tasks=None
 
     existing_user = db.query(user_model.User).filter(user_model.User.email == user.email).first()
     if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered.")
+        raise HTTPException(
+            status_code=400,
+            detail="The email address is already registered. Please use another one."
+        )
 
 
     if user.role != user_schema.RoleEnum.superuser and not user.company_id:
@@ -44,8 +47,14 @@ def create_user(db: Session, user: user_schema.UserCreate, background_tasks=None
         phone_number=user.phone_number,
         role=user.role,
         company_id=user.company_id,
-        isActive=user.isActive if user.isActive is not None else True  # ✅ Added isActive field
+        # isActive=user.isActive if user.isActive is not None else True  # ✅ Added isActive field
+        isActive=True if user.isActive else False,
+        
     )
+    
+    print("Creating_user:test:", db_user, raw_password, user.assigned_location, user.permissions, user.company_id)
+
+ 
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
