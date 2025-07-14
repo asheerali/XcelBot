@@ -481,16 +481,27 @@ def get_recent_storeorders_details_by_location(
     # Process each order in the list
     data = []
     for storeorder in storeorders_list:
+        created = storeorder.created_at.isoformat() if storeorder.created_at else None
+        updated = storeorder.updated_at.isoformat() if storeorder.updated_at else None
+        created_readable = storeorder.created_at.strftime('%Y-%m-%d %H:%M:%S') if storeorder.created_at else None
+        updated_readable = storeorder.updated_at.strftime('%Y-%m-%d %H:%M:%S') if storeorder.updated_at else None
+        
+        created_variable = updated if updated else created
+        created_readable_variable = updated_readable if updated_readable else created_readable
+
         order_data = {
             "id": storeorder.id,
             "company_id": storeorder.company_id,
             "company_name": company.name if company else "Unknown",
             "location_id": storeorder.location_id,
             "location_name": location.name if location else "Unknown",
-            "created_at": storeorder.created_at.isoformat() if storeorder.created_at else None,
-            "created_at_readable": storeorder.created_at.strftime('%Y-%m-%d %H:%M:%S') if storeorder.created_at else "Unknown",
+            "created_at_original": storeorder.created_at.isoformat() if storeorder.created_at else None,
+            "created_at_readable_original": storeorder.created_at.strftime('%Y-%m-%d %H:%M:%S') if storeorder.created_at else None,
+            "created_at": created_variable,
+            "created_at_readable": created_readable_variable,
             "updated_at": storeorder.updated_at.isoformat() if storeorder.updated_at else None,
-            "updated_at_readable": storeorder.updated_at.strftime('%Y-%m-%d %H:%M:%S') if storeorder.updated_at else "Unknown",
+            "updated_at_readable": storeorder.updated_at.strftime('%Y-%m-%d %H:%M:%S') if storeorder.updated_at else None,
+            "testing_created_at_show_updated_at_if_available": created_variable,
             "items_ordered": storeorder.items_ordered,
             "prev_items_ordered": storeorder.prev_items_ordered,
         }
@@ -551,8 +562,6 @@ def get_recent_storeorders_details_by_location(
     }
     
     
-
-
 
 
 
