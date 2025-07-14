@@ -140,6 +140,83 @@ def create_mail_record_from_mail(db: Session, mail: MailCreate):
 
 
 
+# def create_multiple_mail_records(db: Session, mails: List[MailCreate]):
+#     """Create multiple mail records"""
+#     created_mails = []
+
+#     for mail in mails:
+        
+#         # Handle company_id logic
+#         if mail.company_id is None:
+#             # Get company_id from the user's email
+#             user = db.query(User).filter(User.email == mail.receiver_email).first()
+#             if not user:
+#                 raise HTTPException(
+#                     status_code=status.HTTP_400_BAD_REQUEST,
+#                     detail=f"User with email {mail.receiver_email} is not registered."
+#                 )
+#             mail.company_id = user.company_id
+            
+#         elif mail.company_id > 0:
+#             # Check if user belongs to the specified company
+#             user = db.query(User).filter(User.email == mail.receiver_email).first()
+#             if not user:
+#                 raise HTTPException(
+#                     status_code=status.HTTP_400_BAD_REQUEST,
+#                     detail=f"User with email {mail.receiver_email} is not registered."
+#                 )
+            
+#             if user.company_id != mail.company_id:
+#                 raise HTTPException(
+#                     status_code=status.HTTP_400_BAD_REQUEST,
+#                     detail=f"User {mail.receiver_email} does not belong to company ID {mail.company_id}."
+#                 )
+        
+#         else:  # company_id == 0
+#             # Check if user is superuser to allow company_id = 0
+#             user = db.query(User).filter(User.email == mail.receiver_email).first()
+#             if not user:
+#                 raise HTTPException(
+#                     status_code=status.HTTP_400_BAD_REQUEST,
+#                     detail=f"User with email {mail.receiver_email} is not registered."
+#                 )
+            
+#             if user.role != "superuser":
+#                 raise HTTPException(
+#                     status_code=status.HTTP_400_BAD_REQUEST,
+#                     detail="Company ID cannot be 0. Only superusers can have company ID 0."
+#                 )
+#             # If user is superuser, keep company_id as 0
+        
+#         # Check for duplicate entry
+#         existing_mail = db.query(Mail).filter(Mail.receiver_email == mail.receiver_email).first()
+#         if existing_mail:
+#             continue  # Skip duplicates silently; or you could collect and report skipped entries
+
+#         mail_data = mail.dict()
+
+#         # Assign name based on email
+#         user = db.query(User).filter(User.email == mail.receiver_email).first()
+#         if user:
+#             mail_data["receiver_name"] = user.last_name
+#         else:
+#             company = db.query(Company).filter(Company.email == mail.receiver_email).first()
+#             if company:
+#                 mail_data["receiver_name"] = company.name
+#             else:
+#                 mail_data["receiver_name"] = "user"
+
+#         db_mail = Mail(**mail_data)
+#         db.add(db_mail)
+#         db.commit()
+#         db.refresh(db_mail)
+#         created_mails.append(db_mail)
+
+#     return created_mails
+
+
+
+
 def create_multiple_mail_records(db: Session, mails: List[MailCreate]):
     """Create multiple mail records"""
     created_mails = []
