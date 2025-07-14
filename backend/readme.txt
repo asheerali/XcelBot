@@ -82,7 +82,7 @@ for the financila summary dashboard
 
 
 for the mails schedule logic:
-to show the list of entries in the db
+to show the list of entries in the db (just change this to add company_id)
 /mails/{company_id}
 to create emails only email and time in hours and minutes
 /mails/createmails

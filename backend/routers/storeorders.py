@@ -1216,7 +1216,7 @@ def get_company_summary(
             if not order.created_at or not order.location_id:
                 continue
 
-            date = order.created_at.date()
+            date = order.created_at
             store_id = order.location_id
             store_name = location_lookup.get(store_id, f"Store {store_id}")
 
