@@ -5,11 +5,13 @@ from datetime import datetime
 from passlib.hash import bcrypt
 from fastapi import HTTPException
 
+from models.permissions import Permission
 from models import users as user_model
 from schemas import users as user_schema
-from schemas.user_company import UserCompanyCreate
+from schemas.user_company import UserCompany, UserCompanyCreate
 from schemas.user_company_companylocation import UserCompanyCompanyLocationCreate
 from schemas.permissions import PermissionCreate
+
 
 from crud.user_company import create_user_company
 from crud.permissions import create_permission
@@ -80,7 +82,7 @@ def create_user(db: Session, user: user_schema.UserCreate, background_tasks=None
         "product_mix": "d2",
         "finance": "d3",
         "sales_wide": "d4",
-        "user_management": "d5",
+        "oderiq": "d5",
         "location_management": "d6",
         "reporting": "d7",
         "excel_upload": "upload_excel"
@@ -131,23 +133,87 @@ def get_user(db: Session, user_id: int):
     return db.query(user_model.User).filter(user_model.User.id == user_id).first()
 
 
+# def update_user(db: Session, user_id: int, user: user_schema.UserCreate):
+#     db_user = get_user(db, user_id)
+#     if not db_user:
+#         return None
+
+#     db_user.first_name = user.first_name
+#     db_user.last_name = user.last_name
+#     db_user.email = user.email
+#     db_user.password_hash = bcrypt.hash(user.password)
+#     db_user.phone_number = user.phone_number
+#     db_user.role = user.role
+#     db_user.isActive = user.isActive if user.isActive is not None else db_user.isActive  # ✅ Added isActive update
+#     db_user.updated_at = datetime.utcnow()
+#     db.commit()
+#     db.refresh(db_user)
+
+#     # ✅ Reassign locations
+#     if user.assigned_location is not None:
+#         delete_user_location_mappings(db, db_user.id)
+#         for location_id in user.assigned_location:
+#             create_user_location_mapping(db, UserCompanyCompanyLocationCreate(
+#                 user_id=db_user.id,
+#                 company_location_id=location_id
+#             ))
+
+#     return db_user
+
+
+
 def update_user(db: Session, user_id: int, user: user_schema.UserCreate):
     db_user = get_user(db, user_id)
     if not db_user:
         return None
 
-    db_user.first_name = user.first_name
-    db_user.last_name = user.last_name
-    db_user.email = user.email
-    db_user.password_hash = bcrypt.hash(user.password)
-    db_user.phone_number = user.phone_number
-    db_user.role = user.role
-    db_user.isActive = user.isActive if user.isActive is not None else db_user.isActive  # ✅ Added isActive update
+    # ✅ Add the same company validation as create_user
+    if user.role != user_schema.RoleEnum.superuser and not user.company_id:
+        raise HTTPException(status_code=400, detail="Non-superuser accounts must be associated with a company.")
+
+    # ✅ Only update fields that are provided (not None)
+    if user.first_name is not None:
+        db_user.first_name = user.first_name
+    if user.last_name is not None:
+        db_user.last_name = user.last_name
+    if user.email is not None:
+        db_user.email = user.email
+    
+    # ✅ Only hash password if it's provided and not empty
+    if user.password and user.password.strip():
+        db_user.password_hash = bcrypt.hash(user.password)
+    
+    if user.phone_number is not None:
+        db_user.phone_number = user.phone_number
+    if user.role is not None:
+        db_user.role = user.role
+    if user.isActive is not None:
+        db_user.isActive = user.isActive
+    
     db_user.updated_at = datetime.utcnow()
+
+    # ✅ Update company association if provided
+    if user.company_id is not None and user.company_id != db_user.company_id:
+        db_user.company_id = user.company_id
+        
+        # Update or create user-company relationship
+        existing_user_company = db.query(UserCompany).filter(
+            UserCompany.user_id == db_user.id
+        ).first()
+        
+        if existing_user_company:
+            existing_user_company.company_id = user.company_id
+        else:
+            user_company_data = UserCompanyCreate(
+                user_id=db_user.id,
+                company_id=user.company_id
+            )
+            create_user_company(db, user_company_data)
+
     db.commit()
     db.refresh(db_user)
 
-    # ✅ Reassign locations
+    # ✅ Update location mappings if provided
     if user.assigned_location is not None:
         delete_user_location_mappings(db, db_user.id)
         for location_id in user.assigned_location:
@@ -156,7 +222,52 @@ def update_user(db: Session, user_id: int, user: user_schema.UserCreate):
                 company_location_id=location_id
             ))
 
+    # ✅ Update permissions if provided
+    if user.permissions is not None:
+        PERMISSION_MAP = {
+            "sales_split": "d1",
+            "product_mix": "d2",
+            "finance": "d3",
+            "sales_wide": "d4",
+            "orderiq": "d5",
+            "location_management": "d6",
+            "reporting": "d7",
+            "excel_upload": "upload_excel"
+        }
+
+        # Delete existing permissions
+        existing_permission = db.query(Permission).filter(
+            Permission.user_id == db_user.id
+        ).first()
+        
+        if existing_permission:
+            db.delete(existing_permission)
+            db.commit()
+
+        # Create new permissions
+        permission_kwargs = {
+            "company_id": db_user.company_id,
+            "user_id": db_user.id,
+            "upload_excel": False,
+            "d1": False,
+            "d2": False,
+            "d3": False,
+            "d4": False,
+            "d5": False,
+            "d6": False,
+            "d7": False
+        }
+
+        for perm in user.permissions:
+            backend_field = PERMISSION_MAP.get(perm)
+            if backend_field:
+                permission_kwargs[backend_field] = True
+
+        permission_data = PermissionCreate(**permission_kwargs)
+        create_permission(db, permission_data)
+
     return db_user
+
 
 
 def delete_user(db: Session, user_id: int):
