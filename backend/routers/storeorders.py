@@ -950,7 +950,7 @@ def get_analytics_dashboard(
         rows = []
         for order in storeorders:
             print("i am here in the store orders printing the _items_ordered_", order)
-            created_date = order.created_at.date()
+            created_date = order.created_at
             total_amount = 0.0
             total_quantity = 0
 
