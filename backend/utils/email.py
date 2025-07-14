@@ -4,6 +4,25 @@ from models.email_config import fm
 import asyncio
 from fastapi_mail import MessageSchema
 
+# Updated utils/email.py - Add mail logging
+from sqlalchemy.orm import Session
+from datetime import time
+from crud.mails import create_mail_record_simple
+from database import get_db
+from crud import storeorders as storeorders_crud
+from models.locations import Store
+from collections import defaultdict
+
+from database import SessionLocal
+import pandas as pd
+import os
+from datetime import datetime
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+
 async def send_account_email(email: str, username: str, password: str):
     subject = "Welcome to KPI360.ai - Your Account Credentials"
     
@@ -509,15 +528,6 @@ async def send_order_confirmation_email(email: str, username: str, order_id: int
 
 
 
-# Updated utils/email.py - Add mail logging
-from sqlalchemy.orm import Session
-from datetime import time
-from crud.mails import create_mail_record_simple
-from database import get_db
-from crud import storeorders as storeorders_crud
-from models.locations import Store
-from collections import defaultdict
-
 
 def get_consolidated_production(company_id: int, db: Session):
     try:
@@ -571,197 +581,13 @@ def get_consolidated_production(company_id: int, db: Session):
 
 
 
-# from database import SessionLocal
-
-# def send_actual_email(to: str, name: str, company_id: int = None):
-#     db = SessionLocal()
-#     try:
-#         company_id = 1
-#         data = get_consolidated_production(company_id, db)
-#         print("This is the data which I want to print:", data)
-
-#         # Generate HTML table from the data - DYNAMIC VERSION
-#         def generate_production_table(data):
-#             if not data or 'data' not in data or not data['data']:
-#                 return "<p>No production data available.</p>"
-            
-#             # Get columns dynamically from the data
-#             columns = data.get('columns', [])
-#             if not columns and data['data']:
-#                 # If columns not provided, extract from first row
-#                 columns = list(data['data'][0].keys())
-            
-#             if not columns:
-#                 return "<p>No columns found in data.</p>"
-            
-#             # Start building the table
-#             table_html = """
-#             <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
-#                 <thead>
-#                     <tr style="background-color: #f8f9fa;">
-#             """
-            
-#             # Generate header row dynamically
-#             for col in columns:
-#                 # Special styling for specific column types
-#                 if 'total' in col.lower() or 'required' in col.lower() or 'sum' in col.lower():
-#                     header_style = "border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold; background-color: #e8f5e8;"
-#                 else:
-#                     header_style = "border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;"
-                
-#                 table_html += f'<th style="{header_style}">{col}</th>'
-            
-#             table_html += """
-#                     </tr>
-#                 </thead>
-#                 <tbody>
-#             """
-            
-#             # Generate data rows dynamically
-#             for row_index, item in enumerate(data['data']):
-#                 # Alternate row colors for better readability
-#                 row_bg = "#f9f9f9" if row_index % 2 == 0 else "#ffffff"
-                
-#                 table_html += f'<tr style="background-color: {row_bg};">'
-                
-#                 for col_index, col in enumerate(columns):
-#                     cell_value = item.get(col, "")
-                    
-#                     # Smart styling based on column type and content
-#                     if 'total' in col.lower() or 'required' in col.lower() or 'sum' in col.lower():
-#                         # Highlight total/required columns in green
-#                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center; background-color: #e8f5e8; font-weight: bold;"
-#                     elif col_index == 0:  # First column (usually item name)
-#                         # Check if any store column has a value for this row to highlight the item
-#                         has_store_value = any(
-#                             isinstance(item.get(c, 0), (int, float)) and item.get(c, 0) > 0 
-#                             for c in columns[1:-2] if 'store' in c.lower() or 'location' in c.lower() or 'shop' in c.lower()
-#                         )
-#                         if has_store_value:
-#                             cell_style = "border: 1px solid #ddd; padding: 12px; text-align: left; background-color: #fff3cd;"
-#                         else:
-#                             cell_style = "border: 1px solid #ddd; padding: 12px; text-align: left;"
-#                     elif isinstance(cell_value, (int, float)) and cell_value > 0:
-#                         # Highlight cells with positive values (like store quantities)
-#                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center; background-color: #fff3cd;"
-#                     elif col.lower() in ['unit', 'units', 'type', 'category']:
-#                         # Unit/type columns - center aligned, no highlighting
-#                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center;"
-#                     else:
-#                         # Default styling
-#                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center;"
-                    
-#                     table_html += f'<td style="{cell_style}">{cell_value}</td>'
-                
-#                 table_html += "</tr>"
-            
-#             table_html += """
-#                 </tbody>
-#             </table>
-#             """
-            
-#             return table_html
-
-#         production_table = generate_production_table(data)
-        
-#         subject = "Consolidated Production Requirements"
-#         html_body = f"""
-#         <html>
-#         <head>
-#             <style>
-#                 body {{
-#                     font-family: Arial, sans-serif;
-#                     line-height: 1.6;
-#                     color: #333;
-#                     max-width: 1200px;
-#                     margin: 0 auto;
-#                     padding: 20px;
-#                 }}
-#                 .header {{
-#                     background-color: #f8f9fa;
-#                     padding: 20px;
-#                     border-radius: 5px;
-#                     margin-bottom: 20px;
-#                     text-align: center;
-#                 }}
-#                 .footer {{
-#                     margin-top: 30px;
-#                     padding-top: 20px;
-#                     border-top: 1px solid #ddd;
-#                 }}
-#                 .table-container {{
-#                     overflow-x: auto;
-#                 }}
-#                 @media screen and (max-width: 600px) {{
-#                     .table-container {{
-#                         font-size: 12px;
-#                     }}
-#                 }}
-#             </style>
-#         </head>
-#         <body>
-#             <div class="header">
-#                 <h2>Consolidated Production Requirements</h2>
-#             </div>
-            
-#             <h3>Hello {name},</h3>
-#             <p>Please find below the consolidated production requirements for all stores:</p>
-            
-#             <div class="table-container">
-#                 {production_table}
-#             </div>
-            
-#             <div class="footer">
-#                 <p>This report shows the total quantities needed for production across all stores.</p>
-#                 <p><strong>Legend:</strong></p>
-#                 <ul>
-#                     <li>🟡 <strong>Yellow highlighted cells:</strong> Items required by specific stores</li>
-#                     <li>🟢 <strong>Green highlighted columns:</strong> Total/Required quantities</li>
-#                     <li>📊 <strong>Alternating row colors:</strong> For better readability</li>
-#                 </ul>
-#                 <p>This report automatically adapts to your data structure.</p>
-                
-#                 <p>Regards,<br><strong>KPI360.ai Team</strong></p>
-#             </div>
-#         </body>
-#         </html>
-#         """
-
-#         message = MessageSchema(
-#             subject=subject,
-#             recipients=[to],
-#             body=html_body,
-#             subtype="html"
-#         )
-
-#         async def send():
-#             await fm.send_message(message)
-
-#         asyncio.run(send())
-#         print(f"Production requirements email sent successfully to {to}")
-#     except Exception as e:
-#         print(f"Failed to send production requirements email to {to}: {e}")
-#     finally:
-#         db.close()        
-        
-
-
-from database import SessionLocal
-import pandas as pd
-import os
-from datetime import datetime
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-# Removed unnecessary imports since we're using your existing email system
-
 def send_actual_email(to: str, name: str, company_id: int = None):
     db = SessionLocal()
     try:
         company_id = 1
         data = get_consolidated_production(company_id, db)
+        
+        
         print("This is the data which I want to print:", data)
 
         # Generate timestamp for file names

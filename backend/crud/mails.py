@@ -8,6 +8,7 @@ from models.companies import Company
 from models.users import User
 from models.mails import Mail
 from schemas.mails import MailCreate
+from fastapi import status
 from schemas.mails import MailUpdate
 
 
@@ -35,6 +36,13 @@ def create_mail_record_simple(db: Session, receiver_name: str, receiver_email: s
 def get_mails(db: Session, skip: int = 0, limit: int = 100):
     """Get all mail records"""
     return db.query(Mail).offset(skip).limit(limit).all()
+
+
+# Updated CRUD function
+def get_mails_by_company_id(db: Session, company_id: int, skip: int = 0, limit: int = 100):
+    """Get mail records by company_id"""
+    return db.query(Mail).filter(Mail.company_id == company_id).offset(skip).limit(limit).all()
+
 
 
 def get_mail_by_id(db: Session, mail_id: int):
@@ -100,7 +108,6 @@ def get_mails_by_company(db: Session, company_id: int):
 
 
 
-
 def create_mail_record_from_mail(db: Session, mail: MailCreate):
     """Create a mail record in the database"""
     print("Creating mail record from MailCreate schema", mail)
@@ -132,11 +139,55 @@ def create_mail_record_from_mail(db: Session, mail: MailCreate):
 
 
 
+
 def create_multiple_mail_records(db: Session, mails: List[MailCreate]):
     """Create multiple mail records"""
     created_mails = []
 
     for mail in mails:
+        
+        # Handle company_id logic
+        if mail.company_id is None:
+            # Get company_id from the user's email
+            user = db.query(User).filter(User.email == mail.receiver_email).first()
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"User with email {mail.receiver_email} is not registered."
+                )
+            mail.company_id = user.company_id
+            
+        elif mail.company_id > 0:
+            # Check if user belongs to the specified company
+            user = db.query(User).filter(User.email == mail.receiver_email).first()
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"User with email {mail.receiver_email} is not registered."
+                )
+            
+            if user.company_id != mail.company_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"User {mail.receiver_email} does not belong to company ID {mail.company_id}."
+                )
+        
+        else:  # company_id == 0
+            # Check if user is superuser to allow company_id = 0
+            user = db.query(User).filter(User.email == mail.receiver_email).first()
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"User with email {mail.receiver_email} is not registered."
+                )
+            
+            if user.role != "superuser":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Company ID cannot be 0. Only superusers can have company ID 0."
+                )
+            # If user is superuser, keep company_id as 0
+        
         # Check for duplicate entry
         existing_mail = db.query(Mail).filter(Mail.receiver_email == mail.receiver_email).first()
         if existing_mail:
@@ -162,6 +213,7 @@ def create_multiple_mail_records(db: Session, mails: List[MailCreate]):
         created_mails.append(db_mail)
 
     return created_mails
+
 
 
 def update_mail(db: Session, mail_id: int, update_data: MailUpdate):
@@ -205,3 +257,7 @@ def update_mail(db: Session, mail_id: int, update_data: MailUpdate):
     db.commit()
     db.refresh(mail_record)
     return mail_record
+
+
+
+

@@ -83,7 +83,7 @@ for the financila summary dashboard
 
 for the mails schedule logic:
 to show the list of entries in the db
-/mails
+/mails/{company_id}
 to create emails only email and time in hours and minutes
 /mails/createmails
 Delete entries by emails
@@ -97,3 +97,6 @@ mail/updatemail/{mail_id}
 
 ai suggestions
 /api/storeorders/aisuggestions/{company_id}/{location_id}
+
+
+issues with dates
