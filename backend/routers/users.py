@@ -75,6 +75,7 @@ def update_user(
     db: Session = Depends(get_db),
     current_user: user_schema.User = Depends(get_current_user)
 ):
+    print("Updating_user:", user_id, user, db, current_user)
     target_user = user_crud.get_user(db, user_id)
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
