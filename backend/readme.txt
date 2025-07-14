@@ -97,10 +97,3 @@ mail/updatemail/{mail_id}
 
 ai suggestions
 /api/storeorders/aisuggestions/{company_id}/{location_id}
-
-
-issues with dates
-
-
-http://localhost:8000/api/storeorders/companysummary/1
-http://localhost:8000/api/storeorders/allordersinvoices/1/2
