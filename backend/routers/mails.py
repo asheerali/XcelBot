@@ -45,6 +45,8 @@ def get_mails(
 
 
 
+
+
 @router.post("/createmails", response_model=List[mail_schema.Mail])
 def create_mails_with_company(
     mails: List[mail_schema.MailCreate],
@@ -78,6 +80,17 @@ def get_mails_by_company(
 
 
 
+# Updated endpoint
+@router.get("/remainingmails/{company_id}", response_model=List[str])
+def get_remaining_mails(
+    company_id: int,
+    db: Session = Depends(get_db),
+    # current_user: User = Depends(get_current_user)
+):
+    """Get users and companies that are not in the mails table for a specific company"""
+    return mail_crud.get_remaining_mails_by_company(db, company_id=company_id)
+
+    
 
 from schemas.mails import MailUpdate
 
