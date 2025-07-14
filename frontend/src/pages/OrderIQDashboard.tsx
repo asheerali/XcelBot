@@ -498,7 +498,15 @@ const OrderIQDashboard = () => {
           ? (order.items_ordered.items.reduce((sum, item) => sum + item.total_price, 0) / order.items_ordered.items.length) 
           : 0,
         qty: order.items_ordered?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0,
-        date: new Date(order.created_at).toLocaleDateString('en-GB'),
+        date: new Date(order.created_at).toLocaleString('en-US', {
+  month: 'numeric',
+  day: 'numeric', 
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: true
+}),
+        // date: new Date(order.created_at).toLocaleDateString(),
         created_at: order.created_at,
         company_name: order.company_name,
         location_name: order.location_name,

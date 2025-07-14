@@ -100,3 +100,7 @@ ai suggestions
 
 
 issues with dates
+
+
+http://localhost:8000/api/storeorders/companysummary/1
+http://localhost:8000/api/storeorders/allordersinvoices/1/2

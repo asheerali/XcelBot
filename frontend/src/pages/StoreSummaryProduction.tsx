@@ -56,6 +56,7 @@ import {
   Send as SendIcon,
   PersonAdd as PersonAddIcon
 } from '@mui/icons-material';
+import { DateTime } from 'luxon';
 
 // Import Redux hooks and selectors
 import { useAppDispatch, useAppSelector } from '../typedHooks';
@@ -911,7 +912,18 @@ const StoreSummaryProduction = () => {
         
         <div class="order-summary">
           <div><strong>Order ID:</strong> ${order.order_id}</div>
-          <div><strong>Order Date:</strong> ${new Date(order.created_at).toLocaleDateString()}</div>
+          // <div><strong>Order Date:</strong> ${new Date(order.created_at).toLocaleDateString()}</div>
+<div>
+  <strong>Order Date:</strong>{' '}
+  ${new Date(order.created_at).toLocaleString('en-US', {
+    month: 'numeric',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  })}
+</div>
           <div><strong>Items Count:</strong> ${order.items_count}</div>
           <div><strong>Total Quantity:</strong> ${order.total_quantity}</div>
           <div><strong>Total Amount:</strong> $${order.total_amount.toFixed(2)}</div>
@@ -1124,7 +1136,7 @@ const generateConsolidatedReport = () => {
 
   // Show empty state when no data
   const showEmptyState = !loading && ordersData.length === 0 && selectedCompanies.length > 0 && selectedLocations.length > 0 && dataLoaded;
-
+  console.log('ordersData:', ordersData);
   // Combined error from Redux and local state
   const displayError = error || localError;
 
@@ -1461,6 +1473,8 @@ const generateConsolidatedReport = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
+                
+        
                     {ordersData.map((order) => (
                       <TableRow key={order.order_id} hover>
                         <TableCell>
@@ -1470,7 +1484,11 @@ const generateConsolidatedReport = () => {
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">
-                            {new Date(order.created_at).toLocaleDateString()}
+                        <Typography variant="body2">
+                        {new Date(order.created_at.split('.')[0]).toLocaleString('en-US')}
+                         </Typography>
+
+             
                           </Typography>
                         </TableCell>
                         <TableCell>{order.items_count}</TableCell>
