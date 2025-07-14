@@ -962,49 +962,131 @@ const CompanyLocationManager: React.FC = () => {
     setDialogOpen(true);
   };
 
-  const handleEditUser = (company_id: number, user: User) => {
-    console.log("✏️ Editing User - Raw user data from API:", user);
-    console.log("📊 User properties available:", Object.keys(user));
+ // Add this improved handleEditUser function to replace the existing one
 
-    setDialogMode("edit");
-    setEntityType("user");
-    setSelectedCompany(companies.find((c) => c.id === company_id) || null);
-    setSelectedUser(user); // Set the selected user
+const handleEditUser = (company_id: number, user: User) => {
+  console.log("✏️ Editing User - Raw user data from API:", user);
+  console.log("📊 User properties available:", Object.keys(user));
+  console.log("🎭 User role from API:", user.role);
 
-    // Handle both API structures - when API returns 'name' field, try to split it
-    let firstName = "";
-    let lastName = "";
+  setDialogMode("edit");
+  setEntityType("user");
+  setSelectedCompany(companies.find((c) => c.id === company_id) || null);
+  setSelectedUser(user);
 
-    if (user.first_name && user.last_name) {
-      // API returns separate first_name and last_name
-      firstName = user.first_name;
-      lastName = user.last_name;
-    } else if (user.name) {
-      // API returns single 'name' field - try to split it
-      const nameParts = user.name.trim().split(" ");
-      firstName = nameParts[0] || "";
-      lastName = nameParts.slice(1).join(" ") || "";
-    }
+  // Handle both API structures - when API returns 'name' field, try to split it
+  let firstName = "";
+  let lastName = "";
 
-    // More robust form population with fallbacks
-    const formData = {
-      first_name: firstName,
-      last_name: lastName,
-      email: user.email || "",
-      phone_number: user.phone_number || "",
-      role: user.role || "",
-      permissions: Array.isArray(user.permissions) ? user.permissions : [],
-      assignedLocations: Array.isArray(user.assignedLocations)
-        ? user.assignedLocations
-        : [],
-      company_id: company_id,
-      isActive: user.isActive !== undefined ? user.isActive : true, // Add this line to handle isActive
-    };
+  if (user.first_name && user.last_name) {
+    firstName = user.first_name;
+    lastName = user.last_name;
+  } else if (user.name) {
+    const nameParts = user.name.trim().split(" ");
+    firstName = nameParts[0] || "";
+    lastName = nameParts.slice(1).join(" ") || "";
+  }
 
-    console.log("📝 Setting form data for edit:", formData);
-    setUserForm(formData);
-    setDialogOpen(true);
+  // Normalize the role to match our predefined roles
+  const normalizeRole = (roleFromAPI: string) => {
+    if (!roleFromAPI) return "";
+    
+    const roleLower = roleFromAPI.toLowerCase().trim();
+    
+    // Check if the role matches any of our predefined roles
+    const matchingRole = USER_ROLES.find(role => 
+      role.value.toLowerCase() === roleLower ||
+      role.label.toLowerCase() === roleLower
+    );
+    
+    return matchingRole ? matchingRole.value : roleFromAPI;
   };
+
+  const normalizedRole = normalizeRole(user.role || "");
+  console.log("🔄 Normalized role:", normalizedRole);
+  console.log("📋 Available roles:", USER_ROLES.map(r => r.value));
+
+  const formData = {
+    first_name: firstName,
+    last_name: lastName,
+    email: user.email || "",
+    phone_number: user.phone_number || "",
+    role: normalizedRole,
+    permissions: Array.isArray(user.permissions) ? user.permissions : [],
+    assignedLocations: Array.isArray(user.assignedLocations)
+      ? user.assignedLocations
+      : [],
+    company_id: company_id,
+    isActive: user.isActive !== undefined ? user.isActive : true,
+  };
+
+  console.log("📝 Setting form data for edit:", formData);
+  setUserForm(formData);
+  setDialogOpen(true);
+};
+
+// Also update the Role Select component in the dialog to include better debugging and fallback
+
+// Replace the existing Role Select section with this improved version:
+<Grid item xs={12}>
+  <FormControl fullWidth>
+    <InputLabel>👔 Role *</InputLabel>
+    <Select
+      value={userForm.role}
+      label="👔 Role *"
+      onChange={(e) => {
+        console.log("🎭 Role changed to:", e.target.value);
+        setUserForm({ ...userForm, role: e.target.value });
+      }}
+      displayEmpty
+    >
+      {/* Add empty option if role doesn't match any predefined roles */}
+      {userForm.role && !USER_ROLES.find(role => role.value === userForm.role) && (
+        <MenuItem value={userForm.role} disabled>
+          <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
+            <Chip
+              label={`${userForm.role} (Unknown Role)`}
+              sx={{
+                backgroundColor: "#9e9e9e",
+                color: "white",
+                fontWeight: 600,
+                mr: 1,
+              }}
+            />
+          </Box>
+        </MenuItem>
+      )}
+      {USER_ROLES.map((role) => (
+        <MenuItem key={role.value} value={role.value}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              width: "100%",
+            }}
+          >
+            <Chip
+              label={role.label}
+              sx={{
+                backgroundColor: role.color,
+                color: "white",
+                fontWeight: 600,
+                mr: 1,
+              }}
+            />
+          </Box>
+        </MenuItem>
+      ))}
+    </Select>
+  </FormControl>
+  {/* Debug info - remove this after fixing */}
+  {process.env.NODE_ENV === 'development' && (
+    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+      🐛 Debug: Current role value = "{userForm.role}" | 
+      Matches predefined role: {USER_ROLES.find(r => r.value === userForm.role) ? 'Yes' : 'No'}
+    </Typography>
+  )}
+</Grid>
 
   const handleDeleteUser = async (userId: number) => {
     const user = companies.flatMap((c) => c.users).find((u) => u.id === userId);
