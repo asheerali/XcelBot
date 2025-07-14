@@ -54,7 +54,8 @@ import {
   Edit as EditIcon,
   Add as AddIcon,
   Send as SendIcon,
-  PersonAdd as PersonAddIcon
+  PersonAdd as PersonAddIcon,
+  AccessTime as AccessTimeIcon
 } from '@mui/icons-material';
 import { DateTime } from 'luxon';
 
@@ -132,7 +133,6 @@ interface EmailListItem {
   selected: boolean;
   name: string;
   nameMode: 'auto' | 'manual';
-  time: string;
 }
 
 // Helper function to format time to HH:MM
@@ -305,6 +305,9 @@ const StoreSummaryProduction = () => {
   const [customEmail, setCustomEmail] = useState('');
   const [selectAll, setSelectAll] = useState(false);
   
+  // Global time scheduler state
+  const [globalScheduledTime, setGlobalScheduledTime] = useState('09:00');
+  
   // Date range selector state
   const [selectedDateRange, setSelectedDateRange] = useState(null);
 
@@ -446,11 +449,17 @@ const StoreSummaryProduction = () => {
     }
   };
 
-  // Email Scheduler functions
+  // Email Scheduler functions - UPDATED to include company ID
   const fetchScheduledEmails = async () => {
+    if (selectedCompanies.length === 0) {
+      setLocalError('Please select a company first');
+      return;
+    }
+
     setEmailSchedulerLoading(true);
     try {
-      const response = await fetch(`${API_URL_Local}/mails`);
+      const companyId = selectedCompanies[0];
+      const response = await fetch(`${API_URL_Local}/mails/${companyId}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -527,28 +536,31 @@ const StoreSummaryProduction = () => {
   };
 
   const handleOpenEmailScheduler = () => {
+    if (selectedCompanies.length === 0) {
+      setLocalError('Please select a company first');
+      return;
+    }
     setEmailSchedulerDialog(true);
     fetchScheduledEmails();
   };
 
-  // Create Mails functions
+  // Create Mails functions - UPDATED to include company ID
   const fetchEmailsList = async (companyId: string) => {
     setCreateMailsLoading(true);
     try {
-      const response = await fetch(`${API_URL_Local}/mails/mailslist/${companyId}`);
+      const response = await fetch(`${API_URL_Local}/mails/remainingmails/${companyId}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const emails: string[] = await response.json();
       setEmailsList(emails);
       
-      // Initialize email list items
+      // Initialize email list items WITHOUT individual time fields
       const items: EmailListItem[] = emails.map(email => ({
         email,
         selected: false,
         name: generateAutoName(email),
-        nameMode: 'auto',
-        time: '09:00'
+        nameMode: 'auto'
       }));
       setEmailListItems(items);
       
@@ -608,14 +620,6 @@ const StoreSummaryProduction = () => {
     });
   };
 
-  const handleTimeChange = (index: number, time: string) => {
-    setEmailListItems(prev => {
-      const newItems = [...prev];
-      newItems[index].time = time;
-      return newItems;
-    });
-  };
-
   const handleAddCustomEmail = () => {
     if (!customEmail || !customEmail.includes('@')) {
       setLocalError('Please enter a valid email address');
@@ -632,8 +636,7 @@ const StoreSummaryProduction = () => {
       email: customEmail,
       selected: true,
       name: generateAutoName(customEmail),
-      nameMode: 'auto',
-      time: '09:00'
+      nameMode: 'auto'
     };
 
     setEmailListItems(prev => [...prev, newItem]);
@@ -649,19 +652,25 @@ const StoreSummaryProduction = () => {
       return;
     }
 
+    if (!globalScheduledTime) {
+      setLocalError('Please set a scheduled time');
+      return;
+    }
+
     try {
       setCreateMailsLoading(true);
       
-      // Prepare data for API - send as array directly
+      // Prepare data for API using global time for all emails
       const mailsData = selectedItems.map(item => ({
         receiver_name: item.name,
         receiver_email: item.email,
-        receiving_time: item.time
+        receiving_time: globalScheduledTime
       }));
 
       console.log('=== CREATE MAILS REQUEST ===');
       console.log('URL:', `${API_URL_Local}/mails/createmails`);
       console.log('Request Body:', JSON.stringify(mailsData, null, 2));
+      console.log('Global Scheduled Time Applied:', globalScheduledTime);
 
       const response = await fetch(`${API_URL_Local}/mails/createmails`, {
         method: 'POST',
@@ -688,11 +697,12 @@ const StoreSummaryProduction = () => {
       setEmailListItems([]);
       setCustomEmail('');
       setSelectAll(false);
+      setGlobalScheduledTime('09:00'); // Reset to default
       
       // Refresh the scheduled emails list
       await fetchScheduledEmails();
       
-      alert(`Successfully created ${selectedItems.length} scheduled emails!`);
+      alert(`Successfully created ${selectedItems.length} scheduled emails at ${globalScheduledTime}!`);
       
     } catch (err) {
       console.error('Error creating mails:', err);
@@ -912,21 +922,20 @@ const StoreSummaryProduction = () => {
         
         <div class="order-summary">
           <div><strong>Order ID:</strong> ${order.order_id}</div>
-          // <div><strong>Order Date:</strong> ${new Date(order.created_at).toLocaleDateString()}</div>
-<div>
-  <strong>Order Date:</strong>{' '}
-  ${new Date(order.created_at).toLocaleString('en-US', {
-    month: 'numeric',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  })}
-</div>
+          <div>
+            <strong>Order Date:</strong>{' '}
+            ${new Date(order.created_at).toLocaleString('en-US', {
+              month: 'numeric',
+              day: 'numeric',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true,
+            })}
+          </div>
           <div><strong>Items Count:</strong> ${order.items_count}</div>
           <div><strong>Total Quantity:</strong> ${order.total_quantity}</div>
-          <div><strong>Total Amount:</strong> $${order.total_amount.toFixed(2)}</div>
+          <div><strong>Total Amount:</strong> ${order.total_amount.toFixed(2)}</div>
         </div>
         
         <div class="footer">
@@ -1473,8 +1482,6 @@ const generateConsolidatedReport = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                
-        
                     {ordersData.map((order) => (
                       <TableRow key={order.order_id} hover>
                         <TableCell>
@@ -1484,11 +1491,7 @@ const generateConsolidatedReport = () => {
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">
-                        <Typography variant="body2">
-                        {new Date(order.created_at.split('.')[0]).toLocaleString('en-US')}
-                         </Typography>
-
-             
+                            {new Date(order.created_at.split('.')[0]).toLocaleString('en-US')}
                           </Typography>
                         </TableCell>
                         <TableCell>{order.items_count}</TableCell>
@@ -1614,7 +1617,7 @@ const generateConsolidatedReport = () => {
         </Card>
       )}
 
-      {/* Create Mails Dialog */}
+      {/* Create Mails Dialog - UPDATED with Global Time Scheduler */}
       <Dialog 
         open={createMailsDialog} 
         onClose={() => {
@@ -1622,6 +1625,7 @@ const generateConsolidatedReport = () => {
           setEmailListItems([]);
           setCustomEmail('');
           setSelectAll(false);
+          setGlobalScheduledTime('09:00');
         }}
         maxWidth="lg" 
         fullWidth
@@ -1646,6 +1650,7 @@ const generateConsolidatedReport = () => {
                 setEmailListItems([]);
                 setCustomEmail('');
                 setSelectAll(false);
+                setGlobalScheduledTime('09:00');
               }}
               size="small"
             >
@@ -1660,6 +1665,31 @@ const generateConsolidatedReport = () => {
             </Box>
           ) : (
             <Box>
+              {/* Global Time Scheduler Section */}
+              <Box sx={{ mb: 3, p: 2, border: '2px solid #1976d2', borderRadius: 1, backgroundColor: '#e3f2fd' }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <AccessTimeIcon color="primary" />
+                  Global Scheduled Time
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <TextField
+                    label="Scheduled Time"
+                    type="time"
+                    value={globalScheduledTime}
+                    onChange={(e) => setGlobalScheduledTime(e.target.value)}
+                    sx={{ minWidth: 150 }}
+                    size="small"
+                    InputLabelProps={{
+                      shrink: true,
+                    }}
+                    helperText="This time will be applied to all selected emails"
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    All selected emails will be scheduled at <strong>{globalScheduledTime}</strong>
+                  </Typography>
+                </Box>
+              </Box>
+
               {/* Add Custom Email Section */}
               <Box sx={{ mb: 3, p: 2, border: '1px solid #e0e0e0', borderRadius: 1, backgroundColor: '#f9f9f9' }}>
                 <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
@@ -1720,7 +1750,7 @@ const generateConsolidatedReport = () => {
                     />
                   </Box>
 
-                  {/* Emails Table */}
+                  {/* Emails Table - UPDATED without individual time columns */}
                   <TableContainer component={Paper} variant="outlined">
                     <Table size="small">
                       <TableHead>
@@ -1729,7 +1759,6 @@ const generateConsolidatedReport = () => {
                           <TableCell sx={{ fontWeight: 600 }}>Email Address</TableCell>
                           <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
                           <TableCell sx={{ fontWeight: 600 }}>Name Mode</TableCell>
-                          <TableCell sx={{ fontWeight: 600 }}>Time (HH:MM)</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -1777,18 +1806,6 @@ const generateConsolidatedReport = () => {
                                 </RadioGroup>
                               </FormControl>
                             </TableCell>
-                            <TableCell>
-                              <TextField
-                                type="time"
-                                value={item.time}
-                                onChange={(e) => handleTimeChange(index, e.target.value)}
-                                size="small"
-                                sx={{ minWidth: 130 }}
-                                InputLabelProps={{
-                                  shrink: true,
-                                }}
-                              />
-                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -1802,7 +1819,7 @@ const generateConsolidatedReport = () => {
         <DialogActions sx={{ p: 3, borderTop: '1px solid #e0e0e0' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
             <Typography variant="body2" color="text.secondary">
-              {emailListItems.filter(item => item.selected).length} emails selected for scheduling
+              {emailListItems.filter(item => item.selected).length} emails selected for scheduling at {globalScheduledTime}
             </Typography>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <Button 
@@ -1811,6 +1828,7 @@ const generateConsolidatedReport = () => {
                   setEmailListItems([]);
                   setCustomEmail('');
                   setSelectAll(false);
+                  setGlobalScheduledTime('09:00');
                 }}
                 variant="outlined"
               >
@@ -1829,7 +1847,7 @@ const generateConsolidatedReport = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Email Scheduler Dialog */}
+      {/* Email Scheduler Dialog - UPDATED to use company ID in API calls */}
       <Dialog 
         open={emailSchedulerDialog} 
         onClose={() => setEmailSchedulerDialog(false)}
@@ -1841,6 +1859,14 @@ const generateConsolidatedReport = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <ScheduleIcon color="primary" />
               <Typography variant="h6">Email Scheduler</Typography>
+              {selectedCompanies.length > 0 && (
+                <Chip 
+                  label={getCompanyName(selectedCompanies[0])} 
+                  size="small" 
+                  variant="outlined" 
+                  color="secondary"
+                />
+              )}
             </Box>
             <IconButton 
               onClick={() => setEmailSchedulerDialog(false)}
@@ -1862,7 +1888,7 @@ const generateConsolidatedReport = () => {
                 No Scheduled Emails
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                There are no emails currently scheduled.
+                There are no emails currently scheduled for this company.
               </Typography>
             </Box>
           ) : (
@@ -1926,6 +1952,7 @@ const generateConsolidatedReport = () => {
               startIcon={<PersonAddIcon />}
               onClick={handleOpenCreateMails}
               color="secondary"
+              disabled={selectedCompanies.length === 0}
             >
               Create New Mails
             </Button>
@@ -1940,6 +1967,7 @@ const generateConsolidatedReport = () => {
                 onClick={fetchScheduledEmails}
                 variant="contained"
                 startIcon={<RefreshIcon />}
+                disabled={selectedCompanies.length === 0}
               >
                 Refresh
               </Button>

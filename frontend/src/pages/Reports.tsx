@@ -748,7 +748,15 @@ const Reports = () => {
                           </TableCell>
                           <TableCell align="right">
                             <Typography variant="body2" color="text.secondary">
-                              {formatDateOnly(item.created_at_readable)}
+                             {new Date(item.created_at).toLocaleString('en-US', {
+                                  month: 'numeric',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true,
+                                })}
+
                             </Typography>
                           </TableCell>
                         </TableRow>
