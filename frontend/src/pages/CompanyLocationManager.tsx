@@ -94,8 +94,7 @@ import apiClient from "../api/axiosConfig";
 const COMPANY_OVERVIEW_API_URL = `/company-overview/`; // Relative path for apiClient
 const COMPANY_API_URL = `${API_URL_Local}/companies/`;
 const LOCATION_API_URL = `${API_URL_Local}/stores/`;
-// const USER_API_URL = `${API_URL_Local}/users/`;
-const USER_API_URL = `/users/`;
+const USER_API_URL = `${API_URL_Local}/users/`;
 
 // Interface definitions based on new API structure
 interface Permission {
@@ -121,6 +120,8 @@ interface User {
   role: string;
   permissions: string[];
   assignedLocations: AssignedLocation[];
+  isActive: boolean;   // Add this field if not already present
+  companyId?: number;  // Add this field if not already present
   createdAt: Date;
 }
 
@@ -239,16 +240,17 @@ const CompanyLocationManager: React.FC = () => {
     company_id: 0,
   });
 
-  const [userForm, setUserForm] = useState({
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone_number: "",
-    role: "",
-    permissions: [] as string[],
-    assignedLocations: [] as AssignedLocation[],
-    company_id: 0,
-  });
+ const [userForm, setUserForm] = useState({
+  first_name: "",
+  last_name: "",
+  email: "",
+  phone_number: "",
+  role: "",
+  permissions: [] as string[],
+  assignedLocations: [] as AssignedLocation[],
+  company_id: 0,
+  isActive: true, // Add this field with default value
+});
 
   // UI states
   const [searchTerm, setSearchTerm] = useState("");
@@ -449,9 +451,7 @@ const CompanyLocationManager: React.FC = () => {
       setLoading(true);
       console.log('👤 Creating User - Data being sent to backend:', userData);
       
-      // const response = await axios.post(USER_API_URL, userData);
-      const response = await apiClient.post(USER_API_URL, userData);
-
+      const response = await axios.post(USER_API_URL, userData);
       
       if (response.status === 200 || response.status === 201) {
         console.log('✅ User created successfully - Response:', response.data);
@@ -475,9 +475,7 @@ const CompanyLocationManager: React.FC = () => {
       setLoading(true);
       console.log('👤 Updating User - ID:', userId, 'Data being sent to backend:', userData);
       
-      // const response = await axios.put(`${USER_API_URL}${userId}/`, userData);
-      const response = await apiClient.put(`${USER_API_URL}${userId}/`, userData);
-
+      const response = await axios.put(`${USER_API_URL}${userId}/`, userData);
       
       if (response.status === 200) {
         console.log('✅ User updated successfully - Response:', response.data);
@@ -501,9 +499,7 @@ const CompanyLocationManager: React.FC = () => {
       setLoading(true);
       console.log('🗑️ Deleting User - ID being sent to backend:', userId);
       
-      // const response = await axios.delete(`${USER_API_URL}${userId}/`);
-      const response = await apiClient.delete(`${USER_API_URL}${userId}/`);
-
+      const response = await axios.delete(`${USER_API_URL}${userId}/`);
       
       if (response.status === 200 || response.status === 204) {
         console.log('✅ User deleted successfully');
@@ -582,44 +578,45 @@ const CompanyLocationManager: React.FC = () => {
     setNotification({ open: true, message, severity });
   };
 
-  const resetForms = () => {
-    setCompanyForm({
-      name: "",
-      address: "",
-      state: "",
-      postcode: "",
-      phone: "",
-      email: "",
-      website: "",
-    });
+ const resetForms = () => {
+  setCompanyForm({
+    name: "",
+    address: "",
+    state: "",
+    postcode: "",
+    phone: "",
+    email: "",
+    website: "",
+  });
 
-    setLocationForm({
-      name: "",
-      address: "",
-      city: "",
-      state: "",
-      postcode: "",
-      phone: "",
-      email: "",
-      company_id: 0,
-    });
+  setLocationForm({
+    name: "",
+    address: "",
+    city: "",
+    state: "",
+    postcode: "",
+    phone: "",
+    email: "",
+    company_id: 0,
+  });
 
-    setUserForm({
-      first_name: "",
-      last_name: "",
-      email: "",
-      phone_number: "",
-      role: "",
-      permissions: [],
-      assignedLocations: [],
-      company_id: 0,
-    });
+  setUserForm({
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone_number: "",
+    role: "",
+    permissions: [],
+    assignedLocations: [],
+    company_id: 0,
+    isActive: true, // Add this field
+  });
 
-    // Reset selected entities
-    setSelectedCompany(null);
-    setSelectedLocation(null);
-    setSelectedUser(null);
-  };
+  // Reset selected entities
+  setSelectedCompany(null);
+  setSelectedLocation(null);
+  setSelectedUser(null);
+};
 
   // Get role color
   const getRoleColor = (role: string) => {
@@ -838,64 +835,66 @@ const CompanyLocationManager: React.FC = () => {
   };
 
   // User CRUD operations
-  const handleAddUser = (company_id: number) => {
-    setDialogMode("add");
-    setEntityType("user");
-    setSelectedCompany(companies.find((c) => c.id === company_id) || null);
-    setSelectedUser(null); // Clear selected user
-    setUserForm({ 
-      first_name: "",
-      last_name: "",
-      email: "",
-      phone_number: "",
-      role: "",
-      permissions: [],
-      assignedLocations: [],
-      company_id: company_id,
-    });
-    setDialogOpen(true);
-  };
+const handleAddUser = (company_id: number) => {
+  setDialogMode("add");
+  setEntityType("user");
+  setSelectedCompany(companies.find((c) => c.id === company_id) || null);
+  setSelectedUser(null); // Clear selected user
+  setUserForm({ 
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone_number: "",
+    role: "",
+    permissions: [],
+    assignedLocations: [],
+    company_id: company_id,
+    isActive: true, // Add this field with default value
+  });
+  setDialogOpen(true);
+};
 
   const handleEditUser = (company_id: number, user: User) => {
-    console.log('✏️ Editing User - Raw user data from API:', user);
-    console.log('📊 User properties available:', Object.keys(user));
-    
-    setDialogMode("edit");
-    setEntityType("user");
-    setSelectedCompany(companies.find((c) => c.id === company_id) || null);
-    setSelectedUser(user); // Set the selected user
-    
-    // Handle both API structures - when API returns 'name' field, try to split it
-    let firstName = "";
-    let lastName = "";
-    
-    if (user.first_name && user.last_name) {
-      // API returns separate first_name and last_name
-      firstName = user.first_name;
-      lastName = user.last_name;
-    } else if (user.name) {
-      // API returns single 'name' field - try to split it
-      const nameParts = user.name.trim().split(' ');
-      firstName = nameParts[0] || "";
-      lastName = nameParts.slice(1).join(' ') || "";
-    }
-    
-    // More robust form population with fallbacks
-    const formData = {
-      first_name: firstName,
-      last_name: lastName,
-      email: user.email || "",
-      phone_number: user.phone_number || "",
-      role: user.role || "",
-      permissions: Array.isArray(user.permissions) ? user.permissions : [],
-      assignedLocations: Array.isArray(user.assignedLocations) ? user.assignedLocations : [],
-      company_id: company_id,
-    };
-    
-    console.log('📝 Setting form data for edit:', formData);
-    setUserForm(formData);
-    setDialogOpen(true);
+  console.log('✏️ Editing User - Raw user data from API:', user);
+  console.log('📊 User properties available:', Object.keys(user));
+  
+  setDialogMode("edit");
+  setEntityType("user");
+  setSelectedCompany(companies.find((c) => c.id === company_id) || null);
+  setSelectedUser(user); // Set the selected user
+  
+  // Handle both API structures - when API returns 'name' field, try to split it
+  let firstName = "";
+  let lastName = "";
+  
+  if (user.first_name && user.last_name) {
+    // API returns separate first_name and last_name
+    firstName = user.first_name;
+    lastName = user.last_name;
+  } else if (user.name) {
+    // API returns single 'name' field - try to split it
+    const nameParts = user.name.trim().split(' ');
+    firstName = nameParts[0] || "";
+    lastName = nameParts.slice(1).join(' ') || "";
+  }
+  
+  // More robust form population with fallbacks
+  const formData = {
+    first_name: firstName,
+    last_name: lastName,
+    email: user.email || "",
+    phone_number: user.phone_number || "",
+    role: user.role || "",
+    permissions: Array.isArray(user.permissions) ? user.permissions : [],
+    assignedLocations: Array.isArray(user.assignedLocations) ? user.assignedLocations : [],
+    company_id: company_id,
+    isActive: user.isActive !== undefined ? user.isActive : true, // Add this line to handle isActive
   };
+  
+  console.log('📝 Setting form data for edit:', formData);
+  setUserForm(formData);
+  setDialogOpen(true);
+};
 
   const handleDeleteUser = async (userId: number) => {
     const user = companies

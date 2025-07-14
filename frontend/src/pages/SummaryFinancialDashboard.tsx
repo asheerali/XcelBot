@@ -470,61 +470,61 @@ const SummaryFinancialDashboard = () => {
 
   // Export functions for Daily Cost Summary table
   const exportToExcel = () => {
-    const dailyData = getDailyData();
-    const periodTotal = getPeriodTotal();
-
-    if (dailyData.length === 0) {
-      alert("No data available to export");
-      return;
-    }
-
-    try {
-      const storeNames = Object.keys(dailyData[0].stores);
-      const headers = ["Date", ...storeNames, "Daily Total"];
-
-      // Create CSV content
-      let csvContent = "\uFEFF"; // BOM for Excel UTF-8 recognition
-      csvContent += headers.join(",") + "\n";
-
-      // Add data rows
-      dailyData.forEach((row) => {
-        const rowData = [
-          `"${row.date}"`,
-          ...storeNames.map((store) => `"${row.stores[store].toFixed(2)}"`),
-          `"${row.total.toFixed(2)}"`,
-        ];
-        csvContent += rowData.join(",") + "\n";
-      });
-
-      // Add period total row
-      if (periodTotal.stores) {
-        const periodTotalRow = [
-          `"Period Total:"`,
-          ...storeNames.map(
-            (store) => `"${(periodTotal.stores[store] || 0).toFixed(2)}"`
-          ),
-          `"${periodTotal.total.toFixed(2)}"`,
-        ];
-        csvContent += periodTotalRow.join(",") + "\n";
-      }
-
-      // Create and download file
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", "daily_cost_summary.csv");
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      console.log("Excel export completed successfully");
-    } catch (error) {
-      console.error("Error exporting to Excel:", error);
-      alert("Error exporting to Excel. Please try again.");
-    }
+  const dailyData = getDailyData();
+  
+  // Date formatting function
+  const formatOrderDate = (created_at) => {
+    return new Date(created_at).toLocaleString('en-US', {
+      month: 'numeric',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
   };
+
+  if (dailyData.length === 0) {
+    alert("No data available to export");
+    return;
+  }
+
+  try {
+    const storeNames = Object.keys(dailyData[0].stores);
+    // Add formatted date column
+    const headers = ["Date", "Formatted Date", ...storeNames, "Daily Total"];
+
+    let csvContent = "\uFEFF"; // BOM for Excel UTF-8 recognition
+    csvContent += headers.join(",") + "\n";
+
+    // Add data rows with formatted dates
+    dailyData.forEach((row) => {
+      const rowData = [
+        `"${row.date}"`,
+        `"${formatOrderDate(row.date)}"`, // Add formatted date
+        ...storeNames.map((store) => `"${row.stores[store].toFixed(2)}"`),
+        `"${row.total.toFixed(2)}"`,
+      ];
+      csvContent += rowData.join(",") + "\n";
+    });
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "daily_cost_summary_with_formatted_dates.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    console.log("Excel export with formatted dates completed successfully");
+  } catch (error) {
+    console.error("Error exporting to Excel:", error);
+    alert("Error exporting to Excel. Please try again.");
+  }
+};
 
   const exportToPDF = () => {
     const dailyData = getDailyData();
