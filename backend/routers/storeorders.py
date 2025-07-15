@@ -873,6 +873,21 @@ def get_avg_daily_orders(
         # Filter by company_id since get_storeorders_by_location doesn't filter by company
         storeorders = [order for order in storeorders if order.company_id == company_id]
         
+                
+        # Apply date filtering if start_date and end_date are provided
+        if start_date and end_date:
+            try:
+                start = datetime.strptime(start_date, "%Y-%m-%d").date()
+                end = datetime.strptime(end_date, "%Y-%m-%d").date()
+                print("Filtering store orders between dates:", start, end)
+                storeorders = [
+                    order for order in storeorders
+                    if (order.updated_at or order.created_at)
+                    and start <= (order.updated_at or order.created_at).date() <= end
+                ]
+            except ValueError:
+                return {"message": "Invalid date format. Use YYYY-MM-DD", "data": []}
+        
         if not storeorders:
             return {
                 "message": "No store orders found for this company and location", 
