@@ -20,7 +20,7 @@ from dependencies.auth import get_current_active_user
 from fastapi import BackgroundTasks
 from utils.email import send_order_confirmation_email
 from crud.users import get_user 
-
+from fastapi import Query
 
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
@@ -459,14 +459,75 @@ def create_new_order_items(request: OrderItemsRequest,
 
 
 
+# # Updated router endpoint
+# @router.get("/detailsrecent/{company_id}/{location_id}")
+# def get_recent_storeorders_details_by_location(
+#     company_id: int, 
+#     location_id: int, 
+#     db: Session = Depends(get_db)
+# ):
+#     """Get 7 most recent store orders details by company ID and location ID"""
+    
+#     # Get the recent store orders (returns a list)
+#     storeorders_list = storeorders_crud.get_recent_storeorders_by_company_and_location(db, company_id, location_id)
+    
+#     if not storeorders_list:
+#         return {"message": "Store orders not found", "data": []}
+    
+#     # Get company and location names (fetch once)
+#     company = db.query(Company).filter(Company.id == company_id).first()
+#     location = db.query(Store).filter(Store.id == location_id).first()
+    
+#     # Process each order in the list
+#     data = []
+#     for storeorder in storeorders_list:
+#         created = storeorder.created_at.isoformat() if storeorder.created_at else None
+#         updated = storeorder.updated_at.isoformat() if storeorder.updated_at else None
+#         created_readable = storeorder.created_at.strftime('%Y-%m-%d %H:%M:%S') if storeorder.created_at else None
+#         updated_readable = storeorder.updated_at.strftime('%Y-%m-%d %H:%M:%S') if storeorder.updated_at else None
+        
+#         created_variable = updated if updated else created
+#         created_readable_variable = updated_readable if updated_readable else created_readable
+
+#         order_data = {
+#             "id": storeorder.id,
+#             "company_id": storeorder.company_id,
+#             "company_name": company.name if company else "Unknown",
+#             "location_id": storeorder.location_id,
+#             "location_name": location.name if location else "Unknown",
+#             "created_at_original": storeorder.created_at.isoformat() if storeorder.created_at else None,
+#             "created_at_readable_original": storeorder.created_at.strftime('%Y-%m-%d %H:%M:%S') if storeorder.created_at else None,
+#             "created_at": created_variable,
+#             "created_at_readable": created_readable_variable,
+#             "updated_at": storeorder.updated_at.isoformat() if storeorder.updated_at else None,
+#             "updated_at_readable": storeorder.updated_at.strftime('%Y-%m-%d %H:%M:%S') if storeorder.updated_at else None,
+#             "testing_created_at_show_updated_at_if_available": created_variable,
+#             "items_ordered": storeorder.items_ordered,
+#             "prev_items_ordered": storeorder.prev_items_ordered,
+#         }
+#         data.append(order_data)
+    
+#     return {
+#         "message": "Recent store orders details fetched successfully", 
+#         "data": data,
+#         "total_orders": len(data),
+#         "company_name": company.name if company else "Unknown",
+#         "location_name": location.name if location else "Unknown"
+#     }
+    
+
+
 # Updated router endpoint
 @router.get("/detailsrecent/{company_id}/{location_id}")
 def get_recent_storeorders_details_by_location(
     company_id: int, 
     location_id: int, 
+    start_date: str = Query(None),
+    end_date: str = Query(None),
     db: Session = Depends(get_db)
 ):
     """Get 7 most recent store orders details by company ID and location ID"""
+    print(" i am here in details recent", company_id, location_id, start_date, end_date)
     
     # Get the recent store orders (returns a list)
     storeorders_list = storeorders_crud.get_recent_storeorders_by_company_and_location(db, company_id, location_id)
@@ -669,13 +730,117 @@ def update_storeorders_by_id(
         raise HTTPException(status_code=500, detail=f"Error updating store order: {str(e)}")
     
 
+# @router.get("/analytics/{company_id}/{location_id}")
+# def get_avg_daily_orders(
+#     company_id: int, 
+#     location_id: int, 
+#     db: Session = Depends(get_db)
+# ):
+#     """Get average daily orders, total orders, and top 2 items ordered for a company and location"""
+    
+#     try:
+#         # FIXED: Use get_storeorders_by_location() to get ALL orders, not just the latest one
+#         storeorders = storeorders_crud.get_storeorders_by_location(db, location_id)
+        
+#         # Filter by company_id since get_storeorders_by_location doesn't filter by company
+#         storeorders = [order for order in storeorders if order.company_id == company_id]
+        
+#         if not storeorders:
+#             return {
+#                 "message": "No store orders found for this company and location", 
+#                 "data": {
+#                     "total_orders": 0,
+#                     "avg_daily_orders": 0,
+#                     "date_range": None,
+#                     "top_items": []
+#                 }
+#             }
+        
+#         total_orders = len(storeorders)
+        
+#         # Calculate average daily orders
+#         if total_orders > 0:
+#             # Get valid dates only
+#             valid_dates = [order.created_at for order in storeorders if order.created_at]
+            
+#             if valid_dates:
+#                 first_order_date = min(valid_dates)
+#                 last_order_date = max(valid_dates)
+#                 days_difference = (last_order_date - first_order_date).days + 1  # Include the last day
+                
+#                 avg_daily_orders = round(total_orders / days_difference, 2) if days_difference > 0 else total_orders
+#                 date_range = {
+#                     "first_order": first_order_date.strftime('%Y-%m-%d'),
+#                     "last_order": last_order_date.strftime('%Y-%m-%d'),
+#                     "total_days": days_difference
+#                 }
+#             else:
+#                 avg_daily_orders = 0
+#                 date_range = None
+#         else:
+#             avg_daily_orders = 0
+#             date_range = None
+        
+#         # Aggregate items ordered
+#         item_counts = {}
+#         for order in storeorders:
+#             if order.items_ordered and 'items' in order.items_ordered:
+#                 items_ordered = order.items_ordered.get('items', [])
+#                 for item in items_ordered:
+#                     # Handle different possible item structure
+#                     item_name = item.get('name') or item.get('product') or item.get('item_name', 'Unknown')
+#                     item_quantity = item.get('quantity', 1)
+                    
+#                     if item_name in item_counts:
+#                         item_counts[item_name] += item_quantity
+#                     else:
+#                         item_counts[item_name] = item_quantity
+        
+#         # Get top 2 items ordered
+#         top_items = sorted(item_counts.items(), key=lambda x: x[1], reverse=True)[:2]
+#         top_items_formatted = [{"name": name, "total_quantity": quantity} for name, quantity in top_items]
+        
+#         # Get company and location names for response
+#         company = db.query(Company).filter(Company.id == company_id).first()
+#         location = db.query(Store).filter(Store.id == location_id).first()
+        
+#         return {
+#             "message": "Average daily orders and top items fetched successfully",
+#             "data": {
+#                 "company_name": company.name if company else "Unknown",
+#                 "location_name": location.name if location else "Unknown",
+#                 "total_orders": total_orders,
+#                 "avg_daily_orders": avg_daily_orders,
+#                 "date_range": date_range,
+#                 "top_items": top_items_formatted,
+#                 "all_items_summary": {
+#                     "unique_items_count": len(item_counts),
+#                     "total_item_quantities": sum(item_counts.values())
+#                 }
+#             }
+#         }
+    
+#     except Exception as e:
+#         print(f"Error fetching average daily orders: {str(e)}")
+#         import traceback
+#         print(traceback.format_exc())
+#         raise HTTPException(status_code=500, detail=f"Error fetching average daily orders: {str(e)}")
+
+
+
 @router.get("/analytics/{company_id}/{location_id}")
 def get_avg_daily_orders(
     company_id: int, 
     location_id: int, 
+    start_date: str = Query(None),
+    end_date: str = Query(None),
     db: Session = Depends(get_db)
+    
 ):
     """Get average daily orders, total orders, and top 2 items ordered for a company and location"""
+    print(f"Fetching average daily orders for company {company_id} and location {location_id} with date range {start_date} to {end_date}"
+          )
+    
     
     try:
         # FIXED: Use get_storeorders_by_location() to get ALL orders, not just the latest one
@@ -765,70 +930,6 @@ def get_avg_daily_orders(
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error fetching average daily orders: {str(e)}")
 
-
-
-
-# # now i want to calculate the total sales, total orders, avg order value from company and location
-# @router.get("/analyticsdashboard/{company_id}/{location_id}")
-# def get_analytics_dashboard(
-#     company_id: int, 
-#     location_id: int, 
-#     db: Session = Depends(get_db)
-# ):
-#     """Get total sales, total orders, and average order value for a company and location"""
-    
-#     try:
-#         # Get all store orders for the specified company and location
-#         storeorders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
-        
-#         if not storeorders:
-#             return {
-#                 "message": "No store orders found for this company and location", 
-#                 "data": {
-#                     "total_sales": 0,
-#                     "total_orders": 0,
-#                     "avg_order_value": 0.0
-#                 }
-#             }
-#         if not isinstance(storeorders, list):
-#             storeorders = [storeorders] if storeorders else []
-        
-#         total_orders = len(storeorders)
-#         total_sales = 0.0
-        
-#         # Calculate total sales and total orders
-#         for order in storeorders:
-#             print("i am here in the store orders printing the items_ordered", order.items_ordered)
-#             if order.items_ordered and "items" in order.items_ordered:
-#                 print("i am here in the store orders printing the items_ordered", order.items_ordered["items"])
-#                 for item in order.items_ordered["items"]:
-#                     print("i am here in the store orders printing the items_ordered", item)
-#                     total_price = item.get("total_price", 0)
-#                     total_sales += float(total_price)
-
-#         # Calculate average order value
-#         avg_order_value = round(total_sales / total_orders, 2) if total_orders > 0 else 0.0
-        
-#         # Get company and location names for response
-#         company = db.query(Company).filter(Company.id == company_id).first()
-#         location = db.query(Store).filter(Store.id == location_id).first()
-#         return {
-#             "message": "Analytics dashboard data fetched successfully",
-#             "data": {
-#                 "company_name": company.name if company else "Unknown",
-#                 "location_name": location.name if location else "Unknown",
-#                 "total_sales": total_sales,
-#                 "total_orders": total_orders,
-#                 "avg_order_value": avg_order_value
-             
-#             }
-#         }
-
-#     except Exception as e:
-#         print(f"Error fetching analytics dashboard data: {str(e)}")
-#         import traceback
-#         print(traceback.format_exc())
-#         raise HTTPException(status_code=500, detail=f"Error fetching analytics dashboard data: {str(e)}")
 
 
 
