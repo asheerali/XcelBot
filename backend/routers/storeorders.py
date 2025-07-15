@@ -1,6 +1,5 @@
 # routers/storeorders.py
 from collections import defaultdict
-import datetime
 import platform
 import traceback
 from fastapi import APIRouter, Depends, HTTPException
@@ -21,7 +20,7 @@ from fastapi import BackgroundTasks
 from utils.email import send_order_confirmation_email
 from crud.users import get_user 
 from fastapi import Query
-
+from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
@@ -145,7 +144,7 @@ def get_storeorders_details_by_company(company_id: int, db: Session = Depends(ge
                 }
             
             location_aggregates[location_name]["total_orders"] += 1
-            if not location_aggregates[location_name]["latest_order_date"] or order.updated_at > datetime.datetime.fromisoformat(location_aggregates[location_name]["latest_order_date"]):
+            if not location_aggregates[location_name]["latest_order_date"] or order.updated_at > datetime.fromisoformat(location_aggregates[location_name]["latest_order_date"]):
                 location_aggregates[location_name]["latest_order_date"] = order.updated_at.isoformat()
             
             if order.prev_items_ordered:
@@ -255,7 +254,7 @@ def update_storeorders_location(
     
     # Update the location_id to the new value
     storeorders.location_id = new_location_id
-    storeorders.updated_at = datetime.datetime.utcnow()
+    storeorders.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(storeorders)
     return storeorders
@@ -409,7 +408,7 @@ def create_new_order_items(request: OrderItemsRequest,
         create_obj = storeorders_schema.StoreOrdersCreate(
             company_id=request.company_id,
             location_id=request.location_id,
-            created_at=datetime.datetime.utcnow(),  # Set current time as created_at
+            created_at=datetime.utcnow(),  # Set current time as created_at
             items_ordered=items_ordered_data
         )
         print(f"Creating new store items ordered with data: {items_ordered_data}")
@@ -532,6 +531,31 @@ def get_recent_storeorders_details_by_location(
     # Get the recent store orders (returns a list)
     storeorders_list = storeorders_crud.get_recent_storeorders_by_company_and_location(db, company_id, location_id)
     
+    # if start_date and end_date:
+    #     try:
+    #         start = datetime.strptime(start_date, "%Y-%m-%d").date()
+    #         end = datetime.strptime(end_date, "%Y-%m-%d").date()
+    #         print("Filtering store orders between dates:", start, end)
+    #         storeorders_list = [
+    #             order for order in storeorders_list
+    #             if order.created_at and start <= order.created_at.date() <= end
+    #         ]
+    #     except ValueError:
+    #         return {"message": "Invalid date format. Use YYYY-MM-DD", "data": []}
+
+    if start_date and end_date:
+        try:
+            start = datetime.strptime(start_date, "%Y-%m-%d").date()
+            end = datetime.strptime(end_date, "%Y-%m-%d").date()
+            print("Filtering store orders between dates:", start, end)
+            storeorders_list = [
+                order for order in storeorders_list
+                if (order.updated_at or order.created_at)
+                and start <= (order.updated_at or order.created_at).date() <= end
+            ]
+        except ValueError:
+            return {"message": "Invalid date format. Use YYYY-MM-DD", "data": []}
+
     if not storeorders_list:
         return {"message": "Store orders not found", "data": []}
     
