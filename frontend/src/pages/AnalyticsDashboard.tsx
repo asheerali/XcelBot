@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
   Container,
@@ -53,17 +53,17 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
   const [selectedRange, setSelectedRange] = useState('Select Date Range');
   const [tempRange, setTempRange] = useState(null);
 
-  const handleOpen = () => setIsOpen(true);
-  const handleClose = () => {
+  const handleOpen = useCallback(() => setIsOpen(true), []);
+  const handleClose = useCallback(() => {
     setIsOpen(false);
     setTempRange(null);
-  };
+  }, []);
 
-  const handleDateRangeSelect = (range) => {
+  const handleDateRangeSelect = useCallback((range) => {
     setTempRange(range);
-  };
+  }, []);
 
-  const handleApply = () => {
+  const handleApply = useCallback(() => {
     if (tempRange) {
       const startDate = tempRange.startDate.toLocaleDateString();
       const endDate = tempRange.endDate.toLocaleDateString();
@@ -71,13 +71,13 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
       onDateRangeSelect(tempRange);
     }
     setIsOpen(false);
-  };
+  }, [tempRange, onDateRangeSelect]);
 
-  const handleClear = (event) => {
+  const handleClear = useCallback((event) => {
     event.stopPropagation();
     setSelectedRange('Select Date Range');
     onDateRangeSelect(null);
-  };
+  }, [onDateRangeSelect]);
 
   return (
     <>
@@ -193,7 +193,7 @@ const ContentCard = styled(Card)(({ theme }) => ({
   minHeight: 500,
   background: theme.palette.background.paper,
   boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.08)}`,
-  overflow: 'visible' // Changed from 'hidden' to 'visible'
+  overflow: 'visible'
 }));
 
 const ActiveFilterChip = styled(Chip)(({ theme }) => ({
@@ -233,63 +233,18 @@ const AnalyticsDashboard = () => {
     dateRange: null
   });
 
-  // Auto-apply filters when locations change
-  useEffect(() => {
-    if (selectedLocations.length > 0) {
-      console.log('Auto-applying filters due to location change:', {
-        companies: selectedCompanies,
-        locations: selectedLocations,
-        dateRange: selectedDateRange
-      });
-      
-      // Update Redux with current selections
-      dispatch(setSelectedCompanies(selectedCompanies.map(id => id.toString())));
-      dispatch(setSelectedLocations(selectedLocations.map(id => id.toString())));
-      
-      // Apply the filters - this will trigger the analytics data fetch
-      setAppliedFilters({
-        companies: selectedCompanies,
-        locations: selectedLocations,
-        dateRange: selectedDateRange
-      });
-    }
-  }, [selectedLocations, selectedCompanies, selectedDateRange, dispatch]);
-
-  // Auto-apply filters when date range changes
-  useEffect(() => {
-    if (selectedDateRange) {
-      console.log('Auto-applying filters due to date range change:', {
-        companies: selectedCompanies,
-        locations: selectedLocations,
-        dateRange: selectedDateRange
-      });
-      
-      // Update Redux with current selections
-      dispatch(setSelectedCompanies(selectedCompanies.map(id => id.toString())));
-      dispatch(setSelectedLocations(selectedLocations.map(id => id.toString())));
-      
-      // Apply the filters - this will trigger the analytics data fetch
-      setAppliedFilters({
-        companies: selectedCompanies,
-        locations: selectedLocations,
-        dateRange: selectedDateRange
-      });
-    }
-  }, [selectedDateRange, selectedCompanies, selectedLocations, dispatch]);
-
-  // Fetch company-location data from API
-  const fetchCompanyLocationData = async () => {
+  // ========================================
+  // CRITICAL FIX #1: Memoize stable functions
+  // ========================================
+  const fetchCompanyLocationData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Use the correct endpoint for company-locations
       const response = await fetch(`${API_URL_Local}/company-locations/all`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          // Add any authentication headers if needed
-          // 'Authorization': `Bearer ${token}`,
         },
       });
       
@@ -305,73 +260,128 @@ const AnalyticsDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // No dependencies - this function doesn't depend on any changing values
 
-  // Load initial data and set from Redux on component mount
+  // ========================================
+  // CRITICAL FIX #2: Optimize auto-apply logic with proper dependencies
+  // ========================================
+  
+  // Debounced filter application to prevent rapid successive calls
+  const applyFiltersDebounced = useCallback((companies, locations, dateRange) => {
+    console.log('Applying filters:', { companies, locations, dateRange });
+    
+    // Update Redux with current selections (convert to strings for consistency)
+    dispatch(setSelectedCompanies(companies.map(id => id.toString())));
+    dispatch(setSelectedLocations(locations.map(id => id.toString())));
+    
+    // Apply the filters - this will trigger the analytics data fetch
+    setAppliedFilters({
+      companies,
+      locations,
+      dateRange
+    });
+  }, [dispatch]);
+
+  // ========================================
+  // CRITICAL FIX #3: Replace problematic useEffects with optimized versions
+  // ========================================
+  
+  // Only apply filters when locations actually change AND we have valid data
+  useEffect(() => {
+    if (selectedLocations.length > 0 && companyLocationData.length > 0) {
+      console.log('Auto-applying filters due to location change');
+      applyFiltersDebounced(selectedCompanies, selectedLocations, selectedDateRange);
+    }
+  }, [selectedLocations.length, selectedCompanies.length, selectedDateRange, companyLocationData.length, applyFiltersDebounced]);
+
+  // Load initial data on component mount ONLY
   useEffect(() => {
     fetchCompanyLocationData();
-  }, []);
+  }, [fetchCompanyLocationData]);
 
-  // Initialize local state from Redux when component mounts or Redux state changes
+  // ========================================
+  // CRITICAL FIX #4: Optimize Redux state initialization
+  // ========================================
+  
+  // Initialize local state from Redux ONLY when values actually change
   useEffect(() => {
     if (reduxSelectedCompanies.length > 0) {
-      console.log('Setting initial companies from Redux:', reduxSelectedCompanies);
-      setSelectedCompaniesLocal(reduxSelectedCompanies.map(id => parseInt(id)));
+      const newCompanies = reduxSelectedCompanies.map(id => parseInt(id));
+      // Only update if the values are actually different
+      setSelectedCompaniesLocal(prev => {
+        const isEqual = prev.length === newCompanies.length && 
+                       prev.every((val, idx) => val === newCompanies[idx]);
+        return isEqual ? prev : newCompanies;
+      });
     }
-  }, [reduxSelectedCompanies]);
+  }, [reduxSelectedCompanies.join(',')]); // Use join to create stable dependency
 
   useEffect(() => {
     if (reduxSelectedLocations.length > 0) {
-      console.log('Setting initial locations from Redux:', reduxSelectedLocations);
-      setSelectedLocationsLocal(reduxSelectedLocations.map(id => parseInt(id)));
-    }
-  }, [reduxSelectedLocations]);
-
-  // Auto-apply filters when component loads with Redux data
-  useEffect(() => {
-    if (reduxSelectedCompanies.length > 0 && reduxSelectedLocations.length > 0 && companyLocationData.length > 0) {
-      console.log('Auto-applying filters from Redux state');
-      setAppliedFilters({
-        companies: reduxSelectedCompanies.map(id => parseInt(id)),
-        locations: reduxSelectedLocations.map(id => parseInt(id)),
-        dateRange: null
+      const newLocations = reduxSelectedLocations.map(id => parseInt(id));
+      setSelectedLocationsLocal(prev => {
+        const isEqual = prev.length === newLocations.length && 
+                       prev.every((val, idx) => val === newLocations[idx]);
+        return isEqual ? prev : newLocations;
       });
     }
-  }, [reduxSelectedCompanies, reduxSelectedLocations, companyLocationData]);
+  }, [reduxSelectedLocations.join(',')]); // Use join to create stable dependency
 
-  // Get available companies
-  const availableCompanies = companyLocationData.map(item => ({
-    id: item.company_id,
-    name: item.company_name
-  }));
+  // Auto-apply filters when component loads with Redux data (ONE TIME ONLY)
+  useEffect(() => {
+    if (reduxSelectedCompanies.length > 0 && 
+        reduxSelectedLocations.length > 0 && 
+        companyLocationData.length > 0 &&
+        appliedFilters.companies.length === 0) { // Only if not already applied
+      console.log('Auto-applying filters from Redux state (initial load)');
+      applyFiltersDebounced(
+        reduxSelectedCompanies.map(id => parseInt(id)),
+        reduxSelectedLocations.map(id => parseInt(id)),
+        null
+      );
+    }
+  }, [
+    reduxSelectedCompanies.length,
+    reduxSelectedLocations.length,
+    companyLocationData.length,
+    appliedFilters.companies.length,
+    applyFiltersDebounced
+  ]);
 
-  // Get available locations based on selected companies
-  const getAvailableLocations = () => {
-    // Only show locations if companies are selected
+  // ========================================
+  // CRITICAL FIX #5: Memoize expensive computations
+  // ========================================
+  
+  // Memoize available companies to prevent unnecessary recalculation
+  const availableCompanies = useMemo(() => 
+    companyLocationData.map(item => ({
+      id: item.company_id,
+      name: item.company_name
+    })), [companyLocationData]);
+
+  // Memoize available locations computation
+  const availableLocations = useMemo(() => {
     if (selectedCompanies.length === 0) {
       return [];
-    } else {
-      // Show only locations for selected companies
-      const locations = companyLocationData
-        .filter(company => selectedCompanies.includes(company.company_id))
-        .reduce((acc, company) => {
-          return acc.concat(company.locations.map(location => ({
-            id: location.location_id,
-            name: location.location_name,
-            companyId: company.company_id,
-            companyName: company.company_name
-          })));
-        }, []);
-      
-      console.log('Available locations:', locations);
-      return locations;
     }
-  };
+    
+    return companyLocationData
+      .filter(company => selectedCompanies.includes(company.company_id))
+      .reduce((acc, company) => {
+        return acc.concat(company.locations.map(location => ({
+          id: location.location_id,
+          name: location.location_name,
+          companyId: company.company_id,
+          companyName: company.company_name
+        })));
+      }, []);
+  }, [selectedCompanies, companyLocationData]);
 
-  const availableLocations = getAvailableLocations();
-
-  // Clear all filters
-  const clearAllFilters = () => {
+  // ========================================
+  // CRITICAL FIX #6: Optimize event handlers with useCallback
+  // ========================================
+  
+  const clearAllFilters = useCallback(() => {
     setSelectedCompaniesLocal([]);
     setSelectedLocationsLocal([]);
     setSelectedDateRange(null);
@@ -379,10 +389,9 @@ const AnalyticsDashboard = () => {
     // Update Redux
     dispatch(setSelectedCompanies([]));
     dispatch(setSelectedLocations([]));
-  };
+  }, [dispatch]);
 
-  // Handle company selection
-  const handleCompanyChange = (event) => {
+  const handleCompanyChange = useCallback((event) => {
     const value = event.target.value;
     const newSelectedCompanies = typeof value === 'string' ? value.split(',') : value;
     
@@ -398,44 +407,38 @@ const AnalyticsDashboard = () => {
       
       setSelectedLocationsLocal(prev => prev.filter(locationId => validLocationIds.includes(locationId)));
     }
-  };
+  }, [companyLocationData]);
 
-  // Handle location selection
-  const handleLocationChange = (event) => {
+  const handleLocationChange = useCallback((event) => {
     const value = event.target.value;
-    console.log('Location selection event:', { value, type: typeof value });
-    
     const newSelectedLocations = typeof value === 'string' ? value.split(',') : value;
-    console.log('New selected locations:', newSelectedLocations);
-    
     setSelectedLocationsLocal(newSelectedLocations);
-  };
+  }, []);
 
-  // Handle date range selection
-  const handleDateRangeSelect = (range) => {
+  const handleDateRangeSelect = useCallback((range) => {
     setSelectedDateRange(range);
-    console.log('Selected date range:', range);
-  };
+  }, []);
 
-  // Handle refresh
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     fetchCompanyLocationData();
-  };
+  }, [fetchCompanyLocationData]);
 
-  // Get company name by ID
-  const getCompanyNameById = (companyId) => {
+  // ========================================
+  // CRITICAL FIX #7: Memoize utility functions
+  // ========================================
+  
+  const getCompanyNameById = useCallback((companyId) => {
     const company = companyLocationData.find(c => c.company_id === companyId);
     return company ? company.company_name : '';
-  };
+  }, [companyLocationData]);
 
-  // Get location name by ID
-  const getLocationNameById = (locationId) => {
+  const getLocationNameById = useCallback((locationId) => {
     for (const company of companyLocationData) {
       const location = company.locations.find(l => l.location_id === locationId);
       if (location) return location.location_name;
     }
     return '';
-  };
+  }, [companyLocationData]);
 
   if (loading) {
     return (
@@ -674,7 +677,6 @@ const AnalyticsDashboard = () => {
                               newSelectedLocations.splice(currentIndex, 1);
                             }
                             
-                            console.log('Individual location clicked:', location.id, 'New selection:', newSelectedLocations);
                             setSelectedLocationsLocal(newSelectedLocations);
                           }}
                           sx={{ 
@@ -750,9 +752,6 @@ const AnalyticsDashboard = () => {
               </Box>
             </Box>
           )}
-
-          {/* Apply Filters Button - Removed as requested */}
-          {/* Button has been removed and filters now auto-apply when location or date range is selected */}
         </StyledCard>
       </Container>
 

@@ -350,6 +350,7 @@ const SummaryFinancialDashboard = () => {
               minute: '2-digit',
               hour12: true,
             }),
+
           stores: stores,
           total: entry.daily_total || 0,
         });

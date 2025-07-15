@@ -30,7 +30,8 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Tooltip
+  Tooltip,
+  Snackbar
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -254,73 +255,6 @@ const UpdateOrderDialog = ({ open, onClose, order, onConfirm }) => {
   );
 };
 
-const QuantityDialog = ({ open, onClose, item, onAdd }) => {
-  const [quantity, setQuantity] = useState(1);
-
-  const handleAdd = () => {
-    onAdd(item, quantity);
-    setQuantity(1);
-    onClose();
-  };
-
-  const adjustQuantity = (delta) => {
-    setQuantity(prev => Math.max(1, prev + delta));
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Add Item to Order</DialogTitle>
-      <DialogContent>
-        <Box sx={{ py: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            {item?.name}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            ${item?.price}/{item?.unit}
-          </Typography>
-          <Typography variant="body2" color="primary.main" gutterBottom>
-            Category: {item?.category}
-          </Typography>
-          
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 3 }}>
-            <Typography variant="body1">Quantity:</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <IconButton 
-                onClick={() => adjustQuantity(-1)}
-                size="small"
-                disabled={quantity <= 1}
-              >
-                <RemoveIcon />
-              </IconButton>
-              <TextField
-                value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                sx={{ width: 80 }}
-                inputProps={{ style: { textAlign: 'center' } }}
-                type="number"
-                size="small"
-              />
-              <Typography variant="body2" sx={{ minWidth: 30 }}>
-                {item?.unit}
-              </Typography>
-              <IconButton 
-                onClick={() => adjustQuantity(1)}
-                size="small"
-              >
-                <AddIcon />
-              </IconButton>
-            </Box>
-          </Box>
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleAdd} variant="contained">Add to Order</Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
-
 // Main OrderIQ Dashboard Component
 const OrderIQDashboard = () => {
   // Redux hooks
@@ -333,7 +267,6 @@ const OrderIQDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentOrder, setCurrentOrder] = useState([]);
   const [emailOrder, setEmailOrder] = useState(false);
-  const [quantityDialog, setQuantityDialog] = useState({ open: false, item: null });
   const [updateOrderDialog, setUpdateOrderDialog] = useState({ open: false, order: null });
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
   const [orderToUpdate, setOrderToUpdate] = useState(null);
@@ -351,6 +284,13 @@ const OrderIQDashboard = () => {
   
   // Date range selector state
   const [selectedDateRange, setSelectedDateRange] = useState(null);
+
+  // Success notification state
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   // Selected company and location for API calls - Initialize from Redux
   const [selectedCompanyId, setSelectedCompanyId] = useState(() => {
@@ -400,6 +340,22 @@ const OrderIQDashboard = () => {
       fetchAnalytics(selectedCompanyId, selectedLocationId);
     }
   }, [selectedCompanyId, selectedLocationId, companyLocations.length]);
+
+  // Success notification function
+  const showNotification = (message, severity = 'success') => {
+    setNotification({
+      open: true,
+      message,
+      severity
+    });
+  };
+
+  const handleCloseNotification = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setNotification(prev => ({ ...prev, open: false }));
+  };
 
   // Fetch company-locations data on component mount
   useEffect(() => {
@@ -669,11 +625,9 @@ const OrderIQDashboard = () => {
       if (suggestedItems.length > 0) {
         // Replace current order with AI suggestions
         setCurrentOrder(suggestedItems);
-        
-        // Show success message
-        alert(`🤖 AI suggested ${suggestedItems.length} item${suggestedItems.length > 1 ? 's' : ''} based on your order history!`);
+        showNotification(`🤖 AI suggested ${suggestedItems.length} item${suggestedItems.length > 1 ? 's' : ''} based on your order history!`);
       } else {
-        alert('🤖 No AI suggestions available at the moment. Try placing some orders first!');
+        showNotification('🤖 No AI suggestions available at the moment. Try placing some orders first!', 'info');
       }
       
     } catch (err) {
@@ -767,21 +721,32 @@ const OrderIQDashboard = () => {
     console.log('Date range selected - waiting for user to click Apply Filters');
   };
 
-  const handleAddToOrder = (item, quantity) => {
+  // Updated to directly add item with quantity 1
+  const handleAddToOrder = (item, quantity = 1, showNotif = true) => {
     setCurrentOrder(prev => {
       const existingIndex = prev.findIndex(orderItem => orderItem.id === item.id);
       if (existingIndex >= 0) {
         const updated = [...prev];
         updated[existingIndex].quantity += quantity;
+        if (showNotif) {
+          showNotification(`Added ${quantity} more ${item.name} to cart`);
+        }
         return updated;
       } else {
+        if (showNotif) {
+          showNotification(`${item.name} added to cart`);
+        }
         return [...prev, { ...item, quantity }];
       }
     });
   };
 
   const handleRemoveFromOrder = (itemId) => {
+    const removedItem = currentOrder.find(item => item.id === itemId);
     setCurrentOrder(prev => prev.filter(item => item.id !== itemId));
+    if (removedItem) {
+      showNotification(`${removedItem.name} removed from cart`);
+    }
   };
 
   const handleUpdateQuantity = (itemId, newQuantity) => {
@@ -802,11 +767,17 @@ const OrderIQDashboard = () => {
 
   const handleAddRecentOrderToCart = (recentOrder) => {
     // Add all items from the recent order to current order
+    let itemsAdded = 0;
     recentOrder.orderItems.forEach(item => {
       if (item.quantity > 0) { // Only add items with quantity > 0
-        handleAddToOrder(item, item.quantity);
+        handleAddToOrder(item, item.quantity, false); // Don't show individual notifications
+        itemsAdded++;
       }
     });
+    
+    if (itemsAdded > 0) {
+      showNotification(`Added ${itemsAdded} item${itemsAdded > 1 ? 's' : ''} from recent order to cart`);
+    }
   };
 
   const handleUpdateRecentOrder = (recentOrder) => {
@@ -878,7 +849,7 @@ const OrderIQDashboard = () => {
 
       console.log('Order updated successfully:', response.data);
       
-      alert(`Order #${orderToUpdate.id} updated successfully!`);
+      showNotification(`Order #${orderToUpdate.id} updated successfully! 🎉`);
       handleCancelOrderUpdate();
       setError(null);
       
@@ -948,7 +919,7 @@ const OrderIQDashboard = () => {
 
       console.log('Order submitted successfully:', response.data);
       
-      alert('Order submitted successfully!');
+      showNotification('Order submitted successfully! 🎉');
       setCurrentOrder([]);
       setEmailOrder(false);
       setError(null);
@@ -1478,7 +1449,7 @@ const OrderIQDashboard = () => {
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 {availableItems.length > 0 
-                  ? `${availableItems.length} items available. Search and select items to add to your order.`
+                  ? `${availableItems.length} items available. Click "Add" to add items to your cart with quantity 1 (you can adjust quantity in the cart).`
                   : selectedCompanyId && selectedLocationId
                     ? 'Click "Apply Filters & Load Data" above to view available items.'
                     : 'Select company and location from filters above to view available items.'
@@ -1585,7 +1556,7 @@ const OrderIQDashboard = () => {
                             variant="contained"
                             size="small"
                             startIcon={<AddIcon />}
-                            onClick={() => setQuantityDialog({ open: true, item })}
+                            onClick={() => handleAddToOrder(item, 1)}
                             sx={{ ml: 2, minWidth: 80 }}
                           >
                             Add
@@ -1660,9 +1631,9 @@ const OrderIQDashboard = () => {
                     <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
                       Your order is empty
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Start adding items from the Available Items section to build your order
-                    </Typography>
+                    {/* <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Click "Add" on any item to add it to your cart with quantity 1. You can adjust quantities here.
+                    </Typography> */}
                     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
                       <Tooltip title="Get personalized item suggestions based on your order history">
                         <span>
@@ -1687,9 +1658,7 @@ const OrderIQDashboard = () => {
                         <Button 
                           variant="contained" 
                           size="small"
-                          onClick={() => {
-                            setQuantityDialog({ open: true, item: availableItems[0] });
-                          }}
+                          onClick={() => handleAddToOrder(availableItems[0], 1)}
                         >
                           ➕ Add First Item
                         </Button>
@@ -1833,12 +1802,34 @@ const OrderIQDashboard = () => {
         </Grid>
       </Grid>
 
-      {/* Quantity Selection Dialog */}
-      <QuantityDialog
-        open={quantityDialog.open}
-        onClose={() => setQuantityDialog({ open: false, item: null })}
-        item={quantityDialog.item}
-        onAdd={handleAddToOrder}
+      {/* Success Notification */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={3000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        sx={{
+          '& .MuiSnackbarContent-root': {
+            backgroundColor: notification.severity === 'success' ? '#4caf50' : 
+                           notification.severity === 'info' ? '#2196f3' : 
+                           notification.severity === 'warning' ? '#ff9800' : '#f44336',
+            color: 'white',
+            fontWeight: 500,
+            borderRadius: 2,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            minWidth: '300px',
+            '& .MuiSnackbarContent-message': {
+              fontSize: '0.95rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }
+          },
+          '& .MuiSnackbar-root': {
+            bottom: '24px !important'
+          }
+        }}
+        message={notification.message}
       />
     </Container>
   );
