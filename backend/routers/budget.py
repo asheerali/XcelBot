@@ -12,14 +12,14 @@ router = APIRouter(
     tags=["Budget"],
 )
 
-@router.post("/", response_model=budget_schema.Budget)
-def create_budget_record(
-    budget: budget_schema.BudgetCreate, 
-    db: Session = Depends(get_db),
-    # current_user: User = Depends(get_current_active_user)
-):
-    """Create a new budget record"""
-    return budget_crud.create_budget_record(db, budget)
+# @router.post("/", response_model=budget_schema.Budget)
+# def create_budget_record(
+#     budget: budget_schema.BudgetCreate, 
+#     db: Session = Depends(get_db),
+#     # current_user: User = Depends(get_current_active_user)
+# ):
+#     """Create a new budget record"""
+#     return budget_crud.create_budget_record(db, budget)
 
 @router.get("/", response_model=List[budget_schema.Budget])
 def get_budget_records(

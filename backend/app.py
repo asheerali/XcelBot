@@ -86,7 +86,8 @@ from routers import (users, company_locations, companies,
                      dashboards, user_dashboard_permissions,
                      uploaded_files, permissions, user_company,   
                      file_permissions, company_overview, logs, 
-                     storeorders, mails, sales_pmix
+                     storeorders, mails, sales_pmix,
+                     budget, financials_company_wide
                      )
 
 app.include_router(users.router)
@@ -107,6 +108,8 @@ app.include_router(logs.router)
 app.include_router(storeorders.router)
 app.include_router(mails.router)
 app.include_router(sales_pmix.router)
+app.include_router(financials_company_wide.router)
+app.include_router(budget.router)
 
 
 

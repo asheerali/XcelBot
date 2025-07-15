@@ -8,18 +8,18 @@ from database import get_db
 # from models.users import User
 
 router = APIRouter(
-    prefix="/financials",
+    prefix="/financialscompanywide",
     tags=["Financials Company Wide"],
 )
 
-@router.post("/", response_model=financials_schema.FinancialsCompanyWide)
-def create_financials_record(
-    financials: financials_schema.FinancialsCompanyWideCreate, 
-    db: Session = Depends(get_db),
-    # current_user: User = Depends(get_current_active_user)
-):
-    """Create a new financials record"""
-    return financials_crud.create_financials_record(db, financials)
+# @router.post("/", response_model=financials_schema.FinancialsCompanyWide)
+# def create_financials_record(
+#     financials: financials_schema.FinancialsCompanyWideCreate, 
+#     db: Session = Depends(get_db),
+#     # current_user: User = Depends(get_current_active_user)
+# ):
+#     """Create a new financials record"""
+#     return financials_crud.create_financials_record(db, financials)
 
 @router.get("/", response_model=List[financials_schema.FinancialsCompanyWide])
 def get_financials_records(
