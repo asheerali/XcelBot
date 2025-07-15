@@ -81,22 +81,12 @@ app.include_router(masterfile.router)
 
 
 # for the databases
-from routers import (users, 
-                     company_locations,
-                    companies,
-                    locations,
-                     payments, 
-                     subscriptions, 
-                     dashboards, 
-                     user_dashboard_permissions,
-                     uploaded_files, 
-                     permissions,
-                     user_company,   
-                     file_permissions,
-                     company_overview, 
-                     logs,
-                     storeorders,
-                     mails
+from routers import (users, company_locations, companies,
+                     locations, payments, subscriptions, 
+                     dashboards, user_dashboard_permissions,
+                     uploaded_files, permissions, user_company,   
+                     file_permissions, company_overview, logs, 
+                     storeorders, mails, sales_pmix
                      )
 
 app.include_router(users.router)
@@ -116,6 +106,7 @@ app.include_router(company_overview.router)
 app.include_router(logs.router)
 app.include_router(storeorders.router)
 app.include_router(mails.router)
+app.include_router(sales_pmix.router)
 
 
 

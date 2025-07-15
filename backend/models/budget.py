@@ -9,6 +9,11 @@ class Budget(Base):
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     
+    # New columns
+    file_name = Column(String(255), nullable=True, index=True)  # For storing filename
+    dashboard = Column(Integer, nullable=True)  # Dashboard integer field
+    
+    
     # Basic information fields
     Store = Column(String(100), index=True, nullable=True)
     Date = Column(String(50), nullable=True)
