@@ -29,6 +29,7 @@ class OrderItemsRequest(BaseModel):
     location_id: Optional[int] = None
     items: Optional[List[Dict[str, Any]]] = None
     email_order: Optional[bool] = None
+    order_date: Optional[str] = None  # Date in ISO format, e.g., "2023-10-01T12:00:00Z"
 
     # Add other fields as neede
 
@@ -408,7 +409,8 @@ def create_new_order_items(request: OrderItemsRequest,
         create_obj = storeorders_schema.StoreOrdersCreate(
             company_id=request.company_id,
             location_id=request.location_id,
-            created_at=datetime.utcnow(),  # Set current time as created_at
+            # created_at=datetime.utcnow(),  # Set current time as created_at
+            created_at=request.order_date if request.order_date else datetime.utcnow.isoformat(),
             items_ordered=items_ordered_data
         )
         print(f"Creating new store items ordered with data: {items_ordered_data}")
