@@ -97,8 +97,35 @@ mail/updatemail/{mail_id}
 
 
 
+
 ai suggestions
 /api/storeorders/aisuggestions/{company_id}/{location_id}
 
+
+
+
+
+
+in the page: storeorders - order items at a specific date but the api does not give me the startdate and end_date
+ /api/storeorders/orderitems
+/api/storeorders/orderupdate
+
+
+
+the page: analytics dashboard - also doesnot have the dates
+ /api/storeorders/analyticsdashboard/1/2
+
+
+in the page:store summary - both apis doesnot have date ranges
+
+INFO:     127.0.0.1:52324 - "GET /api/storeorders/consolidatedproduction/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52323 - "GET /api/storeorders/allordersinvoices/1/2 HTTP/1.1" 200 OK
+
+
+in the page: financial summary - the date range is not working
+
+
+in the page: reports - no date ranges
+api/logs/details/2 
 
 
