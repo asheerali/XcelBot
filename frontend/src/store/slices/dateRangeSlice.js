@@ -1,144 +1,133 @@
-// store/slices/dateRangeSlice.js
-
 import { createSlice } from '@reduxjs/toolkit';
 
-/**
- * Date Range Redux Slice
- * 
- * This slice manages date ranges for different dashboards.
- * Each dashboard can have its own independent date range.
- * 
- * State Structure:
- * {
- *   analyticsDashboard: { startDate: string, endDate: string },
- *   salesDashboard: { startDate: string, endDate: string },
- *   reportsDashboard: { startDate: string, endDate: string },
- *   // ... other dashboards
- * }
- */
-
+// Initial state for date range
 const initialState = {
-  // Analytics Dashboard date range
-  analyticsDashboard: {
-    startDate: null,
-    endDate: null
-  },
-  
-  // Future dashboards can be added here
-  // salesDashboard: {
-  //   startDate: null,
-  //   endDate: null
-  // },
-  // reportsDashboard: {
-  //   startDate: null,
-  //   endDate: null
-  // }
+  AnalyticsDashboardStart: null,
+  AnalyticsDashboardEnd: null,
+  MasterfileStart: null,
+  MasterfileEnd: null,
 };
 
+// Create the date range slice
 const dateRangeSlice = createSlice({
   name: 'dateRange',
   initialState,
   reducers: {
-    /**
-     * Set date range for Analytics Dashboard
-     * @param {Object} state - Current state
-     * @param {Object} action - Action with payload: { startDate: string, endDate: string }
-     */
+    // Analytics Dashboard Date Range Actions
     setAnalyticsDashboardDateRange: (state, action) => {
       const { startDate, endDate } = action.payload;
-      state.analyticsDashboard.startDate = startDate;
-      state.analyticsDashboard.endDate = endDate;
+      state.AnalyticsDashboardStart = startDate;
+      state.AnalyticsDashboardEnd = endDate;
     },
-
-    /**
-     * Clear date range for Analytics Dashboard
-     * @param {Object} state - Current state
-     */
+    
+    setAnalyticsDashboardStartDate: (state, action) => {
+      state.AnalyticsDashboardStart = action.payload;
+    },
+    
+    setAnalyticsDashboardEndDate: (state, action) => {
+      state.AnalyticsDashboardEnd = action.payload;
+    },
+    
     clearAnalyticsDashboardDateRange: (state) => {
-      state.analyticsDashboard.startDate = null;
-      state.analyticsDashboard.endDate = null;
+      state.AnalyticsDashboardStart = null;
+      state.AnalyticsDashboardEnd = null;
     },
 
-    // Future dashboard actions can be added here following the same pattern
-    // 
-    // setSalesDashboardDateRange: (state, action) => {
-    //   const { startDate, endDate } = action.payload;
-    //   state.salesDashboard.startDate = startDate;
-    //   state.salesDashboard.endDate = endDate;
-    // },
-    // 
-    // clearSalesDashboardDateRange: (state) => {
-    //   state.salesDashboard.startDate = null;
-    //   state.salesDashboard.endDate = null;
-    // },
-    //
-    // setReportsDashboardDateRange: (state, action) => {
-    //   const { startDate, endDate } = action.payload;
-    //   state.reportsDashboard.startDate = startDate;
-    //   state.reportsDashboard.endDate = endDate;
-    // },
-    //
-    // clearReportsDashboardDateRange: (state) => {
-    //   state.reportsDashboard.startDate = null;
-    //   state.reportsDashboard.endDate = null;
-    // }
-  }
+    // Masterfile Date Range Actions
+    setMasterfileDateRange: (state, action) => {
+      const { startDate, endDate } = action.payload;
+      state.MasterfileStart = startDate;
+      state.MasterfileEnd = endDate;
+    },
+    
+    setMasterfileStartDate: (state, action) => {
+      state.MasterfileStart = action.payload;
+    },
+    
+    setMasterfileEndDate: (state, action) => {
+      state.MasterfileEnd = action.payload;
+    },
+    
+    clearMasterfileDateRange: (state) => {
+      state.MasterfileStart = null;
+      state.MasterfileEnd = null;
+    },
+
+    // Clear all date ranges
+    clearAllDateRanges: (state) => {
+      state.AnalyticsDashboardStart = null;
+      state.AnalyticsDashboardEnd = null;
+      state.MasterfileStart = null;
+      state.MasterfileEnd = null;
+    },
+  },
 });
 
 // Export actions
 export const {
+  // Analytics Dashboard actions
   setAnalyticsDashboardDateRange,
+  setAnalyticsDashboardStartDate,
+  setAnalyticsDashboardEndDate,
   clearAnalyticsDashboardDateRange,
-  // Future dashboard actions will be exported here
+  
+  // Masterfile actions
+  setMasterfileDateRange,
+  setMasterfileStartDate,
+  setMasterfileEndDate,
+  clearMasterfileDateRange,
+  
+  // Clear all
+  clearAllDateRanges,
 } = dateRangeSlice.actions;
 
-// Selectors for Analytics Dashboard
-/**
- * Select the complete date range object for Analytics Dashboard
- * @param {Object} state - Redux state
- * @returns {Object} { startDate: string, endDate: string }
- */
-export const selectAnalyticsDashboardDateRange = (state) => {
-  return state.dateRange?.analyticsDashboard || { startDate: null, endDate: null };
-};
+// Analytics Dashboard Selectors with safe fallbacks
+export const selectAnalyticsDashboardStartDate = (state) => 
+  state.dateRange?.AnalyticsDashboardStart || null;
 
-/**
- * Select start date for Analytics Dashboard
- * @param {Object} state - Redux state
- * @returns {string|null} startDate
- */
-export const selectAnalyticsDashboardStartDate = (state) => {
-  return state.dateRange?.analyticsDashboard?.startDate || null;
-};
+export const selectAnalyticsDashboardEndDate = (state) => 
+  state.dateRange?.AnalyticsDashboardEnd || null;
 
-/**
- * Select end date for Analytics Dashboard
- * @param {Object} state - Redux state
- * @returns {string|null} endDate
- */
-export const selectAnalyticsDashboardEndDate = (state) => {
-  return state.dateRange?.analyticsDashboard?.endDate || null;
-};
+export const selectAnalyticsDashboardDateRange = (state) => ({
+  startDate: state.dateRange?.AnalyticsDashboardStart || null,
+  endDate: state.dateRange?.AnalyticsDashboardEnd || null,
+});
 
-/**
- * Check if Analytics Dashboard has a date range set
- * @param {Object} state - Redux state
- * @returns {boolean} true if both startDate and endDate are set
- */
-export const selectAnalyticsDashboardHasDateRange = (state) => {
-  const dateRange = state.dateRange?.analyticsDashboard;
-  if (!dateRange) return false;
-  return dateRange.startDate !== null && dateRange.endDate !== null;
-};
+export const selectHasAnalyticsDashboardDateRange = (state) => 
+  state.dateRange?.AnalyticsDashboardStart !== null && 
+  state.dateRange?.AnalyticsDashboardEnd !== null;
 
-// Future dashboard selectors can be added here following the same pattern
-//
-// export const selectSalesDashboardDateRange = (state) => state.dateRange.salesDashboard;
-// export const selectSalesDashboardStartDate = (state) => state.dateRange.salesDashboard.startDate;
-// export const selectSalesDashboardEndDate = (state) => state.dateRange.salesDashboard.endDate;
-// export const selectSalesDashboardHasDateRange = (state) => {
-//   const { startDate, endDate } = state.dateRange.salesDashboard;
-//   return startDate !== null && endDate !== null;
-// };
+// Masterfile Selectors with safe fallbacks
+export const selectMasterfileStartDate = (state) => 
+  state.dateRange?.MasterfileStart || null;
 
+export const selectMasterfileEndDate = (state) => 
+  state.dateRange?.MasterfileEnd || null;
+
+export const selectMasterfileDateRange = (state) => ({
+  startDate: state.dateRange?.MasterfileStart || null,
+  endDate: state.dateRange?.MasterfileEnd || null,
+});
+
+export const selectHasMasterfileDateRange = (state) => 
+  state.dateRange?.MasterfileStart !== null && 
+  state.dateRange?.MasterfileEnd !== null;
+
+// Combined selectors for convenience
+export const selectAllDateRanges = (state) => ({
+  analyticsDashboard: {
+    startDate: state.dateRange?.AnalyticsDashboardStart || null,
+    endDate: state.dateRange?.AnalyticsDashboardEnd || null,
+  },
+  masterfile: {
+    startDate: state.dateRange?.MasterfileStart || null,
+    endDate: state.dateRange?.MasterfileEnd || null,
+  },
+});
+
+export const selectHasAnyDateRange = (state) => 
+  (state.dateRange?.AnalyticsDashboardStart !== null && state.dateRange?.AnalyticsDashboardEnd !== null) ||
+  (state.dateRange?.MasterfileStart !== null && state.dateRange?.MasterfileEnd !== null);
+
+// Export reducer
 export default dateRangeSlice.reducer;

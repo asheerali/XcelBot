@@ -55,29 +55,37 @@ import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import BusinessIcon from "@mui/icons-material/Business";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 
-const drawerWidth = 260;
+// Responsive drawer widths - more aggressive scaling
+const getDrawerWidth = (theme, isMobile, isTablet, isSmallScreen) => {
+  if (isSmallScreen) return 200; // Much narrower for very small screens
+  if (isMobile) return 240; // Narrower for mobile
+  if (isTablet) return 220; // Smaller for tablets
+  return 260; // Default for desktop
+};
+
 const gradientBackground = "linear-gradient(180deg, #050b1b 0%, #150949 100%)";
 
-// Custom Logo Component - Exact same design as homepage
-const CustomLogo = ({ size = 32 }) => (
+// Custom Logo Component - Responsive size
+const CustomLogo = ({ size = 32, isMobile = false }) => (
   <Box
     sx={{
       width: size,
       height: size,
-      borderRadius: "50%", // Perfect circle like homepage
-      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", // Exact same gradient
+      borderRadius: "50%",
+      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      boxShadow: `0 4px 20px ${alpha("#667eea", 0.3)}`, // Same shadow as homepage
+      boxShadow: `0 4px 20px ${alpha("#667eea", 0.3)}`,
       position: "relative",
       overflow: "hidden",
+      flexShrink: 0, // Prevent shrinking
     }}
   >
     <DashboardIcon
       sx={{
         color: "#ffffff",
-        fontSize: size * 0.5, // Slightly smaller icon to match homepage proportions
+        fontSize: size * 0.5,
         fontWeight: "bold",
       }}
     />
@@ -88,7 +96,12 @@ const CustomSidebar = ({ onSignOut }) => {
   const theme = useTheme();
   const location = useLocation();
   const dispatch = useDispatch();
+  
+  // Responsive breakpoints
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isTablet = useMediaQuery(theme.breakpoints.between("md", "lg"));
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
+  
   const [open, setOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [insightiqOpen, setInsightiqOpen] = useState(false);
@@ -103,62 +116,149 @@ const CustomSidebar = ({ onSignOut }) => {
   const [availableLocations, setAvailableLocations] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Get single selected values for dropdowns (assuming single selection for dropdowns)
+  // Get single selected values for dropdowns
   const selectedCompany = selectedCompanies.length > 0 ? selectedCompanies[0] : '';
   const selectedLocation = selectedLocations.length > 0 ? selectedLocations[0] : '';
+
+  // Responsive drawer width
+  const drawerWidth = getDrawerWidth(theme, isMobile, isTablet, isSmallScreen);
 
   // Define your app name here
   const appName = "KPI360";
 
-  // INSIGHTIQ dropdown items (renamed from analyticsItems)
+  // INSIGHTIQ dropdown items with multiple title options for different screen sizes
   const insightiqItems = [
-    { title: "Upload Excel", path: "/upload-excel", icon: <UploadFileIcon /> },
-    { title: "Sales Split", path: "/manage-reports", icon: <PieChartIcon /> },
-    { title: "Product Mix", path: "/Productmix", icon: <RestaurantIcon /> },
-    { title: "Financials", path: "/Financials", icon: <AttachMoneyIcon /> },
-    { title: "Companywide Sales", path: "/Saleswide", icon: <ShowChartIcon /> },
+    { 
+      title: "Upload Excel", 
+      shortTitle: "Upload",
+      compactTitle: "Upload",
+      path: "/upload-excel", 
+      icon: <UploadFileIcon /> 
+    },
+    { 
+      title: "Sales Split", 
+      shortTitle: "Sales",
+      compactTitle: "Sales",
+      path: "/manage-reports", 
+      icon: <PieChartIcon /> 
+    },
+    { 
+      title: "Product Mix", 
+      shortTitle: "Products",
+      compactTitle: "Products",
+      path: "/Productmix", 
+      icon: <RestaurantIcon /> 
+    },
+    { 
+      title: "Financials", 
+      shortTitle: "Finance",
+      compactTitle: "Finance",
+      path: "/Financials", 
+      icon: <AttachMoneyIcon /> 
+    },
+    { 
+      title: "Companywide Sales", 
+      shortTitle: "Company Sales",
+      compactTitle: "Sales",
+      path: "/Saleswide", 
+      icon: <ShowChartIcon /> 
+    },
   ];
 
-  // OrderIQ dropdown items
+  // OrderIQ dropdown items with multiple title options
   const orderiqItems = [
     {
       title: "Analytics Dashboard",
+      shortTitle: "Analytics",
+      compactTitle: "Analytics",
       path: "/AnalyticsDashboard",
       icon: <PieChartIcon />,
     },
-    { title: "Master File", path: "/MasterFile", icon: <InventoryIcon /> },
+    { 
+      title: "Master File", 
+      shortTitle: "Master",
+      compactTitle: "Master",
+      path: "/MasterFile", 
+      icon: <InventoryIcon /> 
+    },
     {
       title: "Store Orders",
+      shortTitle: "Orders",
+      compactTitle: "Orders",
       path: "/OrderIQDashboard",
       icon: <DashboardIcon />,
     },
     {
       title: "Store Summary",
+      shortTitle: "Store Sum",
+      compactTitle: "Store",
       path: "/StoreSummaryProduction",
       icon: <FactoryIcon />,
     },
     {
       title: "Financial Summary",
+      shortTitle: "Finance",
+      compactTitle: "Finance",
       path: "/SummaryFinancialDashboard",
       icon: <TrendingUpIcon />,
     },
      {
       title: "Reports",
+      shortTitle: "Reports",
+      compactTitle: "Reports",
       path: "/Reports",
       icon: <PieChartIcon />,
     },
   ];
 
-  // Other navigation items (removed items that are now in OrderIQ dropdown)
+  // Other navigation items with multiple title options
   const navItems = [
-    { title: "Payments", path: "/Payments", icon: <PaymentIcon /> },
-    { title: "Help Center", path: "/HelpCenter", icon: <HelpIcon /> },
+    { 
+      title: "Payments", 
+      shortTitle: "Payments",
+      compactTitle: "Pay",
+      path: "/Payments", 
+      icon: <PaymentIcon /> 
+    },
+    { 
+      title: "Help Center", 
+      shortTitle: "Help",
+      compactTitle: "Help",
+      path: "/HelpCenter", 
+      icon: <HelpIcon /> 
+    },
     {
       title: "Company",
+      shortTitle: "Company",
+      compactTitle: "Co.",
       path: "/CompanyLocationManager",
       icon: <BusinessIcon />,
     },
   ];
+
+  // Responsive font sizes - more aggressive scaling
+  const getFontSizes = () => ({
+    appName: isSmallScreen ? "0.9rem" : isMobile ? "1rem" : isTablet ? "1.1rem" : "1.25rem",
+    mainNav: isSmallScreen ? "0.75rem" : isMobile ? "0.8rem" : isTablet ? "0.9rem" : "1rem",
+    subNav: isSmallScreen ? "0.7rem" : isMobile ? "0.75rem" : isTablet ? "0.8rem" : "0.875rem",
+    dropdown: isSmallScreen ? "0.7rem" : isMobile ? "0.75rem" : "0.875rem",
+  });
+
+  const fontSizes = getFontSizes();
+
+  // Function to get display title based on screen size and drawer width
+  const getDisplayTitle = (item) => {
+    // For very small screens or narrow drawer widths, use compact title
+    if (isSmallScreen || (drawerWidth < 250)) {
+      return item.compactTitle || item.shortTitle || item.title;
+    }
+    // For mobile/tablet, use short title
+    if (isMobile || isTablet) {
+      return item.shortTitle || item.title;
+    }
+    // For desktop, use full title
+    return item.title;
+  };
 
   // Fetch companies and locations data
   useEffect(() => {
@@ -192,19 +292,25 @@ const CustomSidebar = ({ onSignOut }) => {
     }
   }, [selectedCompany, companies]);
 
+  // Auto-close sidebar on small screens when open
+  useEffect(() => {
+    if (isMobile) {
+      setOpen(false);
+    } else {
+      setOpen(true);
+    }
+  }, [isMobile]);
+
   // Handle company selection
   const handleCompanyChange = (event) => {
     const companyId = event.target.value;
-    // Update Redux state with selected company
     dispatch(setSelectedCompanies([companyId]));
-    // Clear location selection when company changes
     dispatch(setSelectedLocations([]));
   };
 
   // Handle location selection
   const handleLocationChange = (event) => {
     const locationId = event.target.value;
-    // Update Redux state with selected location
     dispatch(setSelectedLocations([locationId]));
   };
 
@@ -238,21 +344,145 @@ const CustomSidebar = ({ onSignOut }) => {
   const renderNavItems = (items, isSubItem = false) =>
     items.map((item) => {
       const isSelected = location.pathname === item.path;
+      const displayTitle = getDisplayTitle(item);
+      const showFullTitleInTooltip = displayTitle !== item.title;
+      
       return (
         <ListItem key={item.path} disablePadding>
+          <Tooltip 
+            title={showFullTitleInTooltip ? item.title : ""} 
+            placement="right" 
+            arrow
+            enterDelay={500}
+          >
+            <ListItemButton
+              component={Link}
+              to={item.path}
+              onClick={handleItemClick}
+              selected={isSelected}
+              sx={{
+                minHeight: isSmallScreen ? 40 : 48,
+                justifyContent: open ? "initial" : "center",
+                px: isSmallScreen ? 1 : 2,
+                mx: 0.5,
+                mb: 0.5,
+                ml: isSubItem ? (isSmallScreen ? 1 : 1.5) : 0.5,
+                borderRadius: "8px",
+                position: "relative",
+                overflow: "hidden",
+                transition: theme.transitions.create(
+                  ["background-color", "box-shadow"],
+                  {
+                    duration: 300,
+                    easing: theme.transitions.easing.easeInOut,
+                  }
+                ),
+                "&::before": {
+                  content: '""',
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  height: "100%",
+                  width: "3px",
+                  backgroundColor: isSelected ? "#ffffff" : "transparent",
+                  transition: "all 0.3s ease-in-out",
+                },
+                "&:hover": {
+                  backgroundColor: alpha("#ffffff", 0.08),
+                  "&::before": {
+                    backgroundColor: alpha("#ffffff", 0.5),
+                  },
+                },
+                "&.Mui-selected": {
+                  backgroundColor: alpha("#ffffff", 0.12),
+                  "&:hover": {
+                    backgroundColor: alpha("#ffffff", 0.2),
+                  },
+                  "& .MuiListItemIcon-root": { color: "#ffffff" },
+                  "& .MuiListItemText-primary": {
+                    color: "#ffffff",
+                    fontWeight: "bold",
+                  },
+                  "&::before": { backgroundColor: "#ffffff" },
+                },
+                boxShadow: isSelected
+                  ? `0 0 10px 1px ${alpha("#ffffff", 0.15)}`
+                  : "none",
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  mr: open ? (isSmallScreen ? 1 : 1.5) : "auto",
+                  justifyContent: "center",
+                  color: isSelected ? "#ffffff" : "#e0e0e0",
+                  transition: "color 0.3s ease",
+                  fontSize: isSmallScreen ? "1.1rem" : "1.3rem",
+                  "& .MuiSvgIcon-root": {
+                    fontSize: isSmallScreen ? "1.1rem" : "1.3rem",
+                  }
+                }}
+              >
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText
+                primary={
+                  <Box
+                    sx={{
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      maxWidth: "100%",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {displayTitle}
+                  </Box>
+                }
+                sx={{
+                  transition: "opacity 0.3s ease",
+                  opacity: open ? 1 : 0,
+                  margin: 0,
+                  "& .MuiTypography-root": {
+                    fontWeight: isSelected ? 700 : 400,
+                    color: isSelected ? "#ffffff" : "#f0f0f0",
+                    fontSize: isSubItem ? fontSizes.subNav : fontSizes.mainNav,
+                    lineHeight: 1.2,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  },
+                }}
+              />
+            </ListItemButton>
+          </Tooltip>
+        </ListItem>
+      );
+    });
+
+  const renderDropdownButton = (title, shortTitle, compactTitle, isOpen, isSelected, onToggle, icon) => {
+    const displayTitle = isSmallScreen || (drawerWidth < 250) ? 
+      (compactTitle || shortTitle || title) : 
+      (isMobile || isTablet ? (shortTitle || title) : title);
+    const showFullTitleInTooltip = displayTitle !== title;
+    
+    return (
+      <ListItem disablePadding>
+        <Tooltip 
+          title={showFullTitleInTooltip ? title : ""} 
+          placement="right" 
+          arrow
+          enterDelay={500}
+        >
           <ListItemButton
-            component={Link}
-            to={item.path}
-            onClick={handleItemClick}
-            selected={isSelected}
+            onClick={onToggle}
             sx={{
-              minHeight: 48,
+              minHeight: isSmallScreen ? 40 : 48,
               justifyContent: open ? "initial" : "center",
-              px: 2.5,
-              mx: 1,
+              px: isSmallScreen ? 1 : 2,
+              mx: 0.5,
               mb: 0.5,
-              ml: isSubItem ? 2 : 1, // Indent sub-items
-              borderRadius: "10px",
+              borderRadius: "8px",
               position: "relative",
               overflow: "hidden",
               transition: theme.transitions.create(
@@ -268,7 +498,7 @@ const CustomSidebar = ({ onSignOut }) => {
                 left: 0,
                 top: 0,
                 height: "100%",
-                width: "4px",
+                width: "3px",
                 backgroundColor: isSelected ? "#ffffff" : "transparent",
                 transition: "all 0.3s ease-in-out",
               },
@@ -278,160 +508,103 @@ const CustomSidebar = ({ onSignOut }) => {
                   backgroundColor: alpha("#ffffff", 0.5),
                 },
               },
-              "&.Mui-selected": {
-                backgroundColor: alpha("#ffffff", 0.12),
-                "&:hover": {
-                  backgroundColor: alpha("#ffffff", 0.2),
-                },
-                "& .MuiListItemIcon-root": { color: "#ffffff" },
-                "& .MuiListItemText-primary": {
-                  color: "#ffffff",
-                  fontWeight: "bold",
-                },
-                "&::before": { backgroundColor: "#ffffff" },
+              backgroundColor: isSelected ? alpha("#ffffff", 0.12) : "transparent",
+              "& .MuiListItemIcon-root": {
+                color: isSelected ? "#ffffff" : "#e0e0e0",
+              },
+              "& .MuiListItemText-primary": {
+                color: isSelected ? "#ffffff" : "#f0f0f0",
+                fontWeight: isSelected ? "bold" : "normal",
               },
               boxShadow: isSelected
                 ? `0 0 10px 1px ${alpha("#ffffff", 0.15)}`
                 : "none",
             }}
           >
-            <Tooltip title={open ? "" : item.title} placement="right" arrow>
-              <ListItemIcon
-                sx={{
-                  minWidth: 0,
-                  mr: open ? 2 : "auto",
-                  justifyContent: "center",
-                  color: isSelected ? "#ffffff" : "#e0e0e0",
-                  transition: "color 0.3s ease",
-                }}
-              >
-                {item.icon}
-              </ListItemIcon>
-            </Tooltip>
+            <ListItemIcon
+              sx={{
+                minWidth: 0,
+                mr: open ? (isSmallScreen ? 1 : 1.5) : "auto",
+                justifyContent: "center",
+                color: isSelected ? "#ffffff" : "#e0e0e0",
+                transition: "color 0.3s ease",
+                fontSize: isSmallScreen ? "1.1rem" : "1.3rem",
+                "& .MuiSvgIcon-root": {
+                  fontSize: isSmallScreen ? "1.1rem" : "1.3rem",
+                }
+              }}
+            >
+              {icon}
+            </ListItemIcon>
             <ListItemText
-              primary={item.title}
+              primary={
+                <Box
+                  sx={{
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    maxWidth: "100%",
+                    lineHeight: 1.2,
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  {displayTitle}
+                </Box>
+              }
               sx={{
                 transition: "opacity 0.3s ease",
                 opacity: open ? 1 : 0,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
+                margin: 0,
+                flex: 1,
                 "& .MuiTypography-root": {
                   fontWeight: isSelected ? 700 : 400,
                   color: isSelected ? "#ffffff" : "#f0f0f0",
-                  fontSize: isSubItem ? "0.875rem" : "1rem", // Smaller font for sub-items
+                  fontSize: fontSizes.mainNav,
+                  lineHeight: 1.2,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
                 },
               }}
             />
-          </ListItemButton>
-        </ListItem>
-      );
-    });
-
-  const renderDropdownButton = (title, isOpen, isSelected, onToggle, icon) => (
-    <ListItem disablePadding>
-      <ListItemButton
-        onClick={onToggle}
-        sx={{
-          minHeight: 48,
-          justifyContent: open ? "initial" : "center",
-          px: 2.5,
-          mx: 1,
-          mb: 0.5,
-          borderRadius: "10px",
-          position: "relative",
-          overflow: "hidden",
-          transition: theme.transitions.create(
-            ["background-color", "box-shadow"],
-            {
-              duration: 300,
-              easing: theme.transitions.easing.easeInOut,
-            }
-          ),
-          "&::before": {
-            content: '""',
-            position: "absolute",
-            left: 0,
-            top: 0,
-            height: "100%",
-            width: "4px",
-            backgroundColor: isSelected ? "#ffffff" : "transparent",
-            transition: "all 0.3s ease-in-out",
-          },
-          "&:hover": {
-            backgroundColor: alpha("#ffffff", 0.08),
-            "&::before": {
-              backgroundColor: alpha("#ffffff", 0.5),
-            },
-          },
-          backgroundColor: isSelected ? alpha("#ffffff", 0.12) : "transparent",
-          "& .MuiListItemIcon-root": {
-            color: isSelected ? "#ffffff" : "#e0e0e0",
-          },
-          "& .MuiListItemText-primary": {
-            color: isSelected ? "#ffffff" : "#f0f0f0",
-            fontWeight: isSelected ? "bold" : "normal",
-          },
-          boxShadow: isSelected
-            ? `0 0 10px 1px ${alpha("#ffffff", 0.15)}`
-            : "none",
-        }}
-      >
-        <Tooltip title={open ? "" : title} placement="right" arrow>
-          <ListItemIcon
-            sx={{
-              minWidth: 0,
-              mr: open ? 2 : "auto",
-              justifyContent: "center",
-              color: isSelected ? "#ffffff" : "#e0e0e0",
-              transition: "color 0.3s ease",
-            }}
-          >
-            {icon}
-          </ListItemIcon>
-        </Tooltip>
-        <ListItemText
-          primary={title}
-          sx={{
-            transition: "opacity 0.3s ease",
-            opacity: open ? 1 : 0,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            "& .MuiTypography-root": {
-              fontWeight: isSelected ? 700 : 400,
-              color: isSelected ? "#ffffff" : "#f0f0f0",
-            },
-          }}
-        />
-        {open && (
-          <Box sx={{ ml: 1 }}>
-            {isOpen ? (
-              <ExpandLess sx={{ color: isSelected ? "#ffffff" : "#e0e0e0" }} />
-            ) : (
-              <ExpandMore sx={{ color: isSelected ? "#ffffff" : "#e0e0e0" }} />
+            {open && (
+              <Box sx={{ ml: isSmallScreen ? 0.5 : 1, flexShrink: 0 }}>
+                {isOpen ? (
+                  <ExpandLess sx={{ 
+                    color: isSelected ? "#ffffff" : "#e0e0e0",
+                    fontSize: isSmallScreen ? "1.1rem" : "1.3rem"
+                  }} />
+                ) : (
+                  <ExpandMore sx={{ 
+                    color: isSelected ? "#ffffff" : "#e0e0e0",
+                    fontSize: isSmallScreen ? "1.1rem" : "1.3rem"
+                  }} />
+                )}
+              </Box>
             )}
-          </Box>
-        )}
-      </ListItemButton>
-    </ListItem>
-  );
+          </ListItemButton>
+        </Tooltip>
+      </ListItem>
+    );
+  };
 
   // Company and Location Dropdowns Component
   const renderCompanyLocationDropdowns = () => {
-    if (!open) return null; // Hide dropdowns when sidebar is collapsed
+    if (!open) return null;
 
     return (
-      <Box sx={{ px: 2, pb: 2 }}>
+      <Box sx={{ px: isSmallScreen ? 1 : 1.5, pb: 1.5 }}>
         {/* Company Dropdown */}
         <FormControl 
           fullWidth 
           size="small" 
           sx={{ 
-            mb: 1.5,
+            mb: 1,
             '& .MuiOutlinedInput-root': {
               backgroundColor: alpha('#ffffff', 0.1),
-              borderRadius: '8px',
+              borderRadius: '6px',
+              fontSize: fontSizes.dropdown,
               '& fieldset': {
                 borderColor: alpha('#ffffff', 0.3),
               },
@@ -443,29 +616,35 @@ const CustomSidebar = ({ onSignOut }) => {
               },
               '& .MuiSelect-select': {
                 color: '#ffffff',
-                fontSize: '0.875rem',
+                fontSize: fontSizes.dropdown,
+                padding: isSmallScreen ? '6px 10px' : '8px 12px',
               },
               '& .MuiSelect-icon': {
                 color: '#ffffff',
+                fontSize: isSmallScreen ? '1.1rem' : '1.3rem',
               },
             },
             '& .MuiInputLabel-root': {
               color: alpha('#ffffff', 0.7),
-              fontSize: '0.875rem',
+              fontSize: fontSizes.dropdown,
               '&.Mui-focused': {
                 color: '#ffffff',
               },
             },
           }}
         >
-          <InputLabel>Select Company *</InputLabel>
+          <InputLabel>Company *</InputLabel>
           <Select
             value={selectedCompany}
             onChange={handleCompanyChange}
-            label="Select Company *"
+            label="Company *"
             disabled={loading}
             startAdornment={
-              <BusinessIcon sx={{ color: alpha('#ffffff', 0.7), mr: 1, fontSize: '1rem' }} />
+              <BusinessIcon sx={{ 
+                color: alpha('#ffffff', 0.7), 
+                mr: 0.5, 
+                fontSize: isSmallScreen ? '0.8rem' : '0.9rem' 
+              }} />
             }
             MenuProps={{
               PaperProps: {
@@ -473,6 +652,8 @@ const CustomSidebar = ({ onSignOut }) => {
                   bgcolor: '#1a1a1a',
                   color: '#ffffff',
                   '& .MuiMenuItem-root': {
+                    fontSize: fontSizes.dropdown,
+                    padding: isSmallScreen ? '6px 10px' : '8px 12px',
                     '&:hover': {
                       backgroundColor: alpha('#ffffff', 0.1),
                     },
@@ -489,7 +670,14 @@ const CustomSidebar = ({ onSignOut }) => {
           >
             {companies.map((company) => (
               <MenuItem key={company.company_id} value={company.company_id.toString()}>
-                {company.company_name}
+                <Box sx={{ 
+                  overflow: 'hidden', 
+                  textOverflow: 'ellipsis', 
+                  whiteSpace: 'nowrap',
+                  maxWidth: '100%' 
+                }}>
+                  {company.company_name}
+                </Box>
               </MenuItem>
             ))}
           </Select>
@@ -503,7 +691,7 @@ const CustomSidebar = ({ onSignOut }) => {
           sx={{ 
             '& .MuiOutlinedInput-root': {
               backgroundColor: alpha('#ffffff', 0.1),
-              borderRadius: '8px',
+              borderRadius: '6px',
               '& fieldset': {
                 borderColor: alpha('#ffffff', 0.3),
               },
@@ -518,15 +706,17 @@ const CustomSidebar = ({ onSignOut }) => {
               },
               '& .MuiSelect-select': {
                 color: '#ffffff',
-                fontSize: '0.875rem',
+                fontSize: fontSizes.dropdown,
+                padding: isSmallScreen ? '6px 10px' : '8px 12px',
               },
               '& .MuiSelect-icon': {
                 color: '#ffffff',
+                fontSize: isSmallScreen ? '1.1rem' : '1.3rem',
               },
             },
             '& .MuiInputLabel-root': {
               color: alpha('#ffffff', 0.7),
-              fontSize: '0.875rem',
+              fontSize: fontSizes.dropdown,
               '&.Mui-focused': {
                 color: '#ffffff',
               },
@@ -536,13 +726,17 @@ const CustomSidebar = ({ onSignOut }) => {
             },
           }}
         >
-          <InputLabel>Select Location *</InputLabel>
+          <InputLabel>Location *</InputLabel>
           <Select
             value={selectedLocation}
             onChange={handleLocationChange}
-            label="Select Location *"
+            label="Location *"
             startAdornment={
-              <LocationOnIcon sx={{ color: alpha('#ffffff', 0.7), mr: 1, fontSize: '1rem' }} />
+              <LocationOnIcon sx={{ 
+                color: alpha('#ffffff', 0.7), 
+                mr: 0.5, 
+                fontSize: isSmallScreen ? '0.8rem' : '0.9rem' 
+              }} />
             }
             MenuProps={{
               PaperProps: {
@@ -550,6 +744,8 @@ const CustomSidebar = ({ onSignOut }) => {
                   bgcolor: '#1a1a1a',
                   color: '#ffffff',
                   '& .MuiMenuItem-root': {
+                    fontSize: fontSizes.dropdown,
+                    padding: isSmallScreen ? '6px 10px' : '8px 12px',
                     '&:hover': {
                       backgroundColor: alpha('#ffffff', 0.1),
                     },
@@ -566,7 +762,14 @@ const CustomSidebar = ({ onSignOut }) => {
           >
             {availableLocations.map((location) => (
               <MenuItem key={location.location_id} value={location.location_id.toString()}>
-                {location.location_name}
+                <Box sx={{ 
+                  overflow: 'hidden', 
+                  textOverflow: 'ellipsis', 
+                  whiteSpace: 'nowrap',
+                  maxWidth: '100%' 
+                }}>
+                  {location.location_name}
+                </Box>
               </MenuItem>
             ))}
           </Select>
@@ -577,7 +780,7 @@ const CustomSidebar = ({ onSignOut }) => {
 
   const drawerContent = (
     <>
-      {/* Header Section - Aligned with navigation items */}
+      {/* Header Section */}
       <Box
         sx={{
           borderBottom: `1px solid ${alpha("#ffffff", 0.2)}`,
@@ -586,17 +789,17 @@ const CustomSidebar = ({ onSignOut }) => {
           position: "sticky",
           top: 0,
           zIndex: 1,
-          minHeight: 64,
-          mx: 1,
-          mt: 1,
+          minHeight: isSmallScreen ? 48 : 56,
+          mx: 0.5,
+          mt: 0.5,
         }}
       >
         <ListItemButton
           sx={{
-            minHeight: 48,
+            minHeight: isSmallScreen ? 40 : 48,
             justifyContent: open ? "initial" : "center",
-            px: 2.5,
-            borderRadius: "10px",
+            px: isSmallScreen ? 1 : 2,
+            borderRadius: "8px",
             cursor: "default",
             "&:hover": {
               backgroundColor: "transparent",
@@ -606,25 +809,38 @@ const CustomSidebar = ({ onSignOut }) => {
           <ListItemIcon
             sx={{
               minWidth: 0,
-              mr: open ? 2 : "auto",
+              mr: open ? (isSmallScreen ? 1 : 1.5) : "auto",
               justifyContent: "center",
               color: "#ffffff",
             }}
           >
-            <CustomLogo size={32} />
+            <CustomLogo size={isSmallScreen ? 24 : 28} isMobile={isMobile} />
           </ListItemIcon>
           <ListItemText
-            primary={appName}
+            primary={
+              <Box
+                sx={{
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  maxWidth: "100%",
+                }}
+              >
+                {appName}
+              </Box>
+            }
             sx={{
               transition: "opacity 0.3s ease",
               opacity: open ? 1 : 0,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
+              margin: 0,
               "& .MuiTypography-root": {
                 fontWeight: "bold",
                 color: "#ffffff",
-                fontSize: "1.25rem",
+                fontSize: fontSizes.appName,
+                lineHeight: 1.2,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
               },
             }}
           />
@@ -639,6 +855,8 @@ const CustomSidebar = ({ onSignOut }) => {
         {/* INSIGHTIQ Dropdown */}
         {renderDropdownButton(
           "INSIGHTiQ",
+          "INSIGHTiQ",
+          "IQ",
           insightiqOpen,
           isInsightiqSelected,
           handleInsightiqToggle,
@@ -655,6 +873,8 @@ const CustomSidebar = ({ onSignOut }) => {
         {/* OrderIQ Dropdown */}
         {renderDropdownButton(
           "ORDERiQ",
+          "ORDERiQ",
+          "OQ",
           orderiqOpen,
           isOrderiqSelected,
           handleOrderiqToggle,
@@ -673,18 +893,18 @@ const CustomSidebar = ({ onSignOut }) => {
       </List>
 
       {/* Divider */}
-      <Divider sx={{ borderColor: alpha("#ffffff", 0.3), mx: 1 }} />
+      <Divider sx={{ borderColor: alpha("#ffffff", 0.3), mx: 0.5 }} />
 
-      {/* Sign Out Section - Styled like nav items */}
+      {/* Sign Out Section */}
       <Box sx={{ p: 1 }}>
         {onSignOut && (
           <ListItem disablePadding>
             <ListItemButton
               onClick={onSignOut}
               sx={{
-                minHeight: 48,
+                minHeight: isSmallScreen ? 44 : 48,
                 justifyContent: open ? "initial" : "center",
-                px: 2.5,
+                px: isSmallScreen ? 1.5 : 2.5,
                 mx: 0,
                 mb: 0.5,
                 borderRadius: "10px",
@@ -701,10 +921,11 @@ const CustomSidebar = ({ onSignOut }) => {
                 <ListItemIcon
                   sx={{
                     minWidth: 0,
-                    mr: open ? 2 : "auto",
+                    mr: open ? (isSmallScreen ? 1.5 : 2) : "auto",
                     justifyContent: "center",
                     color: "#e0e0e0",
                     transition: "color 0.3s ease",
+                    fontSize: isSmallScreen ? "1.2rem" : "1.5rem",
                   }}
                 >
                   <LogoutIcon />
@@ -721,6 +942,8 @@ const CustomSidebar = ({ onSignOut }) => {
                   "& .MuiTypography-root": {
                     fontWeight: 400,
                     color: "#f0f0f0",
+                    fontSize: fontSizes.mainNav,
+                    lineHeight: 1.2,
                   },
                 }}
               />
@@ -744,12 +967,14 @@ const CustomSidebar = ({ onSignOut }) => {
             zIndex: theme.zIndex.drawer + 2,
             bgcolor: "background.paper",
             boxShadow: `0 2px 5px ${alpha("#000", 0.15)}`,
+            width: isSmallScreen ? 40 : 48,
+            height: isSmallScreen ? 40 : 48,
             "&:hover": {
               bgcolor: alpha(theme.palette.background.default, 0.9),
             },
           }}
         >
-          <MenuIcon />
+          <MenuIcon fontSize={isSmallScreen ? "small" : "medium"} />
         </IconButton>
       )}
 
@@ -811,8 +1036,8 @@ const CustomSidebar = ({ onSignOut }) => {
               bgcolor: "#FFFFFF",
               boxShadow: "0 0 8px rgba(0,0,0,0.2)",
               borderRadius: "50%",
-              width: 40,
-              height: 40,
+              width: isSmallScreen ? 36 : 40,
+              height: isSmallScreen ? 36 : 40,
               border: "1px solid rgba(0,0,0,0.1)",
               zIndex: 1300,
               transition: "all 0.3s ease",
@@ -822,9 +1047,9 @@ const CustomSidebar = ({ onSignOut }) => {
             }}
           >
             {open ? (
-              <ChevronLeftIcon fontSize="small" />
+              <ChevronLeftIcon fontSize={isSmallScreen ? "small" : "medium"} />
             ) : (
-              <ChevronRightIcon fontSize="small" />
+              <ChevronRightIcon fontSize={isSmallScreen ? "small" : "medium"} />
             )}
           </IconButton>
         </Box>
