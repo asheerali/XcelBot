@@ -3,6 +3,11 @@ from typing import Optional
 from datetime import datetime
 
 class SalesPMixBase(BaseModel):
+    
+    # New fields
+    file_name: Optional[str] = Field(None, max_length=255)  # For storing filename
+    dashboard: Optional[int] = Field(None, ge=0)  # Dashboard integer field, non-negative
+    
     # String fields with length validation
     Location: Optional[str] = Field(None, max_length=100)
     Order_Id: Optional[int] = Field(None, ge=0)  # Allow large integers, non-negative
