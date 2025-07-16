@@ -947,6 +947,16 @@ def thirteen_week_category(df, location_filter='All', end_date=None, category_fi
 def create_sales_by_day_table(df, location_filter='All', end_date=None, categories_filter='All', moving_avg_days=7):
     df_copy = df.copy()
 
+
+    print("----------------------------------------------------------")
+    print("----------------------------------------------------------")
+    print("----------------------------------------------------------")
+    print("i am here in sales_split_utils printing sales by day", end_date)
+    print("----------------------------------------------------------")
+    print("----------------------------------------------------------")
+    print("----------------------------------------------------------")
+    print("----------------------------------------------------------")
+    
     if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
         df_copy['Date'] = pd.to_datetime(df_copy['Date'])
 

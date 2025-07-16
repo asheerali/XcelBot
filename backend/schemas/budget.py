@@ -4,6 +4,12 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 
 class BudgetBase(BaseModel):
+    
+    
+    # New fields
+    file_name: Optional[str] = Field(None, max_length=255)  # For storing filename
+    dashboard: Optional[int] = Field(None, ge=0)  # Dashboard integer field, non-negative
+    
     # Basic information fields
     Store: Optional[str] = Field(None, max_length=100)
     Date: Optional[str] = Field(None, max_length=50)

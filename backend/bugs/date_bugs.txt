@@ -1,0 +1,32 @@
+in the page: storeorders - order items at a specific date but the api does not give me the startdate and end_date
+ /api/storeorders/orderitems
+/api/storeorders/orderupdate
+
+
+
+the page: analytics dashboard - also doesnot have the dates
+ /api/storeorders/analyticsdashboard/1/2
+
+
+in the page:store summary - both apis doesnot have date ranges
+
+INFO:     127.0.0.1:52324 - "GET /api/storeorders/consolidatedproduction/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52323 - "GET /api/storeorders/allordersinvoices/1/2 HTTP/1.1" 200 OK
+
+
+in the page: financial summary - the date range is not working
+
+
+in the page: reports - no date ranges
+api/logs/details/2 
+
+
+
+
+time change bugs:
+2025-07-16 00:57:27,517 INFO sqlalchemy.engine.Engine [cached since 431.7s ago] (3, 6, '2025-07-16 00:57:27.516991', None, '{"total_items": 1, "items": [{"item_id": "item_0_3_6", "name": "Green sauce - packed", "category": "Sauce", "quantity": 1, "unit_price": 75, "unit": "Unit", "total_price": 75}]}')
+
+
+2025-07-16 01:00:24,566 INFO sqlalchemy.engine.Engine [cached since 608.8s ago] (3, 6, '2025-07-16 01:00:24.565491', None, '{"total_items": 2, "items": [{"item_id": "item_0_3_6", "name": "Green sauce - packed", "category": "Sauce", "quantity": 1, "unit_price": 75, "unit":  ... (28 characters truncated) ... {"item_id": "item_2_3_6", "name": "Garlic sauce - packed", "category": "Sauce", "quantity": 1, "unit_price": 27, "unit": "Unit", "total_price": 27}]}')
+
+est time zone
