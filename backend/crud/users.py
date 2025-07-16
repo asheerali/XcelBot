@@ -13,15 +13,18 @@ from schemas.user_company_companylocation import UserCompanyCompanyLocationCreat
 from schemas.permissions import PermissionCreate
 
 
-from crud.user_company import create_user_company
-from crud.permissions import create_permission
-
+from crud.user_company import create_user_company , delete_user_company_mapping
+from crud.permissions import (create_permission,
+                              delete_user_permission_mappings
+)
 from utils.email import send_account_email
 
 from crud.user_company_companylocation import (
     create_user_location_mapping,
     delete_user_location_mappings
 )
+
+
 import asyncio
 
 def create_user(db: Session, user: user_schema.UserCreate, background_tasks=None):
@@ -278,7 +281,11 @@ def delete_user(db: Session, user_id: int):
     # ✅ Delete user-location mappings
     delete_user_location_mappings(db, user_id)
 
-    # Optionally: delete user-company mapping if needed
+    # ✅ Delete user permissions
+    delete_user_permission_mappings(db, user_id)  # Add this line
+    
+    # ✅ Delete user-company mapping
+    delete_user_company_mapping(db, user_id)
 
     db.delete(db_user)
     db.commit()

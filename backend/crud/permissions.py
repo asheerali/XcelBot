@@ -32,3 +32,9 @@ def delete_permission(db: Session, permission_id: int):
     db.delete(permission)
     db.commit()
     return True
+
+def delete_user_permission_mappings(db: Session, user_id: int):
+    db.query(Permission).filter(
+        Permission.user_id == user_id
+    ).delete()
+    db.commit()

@@ -22,3 +22,9 @@ def delete_user_company(db: Session, record_id: int):
     db.delete(entry)
     db.commit()
     return True
+
+def delete_user_company_mapping(db: Session, user_id: int):
+    db.query(UserCompany).filter(
+        UserCompany.user_id == user_id
+    ).delete()
+    db.commit()
