@@ -30,3 +30,13 @@ time change bugs:
 2025-07-16 01:00:24,566 INFO sqlalchemy.engine.Engine [cached since 608.8s ago] (3, 6, '2025-07-16 01:00:24.565491', None, '{"total_items": 2, "items": [{"item_id": "item_0_3_6", "name": "Green sauce - packed", "category": "Sauce", "quantity": 1, "unit_price": 75, "unit":  ... (28 characters truncated) ... {"item_id": "item_2_3_6", "name": "Garlic sauce - packed", "category": "Sauce", "quantity": 1, "unit_price": 27, "unit": "Unit", "total_price": 27}]}')
 
 est time zone
+
+
+
+while user update:
+getting user_management
+
+Updating_user: 9 first_name='Asheertest' last_name='Ali1' email='newt.ali.99@gmail.com' 
+phone_number='0491742555647' role=<RoleEnum.manager: 'manager'> company_id=3 isActive=True 
+permissions=['user_management', 'orderiq'] password=None assigned_location=[] 
+<sqlalchemy.orm.session.Session object at 0x000001D7EFCCAB00> <mod
