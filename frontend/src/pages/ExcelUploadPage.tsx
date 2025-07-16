@@ -691,6 +691,12 @@ const ExcelUploadPage: React.FC = () => {
         dashboard: fileInfo.dashboard,
         company_id: selectedCompany.id, // NEW: Add company ID
       };
+      console.log("📦 Payload being sent to backend (full):", {
+        fileName: fileInfo.file.name,
+        dashboard: fileInfo.dashboard,
+        company_id: selectedCompany.id,
+        fileContentPreview: base64Content.substring(0, 50) + "...", // show only start of base64
+      });
 
       console.log("📤 Uploading with payload:", {
         ...uploadPayload,
@@ -1130,13 +1136,10 @@ const ExcelUploadPage: React.FC = () => {
                 renderInput={(params) => (
                   <TextField
                     {...params}
-              
                     variant="outlined"
                     fullWidth
                     error={!!companiesError}
-                    helperText={
-                      companiesError || ""
-                    }
+                    helperText={companiesError || ""}
                     InputProps={{
                       ...params.InputProps,
                       startAdornment: (
@@ -1178,8 +1181,6 @@ const ExcelUploadPage: React.FC = () => {
                   },
                 }}
               />
-
-         
             </Box>
           </CardContent>
         </CompanySelectionCard>
@@ -1392,7 +1393,8 @@ const ExcelUploadPage: React.FC = () => {
                 >
                   <BusinessIcon color="primary" />
                   <Typography variant="body1" fontWeight={500}>
-                    Uploading for: {selectedCompany.name} (ID: {selectedCompany.id})
+                    Uploading for: {selectedCompany.name} (ID:{" "}
+                    {selectedCompany.id})
                   </Typography>
                 </Box>
               )}
