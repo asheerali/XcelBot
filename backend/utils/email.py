@@ -24,6 +24,10 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 
 async def send_account_email(email: str, username: str, password: str):
+    
+    frontend_url = os.getenv("SERVER_URL", "FRONTEND_URL")
+    login_link = f"{frontend_url}/signin"    
+    
     subject = "Welcome to KPI360.ai - Your Account Credentials"
     
     # HTML email template with proper UI/UX
@@ -212,7 +216,8 @@ async def send_account_email(email: str, username: str, password: str):
                 
                 <!-- Call to Action -->
                 <div style="text-align: center;">
-                    <a href="#" class="cta-button">Log In to Your Account</a>
+                    <a href="{login_link}" class="cta-button">Log In to Your Account</a>
+
                 </div>
                 
                 <div class="message-text">
