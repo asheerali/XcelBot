@@ -275,10 +275,11 @@ const AnalyticsDashboard = () => {
   useEffect(() => {
     // Only apply filters if we have both companies and locations selected
     if (reduxSelectedCompanies.length > 0 && reduxSelectedLocations.length > 0) {
-      console.log('Auto-applying filters due to Redux state change:', {
+      console.log('🔄 Auto-applying filters due to Redux state change:', {
         reduxCompanies: reduxSelectedCompanies,
         reduxLocations: reduxSelectedLocations,
-        reduxDateRange: reduxDateRange
+        reduxDateRange: reduxDateRange,
+        hasDateRange: hasDateRange
       });
 
       // Apply the filters using Redux values directly
@@ -296,7 +297,7 @@ const AnalyticsDashboard = () => {
         fetchAnalyticsData(parseInt(firstCompany), parseInt(firstLocation), reduxDateRange);
       }
     }
-  }, [reduxSelectedCompanies.join(','), reduxSelectedLocations.join(','), hasDateRange]);
+  }, [reduxSelectedCompanies.join(','), reduxSelectedLocations.join(','), hasDateRange, JSON.stringify(reduxDateRange)]);
 
   // Fetch analytics data for selected company and location
   const fetchAnalyticsData = async (companyId, locationId, dateRange = null) => {
@@ -304,25 +305,57 @@ const AnalyticsDashboard = () => {
       setAnalyticsLoading(true);
       setAnalyticsError(null);
 
-      console.log('Fetching analytics data for:', { companyId, locationId, dateRange });
+      console.log('🔍 Fetching analytics data for:', { 
+        companyId, 
+        locationId, 
+        dateRange,
+        hasDateRange 
+      });
 
       // Build the API URL
       let apiUrl = `${API_URL_Local}/api/storeorders/analyticsdashboard/${companyId}/${locationId}`;
       
       // Add date range parameters if provided
       const params = new URLSearchParams();
+      let dateRangeParams = null;
+      
       if (dateRange && dateRange.startDate && dateRange.endDate) {
         const startDate = new Date(dateRange.startDate).toISOString().split('T')[0];
         const endDate = new Date(dateRange.endDate).toISOString().split('T')[0];
         params.append('start_date', startDate);
         params.append('end_date', endDate);
+        
+        dateRangeParams = {
+          start_date: startDate,
+          end_date: endDate
+        };
+        
+        console.log('📅 Date range parameters being sent to backend:', {
+          original: dateRange,
+          formatted: dateRangeParams,
+          startDateISO: dateRange.startDate,
+          endDateISO: dateRange.endDate,
+          startDateFormatted: startDate,
+          endDateFormatted: endDate
+        });
+      } else {
+        console.log('📅 No date range selected - fetching all data');
       }
       
       if (params.toString()) {
         apiUrl += `?${params.toString()}`;
       }
 
-      console.log('Fetching from URL:', apiUrl);
+      // Enhanced logging for what's being sent to backend
+      console.log('🌐 Backend API Request Details:', {
+        url: apiUrl,
+        method: 'GET',
+        company_id: companyId,
+        location_id: locationId,
+        query_parameters: dateRangeParams,
+        full_url: apiUrl,
+        timestamp: new Date().toISOString()
+      });
 
       const response = await fetch(apiUrl, {
         method: "GET",
@@ -333,12 +366,30 @@ const AnalyticsDashboard = () => {
         },
       });
 
+      console.log('🔄 Backend Response Status:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries()),
+        url: response.url
+      });
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const result = await response.json();
-      console.log('Analytics API response:', result);
+      
+      console.log('✅ Analytics API response from backend:', {
+        success: true,
+        dataReceived: !!result.data,
+        responseKeys: Object.keys(result),
+        dataKeys: result.data ? Object.keys(result.data) : [],
+        totalSales: result.data?.total_sales,
+        totalOrders: result.data?.total_orders,
+        recordCount: result.data?.daily_orders?.length || 0,
+        timestamp: new Date().toISOString()
+      });
 
       if (result.data) {
         setAnalyticsData(result.data);
@@ -347,7 +398,15 @@ const AnalyticsDashboard = () => {
       }
 
     } catch (err) {
-      console.error("Error fetching analytics data:", err);
+      console.error("❌ Error fetching analytics data from backend:", {
+        error: err.message,
+        stack: err.stack,
+        companyId,
+        locationId,
+        dateRange,
+        apiUrl,
+        timestamp: new Date().toISOString()
+      });
       setAnalyticsError(err.message);
       setAnalyticsData(null);
     } finally {
@@ -538,14 +597,23 @@ const AnalyticsDashboard = () => {
       const startDateISO = range.startDate.toISOString();
       const endDateISO = range.endDate.toISOString();
       
+      console.log('📅 Date range selected by user:', {
+        originalRange: range,
+        startDate: range.startDate,
+        endDate: range.endDate,
+        startDateISO,
+        endDateISO,
+        willTriggerAPICall: reduxSelectedCompanies.length > 0 && reduxSelectedLocations.length > 0
+      });
+      
       dispatch(setAnalyticsDashboardDateRange({
         startDate: startDateISO,
         endDate: endDateISO
       }));
     } else {
+      console.log('📅 Date range cleared by user');
       dispatch(clearAnalyticsDashboardDateRange());
     }
-    console.log("Selected date range:", range);
   };
 
   // Handle refresh
@@ -556,6 +624,7 @@ const AnalyticsDashboard = () => {
     if (reduxSelectedCompanies.length > 0 && reduxSelectedLocations.length > 0) {
       const firstCompany = reduxSelectedCompanies[0];
       const firstLocation = reduxSelectedLocations[0];
+      console.log('🔄 Refreshing analytics data with current selections');
       fetchAnalyticsData(parseInt(firstCompany), parseInt(firstLocation), reduxDateRange);
     }
   };
@@ -1051,6 +1120,11 @@ const AnalyticsDashboard = () => {
                   </Typography>
                   <Typography variant="subtitle1" color="text.secondary">
                     {analyticsData.company_name} - {analyticsData.location_name}
+                    {hasDateRange && (
+                      <span style={{ marginLeft: 16 }}>
+                        ({new Date(reduxDateRange.startDate).toLocaleDateString()} - {new Date(reduxDateRange.endDate).toLocaleDateString()})
+                      </span>
+                    )}
                   </Typography>
                 </Box>
 
@@ -1059,7 +1133,7 @@ const AnalyticsDashboard = () => {
                   <Grid item xs={12} sm={6} md={3}>
                     <Card sx={{ p: 2, textAlign: 'center' }}>
                       <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>
-                        ${analyticsData.total_sales}
+                        ${parseFloat(analyticsData.total_sales).toFixed(2)}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         Total Sales
@@ -1079,7 +1153,7 @@ const AnalyticsDashboard = () => {
                   <Grid item xs={12} sm={6} md={3}>
                     <Card sx={{ p: 2, textAlign: 'center' }}>
                       <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>
-                        ${analyticsData.avg_order_value}
+                        ${parseFloat(analyticsData.avg_order_value).toFixed(2)}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         Avg Order Value
