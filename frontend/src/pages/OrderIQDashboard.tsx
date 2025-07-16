@@ -271,6 +271,9 @@ const OrderIQDashboard = () => {
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
   const [orderToUpdate, setOrderToUpdate] = useState(null);
   
+  // NEW: State for quantity inputs for each item
+  const [itemQuantities, setItemQuantities] = useState({});
+  
   // API data state
   const [companyLocations, setCompanyLocations] = useState([]);
   const [availableItems, setAvailableItems] = useState([]);
@@ -341,6 +344,17 @@ const OrderIQDashboard = () => {
     }
   }, [selectedCompanyId, selectedLocationId, companyLocations.length]);
 
+  // Initialize item quantities when available items change
+  useEffect(() => {
+    if (availableItems.length > 0) {
+      const initialQuantities = {};
+      availableItems.forEach(item => {
+        initialQuantities[item.id] = 1; // Default quantity is 1
+      });
+      setItemQuantities(initialQuantities);
+    }
+  }, [availableItems]);
+
   // Success notification function
   const showNotification = (message, severity = 'success') => {
     setNotification({
@@ -355,6 +369,27 @@ const OrderIQDashboard = () => {
       return;
     }
     setNotification(prev => ({ ...prev, open: false }));
+  };
+
+  // NEW: Handle quantity change for specific item
+  const handleQuantityChange = (itemId, newQuantity) => {
+    // Allow empty string for user to clear and type new number
+    if (newQuantity === '') {
+      setItemQuantities(prev => ({
+        ...prev,
+        [itemId]: ''
+      }));
+      return;
+    }
+    
+    const quantity = parseInt(newQuantity);
+    // Allow any positive integer, including 0 temporarily for editing
+    if (!isNaN(quantity) && quantity >= 0) {
+      setItemQuantities(prev => ({
+        ...prev,
+        [itemId]: quantity
+      }));
+    }
   };
 
   // Fetch company-locations data on component mount
@@ -721,22 +756,35 @@ const OrderIQDashboard = () => {
     console.log('Date range selected - waiting for user to click Apply Filters');
   };
 
-  // Updated to directly add item with quantity 1
-  const handleAddToOrder = (item, quantity = 1, showNotif = true) => {
+  // UPDATED: Now uses quantity from itemQuantities state
+  const handleAddToOrder = (item, quantity = null, showNotif = true) => {
+    // Use provided quantity or get from itemQuantities state
+    let quantityToAdd = quantity !== null ? quantity : (itemQuantities[item.id] || 1);
+    
+    // Convert to number if it's a string, and ensure it's at least 1
+    if (typeof quantityToAdd === 'string') {
+      quantityToAdd = parseInt(quantityToAdd) || 1;
+    }
+    
+    // Only add if quantity is 1 or greater
+    if (quantityToAdd < 1) {
+      return;
+    }
+    
     setCurrentOrder(prev => {
       const existingIndex = prev.findIndex(orderItem => orderItem.id === item.id);
       if (existingIndex >= 0) {
         const updated = [...prev];
-        updated[existingIndex].quantity += quantity;
+        updated[existingIndex].quantity += quantityToAdd;
         if (showNotif) {
-          showNotification(`Added ${quantity} more ${item.name} to cart`);
+          showNotification(`Added ${quantityToAdd} more ${item.name} to cart`);
         }
         return updated;
       } else {
         if (showNotif) {
-          showNotification(`${item.name} added to cart`);
+          showNotification(`${quantityToAdd} × ${item.name} added to cart`);
         }
-        return [...prev, { ...item, quantity }];
+        return [...prev, { ...item, quantity: quantityToAdd }];
       }
     });
   };
@@ -821,6 +869,10 @@ const OrderIQDashboard = () => {
     try {
       setLoading(true);
       
+      // Get local time instead of UTC
+      const now = new Date();
+      const localTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString();
+      
       const updateData = {
         order_id: orderToUpdate.id,
         company_id: parseInt(selectedCompanyId),
@@ -836,14 +888,21 @@ const OrderIQDashboard = () => {
         })),
         total_amount: calculateOrderTotal(),
         email_order: emailOrder,
-        updated_date: new Date().toISOString(),
+        updated_date: localTime,
         date_range: selectedDateRange ? {
           start_date: selectedDateRange.startDateStr || selectedDateRange.startDate?.toISOString(),
           end_date: selectedDateRange.endDateStr || selectedDateRange.endDate?.toISOString()
         } : null
       };
 
-      console.log('Updating order with data:', updateData);
+      console.log('=== ORDER UPDATE DATA BEING SENT TO BACKEND ===');
+      console.log('Endpoint: /api/storeorders/orderupdate');
+      console.log('Method: POST');
+      console.log('Local Time:', now.toLocaleString());
+      console.log('UTC Time:', now.toISOString());
+      console.log('Sending Local Time as ISO:', localTime);
+      console.log('Data:', JSON.stringify(updateData, null, 2));
+      console.log('================================================');
 
       const response = await apiClient.post('/api/storeorders/orderupdate', updateData);
 
@@ -892,6 +951,10 @@ const OrderIQDashboard = () => {
     try {
       setLoading(true);
       
+      // Get local time instead of UTC
+      const now = new Date();
+      const localTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString();
+      
       const orderData = {
         company_id: parseInt(selectedCompanyId),
         location_id: parseInt(selectedLocationId),
@@ -906,14 +969,21 @@ const OrderIQDashboard = () => {
         })),
         total_amount: calculateOrderTotal(),
         email_order: emailOrder,
-        order_date: new Date().toISOString(),
+        order_date: localTime,
         date_range: selectedDateRange ? {
           start_date: selectedDateRange.startDateStr || selectedDateRange.startDate?.toISOString(),
           end_date: selectedDateRange.endDateStr || selectedDateRange.endDate?.toISOString()
         } : null
       };
 
-      console.log('Submitting order with data:', orderData);
+      console.log('=== NEW ORDER DATA BEING SENT TO BACKEND ===');
+      console.log('Endpoint: /api/storeorders/orderitems');
+      console.log('Method: POST');
+      console.log('Local Time:', now.toLocaleString());
+      console.log('UTC Time:', now.toISOString());
+      console.log('Sending Local Time as ISO:', localTime);
+      console.log('Data:', JSON.stringify(orderData, null, 2));
+      console.log('============================================');
 
       const response = await apiClient.post('/api/storeorders/orderitems', orderData);
 
@@ -1449,7 +1519,7 @@ const OrderIQDashboard = () => {
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 {availableItems.length > 0 
-                  ? `${availableItems.length} items available. Click "Add" to add items to your cart with quantity 1 (you can adjust quantity in the cart).`
+                  ? `${availableItems.length} items available. Enter desired quantity and click "Add" to add items to your cart.`
                   : selectedCompanyId && selectedLocationId
                     ? 'Click "Apply Filters & Load Data" above to view available items.'
                     : 'Select company and location from filters above to view available items.'
@@ -1552,15 +1622,37 @@ const OrderIQDashboard = () => {
                               </Box>
                             }
                           />
-                          <Button
-                            variant="contained"
-                            size="small"
-                            startIcon={<AddIcon />}
-                            onClick={() => handleAddToOrder(item, 1)}
-                            sx={{ ml: 2, minWidth: 80 }}
-                          >
-                            Add
-                          </Button>
+                          {/* NEW: Quantity input and Add button */}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
+                            <TextField
+                              type="number"
+                              value={itemQuantities[item.id] || ''}
+                              onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                              placeholder="1"
+                              size="small"
+                              inputProps={{ 
+                                min: 1, 
+                                max: 999,
+                                style: { textAlign: 'center' }
+                              }}
+                              sx={{ 
+                                width: 80,
+                                '& .MuiOutlinedInput-root': {
+                                  height: 36
+                                }
+                              }}
+                            />
+                            <Button
+                              variant="contained"
+                              size="small"
+                              startIcon={<AddIcon />}
+                              onClick={() => handleAddToOrder(item)}
+                              disabled={!itemQuantities[item.id] || itemQuantities[item.id] < 1}
+                              sx={{ minWidth: 80, height: 36 }}
+                            >
+                              Add
+                            </Button>
+                          </Box>
                         </ListItem>
                         {index < filteredItems.length - 1 && <Divider />}
                       </React.Fragment>
@@ -1631,9 +1723,9 @@ const OrderIQDashboard = () => {
                     <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
                       Your order is empty
                     </Typography>
-                    {/* <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Click "Add" on any item to add it to your cart with quantity 1. You can adjust quantities here.
-                    </Typography> */}
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Enter quantity and click "Add" on any item to add it to your cart.
+                    </Typography>
                     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
                       <Tooltip title="Get personalized item suggestions based on your order history">
                         <span>
@@ -1654,15 +1746,6 @@ const OrderIQDashboard = () => {
                           </Button>
                         </span>
                       </Tooltip>
-                      {availableItems.length > 0 && (
-                        <Button 
-                          variant="contained" 
-                          size="small"
-                          onClick={() => handleAddToOrder(availableItems[0], 1)}
-                        >
-                          ➕ Add First Item
-                        </Button>
-                      )}
                       {recentOrders.length > 0 && (
                         <Button 
                           variant="outlined" 
