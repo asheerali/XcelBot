@@ -457,65 +457,6 @@ def create_new_order_items(request: OrderItemsRequest,
     
 
 
-
-# # Updated router endpoint
-# @router.get("/detailsrecent/{company_id}/{location_id}")
-# def get_recent_storeorders_details_by_location(
-#     company_id: int, 
-#     location_id: int, 
-#     db: Session = Depends(get_db)
-# ):
-#     """Get 7 most recent store orders details by company ID and location ID"""
-    
-#     # Get the recent store orders (returns a list)
-#     storeorders_list = storeorders_crud.get_recent_storeorders_by_company_and_location(db, company_id, location_id)
-    
-#     if not storeorders_list:
-#         return {"message": "Store orders not found", "data": []}
-    
-#     # Get company and location names (fetch once)
-#     company = db.query(Company).filter(Company.id == company_id).first()
-#     location = db.query(Store).filter(Store.id == location_id).first()
-    
-#     # Process each order in the list
-#     data = []
-#     for storeorder in storeorders_list:
-#         created = storeorder.created_at.isoformat() if storeorder.created_at else None
-#         updated = storeorder.updated_at.isoformat() if storeorder.updated_at else None
-#         created_readable = storeorder.created_at.strftime('%Y-%m-%d %H:%M:%S') if storeorder.created_at else None
-#         updated_readable = storeorder.updated_at.strftime('%Y-%m-%d %H:%M:%S') if storeorder.updated_at else None
-        
-#         created_variable = updated if updated else created
-#         created_readable_variable = updated_readable if updated_readable else created_readable
-
-#         order_data = {
-#             "id": storeorder.id,
-#             "company_id": storeorder.company_id,
-#             "company_name": company.name if company else "Unknown",
-#             "location_id": storeorder.location_id,
-#             "location_name": location.name if location else "Unknown",
-#             "created_at_original": storeorder.created_at.isoformat() if storeorder.created_at else None,
-#             "created_at_readable_original": storeorder.created_at.strftime('%Y-%m-%d %H:%M:%S') if storeorder.created_at else None,
-#             "created_at": created_variable,
-#             "created_at_readable": created_readable_variable,
-#             "updated_at": storeorder.updated_at.isoformat() if storeorder.updated_at else None,
-#             "updated_at_readable": storeorder.updated_at.strftime('%Y-%m-%d %H:%M:%S') if storeorder.updated_at else None,
-#             "testing_created_at_show_updated_at_if_available": created_variable,
-#             "items_ordered": storeorder.items_ordered,
-#             "prev_items_ordered": storeorder.prev_items_ordered,
-#         }
-#         data.append(order_data)
-    
-#     return {
-#         "message": "Recent store orders details fetched successfully", 
-#         "data": data,
-#         "total_orders": len(data),
-#         "company_name": company.name if company else "Unknown",
-#         "location_name": location.name if location else "Unknown"
-#     }
-    
-
-
 # Updated router endpoint
 @router.get("/detailsrecent/{company_id}/{location_id}")
 def get_recent_storeorders_details_by_location(
@@ -531,17 +472,6 @@ def get_recent_storeorders_details_by_location(
     # Get the recent store orders (returns a list)
     storeorders_list = storeorders_crud.get_recent_storeorders_by_company_and_location(db, company_id, location_id)
     
-    # if start_date and end_date:
-    #     try:
-    #         start = datetime.strptime(start_date, "%Y-%m-%d").date()
-    #         end = datetime.strptime(end_date, "%Y-%m-%d").date()
-    #         print("Filtering store orders between dates:", start, end)
-    #         storeorders_list = [
-    #             order for order in storeorders_list
-    #             if order.created_at and start <= order.created_at.date() <= end
-    #         ]
-    #     except ValueError:
-    #         return {"message": "Invalid date format. Use YYYY-MM-DD", "data": []}
 
     if start_date and end_date:
         try:
@@ -976,9 +906,12 @@ def get_avg_daily_orders(
 def get_analytics_dashboard(
     company_id: int, 
     location_id: int, 
+    start_date: str = Query(None),
+    end_date: str = Query(None),
     db: Session = Depends(get_db)
 ):
     """Get total sales, total orders, average order value, and daily analytics tables"""
+    print(f"Fetching analytics dashboard for company {company_id} and location {location_id} with date range {start_date} to {end_date}")
     try:
         storeorders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
 
