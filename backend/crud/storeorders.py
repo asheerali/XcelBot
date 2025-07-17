@@ -3,7 +3,7 @@ from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 from models.storeorders import StoreOrders
 from schemas.storeorders import StoreOrdersCreate, StoreOrdersUpdate
-from typing import List, Optional
+from typing import List, Optional, Union
 from sqlalchemy.orm.attributes import flag_modified
 from datetime import datetime
 
@@ -53,14 +53,29 @@ def get_all_storeorders_by_company_and_location(db: Session, company_id: int, lo
     ).order_by(StoreOrders.updated_at.desc()).all()
         
 
-def get_recent_storeorders_by_company_and_location(db: Session, company_id: int, location_id: int, limit: int = 7):
+def get_recent_storeorders_by_company_and_location(db: Session, 
+                                                   company_id: int, 
+                                                   location_id: int, 
+                                                   limit: Union[int, str] = 7):
     """Get the most recent store orders records by company ID and location ID"""
-    return db.query(StoreOrders).filter(
-        StoreOrders.company_id == company_id,
-        StoreOrders.location_id == location_id
-    ).order_by(
-        desc(func.coalesce(StoreOrders.updated_at, StoreOrders.created_at))
-    ).limit(7).all()
+    print("Fetching recent store orders for company:", company_id, "and location:", location_id, "with limit:", limit)
+    if limit == "all":
+        # If limit is "all", return all records without limit
+        return db.query(StoreOrders).filter(
+            StoreOrders.company_id == company_id,
+            StoreOrders.location_id == location_id
+        ).order_by(
+            desc(func.coalesce(StoreOrders.updated_at, StoreOrders.created_at))
+        ).all()
+    else:    
+        return db.query(StoreOrders).filter(
+            StoreOrders.company_id == company_id,
+            StoreOrders.location_id == location_id
+        ).order_by(
+            desc(func.coalesce(StoreOrders.updated_at, StoreOrders.created_at))
+        ).limit(limit).all()
+        
+        
 
 
 

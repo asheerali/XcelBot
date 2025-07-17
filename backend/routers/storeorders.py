@@ -1030,7 +1030,8 @@ def get_analytics_dashboard(
 ):
     """Get total sales, total orders, average order value, and daily analytics tables"""
     try:
-        storeorders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
+        # storeorders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
+        storeorders = storeorders_crud.get_recent_storeorders_by_company_and_location(db, company_id, location_id, limit="all")
 
 
         if not isinstance(storeorders, list):
@@ -1041,7 +1042,8 @@ def get_analytics_dashboard(
         rows = []
         for order in storeorders:
             print("i am here in the store orders printing the _items_ordered_", order)
-            created_date = order.created_at
+            the_date = order.updated_at if order.updated_at else order.created_at
+            created_date = the_date
             total_amount = 0.0
             total_quantity = 0
 
