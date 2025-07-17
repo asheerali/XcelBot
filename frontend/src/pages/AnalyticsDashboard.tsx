@@ -875,7 +875,7 @@ const AnalyticsDashboard = () => {
           </Button>
           
           {/* Debug Test Button - Development Only */}
-          {process.env.NODE_ENV === 'development' && (
+          {/* {process.env.NODE_ENV === 'development' && (
             <Button
               variant="outlined"
               onClick={() => {
@@ -904,7 +904,7 @@ const AnalyticsDashboard = () => {
             >
               Test Redux
             </Button>
-          )}
+          )} */}
           
           <DateRangeSelectorButton onDateRangeSelect={handleDateRangeSelect} />
         </Box>

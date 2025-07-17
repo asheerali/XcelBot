@@ -9,14 +9,6 @@ import {
   setSelectedLocations,
 } from "../store/slices/masterFileSlice";
 
-// NEW: Import Redux date range actions and selectors
-import {
-  setSummaryFinancialDashboardDateRange,
-  clearSummaryFinancialDashboardDateRange,
-  selectSummaryFinancialDashboardDateRange,
-  selectHasSummaryFinancialDashboardDateRange,
-} from "../store/slices/dateRangeSlice";
-
 import { API_URL_Local } from "../constants";
 
 const SummaryFinancialDashboard = () => {
@@ -27,10 +19,6 @@ const SummaryFinancialDashboard = () => {
   const selectedLocations = useSelector(selectSelectedLocations);
   const lastAppliedFilters = useSelector(selectLastAppliedFilters);
 
-  // NEW: Redux date range selectors
-  const reduxDateRange = useSelector(selectSummaryFinancialDashboardDateRange);
-  const hasReduxDateRange = useSelector(selectHasSummaryFinancialDashboardDateRange);
-
   // Local state for non-Redux data
   const [companyLocationData, setCompanyLocationData] = useState([]);
   const [financialData, setFinancialData] = useState(null);
@@ -39,7 +27,7 @@ const SummaryFinancialDashboard = () => {
   const [financialDataLoading, setFinancialDataLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Date range state - UPDATED to integrate with Redux
+  // Date range state
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState({
     startDate: new Date(),
@@ -47,48 +35,6 @@ const SummaryFinancialDashboard = () => {
     startDateStr: "",
     endDateStr: "",
   });
-
-  // NEW: Initialize local date range state from Redux on mount
-  useEffect(() => {
-    if (hasReduxDateRange && reduxDateRange.startDate && reduxDateRange.endDate) {
-      console.log('💰 SummaryFinancialDashboard: Loading date range from Redux:', reduxDateRange);
-      
-      // FIXED: Convert YYYY-MM-DD format from Redux to Date objects without timezone issues
-      // Create dates at noon to avoid timezone shifting
-      const startDateParts = reduxDateRange.startDate.split('-');
-      const endDateParts = reduxDateRange.endDate.split('-');
-      
-      const startDate = new Date(
-        parseInt(startDateParts[0]), 
-        parseInt(startDateParts[1]) - 1, 
-        parseInt(startDateParts[2]),
-        12, 0, 0 // Set to noon to avoid timezone issues
-      );
-      
-      const endDate = new Date(
-        parseInt(endDateParts[0]), 
-        parseInt(endDateParts[1]) - 1, 
-        parseInt(endDateParts[2]),
-        12, 0, 0 // Set to noon to avoid timezone issues
-      );
-      
-      console.log('💰 Converted dates:', {
-        originalStart: reduxDateRange.startDate,
-        originalEnd: reduxDateRange.endDate,
-        convertedStart: startDate,
-        convertedEnd: endDate,
-        startDateLocal: startDate.toLocaleDateString(),
-        endDateLocal: endDate.toLocaleDateString()
-      });
-      
-      setSelectedDateRange({
-        startDate,
-        endDate,
-        startDateStr: reduxDateRange.startDate,
-        endDateStr: reduxDateRange.endDate,
-      });
-    }
-  }, [hasReduxDateRange, reduxDateRange]);
 
   // Fetch company and location data from API
   useEffect(() => {
@@ -162,7 +108,7 @@ const SummaryFinancialDashboard = () => {
     dispatch,
   ]);
 
-  // UPDATED: Fetch financial data function using Redux state with improved date handling
+  // Fetch financial data function using Redux state
   const fetchFinancialDataFromRedux = async () => {
     const companies =
       selectedCompanies.length > 0
@@ -187,55 +133,19 @@ const SummaryFinancialDashboard = () => {
           locationId
         );
 
-        // UPDATED: Build URL with date range parameters - use Redux date range if available, otherwise local state
+        // Build URL with date range parameters if selected
         let financialUrl = `${API_URL_Local}/api/storeorders/financialsummary/${companyId}/${locationId}`;
         let companySummaryUrl = `${API_URL_Local}/api/storeorders/companysummary/${companyId}`;
 
-        // NEW: Determine which date range to use - prioritize Redux, then local state
-        let finalStartDate = "";
-        let finalEndDate = "";
-
-        if (hasReduxDateRange && reduxDateRange.startDate && reduxDateRange.endDate) {
-          // Use Redux date range (already in YYYY-MM-DD format)
-          finalStartDate = reduxDateRange.startDate;
-          finalEndDate = reduxDateRange.endDate;
-          console.log('💰 Using Redux date range for API calls:', { finalStartDate, finalEndDate });
-        } else if (selectedDateRange.startDateStr && selectedDateRange.endDateStr) {
-          // Use local state date range
-          finalStartDate = selectedDateRange.startDateStr;
-          finalEndDate = selectedDateRange.endDateStr;
-          console.log('📅 Using local date range for API calls:', { finalStartDate, finalEndDate });
-        }
-
-        // Add date range parameters if available
-        if (finalStartDate && finalEndDate) {
-          const dateParams = `?start_date=${finalStartDate}&end_date=${finalEndDate}`;
+        // Add date range parameters if selected
+        if (selectedDateRange.startDateStr && selectedDateRange.endDateStr) {
+          const dateParams = `?start_date=${selectedDateRange.startDateStr}&end_date=${selectedDateRange.endDateStr}`;
           financialUrl += dateParams;
           companySummaryUrl += dateParams;
-          
-          console.log('🚀 API CALLS WITH DATE RANGE:', {
-            message: 'Date range parameters being sent to backend',
-            startDate: finalStartDate,
-            endDate: finalEndDate,
-            dateParams: dateParams,
-            financialApiUrl: financialUrl,
-            companySummaryApiUrl: companySummaryUrl,
-            companyId: companyId,
-            locationId: locationId
-          });
-        } else {
-          console.log('🚀 API CALLS WITHOUT DATE RANGE:', {
-            message: 'No date range selected - calling APIs without date parameters',
-            financialApiUrl: financialUrl,
-            companySummaryApiUrl: companySummaryUrl,
-            companyId: companyId,
-            locationId: locationId
-          });
         }
 
-        console.log("💰 FINAL API ENDPOINTS:");
-        console.log("📊 Financial URL:", financialUrl);
-        console.log("🏢 Company Summary URL:", companySummaryUrl);
+        console.log("Financial URL:", financialUrl);
+        console.log("Company Summary URL:", companySummaryUrl);
 
         // Fetch financial summary data
         const financialResponse = await fetch(financialUrl);
@@ -502,49 +412,20 @@ const SummaryFinancialDashboard = () => {
     [dispatch]
   );
 
-  // NEW: Auto-fetch data when filters change
-  useEffect(() => {
-    const autoFetchData = async () => {
-      // Only fetch if we have both company and location selected
-      if (selectedCompanies.length > 0 && selectedLocations.length > 0) {
-        console.log("🚀 Auto-fetching data due to filter change:", {
-          companies: selectedCompanies,
-          locations: selectedLocations,
-        });
-        await fetchFinancialDataFromRedux();
-      } else {
-        // Clear data if filters are incomplete
-        setFinancialData(null);
-        setCompanySummaryData(null);
-        if (selectedCompanies.length === 0 || selectedLocations.length === 0) {
-          setError("Please select both a company and location to view financial data");
-        }
-      }
-    };
-
-    // Add a small delay to avoid rapid API calls during quick filter changes
-    const timeoutId = setTimeout(autoFetchData, 300);
-    return () => clearTimeout(timeoutId);
-  }, [selectedCompanies, selectedLocations, reduxDateRange]);
-
-  // REMOVED: handleApplyFilters function - no longer needed
+  const handleApplyFilters = async () => {
+    console.log("Applying filters:", {
+      companies: selectedCompanies,
+      locations: selectedLocations,
+    });
+    // Fetch financial data when apply filters is clicked
+    await fetchFinancialDataFromRedux();
+  };
 
   const handleClearFilters = () => {
     dispatch(setSelectedCompanies([]));
     dispatch(setSelectedLocations([]));
 
-    // Clear financial data when filters are cleared
-    setFinancialData(null);
-    setCompanySummaryData(null);
-    setError(null);
-  };
-
-  // NEW: Handle individual date range clear
-  const handleClearDateRange = () => {
-    // Clear Redux date range
-    dispatch(clearSummaryFinancialDashboardDateRange());
-
-    // Clear local date range
+    // Clear date range
     setSelectedDateRange({
       startDate: new Date(),
       endDate: new Date(),
@@ -552,45 +433,14 @@ const SummaryFinancialDashboard = () => {
       endDateStr: "",
     });
 
-    // Refetch data without date range if filters are present
-    if (selectedCompanies.length > 0 && selectedLocations.length > 0) {
-      fetchFinancialDataFromRedux();
-    }
+    // Clear financial data when filters are cleared
+    setFinancialData(null);
+    setCompanySummaryData(null);
+    setError(null);
   };
 
   // Date range utility functions
   const formatDateRange = () => {
-    // NEW: Check Redux date range first, then local state
-    if (hasReduxDateRange && reduxDateRange.startDate && reduxDateRange.endDate) {
-      // FIXED: Use timezone-safe date conversion for display
-      const startDateParts = reduxDateRange.startDate.split('-');
-      const endDateParts = reduxDateRange.endDate.split('-');
-      
-      const startDate = new Date(
-        parseInt(startDateParts[0]), 
-        parseInt(startDateParts[1]) - 1, 
-        parseInt(startDateParts[2]),
-        12, 0, 0
-      );
-      
-      const endDate = new Date(
-        parseInt(endDateParts[0]), 
-        parseInt(endDateParts[1]) - 1, 
-        parseInt(endDateParts[2]),
-        12, 0, 0
-      );
-      
-      const formatDate = (date) => {
-        return date.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        });
-      };
-
-      return `${formatDate(startDate)} - ${formatDate(endDate)}`;
-    }
-    
     if (!selectedDateRange.startDate || !selectedDateRange.endDate) {
       return "Select Date Range";
     }
@@ -608,41 +458,22 @@ const SummaryFinancialDashboard = () => {
     )}`;
   };
 
-  // UPDATED: Date range handlers with Redux integration
+  // Date range handlers
   const handleDateRangeSelect = (range) => {
-    console.log('💰 SummaryFinancialDashboard: Date range selected:', range);
-    
-    // FIXED: Ensure dates are properly formatted without timezone issues
-    const startDateStr = range.startDate.getFullYear() + '-' + 
-      String(range.startDate.getMonth() + 1).padStart(2, '0') + '-' + 
-      String(range.startDate.getDate()).padStart(2, '0');
-    
-    const endDateStr = range.endDate.getFullYear() + '-' + 
-      String(range.endDate.getMonth() + 1).padStart(2, '0') + '-' + 
-      String(range.endDate.getDate()).padStart(2, '0');
-    
-    console.log('💰 Formatted date strings:', { startDateStr, endDateStr });
-    
-    // Update local state
     setSelectedDateRange({
       startDate: range.startDate,
       endDate: range.endDate,
-      startDateStr: startDateStr,
-      endDateStr: endDateStr,
+      startDateStr: range.startDateStr,
+      endDateStr: range.endDateStr,
     });
-
-    // NEW: Update Redux state
-    dispatch(setSummaryFinancialDashboardDateRange({
-      startDate: startDateStr,
-      endDate: endDateStr,
-    }));
-
     setShowDateRangeModal(false);
 
     // Clear current data when date range changes
     setFinancialData(null);
     setCompanySummaryData(null);
     setError(null);
+
+    console.log("Date range selected:", range);
   };
 
   // Export functions for Daily Cost Summary table
@@ -1211,10 +1042,6 @@ const SummaryFinancialDashboard = () => {
 
   // Date Range Button Component
   const DateRangeButton = () => {
-    const displayText = hasReduxDateRange || (selectedDateRange.startDateStr && selectedDateRange.endDateStr) 
-      ? formatDateRange() 
-      : "Date Range";
-
     return (
       <button
         onClick={() => setShowDateRangeModal(true)}
@@ -1267,9 +1094,7 @@ const SummaryFinancialDashboard = () => {
             <line x1="3" y1="10" x2="21" y2="10"></line>
           </svg>
         </div>
-        <span style={{ fontSize: "14px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {displayText}
-        </span>
+        <span>Date Range</span>
       </button>
     );
   };
@@ -1278,121 +1103,28 @@ const SummaryFinancialDashboard = () => {
   const DateRangeModal = () => {
     if (!showDateRangeModal) return null;
 
-    // UPDATED: Initialize with Redux date range if available, otherwise use local state
-    let initialStartDate = new Date();
-    let initialEndDate = new Date();
-
-    if (hasReduxDateRange && reduxDateRange.startDate && reduxDateRange.endDate) {
-      // FIXED: Timezone-safe date conversion for date picker initialization
-      const startDateParts = reduxDateRange.startDate.split('-');
-      const endDateParts = reduxDateRange.endDate.split('-');
-      
-      initialStartDate = new Date(
-        parseInt(startDateParts[0]), 
-        parseInt(startDateParts[1]) - 1, 
-        parseInt(startDateParts[2]),
-        12, 0, 0
-      );
-      
-      initialEndDate = new Date(
-        parseInt(endDateParts[0]), 
-        parseInt(endDateParts[1]) - 1, 
-        parseInt(endDateParts[2]),
-        12, 0, 0
-      );
-      
-      console.log('💰 Modal initialized with Redux dates:', {
-        reduxStart: reduxDateRange.startDate,
-        reduxEnd: reduxDateRange.endDate,
-        convertedStart: initialStartDate,
-        convertedEnd: initialEndDate
-      });
-    } else if (selectedDateRange.startDate && selectedDateRange.endDate) {
-      initialStartDate = selectedDateRange.startDate;
-      initialEndDate = selectedDateRange.endDate;
-    }
-
     const initialState = [
       {
-        startDate: initialStartDate,
-        endDate: initialEndDate,
+        startDate: selectedDateRange.startDate || new Date(),
+        endDate: selectedDateRange.endDate || new Date(),
         key: "selection",
       },
     ];
 
     const [tempDateRange, setTempDateRange] = useState(initialState);
 
-    // FIXED: Better handling of DateRangeSelector callback
-    const handleDateRangeChange = (ranges) => {
-      console.log('📅 Date range changed - raw ranges:', ranges);
-      
-      // Handle different callback formats from DateRangeSelector
-      if (ranges && ranges.selection) {
-        // Format: { selection: { startDate, endDate, key } }
-        console.log('📅 Using ranges.selection format:', ranges.selection);
-        setTempDateRange([ranges.selection]);
-      } else if (ranges && Array.isArray(ranges) && ranges.length > 0) {
-        // Format: [{ startDate, endDate, key }]
-        console.log('📅 Using array format:', ranges[0]);
-        setTempDateRange(ranges);
-      } else if (ranges && ranges.startDate && ranges.endDate) {
-        // Format: { startDate, endDate, key }
-        console.log('📅 Using direct object format:', ranges);
-        setTempDateRange([ranges]);
-      } else {
-        console.warn('⚠️ Unexpected date range format:', ranges);
-      }
+    const handleDateRangeChange = (range) => {
+      setTempDateRange([range.selection]);
     };
 
     const handleApplyRange = () => {
-      console.log('📅 Apply range clicked, tempDateRange:', tempDateRange);
-      
-      // FIXED: Better error handling and validation
-      if (!tempDateRange || tempDateRange.length === 0) {
-        console.error('❌ Invalid tempDateRange - empty or null:', tempDateRange);
-        alert('Please select a valid date range');
-        return;
-      }
-
       const range = tempDateRange[0];
-      
-      // FIXED: Validate that range exists and has required properties
-      if (!range || typeof range !== 'object') {
-        console.error('❌ Range is not a valid object:', range);
-        alert('Please select a valid date range');
-        return;
-      }
-
-      if (!range.startDate || !range.endDate) {
-        console.error('❌ Range missing startDate or endDate:', range);
-        alert('Please select both start and end dates');
-        return;
-      }
-
-      console.log('📅 Applying range:', range);
-      
-      try {
-        // FIXED: Use proper date formatting without timezone issues
-        const startDateStr = range.startDate.getFullYear() + '-' + 
-          String(range.startDate.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(range.startDate.getDate()).padStart(2, '0');
-        
-        const endDateStr = range.endDate.getFullYear() + '-' + 
-          String(range.endDate.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(range.endDate.getDate()).padStart(2, '0');
-        
-        console.log('💰 Modal applying formatted dates:', { startDateStr, endDateStr });
-        
-        handleDateRangeSelect({
-          startDate: range.startDate,
-          endDate: range.endDate,
-          startDateStr: startDateStr,
-          endDateStr: endDateStr,
-        });
-      } catch (error) {
-        console.error('❌ Error applying date range:', error);
-        alert('Error applying date range. Please try again.');
-      }
+      handleDateRangeSelect({
+        startDate: range.startDate,
+        endDate: range.endDate,
+        startDateStr: range.startDate.toISOString().split("T")[0],
+        endDateStr: range.endDate.toISOString().split("T")[0],
+      });
     };
 
     const handleCancelRange = () => {
@@ -1420,10 +1152,9 @@ const SummaryFinancialDashboard = () => {
           style={{
             backgroundColor: "white",
             borderRadius: "12px",
-            width: "85%",
-            maxWidth: "1000px",
+            width: "90%",
+            maxWidth: "900px",
             maxHeight: "90vh",
-            minHeight: "500px",
             boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2)",
             display: "flex",
             flexDirection: "column",
@@ -1445,7 +1176,7 @@ const SummaryFinancialDashboard = () => {
             <h2
               style={{
                 margin: 0,
-                fontSize: "22px",
+                fontSize: "20px",
                 fontWeight: "600",
                 color: "#333",
               }}
@@ -1466,14 +1197,6 @@ const SummaryFinancialDashboard = () => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                borderRadius: "50%",
-                transition: "background-color 0.2s",
-              }}
-              onMouseOver={(e) => {
-                e.target.style.backgroundColor = "#f5f5f5";
-              }}
-              onMouseOut={(e) => {
-                e.target.style.backgroundColor = "transparent";
               }}
             >
               ×
@@ -1484,26 +1207,14 @@ const SummaryFinancialDashboard = () => {
           <div
             style={{
               flex: 1,
-              overflow: "hidden",
+              overflow: "auto",
               padding: "0",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              minHeight: "350px",
             }}
           >
-            <div style={{ 
-              width: "100%", 
-              height: "100%",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center"
-            }}>
-              <DateRangeSelector
-                initialState={tempDateRange}
-                onSelect={handleDateRangeChange}
-              />
-            </div>
+            <DateRangeSelector
+              initialState={tempDateRange}
+              onSelect={handleDateRangeChange}
+            />
           </div>
 
           {/* Footer with buttons */}
@@ -1530,7 +1241,6 @@ const SummaryFinancialDashboard = () => {
                 fontWeight: "500",
                 cursor: "pointer",
                 transition: "all 0.2s",
-                minWidth: "90px",
               }}
               onMouseOver={(e) => {
                 e.target.style.backgroundColor = "#f5f5f5";
@@ -1553,7 +1263,6 @@ const SummaryFinancialDashboard = () => {
                 fontWeight: "500",
                 cursor: "pointer",
                 transition: "all 0.2s",
-                minWidth: "110px",
               }}
               onMouseOver={(e) => {
                 e.target.style.backgroundColor = "#1565c0";
@@ -1795,7 +1504,54 @@ const SummaryFinancialDashboard = () => {
               flexWrap: "wrap",
             }}
           >
-            {/* REMOVED: Clear All button */}
+            <button
+              onClick={handleClearFilters}
+              style={{
+                backgroundColor: "transparent",
+                color: "#666",
+                border: "1px solid #e0e0e0",
+                padding: "8px 16px",
+                borderRadius: "6px",
+                fontSize: "14px",
+                fontWeight: "500",
+                cursor: "pointer",
+                transition: "all 0.2s",
+              }}
+            >
+              Clear All
+            </button>
+            <button
+              onClick={handleApplyFilters}
+              disabled={financialDataLoading}
+              style={{
+                backgroundColor: financialDataLoading ? "#ccc" : "#1976d2",
+                color: "white",
+                border: "none",
+                padding: "8px 20px",
+                borderRadius: "6px",
+                fontSize: "14px",
+                fontWeight: "500",
+                cursor: financialDataLoading ? "not-allowed" : "pointer",
+                transition: "all 0.2s",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              {financialDataLoading && (
+                <div
+                  style={{
+                    width: "14px",
+                    height: "14px",
+                    border: "2px solid white",
+                    borderTop: "2px solid transparent",
+                    borderRadius: "50%",
+                    animation: "spin 1s linear infinite",
+                  }}
+                ></div>
+              )}
+              {financialDataLoading ? "Loading..." : "Apply Filters"}
+            </button>
           </div>
         </div>
 
@@ -1820,10 +1576,9 @@ const SummaryFinancialDashboard = () => {
           ))}
         </div>
 
-        {/* Active filter chips - UPDATED to show Redux date range */}
+        {/* Active filter chips */}
         {(selectedLocations.length > 0 ||
           selectedCompanies.length > 0 ||
-          hasReduxDateRange ||
           (selectedDateRange.startDateStr && selectedDateRange.endDateStr)) && (
           <div
             style={{
@@ -1852,27 +1607,9 @@ const SummaryFinancialDashboard = () => {
                       borderRadius: "10px",
                       fontSize: "12px",
                       border: "1px solid #2e7d32",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
                     }}
                   >
                     🏢 {company?.company_name || companyValue}
-                    <button
-                      onClick={() => handleFilterChange("companies", [])}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "#1976d2",
-                        cursor: "pointer",
-                        fontSize: "14px",
-                        padding: "0",
-                        display: "flex",
-                        alignItems: "center",
-                      }}
-                    >
-                      ×
-                    </button>
                   </span>
                 );
               })}
@@ -1895,64 +1632,27 @@ const SummaryFinancialDashboard = () => {
                       borderRadius: "10px",
                       fontSize: "12px",
                       border: "1px solid #1976d2",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
                     }}
                   >
                     📍 {locationName}
-                    <button
-                      onClick={() => handleFilterChange("location", [])}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "#1976d2",
-                        cursor: "pointer",
-                        fontSize: "14px",
-                        padding: "0",
-                        display: "flex",
-                        alignItems: "center",
-                      }}
-                    >
-                      ×
-                    </button>
                   </span>
                 );
               })}
-              {/* UPDATED: Date range chip with individual cancel button */}
-              {(hasReduxDateRange || 
-                (selectedDateRange.startDateStr && selectedDateRange.endDateStr)) && (
-                <span
-                  style={{
-                    backgroundColor: "#fff3e0",
-                    color: "#ed6c02",
-                    padding: "4px 8px",
-                    borderRadius: "10px",
-                    fontSize: "12px",
-                    border: "1px solid #ed6c02",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                  }}
-                >
-                  📅 {formatDateRange()}
-                  <button
-                    onClick={handleClearDateRange}
+              {selectedDateRange.startDateStr &&
+                selectedDateRange.endDateStr && (
+                  <span
                     style={{
-                      background: "none",
-                      border: "none",
+                      backgroundColor: "#fff3e0",
                       color: "#ed6c02",
-                      cursor: "pointer",
-                      fontSize: "14px",
-                      padding: "0",
-                      display: "flex",
-                      alignItems: "center",
+                      padding: "4px 8px",
+                      borderRadius: "10px",
+                      fontSize: "12px",
+                      border: "1px solid #ed6c02",
                     }}
                   >
-                    ×
-                  </button>
-                </span>
-              )}
+                    📅 {formatDateRange()}
+                  </span>
+                )}
             </div>
           </div>
         )}
@@ -2013,7 +1713,7 @@ const SummaryFinancialDashboard = () => {
             <br />
             3. Optionally select a date range
             <br />
-            Data will load automatically when filters are selected
+            4. Click "Apply Filters" to view financial data
           </div>
         </div>
       )}
@@ -2037,7 +1737,7 @@ const SummaryFinancialDashboard = () => {
                 : `${summaryStats.totalCost.toLocaleString()}`
             }
             subtitle={
-              hasReduxDateRange || (selectedDateRange.startDateStr && selectedDateRange.endDateStr)
+              selectedDateRange.startDateStr && selectedDateRange.endDateStr
                 ? formatDateRange()
                 : "Selected period"
             }
@@ -2052,7 +1752,7 @@ const SummaryFinancialDashboard = () => {
                 : summaryStats.totalOrders.toLocaleString()
             }
             subtitle={
-              hasReduxDateRange || (selectedDateRange.startDateStr && selectedDateRange.endDateStr)
+              selectedDateRange.startDateStr && selectedDateRange.endDateStr
                 ? formatDateRange()
                 : "Selected period"
             }
@@ -2526,6 +2226,10 @@ const SummaryFinancialDashboard = () => {
                   )}
                 </tbody>
               </table>
+
+
+
+              
             </div>
           )}
         </div>

@@ -483,26 +483,63 @@ const Reports = () => {
         endDateStr: reportsDateRange.endDate
       });
     } else {
-      // No Redux date range, use today as default
-      const today = new Date();
-      const defaultRange = {
-        startDate: today,
-        endDate: today,
-        startDateStr: formatDate(today, 'yyyy-MM-dd'),
-        endDateStr: formatDate(today, 'yyyy-MM-dd')
+      // No Redux date range, set empty dates (no filter)
+      const emptyRange = {
+        startDate: null,
+        endDate: null,
+        startDateStr: '',
+        endDateStr: ''
       };
       
-      setSelectedDateRange(defaultRange);
+      setSelectedDateRange(emptyRange);
       
-      // Store default range in Redux
-      dispatch(setReportsDateRange({
-        startDate: today,
-        endDate: today
-      }));
-      
-      console.log('📊 Reports: No Redux date range found, using default (today):', defaultRange);
+      console.log('📊 Reports: No Redux date range found, using no date filter:', emptyRange);
     }
   }, [hasReportsDateRange, reportsDateRange, dispatch]);
+
+  // Auto-fetch data on component mount if we have both company and date range
+  useEffect(() => {
+    const autoFetchInitialData = () => {
+      console.log('🚀 Reports: Checking for auto-fetch conditions:', {
+        masterFileSelectedCompanies,
+        selectedCompany,
+        hasReportsDateRange,
+        selectedDateRangeStr: selectedDateRange.startDateStr
+      });
+
+      // Check if we have a company from masterFile Redux or local state
+      const companyToUse = masterFileSelectedCompanies.length > 0 
+        ? masterFileSelectedCompanies[0] 
+        : selectedCompany !== 'all' ? selectedCompany : null;
+
+      // Auto-fetch if we have both company and optionally date range
+      if (companyToUse && companyToUse !== 'all') {
+        console.log('✅ Reports: Auto-fetching data on mount with:', {
+          company: companyToUse,
+          startDate: selectedDateRange.startDateStr || '(no start date)',
+          endDate: selectedDateRange.endDateStr || '(no end date)',
+          hasDateFilter: !!(selectedDateRange.startDateStr && selectedDateRange.endDateStr)
+        });
+        
+        // Update selected company if needed
+        if (selectedCompany !== companyToUse) {
+          setSelectedCompany(companyToUse);
+        }
+        
+        // Fetch data with or without date range
+        const startDate = selectedDateRange.startDateStr || '';
+        const endDate = selectedDateRange.endDateStr || '';
+        fetchLogsData(parseInt(companyToUse), startDate, endDate);
+      } else {
+        console.log('⏭️ Reports: Skipping auto-fetch - no company selected');
+      }
+    };
+
+    // Only auto-fetch after companies are loaded (date range can be empty)
+    if (!companiesLoading) {
+      autoFetchInitialData();
+    }
+  }, [companiesLoading, selectedDateRange.startDateStr, selectedDateRange.endDateStr, masterFileSelectedCompanies]);
 
   // Initialize with masterFile Redux company on component mount
   useEffect(() => {
@@ -514,15 +551,7 @@ const Reports = () => {
       console.log('🔄 Initializing with masterFile Redux company:', firstSelectedCompany);
       setSelectedCompany(firstSelectedCompany);
       
-      // Use setTimeout to ensure selectedDateRange state is set before API call
-      setTimeout(() => {
-        console.log('📊 Initial fetch with date range:', {
-          company: firstSelectedCompany,
-          startDate: selectedDateRange.startDateStr,
-          endDate: selectedDateRange.endDateStr
-        });
-        fetchLogsData(parseInt(firstSelectedCompany), selectedDateRange.startDateStr, selectedDateRange.endDateStr);
-      }, 100);
+      // Auto-fetch will be handled by the useEffect above when conditions are met
     }
   }, []);
 
@@ -533,14 +562,18 @@ const Reports = () => {
       console.log('🔄 masterFile Redux company changed:', firstSelectedCompany);
       setSelectedCompany(firstSelectedCompany);
       
-      // Fetch data with current date range
-      if (selectedDateRange.startDateStr && selectedDateRange.endDateStr) {
-        console.log('📊 Fetching data for new company with current date range:', {
+      // Fetch data with current date range (or no date range)
+      if (true) { // Always fetch when company changes
+        console.log('📊 Fetching data for new company with current date range (if any):', {
           company: firstSelectedCompany,
-          startDate: selectedDateRange.startDateStr,
-          endDate: selectedDateRange.endDateStr
+          startDate: selectedDateRange.startDateStr || '(no start date)',
+          endDate: selectedDateRange.endDateStr || '(no end date)',
+          hasDateFilter: !!(selectedDateRange.startDateStr && selectedDateRange.endDateStr)
         });
-        fetchLogsData(parseInt(firstSelectedCompany), selectedDateRange.startDateStr, selectedDateRange.endDateStr);
+        
+        const startDate = selectedDateRange.startDateStr || '';
+        const endDate = selectedDateRange.endDateStr || '';
+        fetchLogsData(parseInt(firstSelectedCompany), startDate, endDate);
       }
     }
   }, [masterFileSelectedCompanies, selectedDateRange.startDateStr, selectedDateRange.endDateStr]);
@@ -579,13 +612,13 @@ const Reports = () => {
       const dateStart = startDate || selectedDateRange.startDateStr;
       const dateEnd = endDate || selectedDateRange.endDateStr;
       
-      // Include date range parameters in the API call
+      // Include date range parameters in the API call only if dates are available
       const params = new URLSearchParams();
-      if (dateStart) {
+      if (dateStart && dateStart !== '') {
         params.append('startDate', dateStart);
         console.log('📅 Adding startDate to API call:', dateStart);
       }
-      if (dateEnd) {
+      if (dateEnd && dateEnd !== '') {
         params.append('endDate', dateEnd);
         console.log('📅 Adding endDate to API call:', dateEnd);
       }
@@ -596,7 +629,8 @@ const Reports = () => {
         companyId,
         startDate: dateStart,
         endDate: dateEnd,
-        fullURL: url
+        fullURL: url,
+        hasDateRange: !!(dateStart && dateEnd)
       });
       
       const response = await axios.get(url);
@@ -608,7 +642,8 @@ const Reports = () => {
         console.log('✅ Logs data loaded successfully with date range:', {
           startDate: dateStart,
           endDate: dateEnd,
-          dataLength: response.data?.data?.length || 0
+          dataLength: response.data?.data?.length || 0,
+          hasDateFilter: !!(dateStart && dateEnd)
         });
       } else {
         throw new Error(`Failed to fetch logs data: ${response.status}`);
@@ -629,14 +664,19 @@ const Reports = () => {
       startDateStr: selectedDateRange.startDateStr,
       endDateStr: selectedDateRange.endDateStr,
       hasValidCompany: selectedCompany !== 'all',
-      hasValidDates: selectedDateRange.startDateStr && selectedDateRange.endDateStr
+      hasAnyDates: selectedDateRange.startDateStr || selectedDateRange.endDateStr
     });
 
-    if (selectedCompany !== 'all' && selectedDateRange.startDateStr && selectedDateRange.endDateStr) {
-      console.log('✅ Reports: Conditions met, refetching data with new date range for company:', selectedCompany);
-      fetchLogsData(parseInt(selectedCompany), selectedDateRange.startDateStr, selectedDateRange.endDateStr);
+    if (selectedCompany !== 'all') {
+      console.log('✅ Reports: Company selected, refetching data with current date range (if any) for company:', selectedCompany);
+      
+      // Always fetch data if company is selected, with or without date range
+      const startDate = selectedDateRange.startDateStr || '';
+      const endDate = selectedDateRange.endDateStr || '';
+      
+      fetchLogsData(parseInt(selectedCompany), startDate, endDate);
     } else {
-      console.log('⏭️ Reports: Skipping refetch - either no company selected or invalid date range');
+      console.log('⏭️ Reports: No company selected, skipping data fetch');
     }
   }, [selectedDateRange.startDateStr, selectedDateRange.endDateStr, selectedCompany]);
 
@@ -672,6 +712,30 @@ const Reports = () => {
     
     // Note: Data fetching will be triggered automatically by the useEffect above
     // when selectedDateRange state updates
+  };
+
+  // Clear date range function
+  const handleClearDateRange = () => {
+    console.log('🧹 Reports: Clearing date range');
+    
+    // Clear local state
+    setSelectedDateRange({
+      startDate: null,
+      endDate: null,
+      startDateStr: '',
+      endDateStr: ''
+    });
+    
+    // Clear Redux state
+    dispatch(clearReportsDateRange());
+    
+    // Refetch data without date range if company is selected
+    if (selectedCompany !== 'all') {
+      console.log('📊 Refetching data without date range for company:', selectedCompany);
+      fetchLogsData(parseInt(selectedCompany), '', '');
+    }
+    
+    console.log('✅ Reports: Date range cleared successfully');
   };
 
   const handlePriceFilterChange = (event) => {
@@ -710,6 +774,11 @@ const Reports = () => {
   };
 
   const formatDateRange = () => {
+    if (!selectedDateRange.startDate || !selectedDateRange.endDate || 
+        !selectedDateRange.startDateStr || !selectedDateRange.endDateStr) {
+      return "No Date Filter";
+    }
+    
     if (selectedDateRange.startDateStr === selectedDateRange.endDateStr) {
       return formatDate(selectedDateRange.startDate, 'MMM dd, yyyy');
     }
@@ -1183,11 +1252,22 @@ const Reports = () => {
                   mt: 0.5
                 }}
               >
-                Date Range: {formatDateRange()}
-                {hasReportsDateRange && (
-                  <Typography component="span" sx={{ fontSize: '0.7rem', color: '#1976d2', ml: 1 }}>
-                    (from Redux)
-                  </Typography>
+                {selectedDateRange.startDateStr && selectedDateRange.endDateStr ? (
+                  <>
+                    Date Range: {formatDateRange()}
+                    {hasReportsDateRange && (
+                      <Typography component="span" sx={{ fontSize: '0.7rem', color: '#1976d2', ml: 1 }}>
+                        (from Redux)
+                      </Typography>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    No date filter applied - showing all data
+                    <Typography component="span" sx={{ fontSize: '0.7rem', color: '#f44336', ml: 1 }}>
+                      (no date restriction)
+                    </Typography>
+                  </>
                 )}
               </Typography>
             </Box>
@@ -1236,13 +1316,38 @@ const Reports = () => {
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: '#1a237e' }}>
                   Date Range
                 </Typography>
-                <DateRangeButton
-                  onClick={handleDateRangeClick}
-                  startIcon={<Calendar size={16} />}
-                  size="small"
-                >
-                  {formatDateRange()}
-                </DateRangeButton>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <DateRangeButton
+                    onClick={handleDateRangeClick}
+                    startIcon={<Calendar size={16} />}
+                    size="small"
+                  >
+                    {formatDateRange()}
+                  </DateRangeButton>
+                  
+                  {/* Clear Date Range Button */}
+                  {(selectedDateRange.startDateStr && selectedDateRange.endDateStr) && (
+                    <Button
+                      onClick={handleClearDateRange}
+                      size="small"
+                      sx={{
+                        minWidth: 'auto',
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        backgroundColor: alpha('#f44336', 0.1),
+                        color: '#f44336',
+                        border: `1px solid ${alpha('#f44336', 0.3)}`,
+                        '&:hover': {
+                          backgroundColor: alpha('#f44336', 0.2),
+                          border: `1px solid #f44336`
+                        }
+                      }}
+                    >
+                      ×
+                    </Button>
+                  )}
+                </Box>
               </Box>
             </Box>
             
