@@ -3,6 +3,7 @@ import * as React from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { CssBaseline, Box } from "@mui/material";
+import { PersistGate } from 'redux-persist/integration/react';
 import logoMidPng from "./assets/icon/IQ_logo.svg"; // Adjust the path as necessary
 import { Session } from "@toolpad/core/AppProvider"; // Keep this for Session type
 import { SessionContext } from "./SessionContext";
@@ -17,6 +18,9 @@ import CustomSidebar from "./components/CustomSidebar";
 // Import your specific icons - kept for reference only
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import NewspaperIcon from "@mui/icons-material/Newspaper";
+
+// Import persistor
+import { persistor } from "./store";
 
 // Create a material UI theme
 const muiTheme = createTheme({
@@ -152,16 +156,18 @@ export default function App() {
     <SessionContext.Provider value={sessionContextValue}>
       <ThemeProvider theme={muiTheme}>
         <CssBaseline />
-        <Box sx={{ display: "flex", height: "100vh" }}>
-          <CustomSidebar
-            logo={<Logo />}
-            title="INSIGHTiQ"
-           onSignOut={signOut} 
-          />
-          <Box component="main" sx={{ flexGrow: 1, p: 3, overflow: "auto" }}>
-            <Outlet />
+        <PersistGate loading={null} persistor={persistor}>
+          <Box sx={{ display: "flex", height: "100vh" }}>
+            <CustomSidebar
+              logo={<Logo />}
+              title="INSIGHTiQ"
+              onSignOut={signOut} 
+            />
+            <Box component="main" sx={{ flexGrow: 1, p: 3, overflow: "auto" }}>
+              <Outlet />
+            </Box>
           </Box>
-        </Box>
+        </PersistGate>
       </ThemeProvider>
     </SessionContext.Provider>
   );

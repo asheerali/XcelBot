@@ -8,6 +8,27 @@ const initialState = {
   MasterfileEnd: null,
 };
 
+// Helper function to format date as YYYY-MM-DD (date only, no time) in LOCAL timezone
+const formatDateOnly = (date) => {
+  if (!date) return null;
+  try {
+    const dateObj = date instanceof Date ? date : new Date(date);
+    if (isNaN(dateObj.getTime()) || dateObj.getFullYear() <= 1970) {
+      return null;
+    }
+    
+    // FIXED: Use local timezone instead of UTC
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return null;
+  }
+};
+
 // Create the date range slice
 const dateRangeSlice = createSlice({
   name: 'dateRange',
@@ -16,19 +37,64 @@ const dateRangeSlice = createSlice({
     // Analytics Dashboard Date Range Actions
     setAnalyticsDashboardDateRange: (state, action) => {
       const { startDate, endDate } = action.payload;
-      state.AnalyticsDashboardStart = startDate;
-      state.AnalyticsDashboardEnd = endDate;
+      console.log('🔥 Redux BEFORE: setAnalyticsDashboardDateRange called with:', { 
+        startDate, 
+        endDate,
+        startType: typeof startDate,
+        endType: typeof endDate 
+      });
+      
+      // Format dates to date-only strings (YYYY-MM-DD)
+      const formattedStartDate = formatDateOnly(startDate);
+      const formattedEndDate = formatDateOnly(endDate);
+      
+      console.log('🔥 Redux AFTER formatting:', {
+        formattedStartDate,
+        formattedEndDate,
+        formattedStartType: typeof formattedStartDate,
+        formattedEndType: typeof formattedEndDate
+      });
+      
+      if (formattedStartDate && formattedEndDate) {
+        state.AnalyticsDashboardStart = formattedStartDate;
+        state.AnalyticsDashboardEnd = formattedEndDate;
+        
+        console.log('✅ Redux: Date range stored successfully:', {
+          storedStart: state.AnalyticsDashboardStart,
+          storedEnd: state.AnalyticsDashboardEnd,
+          stateAfterUpdate: {
+            AnalyticsDashboardStart: state.AnalyticsDashboardStart,
+            AnalyticsDashboardEnd: state.AnalyticsDashboardEnd
+          }
+        });
+      } else {
+        console.error('❌ Redux: Invalid dates provided, not storing:', { 
+          originalStart: startDate, 
+          originalEnd: endDate,
+          formattedStart: formattedStartDate,
+          formattedEnd: formattedEndDate
+        });
+      }
     },
     
     setAnalyticsDashboardStartDate: (state, action) => {
-      state.AnalyticsDashboardStart = action.payload;
+      const formattedDate = formatDateOnly(action.payload);
+      if (formattedDate) {
+        state.AnalyticsDashboardStart = formattedDate;
+        console.log('✅ Redux: Start date set:', formattedDate);
+      }
     },
     
     setAnalyticsDashboardEndDate: (state, action) => {
-      state.AnalyticsDashboardEnd = action.payload;
+      const formattedDate = formatDateOnly(action.payload);
+      if (formattedDate) {
+        state.AnalyticsDashboardEnd = formattedDate;
+        console.log('✅ Redux: End date set:', formattedDate);
+      }
     },
     
     clearAnalyticsDashboardDateRange: (state) => {
+      console.log('🧹 Redux: Clearing Analytics Dashboard date range');
       state.AnalyticsDashboardStart = null;
       state.AnalyticsDashboardEnd = null;
     },
@@ -36,16 +102,27 @@ const dateRangeSlice = createSlice({
     // Masterfile Date Range Actions
     setMasterfileDateRange: (state, action) => {
       const { startDate, endDate } = action.payload;
-      state.MasterfileStart = startDate;
-      state.MasterfileEnd = endDate;
+      const formattedStartDate = formatDateOnly(startDate);
+      const formattedEndDate = formatDateOnly(endDate);
+      
+      if (formattedStartDate && formattedEndDate) {
+        state.MasterfileStart = formattedStartDate;
+        state.MasterfileEnd = formattedEndDate;
+      }
     },
     
     setMasterfileStartDate: (state, action) => {
-      state.MasterfileStart = action.payload;
+      const formattedDate = formatDateOnly(action.payload);
+      if (formattedDate) {
+        state.MasterfileStart = formattedDate;
+      }
     },
     
     setMasterfileEndDate: (state, action) => {
-      state.MasterfileEnd = action.payload;
+      const formattedDate = formatDateOnly(action.payload);
+      if (formattedDate) {
+        state.MasterfileEnd = formattedDate;
+      }
     },
     
     clearMasterfileDateRange: (state) => {
@@ -81,21 +158,52 @@ export const {
   clearAllDateRanges,
 } = dateRangeSlice.actions;
 
-// Analytics Dashboard Selectors with safe fallbacks
-export const selectAnalyticsDashboardStartDate = (state) => 
-  state.dateRange?.AnalyticsDashboardStart || null;
+// FIXED: Simple direct selectors that match the actual state structure
+export const selectAnalyticsDashboardStartDate = (state) => {
+  const value = state.dateRange?.AnalyticsDashboardStart;
+  console.log('🔍 selectAnalyticsDashboardStartDate:', { value, type: typeof value });
+  return value;
+};
 
-export const selectAnalyticsDashboardEndDate = (state) => 
-  state.dateRange?.AnalyticsDashboardEnd || null;
+export const selectAnalyticsDashboardEndDate = (state) => {
+  const value = state.dateRange?.AnalyticsDashboardEnd;
+  console.log('🔍 selectAnalyticsDashboardEndDate:', { value, type: typeof value });
+  return value;
+};
 
-export const selectAnalyticsDashboardDateRange = (state) => ({
-  startDate: state.dateRange?.AnalyticsDashboardStart || null,
-  endDate: state.dateRange?.AnalyticsDashboardEnd || null,
-});
+export const selectAnalyticsDashboardDateRange = (state) => {
+  const startDate = state.dateRange?.AnalyticsDashboardStart;
+  const endDate = state.dateRange?.AnalyticsDashboardEnd;
+  
+  console.log('🔍 selectAnalyticsDashboardDateRange raw state:', {
+    rawState: state.dateRange,
+    startDate,
+    endDate,
+    startType: typeof startDate,
+    endType: typeof endDate
+  });
+  
+  return {
+    startDate: startDate,
+    endDate: endDate,
+  };
+};
 
-export const selectHasAnalyticsDashboardDateRange = (state) => 
-  state.dateRange?.AnalyticsDashboardStart !== null && 
-  state.dateRange?.AnalyticsDashboardEnd !== null;
+export const selectHasAnalyticsDashboardDateRange = (state) => {
+  const startDate = state.dateRange?.AnalyticsDashboardStart;
+  const endDate = state.dateRange?.AnalyticsDashboardEnd;
+  const hasRange = startDate !== null && endDate !== null;
+  
+  console.log('🔍 selectHasAnalyticsDashboardDateRange:', {
+    startDate,
+    endDate,
+    hasRange,
+    startIsNull: startDate === null,
+    endIsNull: endDate === null
+  });
+  
+  return hasRange;
+};
 
 // Masterfile Selectors with safe fallbacks
 export const selectMasterfileStartDate = (state) => 
@@ -126,8 +234,8 @@ export const selectAllDateRanges = (state) => ({
 });
 
 export const selectHasAnyDateRange = (state) => 
-  (state.dateRange?.AnalyticsDashboardStart !== null && state.dateRange?.AnalyticsDashboardEnd !== null) ||
-  (state.dateRange?.MasterfileStart !== null && state.dateRange?.MasterfileEnd !== null);
+  selectHasAnalyticsDashboardDateRange(state) ||
+  selectHasMasterfileDateRange(state);
 
 // Export reducer
 export default dateRangeSlice.reducer;

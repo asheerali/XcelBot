@@ -3,7 +3,8 @@ import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import { persistStore, persistReducer, createTransform } from "redux-persist";
 import storage from "redux-persist/lib/storage"; // uses localStorage
 import excelReducer from "./excelSlice";
-import masterFileReducer from "./slices/masterFileSlice"; // Add masterFile reducer
+import masterFileReducer from "./slices/masterFileSlice";
+import dateRangeReducer from "./slices/dateRangeSlice"; // ADD THIS IMPORT
 
 // Create a transform to remove large or non-serializable `fileContent` before persisting
 const excelTransform = createTransform(
@@ -55,14 +56,15 @@ const masterFileTransform = createTransform(
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["excel", "masterFile"], // Add masterFile to persistence
+  whitelist: ["excel", "masterFile", "dateRange"], // ADD dateRange to persistence
   transforms: [excelTransform, masterFileTransform], // Apply both transforms
 };
 
 // Combine all reducers
 const rootReducer = combineReducers({
   excel: excelReducer,
-  masterFile: masterFileReducer, // Add masterFile reducer
+  masterFile: masterFileReducer,
+  dateRange: dateRangeReducer, // ADD THIS LINE
 });
 
 // Wrap root reducer with persistence capabilities

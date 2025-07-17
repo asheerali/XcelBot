@@ -139,7 +139,7 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
 
   return (
     <>
-      <Button
+      {/* <Button
         variant="outlined"
         startIcon={<CalendarTodayIcon />}
         endIcon={
@@ -162,7 +162,7 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
         }}
       >
         {selectedRange}
-      </Button>
+      </Button> */}
 
       <Dialog
         open={isOpen}
@@ -528,7 +528,7 @@ const FiltersOrderIQ2 = ({
   );
 };
 
-// Updated FiltersOrderIQ Component with Filename and Select All
+// Updated FiltersOrderIQ Component without Apply Button - Auto Apply
 const FiltersOrderIQWithFilename = ({
   masterFileDetails,
   selectedCompanies,
@@ -537,8 +537,6 @@ const FiltersOrderIQWithFilename = ({
   onCompanyChange,
   onLocationChange,
   onFilenameChange,
-  onApplyFilters,
-  showApplyButton = true,
   loadingMasterFileDetails = false,
 }) => {
   // Get unique companies
@@ -625,7 +623,7 @@ const FiltersOrderIQWithFilename = ({
     return filteredDetails.length;
   };
 
-  // FIXED: Check if dropdowns should be enabled based on current Redux state
+  // Check if dropdowns should be enabled based on current Redux state
   const isLocationDropdownEnabled = selectedCompanies.length > 0;
   const isFilenameDropdownEnabled =
     selectedCompanies.length > 0 && selectedLocations.length > 0;
@@ -720,7 +718,7 @@ const FiltersOrderIQWithFilename = ({
     <Box style={{ marginBottom: 16 }}>
       <Grid container spacing={2} alignItems="flex-start">
         {/* Company Filter - Always Enabled */}
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} md={4}>
           <FormControl fullWidth size="small">
             <InputLabel>Companies *</InputLabel>
             <Select
@@ -752,7 +750,7 @@ const FiltersOrderIQWithFilename = ({
         </Grid>
 
         {/* Location Filter - Enabled only when companies are selected */}
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} md={4}>
           <FormControl fullWidth size="small">
             <InputLabel>Locations *</InputLabel>
             <Select
@@ -794,7 +792,7 @@ const FiltersOrderIQWithFilename = ({
         </Grid>
 
         {/* Filename Filter - Enabled only when both companies and locations are selected */}
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} md={4}>
           <FormControl fullWidth size="small">
             <InputLabel>Files</InputLabel>
             <Select
@@ -834,31 +832,6 @@ const FiltersOrderIQWithFilename = ({
             </Select>
           </FormControl>
         </Grid>
-
-        {/* Apply Button */}
-        {showApplyButton && (
-          <Grid item xs={12} md={3}>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={onApplyFilters}
-              fullWidth
-              startIcon={
-                loadingMasterFileDetails ? (
-                  <RefreshIcon className="rotating" />
-                ) : (
-                  <FilterListIcon />
-                )
-              }
-              disabled={
-                selectedCompanies.length === 0 || loadingMasterFileDetails
-              }
-              style={{ height: "40px" }} // Match dropdown height
-            >
-              {loadingMasterFileDetails ? "Loading..." : "Apply Filters"}
-            </Button>
-          </Grid>
-        )}
       </Grid>
 
       {/* Show selection guidance and active filters */}
@@ -912,7 +885,7 @@ const FiltersOrderIQWithFilename = ({
               • {getFilenameOptions().length} files available
             </span>
             <span style={{ marginLeft: 8, color: "#2196f3" }}>
-              • {getApiCallCount()} API call(s) will be made
+              • Data will auto-load on changes
             </span>
           </Typography>
         )}
@@ -1042,6 +1015,118 @@ const MasterFile = () => {
     }
   };
 
+  // Auto-apply filters when selections change
+  useEffect(() => {
+    const autoApplyFilters = async () => {
+      // Only auto-apply if we have companies and locations selected
+      if (selectedCompanies.length > 0 && selectedLocations.length > 0) {
+        console.log("Auto-applying filters due to selection change:", {
+          companies: selectedCompanies,
+          locations: selectedLocations,
+          filenames: selectedFilenames,
+          dateRange: selectedDateRange,
+        });
+
+        // Clear any previous errors
+        dispatch(clearError());
+
+        try {
+          // Prepare date range data for backend
+          const dateRangeParams = selectedDateRange ? {
+            start_date: selectedDateRange.startDate.toISOString().split('T')[0], // Format: YYYY-MM-DD
+            end_date: selectedDateRange.endDate.toISOString().split('T')[0]       // Format: YYYY-MM-DD
+          } : {};
+
+          // Single file scenario
+          if (
+            selectedCompanies.length === 1 &&
+            selectedLocations.length === 1 &&
+            selectedFilenames.length === 1
+          ) {
+            const apiParams = {
+              company_id: parseInt(selectedCompanies[0]),
+              location_id: parseInt(selectedLocations[0]),
+              filename: selectedFilenames[0],
+              ...dateRangeParams
+            };
+
+            console.log("Single file API params with date range:", apiParams);
+            dispatch(loadMasterFileData(apiParams));
+          } else {
+            // Multiple files scenario
+            await handleMultipleFilesLoadWithDateRange(
+              selectedCompanies,
+              selectedLocations,
+              selectedFilenames,
+              dateRangeParams
+            );
+          }
+
+          setUploadStatus({
+            type: "success",
+            message: `Successfully applied filters and loaded data${
+              selectedDateRange 
+                ? ` for period ${selectedDateRange.startDate.toLocaleDateString()} - ${selectedDateRange.endDate.toLocaleDateString()}` 
+                : ''
+            }`,
+          });
+
+          // Auto-clear success message after 3 seconds
+          setTimeout(() => setUploadStatus(null), 3000);
+        } catch (error) {
+          console.error("Error auto-applying filters:", error);
+          setUploadStatus({
+            type: "error",
+            message: "Failed to load filtered data",
+          });
+          // Auto-clear error message after 5 seconds
+          setTimeout(() => setUploadStatus(null), 5000);
+        }
+
+        setPage(0); // Reset to first page when filters change
+      }
+    };
+
+    // Debounce the auto-apply to avoid too many API calls
+    const timeoutId = setTimeout(autoApplyFilters, 500);
+    return () => clearTimeout(timeoutId);
+  }, [selectedCompanies, selectedLocations, selectedFilenames, selectedDateRange]);
+
+  // Updated helper function to handle multiple files loading with date range
+  const handleMultipleFilesLoadWithDateRange = async (companies, locations, filenames, dateRangeParams) => {
+    // Create filter combinations
+    let filteredDetails = masterFileDetails;
+
+    if (companies.length > 0) {
+      filteredDetails = filteredDetails.filter((item) =>
+        companies.includes(item.company_id.toString())
+      );
+    }
+
+    if (locations.length > 0) {
+      filteredDetails = filteredDetails.filter((item) =>
+        locations.includes(item.location_id.toString())
+      );
+    }
+
+    if (filenames.length > 0) {
+      filteredDetails = filteredDetails.filter((item) =>
+        filenames.includes(item.filename)
+      );
+    }
+
+    if (filteredDetails.length > 0) {
+      // Add date range parameters to each file request
+      const filteredDetailsWithDateRange = filteredDetails.map(detail => ({
+        ...detail,
+        ...dateRangeParams
+      }));
+
+      console.log("Multiple files API params with date range:", filteredDetailsWithDateRange);
+      dispatch(loadMultipleMasterFileData(filteredDetailsWithDateRange));
+    }
+  };
+
   // Get unique values for filters
   const getUniqueValues = (columnKey) => {
     if (!columnKey || items.length === 0) return [];
@@ -1156,7 +1241,7 @@ const MasterFile = () => {
     })) : [];
   };
 
-  // Handler for FiltersOrderIQ filter changes
+  // Handler for FiltersOrderIQ filter changes (these will trigger auto-apply)
   const handleCompanyChange = (values: string[]) => {
     dispatch(setSelectedCompanies(values));
     // Clear location and filename selections when company changes
@@ -1173,157 +1258,6 @@ const MasterFile = () => {
   const handleFilenameChange = (values: string[]) => {
     dispatch(setSelectedFilenames(values));
   };
-
-  // Handler for applying FiltersOrderIQ filters
-// Handler for applying FiltersOrderIQ filters
-const handleApplyOrderIQFilters = async () => {
-  console.log("Applied FiltersOrderIQ filters:", {
-    companies: selectedCompanies,
-    locations: selectedLocations,
-    filenames: selectedFilenames,
-    dateRange: selectedDateRange,
-  });
-
-  // If no specific filters are selected, don't make API calls
-  if (selectedCompanies.length === 0) {
-    console.log("No companies selected, skipping API calls");
-    setPage(0);
-    return;
-  }
-
-  // Clear any previous errors
-  dispatch(clearError());
-
-  try {
-    // Prepare date range data for backend
-    const dateRangeParams = selectedDateRange ? {
-      start_date: selectedDateRange.startDate.toISOString().split('T')[0], // Format: YYYY-MM-DD
-      end_date: selectedDateRange.endDate.toISOString().split('T')[0]       // Format: YYYY-MM-DD
-    } : {};
-
-    // Single file scenario
-    if (
-      selectedCompanies.length === 1 &&
-      selectedLocations.length === 1 &&
-      selectedFilenames.length === 1
-    ) {
-      const apiParams = {
-        company_id: parseInt(selectedCompanies[0]),
-        location_id: parseInt(selectedLocations[0]),
-        filename: selectedFilenames[0],
-        ...dateRangeParams
-      };
-
-      console.log("Single file API params with date range:", apiParams);
-      dispatch(loadMasterFileData(apiParams));
-    } else {
-      // Multiple files scenario
-      await handleMultipleFilesLoadWithDateRange(
-        selectedCompanies,
-        selectedLocations,
-        selectedFilenames,
-        dateRangeParams
-      );
-    }
-
-    setUploadStatus({
-      type: "success",
-      message: `Successfully applied filters and loaded data${
-        selectedDateRange 
-          ? ` for period ${selectedDateRange.startDate.toLocaleDateString()} - ${selectedDateRange.endDate.toLocaleDateString()}` 
-          : ''
-      }`,
-    });
-
-    // Auto-clear success message after 3 seconds
-    setTimeout(() => setUploadStatus(null), 3000);
-  } catch (error) {
-    console.error("Error applying filters:", error);
-    setUploadStatus({
-      type: "error",
-      message: "Failed to load filtered data",
-    });
-    // Auto-clear error message after 5 seconds
-    setTimeout(() => setUploadStatus(null), 5000);
-  }
-
-  setPage(0); // Reset to first page when filters change
-};
-
-// Updated helper function to handle multiple files loading with date range
-const handleMultipleFilesLoadWithDateRange = async (companies, locations, filenames, dateRangeParams) => {
-  // Create filter combinations
-  let filteredDetails = masterFileDetails;
-
-  if (companies.length > 0) {
-    filteredDetails = filteredDetails.filter((item) =>
-      companies.includes(item.company_id.toString())
-    );
-  }
-
-  if (locations.length > 0) {
-    filteredDetails = filteredDetails.filter((item) =>
-      locations.includes(item.location_id.toString())
-    );
-  }
-
-  if (filenames.length > 0) {
-    filteredDetails = filteredDetails.filter((item) =>
-      filenames.includes(item.filename)
-    );
-  }
-
-  if (filteredDetails.length > 0) {
-    // Add date range parameters to each file request
-    const filteredDetailsWithDateRange = filteredDetails.map(detail => ({
-      ...detail,
-      ...dateRangeParams
-    }));
-
-    console.log("Multiple files API params with date range:", filteredDetailsWithDateRange);
-    dispatch(loadMultipleMasterFileData(filteredDetailsWithDateRange));
-  }
-};
-
-// Alternative: If you need to make individual API calls for each file with date range
-const handleMultipleFilesLoadWithDateRangeIndividual = async (companies, locations, filenames, dateRangeParams) => {
-  // Create filter combinations
-  let filteredDetails = masterFileDetails;
-
-  if (companies.length > 0) {
-    filteredDetails = filteredDetails.filter((item) =>
-      companies.includes(item.company_id.toString())
-    );
-  }
-
-  if (locations.length > 0) {
-    filteredDetails = filteredDetails.filter((item) =>
-      locations.includes(item.location_id.toString())
-    );
-  }
-
-  if (filenames.length > 0) {
-    filteredDetails = filteredDetails.filter((item) =>
-      filenames.includes(item.filename)
-    );
-  }
-
-  // Make individual API calls for each file with date range
-  const apiCalls = filteredDetails.map(detail => {
-    const apiParams = {
-      company_id: detail.company_id,
-      location_id: detail.location_id,
-      filename: detail.filename,
-      ...dateRangeParams
-    };
-    
-    console.log("Individual file API params with date range:", apiParams);
-    return dispatch(loadMasterFileData(apiParams));
-  });
-
-  // Wait for all API calls to complete
-  await Promise.all(apiCalls);
-};
 
   // Apply filters to items - Updated for dynamic data
   const applyFilters = (itemsList) => {
@@ -1807,12 +1741,10 @@ const handleMultipleFilesLoadWithDateRangeIndividual = async (companies, locatio
     setUploading(false);
   };
 
-  // Date range handler
+  // Date range handler (this will trigger auto-apply via useEffect)
   const handleDateRangeSelect = (range) => {
     setSelectedDateRange(range);
     console.log("Selected date range:", range);
-    // Here you would typically filter items based on the selected date range
-    // For example: filterItemsByDateRange(range);
   };
 
   return (
@@ -1912,7 +1844,7 @@ const handleMultipleFilesLoadWithDateRangeIndividual = async (companies, locatio
             </Box>
           </Box>
 
-          {/* Updated FiltersOrderIQ Component */}
+          {/* Updated FiltersOrderIQ Component without Apply Button */}
           <Box style={{ marginTop: 24 }}>
             {loadingMasterFileDetails ? (
               <Box style={{ textAlign: "center", padding: 20 }}>
@@ -1930,8 +1862,6 @@ const handleMultipleFilesLoadWithDateRangeIndividual = async (companies, locatio
                 onCompanyChange={handleCompanyChange}
                 onLocationChange={handleLocationChange}
                 onFilenameChange={handleFilenameChange}
-                onApplyFilters={handleApplyOrderIQFilters}
-                showApplyButton={true}
                 loadingMasterFileDetails={loading} // Use Redux loading state
               />
             )}
@@ -2136,7 +2066,7 @@ const handleMultipleFilesLoadWithDateRangeIndividual = async (companies, locatio
                   >
                     <Typography variant="body1" color="textSecondary">
                       {items.length === 0
-                        ? "No data loaded. Please apply filters to load data from selected sources."
+                        ? "No data loaded. Please select companies and locations to auto-load data."
                         : "No items match the current filters."}
                     </Typography>
                   </TableCell>

@@ -87,6 +87,9 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
   };
 
   // Process Daily Sales data from table8 (Day of Week data) - FULL VALUES
+// Process Daily Sales data from table8 (Day of Week data) - CONSISTENT DAY ORDER
+// Process Daily Sales data from table8 (Day of Week data) - FULL VALUES
+// Process Daily Sales data from table8 (Day of Week data) - FULL VALUES
   const processDailySalesData = () => {
     if (
       !tableData.table8 ||
@@ -112,7 +115,8 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
 
     console.log("Processing table8 data:", tableData.table8);
 
-    // Define abbreviated days for display
+    // Define day order (Monday first) and abbreviated days for display
+    const dayOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     const daysOfWeekMap = {
       "Monday": "Mon",
       "Tuesday": "Tue", 
@@ -123,14 +127,78 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
       "Sunday": "Sun"
     };
 
-    // Process the data directly from table8 - FULL VALUES (preserving decimals)
-    return tableData.table8.map((row: any) => ({
+    // Process the data from table8 - FULL VALUES (preserving decimals)
+    const processedData = tableData.table8.map((row: any) => ({
       day: daysOfWeekMap[row.Day_of_Week] || row.Day_of_Week,
+      fullDayName: row.Day_of_Week,
       sales: parseFloat(String(row.Sales || 0).replace(/[$,]/g, "")) || 0,
       movingAverage: parseFloat(String(row.Moving_Avg || 0).replace(/[$,]/g, "")) || 0,
       date: row.Date, // Keep the date for reference
     }));
+
+    // Sort the data to ensure Monday comes first
+    return processedData.sort((a, b) => {
+      const aIndex = dayOrder.indexOf(a.fullDayName);
+      const bIndex = dayOrder.indexOf(b.fullDayName);
+      return aIndex - bIndex;
+    });
   };
+
+// Enhanced version with both options available
+const processDailySalesDataWithOptions = (startWithSunday = false) => {
+  if (
+    !tableData.table8 ||
+    !Array.isArray(tableData.table8) ||
+    tableData.table8.length === 0
+  ) {
+    console.log("No table8 data available, using fallback");
+    return tableData.table1.map((row: any) => ({
+      day: `Week ${row.Week}`,
+      sales: parseFloat(
+        row["Grand Total"] ||
+        row[
+          Object.keys(row).find((key) =>
+            key.toLowerCase().includes("total")
+          ) || ""
+        ] ||
+        0
+      ),
+      movingAverage: 0,
+    }));
+  }
+
+  const daysOfWeekMap = {
+    "Monday": "Mon",
+    "Tuesday": "Tue", 
+    "Wednesday": "Wed",
+    "Thursday": "Thu",
+    "Friday": "Fri",
+    "Saturday": "Sat",
+    "Sunday": "Sun"
+  };
+
+  // Choose day order based on parameter
+  const dayOrder = startWithSunday 
+    ? ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+  // Process the data and create a map for easy lookup
+  const dataMap = new Map();
+  tableData.table8.forEach((row: any) => {
+    const dayName = row.Day_of_Week;
+    dataMap.set(dayName, {
+      day: daysOfWeekMap[dayName] || dayName,
+      sales: parseFloat(String(row.Sales || 0).replace(/[$,]/g, "")) || 0,
+      movingAverage: parseFloat(String(row.Moving_Avg || 0).replace(/[$,]/g, "")) || 0,
+      date: row.Date,
+    });
+  });
+
+  // Return data in consistent order
+  return dayOrder
+    .filter(day => dataMap.has(day))
+    .map(day => dataMap.get(day));
+};
 
   // ENHANCED: Process Sales Category Line Chart data from table9 - FULL VALUES
   const processSalesCategoryData = () => {

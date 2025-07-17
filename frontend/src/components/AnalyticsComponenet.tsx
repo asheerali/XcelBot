@@ -129,6 +129,7 @@ const AnalyticsComponenet = ({ appliedFilters = { companies: [], locations: [], 
   console.log('AnalyticsComponenet appliedFilters:', appliedFilters);
 
   // Fetch analytics data from API
+ // Fetch analytics data from API
   const fetchAnalyticsData = async () => {
     // Only fetch if we have both company and location applied
     if (!appliedCompanies || !appliedLocations || appliedCompanies.length === 0 || appliedLocations.length === 0) {
@@ -145,17 +146,63 @@ const AnalyticsComponenet = ({ appliedFilters = { companies: [], locations: [], 
       const companyId = appliedCompanies[0];
       const locationId = appliedLocations[0];
 
-      console.log(`Fetching analytics data for company ${companyId}, location ${locationId}`);
-
-      const response = await fetch(
-        `${API_URL_Local}/api/storeorders/analyticsdashboard/${companyId}/${locationId}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+      // Build the API URL
+      let apiUrl = `${API_URL_Local}/api/storeorders/analyticsdashboard/${companyId}/${locationId}`;
+      
+      // FIXED: Add date range parameters if they exist
+      const params = new URLSearchParams();
+      let dateInfo = "No date range - fetching all data";
+      
+      if (appliedDateRange?.startDate && appliedDateRange?.endDate) {
+        // Handle both Date objects and ISO strings
+        let startDateObj, endDateObj;
+        
+        if (typeof appliedDateRange.startDate === 'string') {
+          startDateObj = new Date(appliedDateRange.startDate);
+        } else {
+          startDateObj = appliedDateRange.startDate;
         }
-      );
+        
+        if (typeof appliedDateRange.endDate === 'string') {
+          endDateObj = new Date(appliedDateRange.endDate);
+        } else {
+          endDateObj = appliedDateRange.endDate;
+        }
+        
+        // Validate dates before formatting
+        if (!isNaN(startDateObj.getTime()) && !isNaN(endDateObj.getTime()) && 
+            startDateObj.getFullYear() > 1970 && endDateObj.getFullYear() > 1970) {
+          // Format dates correctly for backend (yyyy-MM-dd)
+          const startDate = startDateObj.toISOString().split('T')[0];
+          const endDate = endDateObj.toISOString().split('T')[0];
+          
+          params.append('start_date', startDate);
+          params.append('end_date', endDate);
+          
+          dateInfo = `Date range: ${startDate} to ${endDate}`;
+        } else {
+          dateInfo = "Invalid dates provided - fetching all data";
+        }
+      }
+      
+      if (params.toString()) {
+        apiUrl += `?${params.toString()}`;
+      }
+
+      console.log('📤 === ANALYTICS COMPONENT API CALL ===');
+      console.log('📤 Company ID:', companyId);
+      console.log('📤 Location ID:', locationId);
+      console.log('📤 Date Info:', dateInfo);
+      console.log('📤 Full API URL:', apiUrl);
+      console.log('📤 Query Parameters:', params.toString());
+      console.log('📤 === END ANALYTICS COMPONENT API ===');
+
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -165,12 +212,18 @@ const AnalyticsComponenet = ({ appliedFilters = { companies: [], locations: [], 
       
       if (result.data) {
         setAnalyticsData(result.data);
-        console.log('Analytics data fetched successfully:', result.data);
+        console.log('✅ Analytics data fetched successfully with date range:', {
+          company: result.data.company_name,
+          location: result.data.location_name,
+          totalSales: result.data.total_sales,
+          totalOrders: result.data.total_orders,
+          dateRangeUsed: dateInfo
+        });
       } else {
         throw new Error('No data received from API');
       }
     } catch (err) {
-      console.error('Error fetching analytics data:', err);
+      console.error('❌ Error fetching analytics data:', err);
       setError(err.message);
     } finally {
       setLoading(false);
