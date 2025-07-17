@@ -6,6 +6,8 @@ const initialState = {
   AnalyticsDashboardEnd: null,
   MasterfileStart: null,
   MasterfileEnd: null,
+  ReportsStart: null,
+  ReportsEnd: null,
 };
 
 // Helper function to format date as YYYY-MM-DD (date only, no time) in LOCAL timezone
@@ -130,12 +132,79 @@ const dateRangeSlice = createSlice({
       state.MasterfileEnd = null;
     },
 
+    // Reports Date Range Actions
+    setReportsDateRange: (state, action) => {
+      const { startDate, endDate } = action.payload;
+      console.log('📊 Redux BEFORE: setReportsDateRange called with:', { 
+        startDate, 
+        endDate,
+        startType: typeof startDate,
+        endType: typeof endDate 
+      });
+      
+      // Format dates to date-only strings (YYYY-MM-DD)
+      const formattedStartDate = formatDateOnly(startDate);
+      const formattedEndDate = formatDateOnly(endDate);
+      
+      console.log('📊 Redux AFTER formatting:', {
+        formattedStartDate,
+        formattedEndDate,
+        formattedStartType: typeof formattedStartDate,
+        formattedEndType: typeof formattedEndDate
+      });
+      
+      if (formattedStartDate && formattedEndDate) {
+        state.ReportsStart = formattedStartDate;
+        state.ReportsEnd = formattedEndDate;
+        
+        console.log('✅ Redux: Reports date range stored successfully:', {
+          storedStart: state.ReportsStart,
+          storedEnd: state.ReportsEnd,
+          stateAfterUpdate: {
+            ReportsStart: state.ReportsStart,
+            ReportsEnd: state.ReportsEnd
+          }
+        });
+      } else {
+        console.error('❌ Redux: Invalid dates provided for Reports, not storing:', { 
+          originalStart: startDate, 
+          originalEnd: endDate,
+          formattedStart: formattedStartDate,
+          formattedEnd: formattedEndDate
+        });
+      }
+    },
+    
+    setReportsStartDate: (state, action) => {
+      const formattedDate = formatDateOnly(action.payload);
+      if (formattedDate) {
+        state.ReportsStart = formattedDate;
+        console.log('✅ Redux: Reports start date set:', formattedDate);
+      }
+    },
+    
+    setReportsEndDate: (state, action) => {
+      const formattedDate = formatDateOnly(action.payload);
+      if (formattedDate) {
+        state.ReportsEnd = formattedDate;
+        console.log('✅ Redux: Reports end date set:', formattedDate);
+      }
+    },
+    
+    clearReportsDateRange: (state) => {
+      console.log('🧹 Redux: Clearing Reports date range');
+      state.ReportsStart = null;
+      state.ReportsEnd = null;
+    },
+
     // Clear all date ranges
     clearAllDateRanges: (state) => {
       state.AnalyticsDashboardStart = null;
       state.AnalyticsDashboardEnd = null;
       state.MasterfileStart = null;
       state.MasterfileEnd = null;
+      state.ReportsStart = null;
+      state.ReportsEnd = null;
     },
   },
 });
@@ -153,6 +222,12 @@ export const {
   setMasterfileStartDate,
   setMasterfileEndDate,
   clearMasterfileDateRange,
+  
+  // Reports actions
+  setReportsDateRange,
+  setReportsStartDate,
+  setReportsEndDate,
+  clearReportsDateRange,
   
   // Clear all
   clearAllDateRanges,
@@ -221,6 +296,53 @@ export const selectHasMasterfileDateRange = (state) =>
   state.dateRange?.MasterfileStart !== null && 
   state.dateRange?.MasterfileEnd !== null;
 
+// Reports Selectors with safe fallbacks
+export const selectReportsStartDate = (state) => {
+  const value = state.dateRange?.ReportsStart;
+  console.log('🔍 selectReportsStartDate:', { value, type: typeof value });
+  return value;
+};
+
+export const selectReportsEndDate = (state) => {
+  const value = state.dateRange?.ReportsEnd;
+  console.log('🔍 selectReportsEndDate:', { value, type: typeof value });
+  return value;
+};
+
+export const selectReportsDateRange = (state) => {
+  const startDate = state.dateRange?.ReportsStart;
+  const endDate = state.dateRange?.ReportsEnd;
+  
+  console.log('🔍 selectReportsDateRange raw state:', {
+    rawState: state.dateRange,
+    startDate,
+    endDate,
+    startType: typeof startDate,
+    endType: typeof endDate
+  });
+  
+  return {
+    startDate: startDate,
+    endDate: endDate,
+  };
+};
+
+export const selectHasReportsDateRange = (state) => {
+  const startDate = state.dateRange?.ReportsStart;
+  const endDate = state.dateRange?.ReportsEnd;
+  const hasRange = startDate !== null && endDate !== null;
+  
+  console.log('🔍 selectHasReportsDateRange:', {
+    startDate,
+    endDate,
+    hasRange,
+    startIsNull: startDate === null,
+    endIsNull: endDate === null
+  });
+  
+  return hasRange;
+};
+
 // Combined selectors for convenience
 export const selectAllDateRanges = (state) => ({
   analyticsDashboard: {
@@ -231,11 +353,16 @@ export const selectAllDateRanges = (state) => ({
     startDate: state.dateRange?.MasterfileStart || null,
     endDate: state.dateRange?.MasterfileEnd || null,
   },
+  reports: {
+    startDate: state.dateRange?.ReportsStart || null,
+    endDate: state.dateRange?.ReportsEnd || null,
+  },
 });
 
 export const selectHasAnyDateRange = (state) => 
   selectHasAnalyticsDashboardDateRange(state) ||
-  selectHasMasterfileDateRange(state);
+  selectHasMasterfileDateRange(state) ||
+  selectHasReportsDateRange(state);
 
 // Export reducer
 export default dateRangeSlice.reducer;

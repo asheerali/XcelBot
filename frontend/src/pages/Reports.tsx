@@ -49,6 +49,14 @@ import {
 // Import masterFile selectors (don't modify masterFileSlice)
 import { selectSelectedCompanies as selectMasterFileCompanies } from "../store/slices/masterFileSlice";
 
+// Import date range Redux selectors and actions
+import {
+  selectReportsDateRange,
+  selectHasReportsDateRange,
+  setReportsDateRange,
+  clearReportsDateRange
+} from "../store/slices/dateRangeSlice";
+
 // Extract actions from the slice
 const { setLoading, setError } = excelSlice.actions;
 
@@ -340,7 +348,7 @@ const DateRangeModal = ({ isOpen, onClose, onSelect }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Calendar size={24} color="#1976d2" />
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Select Date Range for Orders
+            Select Date Range for Reports
           </Typography>
         </Box>
       </Box>
@@ -425,6 +433,10 @@ const Reports = () => {
   // Redux selectors - get selected companies from masterFileSlice
   const masterFileSelectedCompanies = useAppSelector(selectMasterFileCompanies);
   
+  // Redux selectors for date range
+  const reportsDateRange = useAppSelector(selectReportsDateRange);
+  const hasReportsDateRange = useAppSelector(selectHasReportsDateRange);
+
   // Local state
   const [dateRangeOpen, setDateRangeOpen] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState({
@@ -449,6 +461,49 @@ const Reports = () => {
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsError, setLogsError] = useState<string | null>(null);
 
+  // Initialize date range from Redux or default to today
+  useEffect(() => {
+    console.log('📊 Reports: Initializing date range from Redux:', reportsDateRange);
+    
+    if (hasReportsDateRange) {
+      const startDate = new Date(reportsDateRange.startDate);
+      const endDate = new Date(reportsDateRange.endDate);
+      
+      setSelectedDateRange({
+        startDate,
+        endDate,
+        startDateStr: reportsDateRange.startDate,
+        endDateStr: reportsDateRange.endDate
+      });
+      
+      console.log('✅ Reports: Initialized with Redux date range:', {
+        startDate: startDate,
+        endDate: endDate,
+        startDateStr: reportsDateRange.startDate,
+        endDateStr: reportsDateRange.endDate
+      });
+    } else {
+      // No Redux date range, use today as default
+      const today = new Date();
+      const defaultRange = {
+        startDate: today,
+        endDate: today,
+        startDateStr: formatDate(today, 'yyyy-MM-dd'),
+        endDateStr: formatDate(today, 'yyyy-MM-dd')
+      };
+      
+      setSelectedDateRange(defaultRange);
+      
+      // Store default range in Redux
+      dispatch(setReportsDateRange({
+        startDate: today,
+        endDate: today
+      }));
+      
+      console.log('📊 Reports: No Redux date range found, using default (today):', defaultRange);
+    }
+  }, [hasReportsDateRange, reportsDateRange, dispatch]);
+
   // Initialize with masterFile Redux company on component mount
   useEffect(() => {
     fetchCompanies();
@@ -458,7 +513,16 @@ const Reports = () => {
       const firstSelectedCompany = masterFileSelectedCompanies[0];
       console.log('🔄 Initializing with masterFile Redux company:', firstSelectedCompany);
       setSelectedCompany(firstSelectedCompany);
-      fetchLogsData(parseInt(firstSelectedCompany));
+      
+      // Use setTimeout to ensure selectedDateRange state is set before API call
+      setTimeout(() => {
+        console.log('📊 Initial fetch with date range:', {
+          company: firstSelectedCompany,
+          startDate: selectedDateRange.startDateStr,
+          endDate: selectedDateRange.endDateStr
+        });
+        fetchLogsData(parseInt(firstSelectedCompany), selectedDateRange.startDateStr, selectedDateRange.endDateStr);
+      }, 100);
     }
   }, []);
 
@@ -468,9 +532,18 @@ const Reports = () => {
       const firstSelectedCompany = masterFileSelectedCompanies[0];
       console.log('🔄 masterFile Redux company changed:', firstSelectedCompany);
       setSelectedCompany(firstSelectedCompany);
-      fetchLogsData(parseInt(firstSelectedCompany));
+      
+      // Fetch data with current date range
+      if (selectedDateRange.startDateStr && selectedDateRange.endDateStr) {
+        console.log('📊 Fetching data for new company with current date range:', {
+          company: firstSelectedCompany,
+          startDate: selectedDateRange.startDateStr,
+          endDate: selectedDateRange.endDateStr
+        });
+        fetchLogsData(parseInt(firstSelectedCompany), selectedDateRange.startDateStr, selectedDateRange.endDateStr);
+      }
     }
-  }, [masterFileSelectedCompanies]);
+  }, [masterFileSelectedCompanies, selectedDateRange.startDateStr, selectedDateRange.endDateStr]);
 
   const fetchCompanies = async () => {
     try {
@@ -497,13 +570,34 @@ const Reports = () => {
     }
   };
 
-  const fetchLogsData = async (companyId: number) => {
+  const fetchLogsData = async (companyId: number, startDate?: string, endDate?: string) => {
     try {
       setLogsLoading(true);
       setLogsError(null);
       
-      const url = `${LOGS_DETAILS_API_URL}/${companyId}`;
+      // Use provided dates or fall back to current selected range
+      const dateStart = startDate || selectedDateRange.startDateStr;
+      const dateEnd = endDate || selectedDateRange.endDateStr;
+      
+      // Include date range parameters in the API call
+      const params = new URLSearchParams();
+      if (dateStart) {
+        params.append('startDate', dateStart);
+        console.log('📅 Adding startDate to API call:', dateStart);
+      }
+      if (dateEnd) {
+        params.append('endDate', dateEnd);
+        console.log('📅 Adding endDate to API call:', dateEnd);
+      }
+      
+      const url = `${LOGS_DETAILS_API_URL}/${companyId}${params.toString() ? '?' + params.toString() : ''}`;
       console.log('🔍 Fetching logs data from:', url);
+      console.log('📊 API call parameters:', {
+        companyId,
+        startDate: dateStart,
+        endDate: dateEnd,
+        fullURL: url
+      });
       
       const response = await axios.get(url);
       
@@ -511,7 +605,11 @@ const Reports = () => {
       
       if (response.status === 200) {
         setLogsData(response.data);
-        console.log('✅ Logs data loaded successfully');
+        console.log('✅ Logs data loaded successfully with date range:', {
+          startDate: dateStart,
+          endDate: dateEnd,
+          dataLength: response.data?.data?.length || 0
+        });
       } else {
         throw new Error(`Failed to fetch logs data: ${response.status}`);
       }
@@ -524,6 +622,24 @@ const Reports = () => {
     }
   };
 
+  // Watch for date range changes and refetch data when both date range and company are selected
+  useEffect(() => {
+    console.log('📊 Reports: Date range or company changed, checking if we should refetch data:', {
+      selectedCompany,
+      startDateStr: selectedDateRange.startDateStr,
+      endDateStr: selectedDateRange.endDateStr,
+      hasValidCompany: selectedCompany !== 'all',
+      hasValidDates: selectedDateRange.startDateStr && selectedDateRange.endDateStr
+    });
+
+    if (selectedCompany !== 'all' && selectedDateRange.startDateStr && selectedDateRange.endDateStr) {
+      console.log('✅ Reports: Conditions met, refetching data with new date range for company:', selectedCompany);
+      fetchLogsData(parseInt(selectedCompany), selectedDateRange.startDateStr, selectedDateRange.endDateStr);
+    } else {
+      console.log('⏭️ Reports: Skipping refetch - either no company selected or invalid date range');
+    }
+  }, [selectedDateRange.startDateStr, selectedDateRange.endDateStr, selectedCompany]);
+
   const handleDateRangeClick = () => {
     setDateRangeOpen(true);
   };
@@ -533,8 +649,29 @@ const Reports = () => {
   };
 
   const handleDateRangeSelect = (range) => {
+    console.log('📊 Reports: Date range selected from modal:', {
+      startDate: range.startDate,
+      endDate: range.endDate,
+      startDateStr: range.startDateStr,
+      endDateStr: range.endDateStr
+    });
+    
+    // Update local state immediately
     setSelectedDateRange(range);
+    
+    // Update Redux state
+    dispatch(setReportsDateRange({
+      startDate: range.startDate,
+      endDate: range.endDate
+    }));
+    
+    console.log('✅ Reports: Date range updated in Redux and local state, data will be refetched via useEffect');
+    
+    // Close the modal
     setDateRangeOpen(false);
+    
+    // Note: Data fetching will be triggered automatically by the useEffect above
+    // when selectedDateRange state updates
   };
 
   const handlePriceFilterChange = (event) => {
@@ -548,9 +685,17 @@ const Reports = () => {
     
     // Fetch logs data when a specific company is selected
     if (companyId !== 'all') {
-      fetchLogsData(companyId);
+      console.log('📊 Fetching data for company with current date range:', {
+        companyId,
+        startDate: selectedDateRange.startDateStr,
+        endDate: selectedDateRange.endDateStr
+      });
+      
+      // Pass current date range to API call
+      fetchLogsData(companyId, selectedDateRange.startDateStr, selectedDateRange.endDateStr);
     } else {
       // Clear logs data when "All Companies" is selected
+      console.log('🧹 Clearing logs data - All Companies selected');
       setLogsData(null);
     }
     
@@ -1028,6 +1173,23 @@ const Reports = () => {
                   )}
                 </Typography>
               )}
+              {/* Display current date range */}
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: 'text.secondary',
+                  fontSize: '0.8rem',
+                  fontWeight: 400,
+                  mt: 0.5
+                }}
+              >
+                Date Range: {formatDateRange()}
+                {hasReportsDateRange && (
+                  <Typography component="span" sx={{ fontSize: '0.7rem', color: '#1976d2', ml: 1 }}>
+                    (from Redux)
+                  </Typography>
+                )}
+              </Typography>
             </Box>
             
             {/* Controls */}
