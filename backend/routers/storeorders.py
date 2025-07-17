@@ -29,6 +29,7 @@ class OrderItemsRequest(BaseModel):
     location_id: Optional[int] = None
     items: Optional[List[Dict[str, Any]]] = None
     email_order: Optional[bool] = None
+    order_date: Optional[str] = None  # Date in ISO format, e.g., "2023-10-01T12:00:00Z"
 
     # Add other fields as neede
 
@@ -408,7 +409,8 @@ def create_new_order_items(request: OrderItemsRequest,
         create_obj = storeorders_schema.StoreOrdersCreate(
             company_id=request.company_id,
             location_id=request.location_id,
-            created_at=datetime.utcnow(),  # Set current time as created_at
+            # created_at=datetime.utcnow(),  # Set current time as created_at
+            created_at=request.order_date if request.order_date else datetime.utcnow.isoformat(),
             items_ordered=items_ordered_data
         )
         print(f"Creating new store items ordered with data: {items_ordered_data}")
@@ -590,7 +592,7 @@ def update_storeorders_by_id(
 ):
     """Update items_ordered for a specific store orders record by ID"""
 
-    print(f"Received request to update store order request.order_id:", request.model_dump())
+    print(f"Received request to update store order request.order_id:", request.model_dump(), "date:", request.updated_date)
     try:
         # First, check if the order exists
         existing_order = storeorders_crud.get_storeorders(db, request.order_id)
@@ -624,8 +626,15 @@ def update_storeorders_by_id(
         # Create update object
         update_obj = storeorders_schema.StoreOrdersUpdate(items_ordered=new_items_ordered_data)
 
+        # updated_at_date = request.updated_date if request.updated_date else datetime.utcnow().isoformat()
+        
+        if request.updated_date:
+            # Remove 'Z' and convert
+            updated_at_date = datetime.fromisoformat(request.updated_date.rstrip('Z'))
+        else:
+            updated_at_date = datetime.utcnow()
         # Update by order ID (this will automatically move current to prev and set new items)
-        updated_storeorders = storeorders_crud.update_storeorders(db, request.order_id, update_obj)
+        updated_storeorders = storeorders_crud.update_storeorders(db, request.order_id, update_obj, updated_at_date=updated_at_date)
 
         if not updated_storeorders:
             raise HTTPException(status_code=500, detail="Failed to update store order")

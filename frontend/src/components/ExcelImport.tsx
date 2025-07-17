@@ -1323,7 +1323,7 @@ export function ExcelImport() {
         {/* Status Card */}
         <CleanCard sx={{ p: 3, mb: 4 }}>
           <Grid container spacing={2}>
-            {files.length === 0 ? (
+            {files.length === -1 ? (
               <Grid item xs={12}>
                 <StatsCard sx={{ textAlign: 'center', py: 6 }}>
                   <CloudUploadIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />

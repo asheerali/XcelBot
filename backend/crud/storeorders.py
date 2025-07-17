@@ -62,7 +62,9 @@ def get_recent_storeorders_by_company_and_location(db: Session, company_id: int,
         desc(func.coalesce(StoreOrders.updated_at, StoreOrders.created_at))
     ).limit(7).all()
 
-def update_storeorders(db: Session, storeorders_id: int, obj_in: StoreOrdersUpdate):
+
+
+def update_storeorders(db: Session, storeorders_id: int, obj_in: StoreOrdersUpdate, updated_at_date: Optional[datetime] = None):
     """Update items_ordered for an existing store orders record"""
     try:
         db_obj = db.query(StoreOrders).filter(StoreOrders.id == storeorders_id).first()
@@ -77,7 +79,9 @@ def update_storeorders(db: Session, storeorders_id: int, obj_in: StoreOrdersUpda
             db_obj.items_ordered = obj_in.items_ordered
             
             # Update the updated_at timestamp
-            db_obj.updated_at = datetime.utcnow()
+            # db_obj.updated_at = datetime.utcnow()
+            # Use client-provided updated_date if available, else use server's UTC time
+            db_obj.updated_at = updated_at_date
             
             # Mark the objects as dirty (important for JSON fields)
             flag_modified(db_obj, "items_ordered")
@@ -103,6 +107,8 @@ def update_storeorders(db: Session, storeorders_id: int, obj_in: StoreOrdersUpda
         print(f"Error in update_storeorders: {str(e)}")
         db.rollback()  # Rollback on error
         raise e
+
+
 
 def update_storeorders_by_location(db: Session, company_id: int, location_id: int, obj_in: StoreOrdersUpdate):
     """Update items_ordered for store orders by company and location"""

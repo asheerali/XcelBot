@@ -13,6 +13,8 @@ class StoreOrdersCreate(StoreOrdersBase):
 
 class StoreOrdersUpdate(BaseModel):
     items_ordered: Dict[str, Any] = Field(..., description="JSON data for updated items ordered")
+    updated_date: Optional[str] = None
+
 
 class StoreOrders(StoreOrdersBase):
     id: int = Field(..., ge=1)
