@@ -1,6 +1,6 @@
-// FilterSection.tsx - Updated with Redux Integration for Company-Location API
+// FilterSection.tsx - Fixed Auto-Filtering with Better Performance
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Box,
   Grid,
@@ -24,7 +24,8 @@ import {
   MenuList,
   Divider,
   OutlinedInput,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import { format } from 'date-fns';
 
@@ -39,6 +40,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import BusinessIcon from '@mui/icons-material/Business';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
 
 // Import DateRangeSelector component
 import DateRangeSelector from './DateRangeSelector';
@@ -79,7 +81,7 @@ interface MultiSelectProps {
   initiallySelectAll?: boolean;
 }
 
-const MultiSelect: React.FC<MultiSelectProps> = ({
+const MultiSelect: React.FC<MultiSelectProps> = React.memo(({
   id,
   label,
   options,
@@ -338,7 +340,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
       </Popover>
     </Box>
   );
-};
+});
 
 // UPDATED: Interface with new Redux-related props
 interface FilterSectionProps {
@@ -402,11 +404,30 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   // UPDATED: Get Redux locations state
   const reduxLocationSelections = useSelector(selectSelectedLocations);
   
-  // Loading state
-  const [isLoading, setIsLoading] = useState(false);
+  // Loading state for auto-filtering
+  const [isAutoFiltering, setIsAutoFiltering] = useState(false);
+  
+  // Refs to track previous values and prevent unnecessary re-renders
+  const previousFiltersRef = useRef<{
+    locations: string[];
+    startDate: string;
+    endDate: string;
+    categories: string[];
+  }>({
+    locations: [],
+    startDate: '',
+    endDate: '',
+    categories: []
+  });
+  
+  // Timeout ref for debouncing
+  const timeoutRef = useRef<NodeJS.Timeout>();
+  
+  // Track if component has been initialized to avoid initial auto-filter
+  const [isInitialized, setIsInitialized] = useState(false);
   
   // Determine which categories to use
-  const availableCategories = React.useMemo(() => {
+  const availableCategories = useMemo(() => {
     if (categoriesOverride) {
       return categoriesOverride;
     }
@@ -426,7 +447,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   }, [categoriesOverride, dashboardType, salesCategories, financialCategories, salesWideCategories, productMixCategories, allCategories]);
   
   // Filter out common non-category fields and system fields
-  const filterCategories = React.useCallback((categories: string[]) => {
+  const filterCategories = useCallback((categories: string[]) => {
     const excludeFields = [
       'dashboardName', 'fileLocation', 'data', 'uploadDate', 'fileName', 
       'location', 'locations', 'dateRanges', 'Week', 'week', 'Grand Total',
@@ -443,7 +464,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     );
   }, []);
 
-  const filteredCategories = React.useMemo(() => 
+  const filteredCategories = useMemo(() => 
     filterCategories(availableCategories), 
     [availableCategories, filterCategories]
   );
@@ -480,7 +501,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   }, [salesFilters.selectedCategories]);
 
   // UPDATED: Handle location change with Redux integration
-  const handleLocationChange = (newValue: string[]) => {
+  const handleLocationChange = useCallback((newValue: string[]) => {
     console.log('📍 FilterSection: Location selection changed to:', newValue);
     
     if (onReduxLocationChange) {
@@ -502,13 +523,13 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       // Use local state
       setLocalSelectedLocations(newValue);
     }
-  };
+  }, [onReduxLocationChange, availableLocationObjects]);
 
   // Handle category change (multi-select)
-  const handleCategoryChange = (newValue: string[]) => {
+  const handleCategoryChange = useCallback((newValue: string[]) => {
     setSelectedCategories(newValue);
     dispatch(updateSalesFilters({ selectedCategories: newValue }));
-  };
+  }, [dispatch]);
 
   // Open date range dialog
   const openDateRangePicker = () => {
@@ -521,7 +542,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   };
 
   // Apply date range - sets the date range locally
-  const applyDateRange = () => {
+  const applyDateRange = useCallback(() => {
     const formattedStartDate = format(selectedRange.startDate, 'MM/dd/yyyy');
     const formattedEndDate = format(selectedRange.endDate, 'MM/dd/yyyy');
     
@@ -542,7 +563,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     }));
     
     setIsDateRangeOpen(false);
-  };
+  }, [selectedRange, dispatch]);
 
   // Format display date
   const formatDisplayDate = (dateStr: string) => {
@@ -555,96 +576,210 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     }
   };
 
+  // Check if filters have minimum requirements to trigger auto-filter
+  const hasMinimumFilters = useCallback((locations: string[], startDate: string, endDate: string, categories: string[]) => {
+    return locations.length > 0; // Only location is required, others are optional but will use defaults
+  }, []);
+
+  // Check if any filter has actually changed
+  const hasFiltersChanged = useCallback((currentLocations: string[], currentStartDate: string, currentEndDate: string, currentCategories: string[]) => {
+    const prev = previousFiltersRef.current;
+    
+    const locationsChanged = JSON.stringify(currentLocations.sort()) !== JSON.stringify(prev.locations.sort());
+    const startDateChanged = currentStartDate !== prev.startDate;
+    const endDateChanged = currentEndDate !== prev.endDate;
+    const categoriesChanged = JSON.stringify(currentCategories.sort()) !== JSON.stringify(prev.categories.sort());
+    
+    console.log('🔍 FilterSection: Checking for changes:', {
+      locationsChanged,
+      startDateChanged,
+      endDateChanged,
+      categoriesChanged,
+      current: { currentLocations, currentStartDate, currentEndDate, currentCategories },
+      previous: prev
+    });
+    
+    return locationsChanged || startDateChanged || endDateChanged || categoriesChanged;
+  }, []);
+
   // UPDATED: Enhanced apply filters with Redux location handling
-  const handleApplyFilters = () => {
-    console.log('🎯 FilterSection: Applying filters with Redux location state:', {
-      startDate: localStartDate,
-      endDate: localEndDate,
-      selectedCategories,
-      selectedLocations,
+  const triggerAutoFilter = useCallback(async () => {
+    const currentLocations = selectedLocations;
+    const currentStartDate = localStartDate;
+    const currentEndDate = localEndDate;
+    const currentCategories = selectedCategories;
+
+    console.log('🎯 FilterSection: Checking auto-filter trigger:', {
+      startDate: currentStartDate,
+      endDate: currentEndDate,
+      selectedCategories: currentCategories,
+      selectedLocations: currentLocations,
       useRedux: !!onReduxLocationChange,
-      companyId: selectedCompanyId
+      companyId: selectedCompanyId,
+      isInitialized
     });
 
-    // Check if at least one location is selected
-    if (selectedLocations.length === 0) {
-      console.warn('⚠️ No locations selected');
+    // Don't trigger on initial load
+    if (!isInitialized) {
+      console.log('⏳ FilterSection: Skipping auto-filter - component not initialized');
+      return;
+    }
+
+    // Check if minimum requirements are met
+    if (!hasMinimumFilters(currentLocations, currentStartDate, currentEndDate, currentCategories)) {
+      console.warn('⚠️ FilterSection: Minimum filter requirements not met');
       return;
     }
 
     // Check if company is selected (when using Redux)
     if (onReduxLocationChange && !selectedCompanyId) {
-      console.warn('⚠️ No company selected');
+      console.warn('⚠️ FilterSection: No company selected - skipping auto-filter');
       return;
     }
 
-    // Update Redux state
-    dispatch(updateSalesFilters({ 
-      selectedCategories: selectedCategories,
-      location: selectedLocations[0] || '', // Use first selected location for backward compatibility
-      dateRangeType: 'Custom Date Range',
-      startDate: localStartDate,
-      endDate: localEndDate
-    }));
-    
-    // Use the new callback if available to pass explicit values including locations
-    if (onApplyFiltersWithDates) {
-      console.log('🚀 Using new callback with Redux location state');
-      
-      // UPDATED: Convert location IDs back to location names for API compatibility
-      let locationNamesForApi: string[] = [];
-      
-      if (availableLocationObjects.length > 0 && onReduxLocationChange) {
-        // Convert location IDs to names for API
-        locationNamesForApi = selectedLocations.map(locationId => {
-          const location = availableLocationObjects.find(loc => loc.location_id.toString() === locationId);
-          return location ? location.location_name : locationId;
-        });
-        console.log('📍 FilterSection: Converted location IDs to names for API:', {
-          locationIds: selectedLocations,
-          locationNames: locationNamesForApi
-        });
-      } else {
-        // Use location values as-is (legacy mode)
-        locationNamesForApi = selectedLocations;
-      }
-      
-      onApplyFiltersWithDates(localStartDate, localEndDate, selectedCategories, locationNamesForApi);
-    } else {
-      console.log('⚠️ Using legacy callback - may have timing issues');
-      
-      // Legacy approach - update parent state first, then call API
-      const locationEvent = {
-        target: { value: selectedLocations[0] || '' }
-      } as SelectChangeEvent;
-      
-      const startEvent = {
-        target: { value: localStartDate }
-      } as React.ChangeEvent<HTMLInputElement>;
-      
-      const endEvent = {
-        target: { value: localEndDate }
-      } as React.ChangeEvent<HTMLInputElement>;
-      
-      const dateRangeEvent = {
-        target: { value: 'Custom Date Range' }
-      } as SelectChangeEvent;
-      
-      // Update parent component state
-      onLocationChange(locationEvent);
-      onStartDateChange(startEvent);
-      onEndDateChange(endEvent);
-      onDateRangeChange(dateRangeEvent);
-      
-      // Add a small delay to allow state to update
-      setTimeout(() => {
-        onApplyFilters();
-      }, 100);
+    // Check if filters actually changed
+    if (!hasFiltersChanged(currentLocations, currentStartDate, currentEndDate, currentCategories)) {
+      console.log('⏭️ FilterSection: No filter changes detected - skipping auto-filter');
+      return;
     }
-  };
+
+    setIsAutoFiltering(true);
+
+    try {
+      // Update Redux state
+      dispatch(updateSalesFilters({ 
+        selectedCategories: currentCategories,
+        location: currentLocations[0] || '', // Use first selected location for backward compatibility
+        dateRangeType: 'Custom Date Range',
+        startDate: currentStartDate,
+        endDate: currentEndDate
+      }));
+      
+      // Use the new callback if available to pass explicit values including locations
+      if (onApplyFiltersWithDates) {
+        console.log('🚀 FilterSection: Auto-filtering with new callback and Redux location state');
+        
+        // UPDATED: Convert location IDs back to location names for API compatibility
+        let locationNamesForApi: string[] = [];
+        
+        if (availableLocationObjects.length > 0 && onReduxLocationChange) {
+          // Convert location IDs to names for API
+          locationNamesForApi = currentLocations.map(locationId => {
+            const location = availableLocationObjects.find(loc => loc.location_id.toString() === locationId);
+            return location ? location.location_name : locationId;
+          });
+          console.log('📍 FilterSection: Converted location IDs to names for API:', {
+            locationIds: currentLocations,
+            locationNames: locationNamesForApi
+          });
+        } else {
+          // Use location values as-is (legacy mode)
+          locationNamesForApi = currentLocations;
+        }
+        
+        await onApplyFiltersWithDates(
+          currentStartDate || '', 
+          currentEndDate || '', 
+          currentCategories.length > 0 ? currentCategories : [], 
+          locationNamesForApi
+        );
+      } else {
+        console.log('⚠️ FilterSection: Auto-filtering with legacy callback');
+        
+        // Legacy approach - update parent state first, then call API
+        const locationEvent = {
+          target: { value: currentLocations[0] || '' }
+        } as SelectChangeEvent;
+        
+        const startEvent = {
+          target: { value: currentStartDate }
+        } as React.ChangeEvent<HTMLInputElement>;
+        
+        const endEvent = {
+          target: { value: currentEndDate }
+        } as React.ChangeEvent<HTMLInputElement>;
+        
+        const dateRangeEvent = {
+          target: { value: 'Custom Date Range' }
+        } as SelectChangeEvent;
+        
+        // Update parent component state
+        onLocationChange(locationEvent);
+        onStartDateChange(startEvent);
+        onEndDateChange(endEvent);
+        onDateRangeChange(dateRangeEvent);
+        
+        // Add a small delay to allow state to update
+        setTimeout(() => {
+          onApplyFilters();
+        }, 100);
+      }
+
+      // Update previous filters reference
+      previousFiltersRef.current = {
+        locations: [...currentLocations],
+        startDate: currentStartDate,
+        endDate: currentEndDate,
+        categories: [...currentCategories]
+      };
+
+    } catch (error) {
+      console.error('❌ FilterSection: Auto-filter error:', error);
+    } finally {
+      setIsAutoFiltering(false);
+    }
+  }, [
+    selectedLocations,
+    localStartDate,
+    localEndDate,
+    selectedCategories,
+    onReduxLocationChange,
+    selectedCompanyId,
+    isInitialized,
+    hasMinimumFilters,
+    hasFiltersChanged,
+    dispatch,
+    onApplyFiltersWithDates,
+    availableLocationObjects,
+    onLocationChange,
+    onStartDateChange,
+    onEndDateChange,
+    onDateRangeChange,
+    onApplyFilters
+  ]);
+
+  // Debounced auto-filter function
+  const debouncedAutoFilter = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    timeoutRef.current = setTimeout(() => {
+      triggerAutoFilter();
+    }, 300); // Reduced debounce time for better responsiveness
+  }, [triggerAutoFilter]);
+
+  // Single useEffect to monitor all filter changes
+  useEffect(() => {
+    // Mark as initialized after first render
+    if (!isInitialized) {
+      setIsInitialized(true);
+      return;
+    }
+
+    console.log('🔄 FilterSection: Filter change detected, triggering debounced auto-filter');
+    debouncedAutoFilter();
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [selectedLocations, localStartDate, localEndDate, selectedCategories, debouncedAutoFilter, isInitialized]);
 
   // UPDATED: Determine which locations to use and convert for display
-  const displayLocations = React.useMemo(() => {
+  const displayLocations = useMemo(() => {
     if (availableLocationObjects.length > 0) {
       return availableLocationObjects.map(loc => loc.location_name);
     }
@@ -652,7 +787,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   }, [availableLocationObjects, locations]);
 
   // UPDATED: Convert selected location IDs to names for display
-  const displaySelectedLocations = React.useMemo(() => {
+  const displaySelectedLocations = useMemo(() => {
     if (availableLocationObjects.length > 0 && onReduxLocationChange) {
       return selectedLocations.map(id => {
         const location = availableLocationObjects.find(loc => loc.location_id.toString() === id);
@@ -664,7 +799,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
-      {/* Header */}
+      {/* Header with Auto-Filter Indicator */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
         <FilterListIcon color="primary" />
         <Typography variant="h6" sx={{ fontWeight: 500 }}>
@@ -679,6 +814,23 @@ const FilterSection: React.FC<FilterSectionProps> = ({
             variant="outlined"
           />
         )}
+        {isAutoFiltering && (
+          <Chip 
+            icon={<CircularProgress size={16} />}
+            label="Auto-Filtering..."
+            size="small"
+            color="secondary"
+            variant="outlined"
+          />
+        )}
+        <Chip 
+          icon={<AutorenewIcon />}
+          label="Auto-Update"
+          size="small"
+          color="success"
+          variant="outlined"
+          sx={{ ml: 'auto' }}
+        />
       </Box>
 
       {/* Company Selection Alert */}
@@ -698,6 +850,14 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           </Typography>
         </Alert>
       )}
+
+      {/* Auto-Filter Info */}
+      {/* <Alert severity="info" sx={{ mb: 3 }}>
+        <Typography variant="body2">
+          <strong>Auto-Filter Mode:</strong> Data will update automatically when you change any filter. 
+          Location is required, date range and dining options will use defaults if not specified.
+        </Typography>
+      </Alert> */}
 
       <Grid container spacing={2}>
         {/* Location filter - UPDATED to use Redux state */}
@@ -736,7 +896,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
               <Typography variant="body2" component="div">
                 {localStartDate && localEndDate 
                   ? `${formatDisplayDate(localStartDate)} - ${formatDisplayDate(localEndDate)}`
-                  : 'Select Date Range'
+                  : 'Select Date Range (Optional)'
                 }
               </Typography>
             </Box>
@@ -752,18 +912,28 @@ const FilterSection: React.FC<FilterSectionProps> = ({
             value={selectedCategories}
             onChange={handleCategoryChange}
             icon={<CategoryIcon />}
-            placeholder="Select dining options"
+            placeholder="Select dining options (Optional)"
             initiallySelectAll={initiallySelectAll}
           />
         </Grid>
       </Grid>
 
-      {/* Active filters display */}
+      {/* Active filters display with auto-filter status */}
       {(displaySelectedLocations.length > 0 || selectedCategories.length > 0 || (localStartDate && localEndDate)) && (
         <Box sx={{ mt: 2 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            Active Filters:
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Active Filters:
+            </Typography>
+            {isAutoFiltering && (
+              <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <CircularProgress size={16} />
+                <Typography variant="caption" color="primary">
+                  Updating...
+                </Typography>
+              </Box>
+            )}
+          </Box>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
             {displaySelectedLocations.length > 0 && (
               <Chip 
@@ -812,41 +982,37 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         </Box>
       )}
 
-      {/* Apply Filters Button */}
+      {/* Filter Requirements Status */}
       <Box sx={{ mt: 3 }}>
-        <Button 
-          variant="contained" 
-          color="primary"
-          onClick={handleApplyFilters}
-          disabled={displaySelectedLocations.length === 0 || (onReduxLocationChange && !selectedCompanyId)}
-          sx={{ px: 3 }}
+        <Alert 
+          severity={displaySelectedLocations.length > 0 ? "success" : "warning"}
         >
-          Apply Filters 
-        </Button>
-        {displaySelectedLocations.length === 0 && displayLocations.length > 0 && (
-          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-            Please select at least one location
+          <Typography variant="body2">
+            <strong>Filter Status:</strong><br />
+            • Location: {displaySelectedLocations.length > 0 ? `✓ ${displaySelectedLocations.length} selected` : '✗ Required for auto-filtering'}<br />
+            • Date Range: {(localStartDate && localEndDate) ? '✓ Selected' : '○ Optional (will use defaults)'}<br />
+            • Dining Options: {selectedCategories.length > 0 ? `✓ ${selectedCategories.length} selected` : '○ Optional (will use defaults)'}<br />
+            {displaySelectedLocations.length > 0 && (
+              <><br /><strong>Auto-filtering is active - data updates when filters change!</strong></>
+            )}
           </Typography>
-        )}
-        {onReduxLocationChange && !selectedCompanyId && (
-          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-            Please select a company first
-          </Typography>
-        )}
+        </Alert>
       </Box>
 
       {/* Debug Info - Show Redux state in development */}
-      {process.env.NODE_ENV === 'development' && onReduxLocationChange && (
+      {/* {process.env.NODE_ENV === 'development' && onReduxLocationChange && (
         <Alert severity="info" sx={{ mt: 2 }}>
           <Typography variant="body2">
             <strong>Debug - Redux Integration:</strong><br />
             Company ID: {selectedCompanyId || 'None'}<br />
             Redux Location IDs: [{selectedLocations.join(', ')}]<br />
             Display Location Names: [{displaySelectedLocations.join(', ')}]<br />
-            Available Locations: [{displayLocations.join(', ')}]
+            Available Locations: [{displayLocations.join(', ')}]<br />
+            Auto-Filtering: {isAutoFiltering ? 'Active' : 'Idle'}<br />
+            Initialized: {isInitialized ? 'Yes' : 'No'}
           </Typography>
         </Alert>
-      )}
+      )} */}
 
       {/* Date Range Picker Dialog */}
       <Dialog

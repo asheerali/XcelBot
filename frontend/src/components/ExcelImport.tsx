@@ -840,36 +840,25 @@ export function ExcelImport() {
               Sales Split Dashboard
             </h1>
 
-            {/* Company and Location Info Display */}
-            {(activeCompanyId || selectedLocation) && (
+            {/* Company Info Display (Location shown in filters) */}
+            {activeCompanyId && (
               <Box sx={{ 
                 display: 'flex', 
                 justifyContent: 'center', 
-                flexWrap: 'wrap',
-                gap: 1,
                 mt: 2,
                 mb: 1 
               }}>
-                {activeCompanyId && (
-                  <CompanyInfoChip
-                    icon={<BusinessIcon />}
-                    label={`Company: ${selectedCompanyName}`}
-                    variant="outlined"
-                  />
-                )}
-                {selectedLocation && (
-                  <CompanyInfoChip
-                    icon={<BusinessIcon />}
-                    label={`Location: ${selectedLocationName}`}
-                    variant="outlined"
-                  />
-                )}
+                <CompanyInfoChip
+                  icon={<BusinessIcon />}
+                  label={`Company: ${selectedCompanyName}`}
+                  variant="outlined"
+                />
               </Box>
             )}
           </div>
         </Box>
 
-        {/* Company and Location Selection Section */}
+        {/* Company Selection Section (Location handled by FilterSection) */}
         <CleanCard elevation={3} sx={{ 
           mb: 3, 
           borderRadius: 2, 
@@ -880,7 +869,7 @@ export function ExcelImport() {
             <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
               <BusinessIcon color="primary" />
               <Typography variant="h6" sx={{ fontWeight: 600, color: '#1976d2' }}>
-                Company & Location Selection
+                Company Selection
               </Typography>
               {companiesLoading && <CircularProgress size={20} />}
             </Box>
@@ -892,109 +881,62 @@ export function ExcelImport() {
               </Alert>
             )}
             
-            <Grid container spacing={2}>
-              {/* Company Selection */}
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth size="small" disabled={companiesLoading}>
-                  <InputLabel>Company</InputLabel>
-                  <Select
-                    value={selectedCompany}
-                    label="Company"
-                    onChange={handleCompanyChange}
-                    displayEmpty
-                  >
-                    <MenuItem value="">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
-                        <BusinessIcon fontSize="small" />
-                        Select Company
-                      </Box>
-                    </MenuItem>
-                    {companies.map((company) => (
-                      <MenuItem key={company.company_id} value={company.company_id.toString()}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <BusinessIcon fontSize="small" color="primary" />
-                          {company.company_name}
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {/* Location Selection */}
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth size="small" disabled={!selectedCompany || availableLocations.length === 0}>
-                  <InputLabel>Location</InputLabel>
-                  <Select
-                    value={selectedLocation}
-                    label="Location"
-                    onChange={handleLocationChange}
-                    displayEmpty
-                  >
-                    <MenuItem value="">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
-                        <BusinessIcon fontSize="small" />
-                        {!selectedCompany 
-                          ? 'Select Company First' 
-                          : availableLocations.length === 0 
-                            ? 'No Locations Available'
-                            : 'Select Location'
-                        }
-                      </Box>
-                    </MenuItem>
-                    {availableLocations.map((location) => (
-                      <MenuItem key={location.location_id} value={location.location_id.toString()}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <BusinessIcon fontSize="small" color="secondary" />
-                          {location.location_name}
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
+            {/* Company Selection Only */}
+            <FormControl fullWidth size="small" disabled={companiesLoading}>
+              <InputLabel>Company</InputLabel>
+              <Select
+                value={selectedCompany}
+                label="Company"
+                onChange={handleCompanyChange}
+                displayEmpty
+              >
+                <MenuItem value="">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
+                    <BusinessIcon fontSize="small" />
+                    Select Company
+                  </Box>
+                </MenuItem>
+                {companies.map((company) => (
+                  <MenuItem key={company.company_id} value={company.company_id.toString()}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <BusinessIcon fontSize="small" color="primary" />
+                      {company.company_name}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
             
-            {/* Selection Summary */}
-            {(selectedCompany || selectedLocation) && (
-              <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {selectedCompany && (
-                  <Chip
-                    icon={<BusinessIcon />}
-                    label={`Company: ${selectedCompanyName}`}
-                    color="primary"
-                    variant="outlined"
-                    sx={{ fontWeight: 500 }}
-                  />
-                )}
-                {selectedLocation && (
-                  <Chip
-                    icon={<BusinessIcon />}
-                    label={`Location: ${selectedLocationName}`}
-                    color="secondary"
-                    variant="outlined"
-                    sx={{ fontWeight: 500 }}
-                  />
-                )}
+            {/* Company Selection Summary */}
+            {selectedCompany && (
+              <Box sx={{ mt: 2 }}>
+                <Chip
+                  icon={<BusinessIcon />}
+                  label={`Selected: ${selectedCompanyName}`}
+                  color="primary"
+                  variant="outlined"
+                  sx={{ fontWeight: 500 }}
+                />
               </Box>
             )}
             
-            {/* Location count info */}
+            {/* Location count info
             {selectedCompany && availableLocations.length > 0 && (
               <Alert severity="info" sx={{ mt: 2 }}>
                 <Typography variant="body2">
                   <strong>{selectedCompanyName}</strong> has {availableLocations.length} location{availableLocations.length > 1 ? 's' : ''} available.
-                  {availableLocations.length === 1 && ' Location auto-selected.'}
+                  Location selection is handled in the filters section below.
                 </Typography>
               </Alert>
-            )}
+            )} */}
             
-            {/* Redux state info */}
-            <Alert severity="success" sx={{ mt: 2 }}>
+            {/* Note about location selection */}
+            {/* <Alert severity="success" sx={{ mt: 2 }}>
               <Typography variant="body2">
-                <strong>Redux State:</strong> Companies: [{selectedCompanies.join(', ')}] | Locations: [{selectedLocations.join(', ')}]
+                <strong>Note:</strong> Location selection is managed in the Filters section below. 
+                Redux State - Company: [{selectedCompanies.join(', ')}]
               </Typography>
-            </Alert>
+            </Alert> */}
           </CardContent>
         </CleanCard>
 
