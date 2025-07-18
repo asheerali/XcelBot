@@ -1,5 +1,6 @@
-// src/pages/Financials.tsx - Updated with Redux integration and auto-filtering
-import React, { useState, useEffect, useRef } from 'react';
+// src/pages/Financials.tsx - Updated with company selection dropdown and new WoW design
+
+import React, { useState, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import FormControl from '@mui/material/FormControl';
@@ -29,7 +30,6 @@ import Popover from '@mui/material/Popover';
 import MenuList from '@mui/material/MenuList';
 import CircularProgress from '@mui/material/CircularProgress';
 import InputLabel from '@mui/material/InputLabel';
-import LinearProgress from '@mui/material/LinearProgress';
 import { alpha, styled } from '@mui/material/styles';
 
 // Import axios for API calls
@@ -47,9 +47,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import BusinessIcon from '@mui/icons-material/Business';
-import AutorenewIcon from '@mui/icons-material/Autorenew';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import BusinessIcon from '@mui/icons-material/Business'; // NEW: Company icon
 
 // Import components
 import FinancialTable from '../components/FinancialTable';
@@ -62,7 +60,7 @@ import AvgTicketChart from '../components/graphs/AvgTicketChart';
 import DateRangeSelector from '../components/DateRangeSelector';
 import ComprehensiveFinancialDashboard from '../components/ComprehensiveFinancialDashboard';
 
-// Import Redux hooks and actions
+// Import Redux hooks
 import { useAppDispatch, useAppSelector } from '../typedHooks';
 import { 
   selectFinancialLocation, 
@@ -70,34 +68,20 @@ import {
   setTableData,
   setLoading,
   setError,
+  selectCompanyId // NEW: Import company ID selector
 } from '../store/excelSlice';
-
-// NEW: Import masterFileSlice Redux actions and selectors
-import {
-  setSelectedCompanies,
-  setSelectedLocations,
-  clearSelections,
-  selectSelectedCompanies,
-  selectSelectedLocations,
-  selectLoading as selectMasterFileLoading,
-  selectError as selectMasterFileError
-} from '../store/slices/masterFileSlice';
-
 import { API_URL_Local } from '../constants';
 
-// Company-Location interfaces
-interface CompanyLocation {
-  company_id: string;
-  company_name: string;
-  locations: Array<{
-    location_id: string;
-    location_name: string;
-  }>;
+// Company interface
+interface Company {
+  id: string;
+  name: string;
+  [key: string]: any; // Allow for additional company properties
 }
 
-// API URLs - UPDATED to use company-locations endpoint
+// API URLs
 const FINANCIAL_FILTER_API_URL = `${API_URL_Local}/api/financials/filter`;
-const COMPANY_LOCATIONS_API_URL = `${API_URL_Local}/company-locations/all`; // NEW: Updated endpoint
+const COMPANIES_API_URL = `${API_URL_Local}/companies`; // NEW: Companies API endpoint
 
 // Enhanced styled components
 const StyledCard = styled(Card)(({ theme }) => ({
@@ -228,21 +212,7 @@ const AnimatedTabs = styled(Tabs)(({ theme }) => ({
   backdropFilter: 'blur(10px)',
 }));
 
-// NEW: Auto-filtering indicator
-const AutoFilterChip = styled(Chip)(({ theme }) => ({
-  backgroundColor: alpha(theme.palette.success.main, 0.1),
-  border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`,
-  '& .MuiChip-icon': {
-    color: theme.palette.success.main,
-    animation: 'rotating 2s linear infinite',
-  },
-  '& .MuiChip-label': {
-    color: theme.palette.success.main,
-    fontWeight: 600,
-  },
-}));
-
-// Company info display component
+// NEW: Company info display component
 const CompanyInfoChip = styled(Chip)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.primary.main, 0.1),
   border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
@@ -264,6 +234,7 @@ interface TabPanelProps {
 
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
+
   return (
     <div
       role="tabpanel"
@@ -281,16 +252,15 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-// Multi-Select Filter Component
+// Multi-Select Filter Component matching the image design (keeping same design)
 interface MultiSelectFilterProps {
   id: string;
   label: string;
   value: string[];
-  options: Array<{ label: string; value: string }> | string[]; // Support both formats
+  options: string[];
   onChange: (value: string[]) => void;
   placeholder?: string;
   icon?: React.ReactNode;
-  disabled?: boolean;
 }
 
 const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
@@ -300,39 +270,18 @@ const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
   options,
   onChange,
   placeholder = "Select options",
-  icon,
-  disabled = false
+  icon
 }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [searchText, setSearchText] = useState('');
   const open = Boolean(anchorEl);
 
-  // Normalize options to always have label/value format
-  const normalizedOptions = React.useMemo(() => {
-    if (options.length === 0) return [];
-    
-    // Check if options are objects with label/value or just strings
-    if (typeof options[0] === 'string') {
-      return (options as string[]).map(option => ({
-        label: String(option),
-        value: String(option)
-      }));
-    } else {
-      return (options as Array<{ label: string; value: string }>).map(option => ({
-        label: String(option.label),
-        value: String(option.value)
-      }));
-    }
-  }, [options]);
-
-  const filteredOptions = normalizedOptions.filter(option =>
-    option.label.toLowerCase().includes(searchText.toLowerCase())
+  const filteredOptions = options.filter(option =>
+    option.toLowerCase().includes(searchText.toLowerCase())
   );
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
-    if (!disabled) {
-      setAnchorEl(event.currentTarget);
-    }
+    setAnchorEl(event.currentTarget);
   };
 
   const handleClose = () => {
@@ -340,18 +289,18 @@ const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
     setSearchText('');
   };
 
-  const handleToggle = (optionValue: string) => {
-    const newValue = value.includes(optionValue)
-      ? value.filter(item => item !== optionValue)
-      : [...value, optionValue];
+  const handleToggle = (option: string) => {
+    const newValue = value.includes(option)
+      ? value.filter(item => item !== option)
+      : [...value, option];
     onChange(newValue);
   };
 
   const handleSelectAll = () => {
-    if (value.length === normalizedOptions.length) {
+    if (value.length === options.length) {
       onChange([]);
     } else {
-      onChange(normalizedOptions.map(option => option.value));
+      onChange([...options]);
     }
   };
 
@@ -360,21 +309,11 @@ const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
     onChange([]);
   };
 
-  // Get display text based on selected values
-  const getDisplayText = () => {
-    if (value.length === 0) {
-      return placeholder;
-    }
-    
-    if (value.length === 1) {
-      const selectedOption = normalizedOptions.find(option => String(option.value) === String(value[0]));
-      return selectedOption ? selectedOption.label : String(value[0]);
-    }
-    
-    return `Multiple selected (${value.length})`;
-  };
-
-  const displayText = getDisplayText();
+  const displayText = value.length === 0 
+    ? placeholder 
+    : value.length === 1 
+      ? value[0]
+      : `Multiple Loc... (${value.length})`;
 
   return (
     <Box sx={{ position: 'relative', width: '100%' }}>
@@ -382,7 +321,7 @@ const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
         variant="body2" 
         sx={{ 
           mb: 1, 
-          color: disabled ? '#999' : '#666',
+          color: '#666',
           fontSize: '0.875rem',
           fontWeight: 500
         }}
@@ -395,16 +334,15 @@ const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
         sx={{
           display: 'flex',
           alignItems: 'center',
-          border: disabled ? '2px solid #e0e0e0' : '2px solid #e0e0e0',
+          border: '2px solid #e0e0e0',
           borderRadius: '8px',
           padding: '12px 16px',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          backgroundColor: disabled ? '#f5f5f5' : '#fff',
+          cursor: 'pointer',
+          backgroundColor: '#fff',
           minHeight: '48px',
           position: 'relative',
-          opacity: disabled ? 0.6 : 1,
           '&:hover': {
-            borderColor: disabled ? '#e0e0e0' : '#1976d2',
+            borderColor: '#1976d2',
           }
         }}
       >
@@ -425,7 +363,7 @@ const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
           {displayText}
         </Typography>
         
-        {value.length > 0 && !disabled && (
+        {value.length > 0 && (
           <IconButton
             size="small"
             onClick={handleClear}
@@ -507,14 +445,15 @@ const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
             }}
           >
             <Checkbox
-              checked={value.length === normalizedOptions.length}
-              indeterminate={value.length > 0 && value.length < normalizedOptions.length}
+              checked={value.length === options.length}
+              indeterminate={value.length > 0 && value.length < options.length}
               size="small"
               sx={{ p: 0, mr: 2 }}
             />
             <ListItemText primary="Select All" />
           </Box>
         </Box>
+
         <Divider />
 
         {/* Options List */}
@@ -526,17 +465,17 @@ const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
           ) : (
             filteredOptions.map((option) => (
               <MenuItem 
-                key={option.value} 
-                onClick={() => handleToggle(option.value)}
+                key={option} 
+                onClick={() => handleToggle(option)}
                 dense
                 sx={{ py: 1 }}
               >
                 <Checkbox 
-                  checked={value.includes(option.value)} 
+                  checked={value.includes(option)} 
                   size="small" 
                   sx={{ p: 0, mr: 2 }}
                 />
-                <ListItemText primary={option.label} />
+                <ListItemText primary={option} />
               </MenuItem>
             ))
           )}
@@ -546,7 +485,7 @@ const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
   );
 };
 
-// Date Range Selector Component
+// Date Range Selector Component (keeping same design)
 interface DateRangeSelectorComponentProps {
   label: string;
   onDateRangeSelect: (dateRange: any) => void;
@@ -577,10 +516,12 @@ const DateRangeSelectorComponent: React.FC<DateRangeSelectorComponentProps> = ({
 
   const handleApply = () => {
     if (tempRange) {
+      // Format the display text
       const startDate = tempRange.startDate.toLocaleDateString();
       const endDate = tempRange.endDate.toLocaleDateString();
       setSelectedRange(`${startDate} - ${endDate}`);
       
+      // Pass the range to parent with formatted strings
       const rangeWithStrings = {
         ...tempRange,
         startDateStr: format(tempRange.startDate, 'yyyy-MM-dd'),
@@ -732,7 +673,7 @@ const DateRangeSelectorComponent: React.FC<DateRangeSelectorComponentProps> = ({
 // Helper functions for data processing
 const extractFinancialMetrics = (table5Data: any[]) => {
   if (!table5Data || table5Data.length === 0) return [];
-  
+
   const metricsMap = new Map();
   
   table5Data.forEach(row => {
@@ -773,7 +714,7 @@ export function Financials() {
   const dispatch = useAppDispatch();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  // Redux selectors - existing financial data
+  // Get financial-specific data from Redux
   const { 
     financialFiles, 
     currentFinancialLocation, 
@@ -783,43 +724,30 @@ export function Financials() {
     loading,
     error
   } = useAppSelector((state) => state.excel);
-
-  // NEW: Redux selectors from masterFileSlice
-  const selectedCompanies = useAppSelector(selectSelectedCompanies);
-  const selectedLocations = useAppSelector(selectSelectedLocations);
-  const masterFileLoading = useAppSelector(selectMasterFileLoading);
-  const masterFileError = useAppSelector(selectMasterFileError);
-
-  // Find current financial data for selected location
-  const currentFinancialData = financialFiles.find(f => f.location === currentFinancialLocation);
-
-  // State variables
-  const [tabValue, setTabValue] = useState(0);
-  const [statsData, setStatsData] = useState([]);
   
-  // NEW: Company-location API state
-  const [companyLocations, setCompanyLocations] = useState<CompanyLocation[]>([]);
+  // NEW: Get company_id from Redux (might come from uploaded files)
+  const currentCompanyId = useAppSelector(selectCompanyId);
+  
+  // NEW: Company-related state
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
   const [companiesLoading, setCompaniesLoading] = useState(false);
   const [companiesError, setCompaniesError] = useState<string>("");
-
-  // Date range state
+  
+  // Find current financial data for selected location
+  const currentFinancialData = financialFiles.find(f => f.location === currentFinancialLocation);
+  
+  // State variables
+  const [tabValue, setTabValue] = useState(0); // Start with Comprehensive View
+  const [statsData, setStatsData] = useState([]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([currentFinancialLocation || '']);
   const [selectedDateRange, setSelectedDateRange] = useState<any>(null);
-  
-  // Auto-filtering state
-  const [isAutoFiltering, setIsAutoFiltering] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [filterError, setFilterError] = useState<string>('');
-  const [autoFilterInitialized, setAutoFilterInitialized] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(Date.now());
   
-  // Refs for tracking changes
-  const prevCompaniesRef = useRef<string[]>([]);
-  const prevLocationsRef = useRef<string[]>([]);
-  const prevDateRangeRef = useRef<any>(null);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
-
-  // Current table data from Redux or from current financial data
+  // UPDATED: Current table data from Redux or from current financial data - INCLUDING TABLE1
   const [currentTableData, setCurrentTableData] = useState<any>({
-    table1: [],
+    table1: [], // ADDED: Include table1
     table2: [],
     table3: [],
     table4: [],
@@ -837,87 +765,47 @@ export function Financials() {
     table16: []
   });
 
-  // Available locations based on selected companies
-  const availableLocations = React.useMemo(() => {
-    if (selectedCompanies.length === 0) return [];
-    
-    const locations: Array<{ id: string, name: string }> = [];
-    
-    companyLocations.forEach(company => {
-      // Fix: Compare strings to strings
-      if (selectedCompanies.includes(String(company.company_id))) {
-        company.locations.forEach(location => {
-          locations.push({
-            id: String(location.location_id), // Ensure string
-            name: location.location_name
-          });
-        });
-      }
-    });
-    
-    return locations;
-  }, [companyLocations, selectedCompanies]);
+  // FIX: Add state variables for forcing UI updates
+  const [lastUpdated, setLastUpdated] = useState(Date.now());
+  const [filtersApplied, setFiltersApplied] = useState(false);
+  
+  // Extract data arrays from current financial data
+  const locations = currentFinancialData?.data?.locations || financialLocations || ['Midtown East', 'Downtown West', 'Uptown North'];
+  
+  // Table data - use local state that gets updated from API calls
+  const table5Data = currentTableData.table5 || currentFinancialData?.data?.table5 || [];
+  const table2Data = currentTableData.table2 || currentFinancialData?.data?.table2 || [];
+  const table3Data = currentTableData.table3 || currentFinancialData?.data?.table3 || [];
+  const table4Data = currentTableData.table4 || currentFinancialData?.data?.table4 || [];
 
-  // Get company options for display (name as option, id as value)
-  const companyOptions = React.useMemo(() => {
-    return companyLocations.map(company => ({
-      label: company.company_name,
-      value: String(company.company_id) // Ensure string
-    }));
-  }, [companyLocations]);
-
-  // Get location options for display (name as option, id as value)
-  const locationOptions = React.useMemo(() => {
-    return availableLocations.map(location => ({
-      label: location.name,
-      value: String(location.id) // Ensure string
-    }));
-  }, [availableLocations]);
-
-  // Get location names for display
-  const locationDisplayNames = React.useMemo(() => {
-    return selectedLocations.map(locationId => {
-      const location = availableLocations.find(loc => loc.id === String(locationId));
-      return location ? location.name : String(locationId);
-    });
-  }, [selectedLocations, availableLocations]);
-
-  // NEW: Fetch company-locations on component mount
+  // NEW: Fetch companies on component mount
   useEffect(() => {
-    const fetchCompanyLocations = async () => {
+    const fetchCompanies = async () => {
       setCompaniesLoading(true);
       setCompaniesError("");
       
       try {
-        console.log('🏢 Financials: Fetching company-locations from:', COMPANY_LOCATIONS_API_URL);
-        const response = await axios.get(COMPANY_LOCATIONS_API_URL);
+        console.log('🏢 Financials: Fetching companies from:', COMPANIES_API_URL);
+        const response = await axios.get(COMPANIES_API_URL);
         
-        console.log('📥 Financials: Company-locations response:', response.data);
-        setCompanyLocations(response.data || []);
+        console.log('📥 Financials: Companies response:', response.data);
+        setCompanies(response.data || []);
         
-        // Auto-select single company/location when only one available
+        // Optionally auto-select the first company if there's only one
         if (response.data && response.data.length === 1) {
-          const singleCompany = response.data[0];
-          console.log('🎯 Auto-selecting company:', singleCompany.company_name, 'ID:', singleCompany.company_id);
-          dispatch(setSelectedCompanies([String(singleCompany.company_id)]));
-          
-          if (singleCompany.locations.length === 1) {
-            console.log('🎯 Auto-selecting location:', singleCompany.locations[0].location_name, 'ID:', singleCompany.locations[0].location_id);
-            dispatch(setSelectedLocations([String(singleCompany.locations[0].location_id)]));
-          }
-          
-          console.log('🎯 Financials: Auto-selected single company and location');
+          setSelectedCompanyId(response.data[0].id);
+          console.log('🎯 Financials: Auto-selected single company:', response.data[0]);
         }
         
       } catch (error) {
-        console.error('❌ Financials: Error fetching company-locations:', error);
+        console.error('❌ Financials: Error fetching companies:', error);
         
-        let errorMessage = "Error loading company-location data";
+        let errorMessage = "Error loading companies";
         if (axios.isAxiosError(error)) {
           if (error.response) {
             errorMessage = `Server error: ${error.response.status}`;
           } else if (error.request) {
-            errorMessage = 'Cannot connect to company-locations API. Please check server status.';
+            errorMessage = 'Cannot connect to companies API. Please check server status.';
           }
         }
         
@@ -927,64 +815,115 @@ export function Financials() {
       }
     };
 
-    fetchCompanyLocations();
-  }, [dispatch]);
+    fetchCompanies();
+  }, []);
 
-  // NEW: Auto-filtering logic with debouncing
-  const checkForChanges = React.useCallback(() => {
-    const companiesChanged = JSON.stringify(prevCompaniesRef.current) !== JSON.stringify(selectedCompanies);
-    const locationsChanged = JSON.stringify(prevLocationsRef.current) !== JSON.stringify(selectedLocations);
-    const dateRangeChanged = JSON.stringify(prevDateRangeRef.current) !== JSON.stringify(selectedDateRange);
-    
-    return companiesChanged || locationsChanged || dateRangeChanged;
-  }, [selectedCompanies, selectedLocations, selectedDateRange]);
-
-  const hasMinimumRequirements = React.useCallback(() => {
-    return selectedCompanies.length > 0 && selectedLocations.length > 0;
-  }, [selectedCompanies, selectedLocations]);
-
-  const applyFiltersAutomatically = React.useCallback(async () => {
-    if (!hasMinimumRequirements()) {
-      console.log('⏸️ Auto-filter: Minimum requirements not met');
-      return;
+  // NEW: Sync selectedCompanyId with Redux currentCompanyId if it exists (from uploaded files)
+  useEffect(() => {
+    if (currentCompanyId && !selectedCompanyId) {
+      console.log('🏢 Financials: Syncing company ID from Redux files:', currentCompanyId);
+      setSelectedCompanyId(currentCompanyId);
     }
+  }, [currentCompanyId, selectedCompanyId]);
 
-    setIsAutoFiltering(true);
+  // NEW: Handle company selection
+  const handleCompanyChange = (event: SelectChangeEvent) => {
+    const companyId = event.target.value;
+    setSelectedCompanyId(companyId);
+    console.log('🏢 Financials: Company selected:', companyId);
+  };
+
+  // Get selected company name for display
+  const selectedCompanyName = companies.find(c => c.id === selectedCompanyId)?.name || 
+                               (selectedCompanyId ? `Company ID: ${selectedCompanyId}` : 'No Company Selected');
+
+  // Get active company ID (prioritize selectedCompanyId, fallback to Redux currentCompanyId)
+  const activeCompanyId = selectedCompanyId || currentCompanyId;
+
+  // Initialize selected locations and table data
+  useEffect(() => {
+    if (locations.length > 0 && selectedLocations.length === 0) {
+      setSelectedLocations([locations[0]]);
+    }
+    
+    // UPDATED: Initialize table data from current financial data - INCLUDING TABLE1
+    if (currentFinancialData?.data) {
+      setCurrentTableData({
+        table1: currentFinancialData.data.table1 || [], // ADDED: Include table1
+        table2: currentFinancialData.data.table2 || [],
+        table3: currentFinancialData.data.table3 || [],
+        table4: currentFinancialData.data.table4 || [],
+        table5: currentFinancialData.data.table5 || [],
+        table6: currentFinancialData.data.table6 || [],
+        table7: currentFinancialData.data.table7 || [],
+        table8: currentFinancialData.data.table8 || [],
+        table9: currentFinancialData.data.table9 || [],
+        table10: currentFinancialData.data.table10 || [],
+        table11: currentFinancialData.data.table11 || [],
+        table12: currentFinancialData.data.table12 || [],
+        table13: currentFinancialData.data.table13 || [],
+        table14: currentFinancialData.data.table14 || [],
+        table15: currentFinancialData.data.table15 || [],
+        table16: currentFinancialData.data.table16 || []
+      });
+    }
+  }, [locations, currentFinancialData]);
+
+  // FIX: Add useEffect to watch for state changes and force UI updates
+  useEffect(() => {
+    // This will run whenever currentTableData changes
+    console.log('✅ Filter data updated, refreshing UI components', currentTableData);
+    setLastUpdated(Date.now());
+    
+    // FIX: Force an additional re-render to ensure all components update
+    const timer = setTimeout(() => {
+      setLastUpdated(Date.now());
+    }, 50);
+    
+    return () => clearTimeout(timer);
+  }, [currentTableData, currentTableData.table1, currentTableData.table5]); // Watch specific tables too
+
+  // Handle filter changes
+  const handleLocationChange = (newLocations: string[]) => {
+    setSelectedLocations(newLocations);
+  };
+
+  const handleDateRangeSelect = (dateRange: any) => {
+    setSelectedDateRange(dateRange);
+  };
+
+  // UPDATED: Apply filters with backend API call including company_id
+  const handleApplyFilters = async () => {
+    setIsLoading(true);
     setFilterError('');
     
     try {
-      // Find the current financial file data
-      const currentFile = financialFiles.find(f => f.location === currentFinancialLocation);
+      // Find the current financial file data for the first selected location
+      const currentFile = financialFiles.find(f => f.location === selectedLocations[0]);
       
       if (!currentFile) {
-        // If no current file, we can still proceed with the API call
-        console.log('⚠️ No current financial file found, proceeding with API call');
+        throw new Error('No financial data found for selected location');
       }
 
-      // Convert location IDs to names for API
-      const locationNames = selectedLocations.map(locationId => {
-        const location = availableLocations.find(loc => String(loc.id) === String(locationId));
-        return location ? location.name : String(locationId);
-      });
-
-      // Prepare the request payload including company_id
+      // UPDATED: Prepare the request payload with all selected locations AND active company_id
       const payload = {
-        fileName: currentFile?.fileName || 'financial_data',
-        locations: locationNames,
+        fileName: currentFile.fileName,
+        locations: selectedLocations,
         startDate: selectedDateRange?.startDateStr || null,
         endDate: selectedDateRange?.endDateStr || null,
         dashboard: 'Financials',
-        company_id: String(selectedCompanies[0]) // Use first selected company, ensure string
+        company_id: activeCompanyId // NEW: Include active company_id
       };
 
-      console.log('🚀 Auto-filtering: Sending financial filter request:', payload);
+      console.log('🚀 Sending financial filter request with company_id:', payload);
 
       // Make API call to financial filter endpoint
       const response = await axios.post(FINANCIAL_FILTER_API_URL, payload);
-      console.log('📥 Auto-filtering: Received financial filter response:', response.data);
+
+      console.log('📥 Received financial filter response:', response.data);
 
       if (response.data) {
-        // Create new table data object
+        // FIX: Create completely new state object to force re-render
         const newTableData = {
           table1: response.data.table1 || [],
           table2: response.data.table2 || [],
@@ -1004,27 +943,45 @@ export function Financials() {
           table16: response.data.table16 || []
         };
 
-        setCurrentTableData(newTableData);
+        // FIX: Force immediate state update by using functional update and triggering multiple re-renders
+        setCurrentTableData(() => ({ ...newTableData }));
+        
+        // FIX: Force a second update to ensure UI catches the change
+        setTimeout(() => {
+          setCurrentTableData(() => ({ ...newTableData }));
+        }, 0);
 
-        // Update Redux filters
+        // Update Redux filters with company_id
         dispatch(updateFinancialFilters({ 
-          store: locationNames[0] || '',
+          store: selectedLocations[0],
           dateRange: selectedDateRange ? `${selectedDateRange.startDateStr} - ${selectedDateRange.endDateStr}` : '',
-          company_id: String(selectedCompanies[0])
+          company_id: activeCompanyId // NEW: Include company_id in filters
         }));
 
-        // Update refs for change tracking
-        prevCompaniesRef.current = [...selectedCompanies];
-        prevLocationsRef.current = [...selectedLocations];
-        prevDateRangeRef.current = selectedDateRange;
+        // Update current location if changed
+        if (selectedLocations[0] !== currentFinancialLocation) {
+          dispatch(selectFinancialLocation(selectedLocations[0]));
+        }
 
-        setLastUpdated(Date.now());
-        console.log('✅ Auto-filtering completed successfully');
+        // FIX: Force UI update immediately after successful response
+        setFilterError(''); // Clear any previous errors
+        setFiltersApplied(true); // Mark filters as applied
+        setLastUpdated(Date.now()); // Force re-render of UI components
+
+        // FIX: Additional force re-render after small delay
+        setTimeout(() => {
+          setLastUpdated(Date.now());
+          console.log('✅ Filters applied successfully with company_id:', activeCompanyId, '- UI should be updated');
+        }, 100);
+
+        console.log('✅ Filters applied successfully with company_id:', activeCompanyId, '- UI should be updated');
       }
+
     } catch (err: any) {
-      console.error('❌ Auto-filtering error:', err);
+      console.error('❌ Financial filter error:', err);
       
-      let errorMessage = 'Auto-filtering failed';
+      let errorMessage = 'Error applying filters';
+      
       if (axios.isAxiosError(err)) {
         if (err.response) {
           const detail = err.response.data?.detail;
@@ -1037,99 +994,27 @@ export function Financials() {
       }
       
       setFilterError(errorMessage);
+      dispatch(setError(errorMessage));
+      
     } finally {
-      setIsAutoFiltering(false);
-    }
-  }, [selectedCompanies, selectedLocations, selectedDateRange, availableLocations, financialFiles, currentFinancialLocation, hasMinimumRequirements, dispatch]);
-
-  // NEW: Auto-filtering effect with debouncing
-  useEffect(() => {
-    // Skip auto-filtering on initial load
-    if (!autoFilterInitialized) {
-      if (selectedCompanies.length > 0 || selectedLocations.length > 0) {
-        setAutoFilterInitialized(true);
-        prevCompaniesRef.current = [...selectedCompanies];
-        prevLocationsRef.current = [...selectedLocations];
-        prevDateRangeRef.current = selectedDateRange;
-      }
-      return;
-    }
-
-    // Check if there are actual changes
-    if (!checkForChanges()) {
-      return;
-    }
-
-    // Clear existing timeout
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-
-    // Set new timeout for debounced auto-filtering
-    debounceTimeoutRef.current = setTimeout(() => {
-      console.log('🔄 Auto-filter triggered by changes');
-      applyFiltersAutomatically();
-    }, 500); // 500ms debounce
-
-    // Cleanup timeout on unmount
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, [selectedCompanies, selectedLocations, selectedDateRange, autoFilterInitialized, checkForChanges, applyFiltersAutomatically]);
-
-  // NEW: Handle company selection
-  const handleCompanyChange = (newCompanies: string[]) => {
-    dispatch(setSelectedCompanies(newCompanies));
-    
-    // Clear locations when company changes to maintain data consistency
-    if (JSON.stringify(newCompanies) !== JSON.stringify(selectedCompanies)) {
-      dispatch(setSelectedLocations([]));
+      // FIX: Ensure loading state is reset to trigger UI update
+      setIsLoading(false);
+      
+      // FIX: Small delay to ensure all state updates have propagated
+      setTimeout(() => {
+        console.log('✅ Filter operation completed - all states updated');
+      }, 0);
     }
   };
-
-  // NEW: Handle location selection
-  const handleLocationChange = (newLocationIds: string[]) => {
-    dispatch(setSelectedLocations(newLocationIds));
-  };
-
-  // Handle date range changes
-  const handleDateRangeSelect = (dateRange: any) => {
-    setSelectedDateRange(dateRange);
-  };
-
-  // Initialize table data from current financial data
-  useEffect(() => {
-    if (currentFinancialData?.data) {
-      setCurrentTableData({
-        table1: currentFinancialData.data.table1 || [],
-        table2: currentFinancialData.data.table2 || [],
-        table3: currentFinancialData.data.table3 || [],
-        table4: currentFinancialData.data.table4 || [],
-        table5: currentFinancialData.data.table5 || [],
-        table6: currentFinancialData.data.table6 || [],
-        table7: currentFinancialData.data.table7 || [],
-        table8: currentFinancialData.data.table8 || [],
-        table9: currentFinancialData.data.table9 || [],
-        table10: currentFinancialData.data.table10 || [],
-        table11: currentFinancialData.data.table11 || [],
-        table12: currentFinancialData.data.table12 || [],
-        table13: currentFinancialData.data.table13 || [],
-        table14: currentFinancialData.data.table14 || [],
-        table15: currentFinancialData.data.table15 || [],
-        table16: currentFinancialData.data.table16 || []
-      });
-    }
-  }, [currentFinancialData]);
 
   // Update stats when data changes
   useEffect(() => {
-    console.log('📊 Updating stats data from table5Data:', currentTableData.table5.length);
+    console.log('📊 Updating stats data from table5Data:', table5Data.length);
     
-    if (currentTableData.table5.length > 0) {
-      const metricsMap = extractFinancialMetrics(currentTableData.table5);
+    if (table5Data.length > 0) {
+      const metricsMap = extractFinancialMetrics(table5Data);
       
+      // Updated metrics to match the image - all 7 metrics for 4+3 grid layout
       const keyMetrics = [
         'Net Sales',
         'Orders', 
@@ -1174,34 +1059,22 @@ export function Financials() {
           value: formattedValue,
           bottomChange: twLwChange.value,
           bottomLabel: 'VS. PREVIOUS',
-          changeColor: twLwChange.isPositive ? '#10B981' : '#EF4444',
+          changeColor: twLwChange.isPositive ? '#10B981' : '#EF4444', // Green for positive, red for negative
           changeDirection: twLwChange.isPositive ? 'up' : 'down'
         };
       });
       
+      // FIX: Force stats update with new array reference
       setStatsData([...newStatsData]);
       console.log('📊 Stats data updated:', newStatsData.length, 'metrics');
     } else {
       setStatsData([]);
       console.log('📊 No table5Data, clearing stats');
     }
-  }, [currentTableData.table5, lastUpdated]);
+  }, [table5Data, currentTableData.table5, lastUpdated]); // Watch multiple dependencies
 
   // Tab change handler
   const handleTabChange = (event: any, newValue: number) => setTabValue(newValue);
-
-  // Get company names for display
-  const getCompanyNames = () => {
-    return selectedCompanies.map(companyId => {
-      const company = companyLocations.find(c => String(c.company_id) === String(companyId));
-      return company ? company.company_name : String(companyId);
-    });
-  };
-
-  // Get selected company names for display in chips
-  const selectedCompanyNames = React.useMemo(() => {
-    return getCompanyNames();
-  }, [selectedCompanies, companyLocations]);
 
   // Inject rotating animation for loading state
   React.useEffect(() => {
@@ -1218,9 +1091,7 @@ export function Financials() {
     document.head.appendChild(styleElement);
     
     return () => {
-      if (document.head.contains(styleElement)) {
-        document.head.removeChild(styleElement);
-      }
+      document.head.removeChild(styleElement);
     };
   }, []);
 
@@ -1240,55 +1111,56 @@ export function Financials() {
         mb: 4,
         position: 'relative'
       }}>
-        <div style={{ 
-          textAlign: 'center', 
-          marginBottom: '2rem',
-          display: 'flex',
-          justifyContent: 'center',
-          width: '100%'
-        }}>
-          <h1 
-            style={{ 
-              fontWeight: 800,
-              background: 'linear-gradient(135deg, #1976d2 0%, #9c27b0 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontSize: 'clamp(1.75rem, 5vw, 3rem)',
-              marginBottom: '8px',
-              letterSpacing: '-0.02em',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '16px',
-              margin: '0',
-              textAlign: 'center'
-            }}
-          >
-            <span style={{ 
-              color: '#1976d2',
-              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
-              fontSize: 'inherit',
-              display: 'inline-flex',
-              alignItems: 'center'
-            }}>
-              <svg 
-                width="1em" 
-                height="1em" 
-                viewBox="0 0 100 100" 
-                fill="currentColor"
-                style={{ fontSize: 'inherit' }}
-              >
-                <rect x="10" y="10" width="35" height="35" rx="4" fill="#5A8DEE"/>
-                <rect x="55" y="10" width="35" height="35" rx="4" fill="#4285F4"/>
-                <rect x="10" y="55" width="35" height="35" rx="4" fill="#1976D2"/>
-                <rect x="55" y="55" width="35" height="34" rx="4" fill="#3F51B5"/>
-              </svg>
-            </span>
-            Financial Dashboard
-          </h1>
-        </div>
-
+          <div style={{ 
+            textAlign: 'center', 
+            marginBottom: '2rem',
+            display: 'flex',
+            justifyContent: 'center',
+            width: '100%'
+          }}>
+            <h1 
+              style={{ 
+                fontWeight: 800,
+                background: 'linear-gradient(135deg, #1976d2 0%, #9c27b0 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontSize: 'clamp(1.75rem, 5vw, 3rem)',
+                marginBottom: '8px',
+                letterSpacing: '-0.02em',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '16px',
+                margin: '0',
+                textAlign: 'center'
+              }}
+            >
+              <span style={{ 
+                color: '#1976d2',
+                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+                fontSize: 'inherit',
+                display: 'inline-flex',
+                alignItems: 'center'
+              }}>
+                <svg 
+                  width="1em" 
+                  height="1em" 
+                  viewBox="0 0 100 100" 
+                  fill="currentColor"
+                  style={{ fontSize: 'inherit' }}
+                >
+                  {/* 4-square logo matching your design */}
+                  <rect x="10" y="10" width="35" height="35" rx="4" fill="#5A8DEE"/>
+                  <rect x="55" y="10" width="35" height="35" rx="4" fill="#4285F4"/>
+                  <rect x="10" y="55" width="35" height="35" rx="4" fill="#1976D2"/>
+                  <rect x="55" y="55" width="35" height="34" rx="4" fill="#3F51B5"/>
+                </svg>
+              </span>
+              Financial Dashboard
+            </h1>
+          </div>
+  
         <Typography 
           variant="h6" 
           sx={{ 
@@ -1297,53 +1169,106 @@ export function Financials() {
             letterSpacing: '0.02em'
           }}
         >
-          {/* Auto-filtering status */}
-          {isAutoFiltering && (
+          {/* Company Info Display */}
+          {activeCompanyId && (
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'center', 
               mt: 2,
               mb: 1 
             }}>
-              <AutoFilterChip
-                icon={<AutorenewIcon className="rotating" />}
-                label="Auto-updating filters..."
-                size="small"
-              />
-            </Box>
-          )}
-
-          {/* Company/Location context display */}
-          {selectedCompanies.length > 0 && (
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              gap: 1,
-              mt: 2,
-              mb: 1,
-              flexWrap: 'wrap'
-            }}>
               <CompanyInfoChip
                 icon={<BusinessIcon />}
-                label={`${selectedCompanyNames.join(', ')}`}
+                label={`Company: ${selectedCompanyName}`}
                 variant="outlined"
-                size="small"
               />
-              {selectedLocations.length > 0 && (
-                <CompanyInfoChip
-                  icon={<PlaceIcon />}
-                  label={`${locationDisplayNames.length === 1 ? locationDisplayNames[0] : `${locationDisplayNames.length} locations`}`}
-                  variant="outlined"
-                  size="small"
-                />
-              )}
             </Box>
           )}
         </Typography>
       </Box>
 
+      {/* NEW: Company Selection Section */}
+      {companies.length > 0 && (
+        <GradientCard elevation={3} sx={{ 
+          mb: 3, 
+          borderRadius: 2, 
+          overflow: "hidden",
+          border: '2px solid #e3f2fd'
+        }}>
+          <CardContent sx={{ p: { xs: 2, md: 3 }, bgcolor: '#f8f9fa' }}>
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <BusinessIcon color="primary" />
+              <Typography variant="h6" sx={{ fontWeight: 600, color: '#1976d2' }}>
+                Select Company
+              </Typography>
+              {companiesLoading && <CircularProgress size={20} />}
+            </Box>
+            
+            {companiesError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {companiesError}
+              </Alert>
+            )}
+            
+            <FormControl fullWidth size="small" disabled={companiesLoading}>
+           
+              <Select
+                labelId="company-select-label"
+                value={selectedCompanyId}
+                onChange={handleCompanyChange}
+                displayEmpty
+                sx={{ 
+                  '& .MuiSelect-select': {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }
+                }}
+              >
+                <MenuItem value="">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
+                    <BusinessIcon fontSize="small" />
+                    Select Company
+                  </Box>
+                </MenuItem>
+                {companies.map((company) => (
+                  <MenuItem key={company.id} value={company.id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <BusinessIcon fontSize="small" color="primary" />
+                      {company.name}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            {selectedCompanyId && (
+              <Box sx={{ mt: 2 }}>
+                <Chip
+                  icon={<BusinessIcon />}
+                  label={`Selected: ${selectedCompanyName}`}
+                  color="primary"
+                  variant="outlined"
+                  sx={{ fontWeight: 500 }}
+                />
+              </Box>
+            )}
+            
+            {/* Note about existing data */}
+            {currentCompanyId && currentCompanyId !== selectedCompanyId && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                <Typography variant="body2">
+                  <strong>Note:</strong> Your uploaded files are associated with <b>{selectedCompanyName}</b>. 
+                  Select a different company above to override this for new operations.
+                </Typography>
+              </Alert>
+            )}
+          </CardContent>
+        </GradientCard>
+      )}
+
       {/* Error Alert */}
-      {(filterError || error || masterFileError || companiesError) && (
+      {(filterError || error) && (
         <Alert 
           severity="error" 
           sx={{ 
@@ -1354,28 +1279,11 @@ export function Financials() {
           }} 
           onClose={() => {
             setFilterError('');
-            setCompaniesError('');
             dispatch(setError(null));
           }}
         >
-          {filterError || error || masterFileError || companiesError}
+          {filterError || error}
         </Alert>
-      )}
-
-      {/* Auto-filtering progress indicator */}
-      {isAutoFiltering && (
-        <Box sx={{ mb: 2 }}>
-          <LinearProgress 
-            sx={{
-              borderRadius: 1,
-              height: 4,
-              backgroundColor: alpha(theme.palette.primary.main, 0.1),
-              '& .MuiLinearProgress-bar': {
-                backgroundColor: theme.palette.primary.main,
-              }
-            }}
-          />
-        </Box>
       )}
 
       {/* Enhanced Filter Card */}
@@ -1391,78 +1299,48 @@ export function Financials() {
           <Box sx={{ 
             display: 'flex', 
             alignItems: 'center', 
-            mb: 3,
-            justifyContent: 'space-between'
+            mb: 3
           }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <FilterListIcon 
-                sx={{ 
-                  color: theme.palette.primary.main,
-                  fontSize: '1.5rem',
-                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
-                }} 
-              />
-              <Typography 
-                variant="h5" 
-                sx={{ 
-                  fontWeight: 700,
-                  color: theme.palette.text.primary,
-                  fontSize: '1.25rem',
-                  ml: 1.5,
-                  letterSpacing: '-0.01em'
-                }}
-              >
-                Auto-Filtering Controls
-              </Typography>
-            </Box>
-
-            {/* Auto-filtering indicator */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Chip
-                icon={<CheckCircleIcon />}
-                label="Auto-Update Active"
-                color="success"
-                size="small"
-                variant="outlined"
-                sx={{ fontWeight: 500 }}
-              />
-            </Box>
+            <FilterListIcon 
+              sx={{ 
+                color: theme.palette.primary.main,
+                fontSize: '1.5rem',
+                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
+              }} 
+            />
+            <Typography 
+              variant="h5" 
+              sx={{ 
+                fontWeight: 700,
+                color: theme.palette.text.primary,
+                fontSize: '1.25rem',
+                ml: 1.5,
+                letterSpacing: '-0.01em'
+              }}
+            >
+              Advanced Filters
+            </Typography>
           </Box>
 
           {/* Filter Inputs Row */}
           <Grid container spacing={4} sx={{ mb: 3 }} justifyContent="center">
-            {/* Company Filter */}
-            <Grid item xs={12} md={4}>
-              <MultiSelectFilter
-                id="company-filter"
-                label="Company"
-                value={selectedCompanies}
-                options={companyOptions} // Use the new format with label/value
-                onChange={handleCompanyChange}
-                placeholder="Select companies"
-                icon={<BusinessIcon />}
-                disabled={companiesLoading}
-              />
-            </Grid>
-
             {/* Location Filter */}
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={6}>
               <MultiSelectFilter
                 id="location-filter"
                 label="Location"
                 value={selectedLocations}
-                options={locationOptions} // Use the new format with label/value
+                options={locations}
                 onChange={handleLocationChange}
-                placeholder={selectedCompanies.length === 0 ? "Select company first" : "Select locations"}
+                placeholder="Multiple Loc..."
                 icon={<PlaceIcon />}
-                disabled={selectedCompanies.length === 0}
               />
             </Grid>
 
             {/* Date Range Filter */}
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={6}>
               <DateRangeSelectorComponent
-                label="Date Range (Optional)"
+                label="Date Range"
                 onDateRangeSelect={handleDateRangeSelect}
                 onCancel={() => setSelectedDateRange(null)}
               />
@@ -1471,14 +1349,13 @@ export function Financials() {
 
           {/* Enhanced Active Filters Pills */}
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 3 }}>
-            {/* Company filter chips */}
-            {selectedCompanies.length > 0 && (
+            {/* Company filter chip */}
+            {activeCompanyId && (
               <Chip
                 icon={<BusinessIcon sx={{ fontSize: '1rem' }} />}
-                label={`Companies: ${selectedCompanyNames.join(', ')}`}
+                label={`Company: ${selectedCompanyName}`}
                 color="primary"
                 variant="filled"
-                onDelete={() => dispatch(setSelectedCompanies([]))}
                 sx={{
                   borderRadius: '24px',
                   height: '36px',
@@ -1498,15 +1375,17 @@ export function Financials() {
                     color: theme.palette.primary.main
                   }
                 }}
-                deleteIcon={<CloseIcon sx={{ fontSize: '1rem' }} />}
               />
             )}
 
             {selectedLocations.length > 0 && (
               <Chip
                 icon={<PlaceIcon sx={{ fontSize: '1rem' }} />}
-                label={`Locations: ${locationDisplayNames.join(', ')}`}
-                onDelete={() => dispatch(setSelectedLocations([]))}
+                label={selectedLocations.length === 1 
+                  ? `Location: ${selectedLocations[0]}` 
+                  : `Location: Multiple Locations (${selectedLocations.length})`
+                }
+                onDelete={() => setSelectedLocations([])}
                 color="secondary"
                 variant="outlined"
                 deleteIcon={<CloseIcon sx={{ fontSize: '1rem' }} />}
@@ -1562,10 +1441,9 @@ export function Financials() {
               />
             )}
 
-            {/* Auto-filtering status indicator */}
-            {hasMinimumRequirements() && (
+            {/* FIX: Show filter status indicator */}
+            {filtersApplied && (
               <Chip
-                icon={<CheckCircleIcon />}
                 label={`Last Updated: ${format(lastUpdated, 'HH:mm:ss')}`}
                 size="small"
                 sx={{
@@ -1577,18 +1455,70 @@ export function Financials() {
             )}
           </Box>
 
-          {/* Requirements notice */}
-          {!hasMinimumRequirements() && (
-            <Alert severity="info" sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                <strong>Auto-filtering requires:</strong> At least one company and one location selected.
-              </Typography>
-            </Alert>
-          )}
+          {/* Enhanced Apply Filters Button */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'flex-start',
+            mt: 2
+          }}>
+            <Button
+              variant="contained"
+              onClick={handleApplyFilters}
+              disabled={isLoading || loading}
+              startIcon={
+                (isLoading || loading) ? (
+                  <CircularProgress size={18} sx={{ color: theme.palette.common.white }} />
+                ) : (
+                  <AnalyticsIcon />
+                )
+              }
+              sx={{
+                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                color: 'white',
+                fontWeight: 700,
+                height: '48px',
+                px: 4,
+                borderRadius: '24px',
+                textTransform: 'uppercase',
+                fontSize: '0.875rem',
+                letterSpacing: '0.05em',
+                boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.3)}`,
+                border: 'none',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: '-100%',
+                  width: '100%',
+                  height: '100%',
+                  background: `linear-gradient(90deg, transparent, ${alpha(theme.palette.common.white, 0.2)}, transparent)`,
+                  transition: 'left 0.5s ease',
+                },
+                '&:hover': {
+                  background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 8px 30px ${alpha(theme.palette.primary.main, 0.4)}`,
+                  '&::before': {
+                    left: '100%',
+                  }
+                },
+                '&:disabled': {
+                  background: alpha(theme.palette.action.disabled, 0.3),
+                  color: alpha(theme.palette.text.disabled, 0.6),
+                  boxShadow: 'none',
+                  transform: 'none'
+                }
+              }}
+            >
+              {(isLoading || loading) ? 'Analyzing Data...' : 'Apply Advanced Filters'}
+            </Button>
+          </Box>
         </CardContent>
       </GradientCard>
 
-      {/* Week-Over-Week Analysis Card */}
+      {/* UPDATED: Enhanced Week-Over-Week Analysis Card with New Design */}
       <StyledCard 
         elevation={0}
         sx={{ 
@@ -1620,10 +1550,19 @@ export function Financials() {
               filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
             }} />
             Week-Over-Week Analysis
+            {/* Show company context */}
+            {activeCompanyId && (
+              <CompanyInfoChip
+                icon={<BusinessIcon />}
+                label={selectedCompanyName}
+                size="small"
+                sx={{ ml: 2, fontSize: '0.75rem' }}
+              />
+            )}
           </Typography>
           
           {/* Loading State */}
-          {(isAutoFiltering || loading || masterFileLoading) && (
+          {(isLoading || loading) && (
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'center', 
@@ -1646,13 +1585,13 @@ export function Financials() {
                   color: theme.palette.text.secondary
                 }}
               >
-                {isAutoFiltering ? 'Auto-updating financial data...' : 'Loading financial data...'}
+                Analyzing financial data for {selectedCompanyName}...
               </Typography>
             </Box>
           )}
           
-          {/* Enhanced Stats Grid */}
-          {!isAutoFiltering && !loading && !masterFileLoading && (
+          {/* NEW: Enhanced Stats Grid - 4+3 Layout for All 7 Metrics */}
+          {!isLoading && !loading && (
             <>
               {statsData.length > 0 ? (
                 <Box>
@@ -1701,6 +1640,7 @@ export function Financials() {
                           >
                             {stat.label}
                           </Typography>
+
                           {/* Large Number */}
                           <Typography 
                             sx={{ 
@@ -1741,6 +1681,7 @@ export function Financials() {
                               {stat.bottomChange}
                             </Typography>
                           </Box>
+
                           <Typography 
                             sx={{ 
                               fontSize: '0.75rem',
@@ -1802,6 +1743,7 @@ export function Financials() {
                           >
                             {stat.label}
                           </Typography>
+
                           {/* Large Number */}
                           <Typography 
                             sx={{ 
@@ -1842,6 +1784,7 @@ export function Financials() {
                               {stat.bottomChange}
                             </Typography>
                           </Box>
+
                           <Typography 
                             sx={{ 
                               fontSize: '0.75rem',
@@ -1889,7 +1832,10 @@ export function Financials() {
                       textAlign: 'center'
                     }}
                   >
-                    Please select company and location to view analytics with auto-filtering
+                    Please upload data and apply filters to view analytics
+                    {activeCompanyId && (
+                      <span><br />Company: {selectedCompanyName}</span>
+                    )}
                   </Typography>
                 </Box>
               )}
@@ -1930,9 +1876,10 @@ export function Financials() {
               ${alpha(theme.palette.background.default, 0.4)} 100%)`,
             backdropFilter: 'blur(20px)'
           }}>
+            {/* UPDATED: Pass currentTableData (which now includes table1) to ComprehensiveFinancialDashboard */}
             <ComprehensiveFinancialDashboard 
               financialData={currentTableData} 
-              key={lastUpdated} 
+              key={lastUpdated} // FIX: Force re-render when data updates
             />
           </Box>
         </TabPanel>
@@ -1941,8 +1888,8 @@ export function Financials() {
         <TabPanel value={tabValue} index={1}>
           <Box sx={{ p: 4 }}>
             <FinancialTable 
-              data={currentTableData.table5} 
-              key={`financial-table-${lastUpdated}`} 
+              data={table5Data} 
+              key={`financial-table-${lastUpdated}`} // FIX: Force re-render when data updates
             />
           </Box>
         </TabPanel>
@@ -1951,13 +1898,13 @@ export function Financials() {
         <TabPanel value={tabValue} index={2}>
           <Box sx={{ p: 4 }}>
             <DayOfWeekAnalysis 
-              salesData={currentTableData.table2}
-              ordersData={currentTableData.table3} 
-              avgTicketData={currentTableData.table4}
-              key={`dow-analysis-${lastUpdated}`} 
+              salesData={table2Data}
+              ordersData={table3Data} 
+              avgTicketData={table4Data}
+              key={`dow-analysis-${lastUpdated}`} // FIX: Force re-render when data updates
             />
             
-            {(currentTableData.table2.length > 0 || currentTableData.table3.length > 0 || currentTableData.table4.length > 0) && (
+            {currentFinancialData && (table2Data.length > 0 || table3Data.length > 0 || table4Data.length > 0) && (
               <Box sx={{ mt: 4 }}>
                 <Typography 
                   variant="h4" 
@@ -1973,31 +1920,40 @@ export function Financials() {
                   }}
                 >
                   Day of Week Trends
+                  {/* Show company context in detailed analysis */}
+                  {activeCompanyId && (
+                    <CompanyInfoChip
+                      icon={<BusinessIcon />}
+                      label={selectedCompanyName}
+                      size="small"
+                      sx={{ ml: 2, fontSize: '0.75rem' }}
+                    />
+                  )}
                 </Typography>
                 
-                {currentTableData.table2.length > 0 && (
+                {table2Data.length > 0 && (
                   <Box sx={{ mb: 4 }}>
                     <SalesChart 
-                      data={currentTableData.table2} 
-                      key={`sales-chart-${lastUpdated}`} 
+                      data={table2Data} 
+                      key={`sales-chart-${lastUpdated}`} // FIX: Force re-render when data updates
                     />
                   </Box>
                 )}
                 
-                {currentTableData.table3.length > 0 && (
+                {table3Data.length > 0 && (
                   <Box sx={{ mb: 4 }}>
                     <OrdersChart 
-                      data={currentTableData.table3} 
-                      key={`orders-chart-${lastUpdated}`} 
+                      data={table3Data} 
+                      key={`orders-chart-${lastUpdated}`} // FIX: Force re-render when data updates
                     />
                   </Box>
                 )}
                 
-                {currentTableData.table4.length > 0 && (
+                {table4Data.length > 0 && (
                   <Box>
                     <AvgTicketChart 
-                      data={currentTableData.table4} 
-                      key={`avg-ticket-chart-${lastUpdated}`} 
+                      data={table4Data} 
+                      key={`avg-ticket-chart-${lastUpdated}`} // FIX: Force re-render when data updates
                     />
                   </Box>
                 )}
