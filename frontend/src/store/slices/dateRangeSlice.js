@@ -11,6 +11,9 @@ const initialState = {
   // NEW: Add SummaryFinancialDashboard date range
   SummaryFinancialDashboardStart: null,
   SummaryFinancialDashboardEnd: null,
+  // NEW: Add StoreSummaryProduction date range
+  StoreSummaryProductionStart: null,
+  StoreSummaryProductionEnd: null,
 };
 
 // Helper function to format date as YYYY-MM-DD (date only, no time) in LOCAL timezone
@@ -200,7 +203,7 @@ const dateRangeSlice = createSlice({
       state.ReportsEnd = null;
     },
 
-    // NEW: Summary Financial Dashboard Date Range Actions
+    // Summary Financial Dashboard Date Range Actions
     setSummaryFinancialDashboardDateRange: (state, action) => {
       const { startDate, endDate } = action.payload;
       console.log('💰 Redux BEFORE: setSummaryFinancialDashboardDateRange called with:', { 
@@ -265,6 +268,71 @@ const dateRangeSlice = createSlice({
       state.SummaryFinancialDashboardEnd = null;
     },
 
+    // NEW: StoreSummaryProduction Date Range Actions
+    setStoreSummaryProductionDateRange: (state, action) => {
+      const { startDate, endDate } = action.payload;
+      console.log('🏪 Redux BEFORE: setStoreSummaryProductionDateRange called with:', { 
+        startDate, 
+        endDate,
+        startType: typeof startDate,
+        endType: typeof endDate 
+      });
+      
+      // Format dates to date-only strings (YYYY-MM-DD)
+      const formattedStartDate = formatDateOnly(startDate);
+      const formattedEndDate = formatDateOnly(endDate);
+      
+      console.log('🏪 Redux AFTER formatting:', {
+        formattedStartDate,
+        formattedEndDate,
+        formattedStartType: typeof formattedStartDate,
+        formattedEndType: typeof formattedEndDate
+      });
+      
+      if (formattedStartDate && formattedEndDate) {
+        state.StoreSummaryProductionStart = formattedStartDate;
+        state.StoreSummaryProductionEnd = formattedEndDate;
+        
+        console.log('✅ Redux: Store Summary Production date range stored successfully:', {
+          storedStart: state.StoreSummaryProductionStart,
+          storedEnd: state.StoreSummaryProductionEnd,
+          stateAfterUpdate: {
+            StoreSummaryProductionStart: state.StoreSummaryProductionStart,
+            StoreSummaryProductionEnd: state.StoreSummaryProductionEnd
+          }
+        });
+      } else {
+        console.error('❌ Redux: Invalid dates provided for Store Summary Production, not storing:', { 
+          originalStart: startDate, 
+          originalEnd: endDate,
+          formattedStart: formattedStartDate,
+          formattedEnd: formattedEndDate
+        });
+      }
+    },
+    
+    setStoreSummaryProductionStartDate: (state, action) => {
+      const formattedDate = formatDateOnly(action.payload);
+      if (formattedDate) {
+        state.StoreSummaryProductionStart = formattedDate;
+        console.log('✅ Redux: Store Summary Production start date set:', formattedDate);
+      }
+    },
+    
+    setStoreSummaryProductionEndDate: (state, action) => {
+      const formattedDate = formatDateOnly(action.payload);
+      if (formattedDate) {
+        state.StoreSummaryProductionEnd = formattedDate;
+        console.log('✅ Redux: Store Summary Production end date set:', formattedDate);
+      }
+    },
+    
+    clearStoreSummaryProductionDateRange: (state) => {
+      console.log('🧹 Redux: Clearing Store Summary Production date range');
+      state.StoreSummaryProductionStart = null;
+      state.StoreSummaryProductionEnd = null;
+    },
+
     // Clear all date ranges
     clearAllDateRanges: (state) => {
       state.AnalyticsDashboardStart = null;
@@ -275,6 +343,8 @@ const dateRangeSlice = createSlice({
       state.ReportsEnd = null;
       state.SummaryFinancialDashboardStart = null;
       state.SummaryFinancialDashboardEnd = null;
+      state.StoreSummaryProductionStart = null;
+      state.StoreSummaryProductionEnd = null;
     },
   },
 });
@@ -299,11 +369,17 @@ export const {
   setReportsEndDate,
   clearReportsDateRange,
   
-  // NEW: Summary Financial Dashboard actions
+  // Summary Financial Dashboard actions
   setSummaryFinancialDashboardDateRange,
   setSummaryFinancialDashboardStartDate,
   setSummaryFinancialDashboardEndDate,
   clearSummaryFinancialDashboardDateRange,
+  
+  // NEW: StoreSummaryProduction actions
+  setStoreSummaryProductionDateRange,
+  setStoreSummaryProductionStartDate,
+  setStoreSummaryProductionEndDate,
+  clearStoreSummaryProductionDateRange,
   
   // Clear all
   clearAllDateRanges,
@@ -419,7 +495,7 @@ export const selectHasReportsDateRange = (state) => {
   return hasRange;
 };
 
-// NEW: Summary Financial Dashboard Selectors with safe fallbacks
+// Summary Financial Dashboard Selectors with safe fallbacks
 export const selectSummaryFinancialDashboardStartDate = (state) => {
   const value = state.dateRange?.SummaryFinancialDashboardStart;
   console.log('🔍 selectSummaryFinancialDashboardStartDate:', { value, type: typeof value });
@@ -466,6 +542,53 @@ export const selectHasSummaryFinancialDashboardDateRange = (state) => {
   return hasRange;
 };
 
+// NEW: StoreSummaryProduction Selectors with safe fallbacks
+export const selectStoreSummaryProductionStartDate = (state) => {
+  const value = state.dateRange?.StoreSummaryProductionStart;
+  console.log('🔍 selectStoreSummaryProductionStartDate:', { value, type: typeof value });
+  return value;
+};
+
+export const selectStoreSummaryProductionEndDate = (state) => {
+  const value = state.dateRange?.StoreSummaryProductionEnd;
+  console.log('🔍 selectStoreSummaryProductionEndDate:', { value, type: typeof value });
+  return value;
+};
+
+export const selectStoreSummaryProductionDateRange = (state) => {
+  const startDate = state.dateRange?.StoreSummaryProductionStart;
+  const endDate = state.dateRange?.StoreSummaryProductionEnd;
+  
+  console.log('🔍 selectStoreSummaryProductionDateRange raw state:', {
+    rawState: state.dateRange,
+    startDate,
+    endDate,
+    startType: typeof startDate,
+    endType: typeof endDate
+  });
+  
+  return {
+    startDate: startDate,
+    endDate: endDate,
+  };
+};
+
+export const selectHasStoreSummaryProductionDateRange = (state) => {
+  const startDate = state.dateRange?.StoreSummaryProductionStart;
+  const endDate = state.dateRange?.StoreSummaryProductionEnd;
+  const hasRange = startDate !== null && endDate !== null;
+  
+  console.log('🔍 selectHasStoreSummaryProductionDateRange:', {
+    startDate,
+    endDate,
+    hasRange,
+    startIsNull: startDate === null,
+    endIsNull: endDate === null
+  });
+  
+  return hasRange;
+};
+
 // Combined selectors for convenience
 export const selectAllDateRanges = (state) => ({
   analyticsDashboard: {
@@ -484,13 +607,18 @@ export const selectAllDateRanges = (state) => ({
     startDate: state.dateRange?.SummaryFinancialDashboardStart || null,
     endDate: state.dateRange?.SummaryFinancialDashboardEnd || null,
   },
+  storeSummaryProduction: {
+    startDate: state.dateRange?.StoreSummaryProductionStart || null,
+    endDate: state.dateRange?.StoreSummaryProductionEnd || null,
+  },
 });
 
 export const selectHasAnyDateRange = (state) => 
   selectHasAnalyticsDashboardDateRange(state) ||
   selectHasMasterfileDateRange(state) ||
   selectHasReportsDateRange(state) ||
-  selectHasSummaryFinancialDashboardDateRange(state);
+  selectHasSummaryFinancialDashboardDateRange(state) ||
+  selectHasStoreSummaryProductionDateRange(state);
 
 // Export reducer
 export default dateRangeSlice.reducer;

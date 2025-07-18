@@ -80,11 +80,10 @@ import {
 
 // Import date range Redux selectors and actions
 import {
-  selectSummaryFinancialDashboardStartDate,
-  selectSummaryFinancialDashboardEndDate,
-  setSummaryFinancialDashboardStartDate,
-  setSummaryFinancialDashboardEndDate,
-  clearSummaryFinancialDashboardDateRange
+  selectStoreSummaryProductionDateRange,
+  selectHasStoreSummaryProductionDateRange,
+  setStoreSummaryProductionDateRange,
+  clearStoreSummaryProductionDateRange
 } from '../store/slices/dateRangeSlice';
 
 // Import your existing components
@@ -157,31 +156,44 @@ const generateAutoName = (email: string) => {
   return 'default name selected';
 };
 
-// Helper function to format date for API
-const formatDateForAPI = (date: Date) => {
-  if (!date) return '';
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  return `${year}-${month}-${day}`;
+// Helper function to convert Redux date strings to Date objects
+const parseReduxDate = (dateStr: string | null): Date | null => {
+  if (!dateStr) return null;
+  try {
+    // Redux stores dates as YYYY-MM-DD format
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day); // month is 0-indexed in Date constructor
+  } catch (error) {
+    console.error('Error parsing Redux date:', error);
+    return null;
+  }
 };
 
-// DateRangeSelector Button Component
-const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
+// Helper function to format date range for API calls
+const formatDateForAPI = (date: Date): string => {
+  return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
+};
+
+// DateRangeSelector Button Component - UPDATED with Redux integration
+const DateRangeSelectorButton = ({ onDateRangeSelect, currentRange }) => {
   const dispatch = useAppDispatch();
-  const startDate = useAppSelector(selectSummaryFinancialDashboardStartDate);
-  const endDate = useAppSelector(selectSummaryFinancialDashboardEndDate);
-  
   const [isOpen, setIsOpen] = useState(false);
   const [tempRange, setTempRange] = useState(null);
 
-  // Get display text for current Redux date range
-  const getSelectedRangeText = () => {
-    if (startDate && endDate) {
-      return `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
+  // Initialize display text from currentRange
+  const getDisplayText = () => {
+    if (currentRange && currentRange.startDate && currentRange.endDate) {
+      return `${currentRange.startDate.toLocaleDateString()} - ${currentRange.endDate.toLocaleDateString()}`;
     }
     return 'Select Date Range';
   };
+
+  const [selectedRange, setSelectedRange] = useState(getDisplayText());
+
+  // Update display when currentRange changes
+  useEffect(() => {
+    setSelectedRange(getDisplayText());
+  }, [currentRange]);
 
   const handleOpen = () => setIsOpen(true);
   const handleClose = () => {
@@ -195,9 +207,17 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
 
   const handleApply = () => {
     if (tempRange) {
-      // Update Redux store with new date range - UPDATED to use Summary Financial Dashboard actions
-      dispatch(setSummaryFinancialDashboardStartDate(tempRange.startDate.toISOString()));
-      dispatch(setSummaryFinancialDashboardEndDate(tempRange.endDate.toISOString()));
+      const startDate = tempRange.startDate.toLocaleDateString();
+      const endDate = tempRange.endDate.toLocaleDateString();
+      setSelectedRange(`${startDate} - ${endDate}`);
+      
+      // Update Redux store
+      dispatch(setStoreSummaryProductionDateRange({
+        startDate: tempRange.startDate,
+        endDate: tempRange.endDate
+      }));
+      
+      // Call parent callback
       onDateRangeSelect(tempRange);
     }
     setIsOpen(false);
@@ -205,12 +225,14 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
 
   const handleClear = (event) => {
     event.stopPropagation();
-    // Clear Redux date range - UPDATED to use Summary Financial Dashboard action
-    dispatch(clearSummaryFinancialDashboardDateRange());
+    setSelectedRange('Select Date Range');
+    
+    // Clear Redux store
+    dispatch(clearStoreSummaryProductionDateRange());
+    
+    // Call parent callback with null
     onDateRangeSelect(null);
   };
-
-  const selectedRange = getSelectedRangeText();
 
   return (
     <>
@@ -268,8 +290,8 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
           <DateRangeSelector 
             initialState={[
               {
-                startDate: startDate ? new Date(startDate) : new Date(),
-                endDate: endDate ? new Date(endDate) : new Date(),
+                startDate: new Date(),
+                endDate: new Date(),
                 key: 'selection'
               }
             ]}
@@ -318,10 +340,10 @@ const StoreSummaryProduction = () => {
   const lastAppliedFilters = useAppSelector(selectLastAppliedFilters);
   const loading = useAppSelector(selectLoading);
   const error = useAppSelector(selectError);
-  
-  // Redux date range selectors - UPDATED to use Summary Financial Dashboard
-  const startDate = useAppSelector(selectSummaryFinancialDashboardStartDate);
-  const endDate = useAppSelector(selectSummaryFinancialDashboardEndDate);
+
+  // NEW: Redux date range selectors
+  const reduxDateRange = useAppSelector(selectStoreSummaryProductionDateRange);
+  const hasReduxDateRange = useAppSelector(selectHasStoreSummaryProductionDateRange);
 
   // Local state for print/email dialogs
   const [printDialog, setPrintDialog] = useState({ open: false, order: null, type: 'print' });
@@ -343,6 +365,9 @@ const StoreSummaryProduction = () => {
   
   // Global time scheduler state
   const [globalScheduledTime, setGlobalScheduledTime] = useState('09:00');
+  
+  // UPDATED: Date range state now synced with Redux
+  const [selectedDateRange, setSelectedDateRange] = useState(null);
 
   // API data state (not stored in Redux for this component)
   const [ordersData, setOrdersData] = useState<OrderData[]>([]);
@@ -352,6 +377,30 @@ const StoreSummaryProduction = () => {
   const [companiesData, setCompaniesData] = useState<Company[]>([]);
   const [localError, setLocalError] = useState<string | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
+
+  // NEW: Initialize local date range from Redux on component mount
+  useEffect(() => {
+    console.log('🏪 StoreSummaryProduction - Initializing from Redux date range:', {
+      reduxDateRange,
+      hasReduxDateRange,
+      startDate: reduxDateRange?.startDate,
+      endDate: reduxDateRange?.endDate
+    });
+
+    if (hasReduxDateRange && reduxDateRange.startDate && reduxDateRange.endDate) {
+      const startDate = parseReduxDate(reduxDateRange.startDate);
+      const endDate = parseReduxDate(reduxDateRange.endDate);
+      
+      if (startDate && endDate) {
+        setSelectedDateRange({
+          startDate,
+          endDate,
+          key: 'selection'
+        });
+        console.log('✅ Initialized date range from Redux:', { startDate, endDate });
+      }
+    }
+  }, [reduxDateRange, hasReduxDateRange]);
 
   // Fetch companies data for display names
   useEffect(() => {
@@ -369,92 +418,139 @@ const StoreSummaryProduction = () => {
     fetchCompanies();
   }, []);
 
-  // Initialize with Redux values and load initial data on component mount
+  // NEW: Auto-fetch data whenever company, location, or date range changes
+  useEffect(() => {
+    // Add defensive checks for undefined/null values
+    const companies = selectedCompanies || [];
+    const locations = selectedLocations || [];
+    
+    const shouldFetchData = companies.length > 0 && locations.length > 0;
+    
+    if (shouldFetchData) {
+      console.log('🔄 Auto-fetching data due to filter/date range change:', {
+        companies: companies,
+        locations: locations,
+        dateRange: selectedDateRange,
+        hasDateRange: !!selectedDateRange
+      });
+      
+      const fetchData = async () => {
+        try {
+          setLocalError(null);
+          const companyId = companies[0];
+          const locationId = locations[0];
+
+          // Fetch both orders and consolidated data
+          await Promise.all([
+            fetchOrdersData(companyId, locationId),
+            fetchConsolidatedData(companyId)
+          ]);
+
+          setDataLoaded(true);
+        } catch (err) {
+          console.error('❌ Error auto-fetching data:', err);
+          setLocalError('Failed to fetch data. Please try again.');
+        }
+      };
+
+      fetchData();
+    } else {
+      console.log('🔍 Not fetching data - missing required filters:', {
+        hasCompany: companies.length > 0,
+        hasLocation: locations.length > 0,
+        companiesCount: companies.length,
+        locationsCount: locations.length
+      });
+    }
+  }, [selectedCompanies, selectedLocations, selectedDateRange]); // Watch for changes in any of these
+
+  // Initialize with Redux values on component mount
   useEffect(() => {
     console.log('StoreSummaryProduction - Component mounted with Redux state:', {
       selectedCompanies,
       selectedLocations,
-      lastAppliedFilters,
-      dateRange: { startDate, endDate }
+      lastAppliedFilters
     });
-
-    // If we have values in Redux and they match last applied filters, load data automatically
-    if (selectedCompanies.length > 0 && selectedLocations.length > 0 && 
-        !dataLoaded && lastAppliedFilters.companies.length > 0) {
-      console.log('Auto-loading data from Redux state...');
-      loadDataFromReduxState();
-    }
-  }, [selectedCompanies, selectedLocations, lastAppliedFilters, startDate, endDate, dataLoaded]);
-
-  // Auto-load data when Redux values are available
-  const loadDataFromReduxState = async () => {
-    if (selectedCompanies.length === 0 || selectedLocations.length === 0) {
-      return;
-    }
-
-    try {
-      console.log('Loading initial data with Redux values:', {
-        companies: selectedCompanies,
-        locations: selectedLocations,
-        dateRange: { startDate, endDate }
-      });
-      
-      const companyId = selectedCompanies[0];
-      const locationId = selectedLocations[0];
-
-      await Promise.all([
-        fetchOrdersData(companyId, locationId),
-        fetchConsolidatedData(companyId)
-      ]);
-
-      setDataLoaded(true);
-    } catch (err) {
-      console.error('Error loading initial data:', err);
-      setLocalError('Failed to load initial data');
-    }
-  };
+  }, []); // Only run on mount
 
   // Get available locations based on selected companies
   const getAvailableLocations = () => {
-    if (selectedCompanies.length === 0) {
+    // Add defensive checks
+    if (!selectedCompanies || selectedCompanies.length === 0 || !companiesData || companiesData.length === 0) {
       return [];
     }
     
-    const selectedCompanyIds = selectedCompanies.map(id => parseInt(id));
-    return companiesData
-      .filter(company => selectedCompanyIds.includes(company.company_id))
-      .flatMap(company => company.locations);
+    try {
+      const selectedCompanyIds = selectedCompanies.map(id => parseInt(id));
+      return companiesData
+        .filter(company => company && selectedCompanyIds.includes(company.company_id))
+        .flatMap(company => company.locations || []);
+    } catch (error) {
+      console.error('Error getting available locations:', error);
+      return [];
+    }
   };
 
   // Get company and location names for display
   const getCompanyName = (companyId: string) => {
-    const company = companiesData.find(c => c.company_id.toString() === companyId);
-    return company?.company_name || `Company ${companyId}`;
+    if (!companyId || !companiesData || companiesData.length === 0) {
+      return `Company ${companyId || 'Unknown'}`;
+    }
+    try {
+      const company = companiesData.find(c => c && c.company_id && c.company_id.toString() === companyId);
+      return company?.company_name || `Company ${companyId}`;
+    } catch (error) {
+      console.error('Error getting company name:', error);
+      return `Company ${companyId}`;
+    }
   };
 
   const getLocationName = (companyId: string, locationId: string) => {
-    const company = companiesData.find(c => c.company_id.toString() === companyId);
-    const location = company?.locations.find(l => l.location_id.toString() === locationId);
-    return location?.location_name || `Location ${locationId}`;
+    if (!companyId || !locationId || !companiesData || companiesData.length === 0) {
+      return `Location ${locationId || 'Unknown'}`;
+    }
+    try {
+      const company = companiesData.find(c => c && c.company_id && c.company_id.toString() === companyId);
+      const location = company?.locations?.find(l => l && l.location_id && l.location_id.toString() === locationId);
+      return location?.location_name || `Location ${locationId}`;
+    } catch (error) {
+      console.error('Error getting location name:', error);
+      return `Location ${locationId}`;
+    }
   };
 
-  // UPDATED: Fetch orders data with date range
+  // UPDATED: Fetch orders data with date range support and URL logging
   const fetchOrdersData = async (companyId: string, locationId: string) => {
     try {
       setLocalError(null);
       
       // Build URL with date range parameters if available
-      let financialUrl = `${API_URL_Local}/api/storeorders/financialsummary/${companyId}/${locationId}`;
+      let url = `${API_URL_Local}/api/storeorders/allordersinvoices/${companyId}/${locationId}`;
+      const urlParams = new URLSearchParams();
       
-      if (startDate && endDate) {
-        const startDateFormatted = formatDateForAPI(new Date(startDate));
-        const endDateFormatted = formatDateForAPI(new Date(endDate));
-        financialUrl += `?start_date=${startDateFormatted}&end_date=${endDateFormatted}`;
+      if (selectedDateRange) {
+        const startDate = formatDateForAPI(selectedDateRange.startDate);
+        const endDate = formatDateForAPI(selectedDateRange.endDate);
+        urlParams.append('startDate', startDate);
+        urlParams.append('endDate', endDate);
       }
       
-      console.log('Fetching orders with URL:', financialUrl);
+      if (urlParams.toString()) {
+        url += `?${urlParams.toString()}`;
+      }
       
-      const response = await fetch(financialUrl);
+      console.log('📤 Fetching Orders Data - URL:', url);
+      console.log('📤 Orders API Call Details:', {
+        companyId,
+        locationId,
+        dateRange: selectedDateRange ? {
+          startDate: formatDateForAPI(selectedDateRange.startDate),
+          endDate: formatDateForAPI(selectedDateRange.endDate)
+        } : null,
+        fullUrl: url
+      });
+      
+      const response = await fetch(url);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -464,31 +560,52 @@ const StoreSummaryProduction = () => {
       setOrdersData(result.data);
       setOrdersTotal(result.total);
       
+      console.log('✅ Orders data fetched successfully:', {
+        count: result.data.length,
+        total: result.total,
+        dateFiltered: !!selectedDateRange,
+        url: url
+      });
+      
     } catch (err) {
-      console.error('Error fetching orders:', err);
+      console.error('❌ Error fetching orders:', err);
       setLocalError(err instanceof Error ? err.message : 'Failed to fetch orders data');
       setOrdersData([]);
       setOrdersTotal(0);
     }
   };
 
-  // UPDATED: Fetch consolidated production data with date range
+  // UPDATED: Fetch consolidated production data with date range support and URL logging
   const fetchConsolidatedData = async (companyId: string) => {
     try {
       setLocalError(null);
       
       // Build URL with date range parameters if available
-      let companySummaryUrl = `${API_URL_Local}/api/storeorders/companysummary/${companyId}`;
+      let url = `${API_URL_Local}/api/storeorders/consolidatedproduction/${companyId}`;
+      const urlParams = new URLSearchParams();
       
-      if (startDate && endDate) {
-        const startDateFormatted = formatDateForAPI(new Date(startDate));
-        const endDateFormatted = formatDateForAPI(new Date(endDate));
-        companySummaryUrl += `?start_date=${startDateFormatted}&end_date=${endDateFormatted}`;
+      if (selectedDateRange) {
+        const startDate = formatDateForAPI(selectedDateRange.startDate);
+        const endDate = formatDateForAPI(selectedDateRange.endDate);
+        urlParams.append('startDate', startDate);
+        urlParams.append('endDate', endDate);
       }
       
-      console.log('Fetching consolidated data with URL:', companySummaryUrl);
+      if (urlParams.toString()) {
+        url += `?${urlParams.toString()}`;
+      }
       
-      const response = await fetch(companySummaryUrl);
+      console.log('📤 Fetching Consolidated Data - URL:', url);
+      console.log('📤 Consolidated API Call Details:', {
+        companyId,
+        dateRange: selectedDateRange ? {
+          startDate: formatDateForAPI(selectedDateRange.startDate),
+          endDate: formatDateForAPI(selectedDateRange.endDate)
+        } : null,
+        fullUrl: url
+      });
+      
+      const response = await fetch(url);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -498,82 +615,18 @@ const StoreSummaryProduction = () => {
       setConsolidatedData(result.data);
       setConsolidatedColumns(result.columns);
       
+      console.log('✅ Consolidated data fetched successfully:', {
+        itemCount: result.data.length,
+        columnCount: result.columns.length,
+        dateFiltered: !!selectedDateRange,
+        url: url
+      });
+      
     } catch (err) {
-      console.error('Error fetching consolidated data:', err);
+      console.error('❌ Error fetching consolidated data:', err);
       setLocalError(err instanceof Error ? err.message : 'Failed to fetch consolidated production data');
       setConsolidatedData([]);
       setConsolidatedColumns([]);
-    }
-  };
-
-  // Date range handler - UPDATED to use Redux
-  const handleDateRangeSelect = (range) => {
-    console.log('Selected date range for production reports:', range);
-    // The DateRangeSelectorButton component already handles Redux updates
-  };
-
-  // Get date range display text - UPDATED to use Redux
-  const getDateRangeText = () => {
-    if (startDate && endDate) {
-      return `${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`;
-    }
-    return 'All time';
-  };
-
-  // Event handlers for filters
-  const handleLocationChange = (values: string[]) => {
-    // Only allow locations that are available for selected companies
-    const availableLocationIds = getAvailableLocations().map(loc => loc.location_id.toString());
-    const validValues = values.filter(value => availableLocationIds.includes(value));
-    dispatch(setSelectedLocations(validValues));
-  };
-
-  const handleCompanyChange = (values: string[]) => {
-    dispatch(setSelectedCompanies(values));
-    // Clear location selection when company changes
-    dispatch(setSelectedLocations([]));
-    // Clear data when company changes
-    setOrdersData([]);
-    setConsolidatedData([]);
-    setConsolidatedColumns([]);
-    setOrdersTotal(0);
-    setDataLoaded(false);
-  };
-
-  const handleApplyFilters = async () => {
-    console.log('Applying filters:', {
-      companies: selectedCompanies,
-      locations: selectedLocations,
-      dateRange: { startDate, endDate }
-    });
-
-    if (selectedCompanies.length === 0) {
-      setLocalError('Please select at least one company');
-      return;
-    }
-
-    if (selectedLocations.length === 0) {
-      setLocalError('Please select at least one location');
-      return;
-    }
-
-    try {
-      setLocalError(null);
-
-      // For now, we'll use the first selected company and location
-      const companyId = selectedCompanies[0];
-      const locationId = selectedLocations[0];
-
-      // Fetch both orders and consolidated data with date range
-      await Promise.all([
-        fetchOrdersData(companyId, locationId),
-        fetchConsolidatedData(companyId)
-      ]);
-
-      setDataLoaded(true);
-    } catch (err) {
-      console.error('Error applying filters:', err);
-      setLocalError('Failed to fetch data. Please try again.');
     }
   };
 
@@ -840,6 +893,115 @@ const StoreSummaryProduction = () => {
     }
   };
 
+  // Event handlers for filters - UPDATED to only update state, useEffect handles fetching
+  const handleLocationChange = (values: string[]) => {
+    // Add defensive checks
+    if (!values) {
+      console.warn('⚠️ Location change called with undefined values');
+      return;
+    }
+
+    // Only allow locations that are available for selected companies
+    const availableLocations = getAvailableLocations();
+    const availableLocationIds = availableLocations.map(loc => loc?.location_id?.toString()).filter(Boolean);
+    const validValues = values.filter(value => value && availableLocationIds.includes(value));
+    
+    console.log('📍 Location changed:', {
+      from: selectedLocations || [],
+      to: validValues,
+      available: availableLocationIds,
+      receivedValues: values
+    });
+    
+    dispatch(setSelectedLocations(validValues));
+    // Data fetching will be handled by useEffect
+  };
+
+  const handleCompanyChange = (values: string[]) => {
+    // Add defensive checks
+    if (!values) {
+      console.warn('⚠️ Company change called with undefined values');
+      return;
+    }
+
+    console.log('🏭 Company changed:', {
+      from: selectedCompanies || [],
+      to: values
+    });
+    
+    dispatch(setSelectedCompanies(values));
+    // Clear location selection when company changes
+    dispatch(setSelectedLocations([]));
+    // Clear data when company changes
+    setOrdersData([]);
+    setConsolidatedData([]);
+    setConsolidatedColumns([]);
+    setOrdersTotal(0);
+    setDataLoaded(false);
+    // Data fetching will be handled by useEffect when location is selected
+  };
+
+  const handleApplyFilters = async () => {
+    console.log('Applying filters:', {
+      companies: selectedCompanies,
+      locations: selectedLocations,
+      dateRange: selectedDateRange
+    });
+
+    if (selectedCompanies.length === 0) {
+      setLocalError('Please select at least one company');
+      return;
+    }
+
+    if (selectedLocations.length === 0) {
+      setLocalError('Please select at least one location');
+      return;
+    }
+
+    try {
+      setLocalError(null);
+
+      // For now, we'll use the first selected company and location
+      const companyId = selectedCompanies[0];
+      const locationId = selectedLocations[0];
+
+      // Fetch both orders and consolidated data
+      await Promise.all([
+        fetchOrdersData(companyId, locationId),
+        fetchConsolidatedData(companyId)
+      ]);
+
+      setDataLoaded(true);
+    } catch (err) {
+      console.error('Error applying filters:', err);
+      setLocalError('Failed to fetch data. Please try again.');
+    }
+  };
+
+  // UPDATED: Date range handler with Redux integration - simplified
+  const handleDateRangeSelect = (range) => {
+    console.log('📅 Date range selected:', range);
+    setSelectedDateRange(range);
+    
+    if (range) {
+      // Update Redux store
+      dispatch(setStoreSummaryProductionDateRange({
+        startDate: range.startDate,
+        endDate: range.endDate
+      }));
+      
+      console.log('✅ Date range saved to Redux:', {
+        startDate: range.startDate,
+        endDate: range.endDate
+      });
+    } else {
+      // Clear Redux store
+      dispatch(clearStoreSummaryProductionDateRange());
+      console.log('🧹 Date range cleared from Redux');
+    }
+    // Data fetching will be handled by useEffect
+  };
+
   const handlePrintOrder = (order: OrderData) => {
     setPrintDialog({ open: true, order, type: 'print' });
   };
@@ -902,7 +1064,9 @@ const StoreSummaryProduction = () => {
       second: '2-digit'
     });
 
-    const dateRangeText = getDateRangeText();
+    const dateRangeText = selectedDateRange 
+      ? `${selectedDateRange.startDate.toLocaleDateString()} to ${selectedDateRange.endDate.toLocaleDateString()}`
+      : 'All time';
 
     const companyName = selectedCompanies.length > 0 ? getCompanyName(selectedCompanies[0]) : 'Selected Company';
     const locationName = selectedLocations.length > 0 && selectedCompanies.length > 0 
@@ -1027,7 +1191,9 @@ const generateConsolidatedReport = () => {
       second: '2-digit'
     });
 
-    const dateRangeText = getDateRangeText();
+    const dateRangeText = selectedDateRange 
+      ? `${selectedDateRange.startDate.toLocaleDateString()} to ${selectedDateRange.endDate.toLocaleDateString()}`
+      : 'All time';
 
     const companyName = selectedCompanies.length > 0 ? getCompanyName(selectedCompanies[0]) : 'Selected Company';
 
@@ -1170,7 +1336,7 @@ const generateConsolidatedReport = () => {
           <div class="date-range">Total quantities needed for production • ${dateRangeText}</div>
         </div>
         
-        ${startDate && endDate ? `
+        ${selectedDateRange ? `
         <div class="date-filter">
           <strong>📅 Date Filter Applied:</strong> This report shows production requirements for the selected period: ${dateRangeText}
         </div>
@@ -1196,8 +1362,31 @@ const generateConsolidatedReport = () => {
     `;
   };
 
+  // Get date range display text
+  const getDateRangeText = () => {
+    if (selectedDateRange) {
+      return `${selectedDateRange.startDate.toLocaleDateString()} to ${selectedDateRange.endDate.toLocaleDateString()}`;
+    }
+    return 'All time';
+  };
+
+  // Convert current date range to format expected by DateRangeSelectorButton
+  const getCurrentDateRangeForButton = () => {
+    if (selectedDateRange) {
+      return {
+        startDate: selectedDateRange.startDate,
+        endDate: selectedDateRange.endDate
+      };
+    }
+    return null;
+  };
+
   // Show empty state when no data
-  const showEmptyState = !loading && ordersData.length === 0 && selectedCompanies.length > 0 && selectedLocations.length > 0 && dataLoaded;
+  const showEmptyState = !loading && 
+    (!ordersData || ordersData.length === 0) && 
+    selectedCompanies && selectedCompanies.length > 0 && 
+    selectedLocations && selectedLocations.length > 0 && 
+    dataLoaded;
   console.log('ordersData:', ordersData);
   // Combined error from Redux and local state
   const displayError = error || localError;
@@ -1206,7 +1395,7 @@ const generateConsolidatedReport = () => {
     <Container maxWidth="xl" sx={{ py: 3 }}>
       {/* Header Section with Filters and Date Range */}
       <Box sx={{ mb: 3 }}>
-        {/* Title and Date Range Selector */}
+        {/* Title Section */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
           <Box>
             <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main', mb: 1 }}>
@@ -1218,48 +1407,12 @@ const generateConsolidatedReport = () => {
           </Box>
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {startDate && endDate && (
-              <Chip
-                label={`${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`}
-                color="primary"
-                size="small"
-                onDelete={() => dispatch(clearSummaryFinancialDashboardDateRange())}
-                sx={{ fontSize: '0.75rem' }}
-              />
-            )}
-            <DateRangeSelectorButton onDateRangeSelect={handleDateRangeSelect} />
+            <DateRangeSelectorButton 
+              onDateRangeSelect={handleDateRangeSelect} 
+              currentRange={getCurrentDateRangeForButton()}
+            />
           </Box>
         </Box>
-
-        {/* Active Filter Display */}
-        {(selectedCompanies.length > 0 || selectedLocations.length > 0) && (
-          <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {selectedCompanies.length > 0 && (
-              <Chip
-                label={`${selectedCompanies.length === 1 ? getCompanyName(selectedCompanies[0]) : `${selectedCompanies.length} companies selected`}`}
-                color="primary"
-                variant="outlined"
-                size="small"
-              />
-            )}
-            {selectedLocations.length > 0 && selectedCompanies.length > 0 && (
-              <Chip
-                label={`${selectedLocations.length === 1 ? getLocationName(selectedCompanies[0], selectedLocations[0]) : `${selectedLocations.length} locations selected`}`}
-                color="secondary"
-                variant="outlined"
-                size="small"
-              />
-            )}
-            {lastAppliedFilters.companies.length > 0 && !dataLoaded && (
-              <Chip
-                label="Data available - click Apply to refresh"
-                color="info"
-                variant="outlined"
-                size="small"
-              />
-            )}
-          </Box>
-        )}
 
         {/* Error Display */}
         {displayError && (
@@ -1416,20 +1569,52 @@ const generateConsolidatedReport = () => {
             </FormControl>
           </Box>
 
-          <Button 
-            variant="contained" 
-            onClick={handleApplyFilters}
-            disabled={selectedCompanies.length === 0 || selectedLocations.length === 0 || loading}
-            sx={{ 
-              textTransform: 'uppercase',
-              fontWeight: 600,
-              px: 3,
-              py: 1
-            }}
-          >
-            {loading ? <CircularProgress size={20} sx={{ mr: 1 }} /> : null}
-            Apply Filters
-          </Button>
+          {/* Selected Filters Display - MOVED BELOW DROPDOWNS */}
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {selectedCompanies && selectedCompanies.length > 0 && (
+              <Chip
+                label={`${selectedCompanies.length === 1 ? getCompanyName(selectedCompanies[0]) : `${selectedCompanies.length} companies selected`}`}
+                color="primary"
+                variant="outlined"
+                size="small"
+              />
+            )}
+            {selectedLocations && selectedLocations.length > 0 && selectedCompanies && selectedCompanies.length > 0 && (
+              <Chip
+                label={`${selectedLocations.length === 1 ? getLocationName(selectedCompanies[0], selectedLocations[0]) : `${selectedLocations.length} locations selected`}`}
+                color="secondary"
+                variant="outlined"
+                size="small"
+              />
+            )}
+            {selectedDateRange && (
+              <Chip
+                label={`📅 ${selectedDateRange.startDate?.toLocaleDateString()} - ${selectedDateRange.endDate?.toLocaleDateString()}`}
+                color="primary"
+                size="small"
+                onDelete={() => handleDateRangeSelect(null)}
+                sx={{ fontSize: '0.75rem' }}
+              />
+            )}
+            {hasReduxDateRange && !selectedDateRange && (
+              <Chip
+                label="📅 Date range from Redux"
+                color="info"
+                size="small"
+                variant="outlined"
+                sx={{ fontSize: '0.75rem' }}
+              />
+            )}
+            {loading && (
+              <Chip
+                label="🔄 Loading data..."
+                color="info"
+                size="small"
+                variant="outlined"
+                sx={{ fontSize: '0.75rem' }}
+              />
+            )}
+          </Box>
         </Box>
       </Box>
 
@@ -1450,15 +1635,8 @@ const generateConsolidatedReport = () => {
               No Data Available
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Please select a company and location, then click "Apply Filters" to load data.
+              Please select a company and location to automatically load data.
             </Typography>
-            <Button 
-              variant="contained" 
-              onClick={handleApplyFilters}
-              disabled={selectedCompanies.length === 0 || selectedLocations.length === 0}
-            >
-              Load Data
-            </Button>
           </CardContent>
         </Card>
       )}
@@ -1480,7 +1658,7 @@ const generateConsolidatedReport = () => {
                 </Box>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {startDate && endDate && (
+                {selectedDateRange && (
                   <Chip 
                     label="Date Filtered" 
                     size="small" 
@@ -1514,7 +1692,7 @@ const generateConsolidatedReport = () => {
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
                     Total: ${ordersTotal.toFixed(2)}
                   </Typography>
-                  {startDate && endDate && (
+                  {selectedDateRange && (
                     <Typography variant="caption" color="text.secondary">
                       Filtered by date range
                     </Typography>
@@ -1594,7 +1772,7 @@ const generateConsolidatedReport = () => {
                 <Typography variant="body2" color="text.secondary">
                   Total quantities needed for production • {getDateRangeText()}
                 </Typography>
-                {startDate && endDate && (
+                {selectedDateRange && (
                   <Chip 
                     label="📅 Date range applied to production calculations" 
                     size="small" 
@@ -2143,7 +2321,7 @@ const generateConsolidatedReport = () => {
                 <Typography variant="body2"><strong>Date:</strong> {new Date(printDialog.order.created_at).toLocaleDateString()}</Typography>
                 <Typography variant="body2"><strong>Items:</strong> {printDialog.order.items_count}</Typography>
                 <Typography variant="body2"><strong>Total:</strong> ${printDialog.order.total_amount.toFixed(2)}</Typography>
-                {startDate && endDate && (
+                {selectedDateRange && (
                   <Typography variant="body2"><strong>Report Period:</strong> {getDateRangeText()}</Typography>
                 )}
               </Paper>
@@ -2198,7 +2376,7 @@ const generateConsolidatedReport = () => {
                 <Typography variant="body2"><strong>Date:</strong> {new Date(emailDialog.order.created_at).toLocaleDateString()}</Typography>
                 <Typography variant="body2"><strong>Items:</strong> {emailDialog.order.items_count}</Typography>
                 <Typography variant="body2"><strong>Total:</strong> ${emailDialog.order.total_amount.toFixed(2)}</Typography>
-                {startDate && endDate && (
+                {selectedDateRange && (
                   <Typography variant="body2"><strong>Report Period:</strong> {getDateRangeText()}</Typography>
                 )}
               </Paper>
