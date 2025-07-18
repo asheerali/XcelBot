@@ -1,6 +1,6 @@
-// Updated SalesDashboard.tsx with company selection dropdown
+// Updated SalesDashboard.tsx with Redux integration and auto-filtering
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -47,34 +47,50 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
-import BusinessIcon from '@mui/icons-material/Business'; // NEW: Company icon
+import BusinessIcon from '@mui/icons-material/Business';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
 
 // Components
 import FinancialTablesComponent from '../components/FinancialTablesComponent';
 import DateRangeSelector from '../components/DateRangeSelector';
 
-// Import Redux hooks and actions
+// Import Redux hooks and actions - UPDATED
 import { useAppDispatch, useAppSelector } from '../typedHooks';
 import { 
   selectSalesWideLocation, 
   updateSalesWideFilters,
   setTableData,
   setLoading,
-  setError,
-  selectCompanyId // NEW: Import company ID selector
+  setError
 } from '../store/excelSlice';
+
+// NEW: Import masterFileSlice for company/location management
+import {
+  setSelectedCompanies,
+  setSelectedLocations,
+  selectSelectedCompanies,
+  selectSelectedLocations,
+  selectLoading as selectMasterFileLoading,
+  selectError as selectMasterFileError
+} from '../store/slices/masterFileSlice';
+
 import { API_URL_Local } from '../constants';
 
-// Company interface
+// NEW: Company and Location interfaces for API response
 interface Company {
-  id: string;
-  name: string;
-  [key: string]: any; // Allow for additional company properties
+  company_id: number;
+  company_name: string;
+  locations: Location[];
+}
+
+interface Location {
+  location_id: number;
+  location_name: string;
 }
 
 // API URLs
 const SALES_WIDE_FILTER_API_URL = `${API_URL_Local}/api/companywide/filter`;
-const COMPANIES_API_URL = `${API_URL_Local}/companies`; // NEW: Companies API endpoint
+const COMPANY_LOCATIONS_API_URL = `${API_URL_Local}/company-locations/all`; // NEW: Updated API endpoint
 
 // NEW: Company info display component
 const CompanyInfoChip = styled(Chip)(({ theme }) => ({
@@ -86,6 +102,20 @@ const CompanyInfoChip = styled(Chip)(({ theme }) => ({
   '& .MuiChip-label': {
     color: theme.palette.primary.main,
     fontWeight: 600,
+  },
+}));
+
+// NEW: Auto-filtering status indicator
+const AutoFilteringChip = styled(Chip)(({ theme }) => ({
+  backgroundColor: alpha(theme.palette.success.main, 0.1),
+  border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`,
+  '& .MuiChip-icon': {
+    color: theme.palette.success.main,
+  },
+  '& .MuiChip-label': {
+    color: theme.palette.success.main,
+    fontWeight: 600,
+    fontSize: '0.75rem',
   },
 }));
 
@@ -267,6 +297,7 @@ interface MultiSelectFilterProps {
   onChange: (value: string[]) => void;
   placeholder?: string;
   icon?: React.ReactNode;
+  required?: boolean;
 }
 
 const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
@@ -276,7 +307,8 @@ const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
   options,
   onChange,
   placeholder = "Select options",
-  icon
+  icon,
+  required = false
 }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [searchText, setSearchText] = useState('');
@@ -332,7 +364,7 @@ const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
           fontWeight: 500
         }}
       >
-        {label}
+        {label} {required && <span style={{ color: 'red' }}>*</span>}
       </Typography>
       
       <Box
@@ -340,7 +372,7 @@ const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
         sx={{
           display: 'flex',
           alignItems: 'center',
-          border: '2px solid #e0e0e0',
+          border: required && value.length === 0 ? '2px solid #f44336' : '2px solid #e0e0e0',
           borderRadius: '8px',
           padding: '12px 16px',
           cursor: 'pointer',
@@ -817,7 +849,7 @@ export default function SalesDashboard() {
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const dispatch = useAppDispatch();
 
-  // Get data from Redux store
+  // Get data from Redux store (existing)
   const {
     salesWideFiles,
     salesWideLocations,
@@ -827,14 +859,11 @@ export default function SalesDashboard() {
     error
   } = useAppSelector((state) => state.excel);
 
-  // NEW: Get company_id from Redux (might come from uploaded files)
-  const currentCompanyId = useAppSelector(selectCompanyId);
-  
-  // NEW: Company-related state
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
-  const [companiesLoading, setCompaniesLoading] = useState(false);
-  const [companiesError, setCompaniesError] = useState<string>("");
+  // NEW: Get company/location data from Redux masterFileSlice
+  const selectedCompanies = useAppSelector(selectSelectedCompanies);
+  const selectedLocations = useAppSelector(selectSelectedLocations);
+  const masterFileLoading = useAppSelector(selectMasterFileLoading);
+  const masterFileError = useAppSelector(selectMasterFileError);
 
   // Find current data for the selected location
   const currentSalesWideData = salesWideFiles.find(f => f.location === currentSalesWideLocation)?.data;
@@ -842,11 +871,26 @@ export default function SalesDashboard() {
   // State variables
   const [tabValue, setTabValue] = useState(0);
   const [chartTab, setChartTab] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [filterError, setFilterError] = useState<string>('');
   
-  // Filter states
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([currentSalesWideLocation || '']);
+  // NEW: Company-location state for API data
+  const [companiesData, setCompaniesData] = useState<Company[]>([]);
+  const [companiesLoading, setCompaniesLoading] = useState(false);
+  const [companiesError, setCompaniesError] = useState<string>("");
+  
+  // Auto-filtering state
+  const [autoFilteringInitialized, setAutoFilteringInitialized] = useState(false);
+  const [isAutoFiltering, setIsAutoFiltering] = useState(false);
+  const [filterError, setFilterError] = useState<string>('');
+  const autoFilteringTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Previous values for change detection
+  const previousValuesRef = useRef({
+    companies: [] as string[],
+    locations: [] as string[],
+    dateRange: null as any
+  });
+  
+  // Filter states (local)
   const [selectedDateRange, setSelectedDateRange] = useState<any>(null);
   
   // Current table data from local state that gets updated from API calls
@@ -863,34 +907,42 @@ export default function SalesDashboard() {
   // Extract data arrays from backend response or use defaults
   const locations = currentSalesWideData?.locations || salesWideLocations || ['Midtown East', 'Downtown West', 'Uptown North', 'Southside'];
 
-  // NEW: Fetch companies on component mount
+  // NEW: Fetch company-locations data on component mount
   useEffect(() => {
-    const fetchCompanies = async () => {
+    const fetchCompanyLocations = async () => {
       setCompaniesLoading(true);
       setCompaniesError("");
       
       try {
-        console.log('🏢 SalesDashboard: Fetching companies from:', COMPANIES_API_URL);
-        const response = await axios.get(COMPANIES_API_URL);
+        console.log('🏢 SalesDashboard: Fetching company-locations from:', COMPANY_LOCATIONS_API_URL);
+        const response = await fetch(COMPANY_LOCATIONS_API_URL);
         
-        console.log('📥 SalesDashboard: Companies response:', response.data);
-        setCompanies(response.data || []);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
         
-        // Optionally auto-select the first company if there's only one
-        if (response.data && response.data.length === 1) {
-          setSelectedCompanyId(response.data[0].id);
-          console.log('🎯 SalesDashboard: Auto-selected single company:', response.data[0]);
+        const data: Company[] = await response.json();
+        console.log('📥 SalesDashboard: Company-locations response:', data);
+        
+        setCompaniesData(data || []);
+        
+        // Auto-select single company if only one available
+        if (data && data.length === 1 && selectedCompanies.length === 0) {
+          dispatch(setSelectedCompanies([data[0].company_id.toString()]));
+          console.log('🎯 SalesDashboard: Auto-selected single company:', data[0]);
         }
         
       } catch (error) {
-        console.error('❌ SalesDashboard: Error fetching companies:', error);
+        console.error('❌ SalesDashboard: Error fetching company-locations:', error);
         
-        let errorMessage = "Error loading companies";
-        if (axios.isAxiosError(error)) {
-          if (error.response) {
-            errorMessage = `Server error: ${error.response.status}`;
-          } else if (error.request) {
-            errorMessage = 'Cannot connect to companies API. Please check server status.';
+        let errorMessage = "Error loading companies and locations";
+        if (error instanceof Error) {
+          if (error.message.includes('404')) {
+            errorMessage = 'Company-locations API not found. Please check server configuration.';
+          } else if (error.message.includes('500')) {
+            errorMessage = 'Server error loading companies. Please try again later.';
+          } else {
+            errorMessage = error.message;
           }
         }
         
@@ -900,30 +952,8 @@ export default function SalesDashboard() {
       }
     };
 
-    fetchCompanies();
+    fetchCompanyLocations();
   }, []);
-
-  // NEW: Sync selectedCompanyId with Redux currentCompanyId if it exists (from uploaded files)
-  useEffect(() => {
-    if (currentCompanyId && !selectedCompanyId) {
-      console.log('🏢 SalesDashboard: Syncing company ID from Redux files:', currentCompanyId);
-      setSelectedCompanyId(currentCompanyId);
-    }
-  }, [currentCompanyId, selectedCompanyId]);
-
-  // NEW: Handle company selection
-  const handleCompanyChange = (event: SelectChangeEvent) => {
-    const companyId = event.target.value;
-    setSelectedCompanyId(companyId);
-    console.log('🏢 SalesDashboard: Company selected:', companyId);
-  };
-
-  // Get selected company name for display
-  const selectedCompanyName = companies.find(c => c.id === selectedCompanyId)?.name || 
-                               (selectedCompanyId ? `Company ID: ${selectedCompanyId}` : 'No Company Selected');
-
-  // Get active company ID (prioritize selectedCompanyId, fallback to Redux currentCompanyId)
-  const activeCompanyId = selectedCompanyId || currentCompanyId;
 
   // Initialize local state with current data
   useEffect(() => {
@@ -940,57 +970,114 @@ export default function SalesDashboard() {
     }
   }, [currentSalesWideData]);
 
-  // Initialize selected locations
-  useEffect(() => {
-    if (locations.length > 0 && selectedLocations.length === 0) {
-      setSelectedLocations([locations[0]]);
-    }
-  }, [locations, selectedLocations]);
+  // NEW: Get display names for selected companies and locations
+  const getSelectedCompanyNames = () => {
+    return selectedCompanies.map(companyId => {
+      const company = companiesData.find(c => c.company_id.toString() === companyId);
+      return company ? company.company_name : `Company ID: ${companyId}`;
+    });
+  };
 
-  // UPDATED: Apply filters with backend API call including company_id
-  const handleApplyFilters = async () => {
-    setIsLoading(true);
-    setFilterError('');
+  const getSelectedLocationNames = () => {
+    return selectedLocations.map(locationId => {
+      for (const company of companiesData) {
+        const location = company.locations.find(l => l.location_id.toString() === locationId);
+        if (location) {
+          return location.location_name;
+        }
+      }
+      return `Location ID: ${locationId}`;
+    });
+  };
+
+  // NEW: Get available locations for selected companies
+  const getAvailableLocations = () => {
+    if (selectedCompanies.length === 0) return [];
     
+    const availableLocations: Location[] = [];
+    selectedCompanies.forEach(companyId => {
+      const company = companiesData.find(c => c.company_id.toString() === companyId);
+      if (company) {
+        availableLocations.push(...company.locations);
+      }
+    });
+    
+    return availableLocations;
+  };
+
+  // NEW: Check if minimum filter requirements are met
+  const checkMinimumRequirements = () => {
+    return selectedCompanies.length > 0 && selectedLocations.length > 0;
+  };
+
+  // NEW: Check if filters have actually changed
+  const checkFiltersChanged = () => {
+    const current = {
+      companies: [...selectedCompanies].sort(),
+      locations: [...selectedLocations].sort(),
+      dateRange: selectedDateRange
+    };
+    
+    const previous = previousValuesRef.current;
+    
+    const companiesChanged = JSON.stringify(current.companies) !== JSON.stringify(previous.companies);
+    const locationsChanged = JSON.stringify(current.locations) !== JSON.stringify(previous.locations);
+    const dateRangeChanged = JSON.stringify(current.dateRange) !== JSON.stringify(previous.dateRange);
+    
+    return companiesChanged || locationsChanged || dateRangeChanged;
+  };
+
+  // NEW: Auto-filtering function with debouncing
+  const triggerAutoFiltering = async () => {
+    if (!autoFilteringInitialized) {
+      console.log('⏳ SalesDashboard: Auto-filtering not initialized yet');
+      return;
+    }
+
+    if (!checkMinimumRequirements()) {
+      console.log('⚠️ SalesDashboard: Minimum requirements not met for auto-filtering');
+      return;
+    }
+
+    if (!checkFiltersChanged()) {
+      console.log('⏭️ SalesDashboard: No filter changes detected, skipping auto-filtering');
+      return;
+    }
+
+    console.log('🔄 SalesDashboard: Triggering auto-filtering...');
+    setIsAutoFiltering(true);
+    setFilterError('');
+
     try {
-      // Find the current sales wide file data - check all selected locations
-      let currentFile = null;
-      
-      // If multiple locations selected, find the first file that matches any of them
-      for (const location of selectedLocations) {
-        currentFile = salesWideFiles.find(f => f.location === location);
-        if (currentFile) break;
-      }
-      
-      // If no file found in selected locations, try current location
+      // Find current sales wide file data
+      const currentFile = salesWideFiles.find(f => f.location === currentSalesWideLocation) || 
+                         salesWideFiles[0]; // Fallback to first file
+
       if (!currentFile) {
-        currentFile = salesWideFiles.find(f => f.location === currentSalesWideLocation);
-      }
-      
-      if (!currentFile) {
-        throw new Error('No Sales Wide data found for selected location(s)');
+        throw new Error('No Sales Wide data found for filtering');
       }
 
-      // UPDATED: Prepare the request payload with multiple locations AND active company_id
+      // Convert location IDs to location names for API
+      const locationNames = getSelectedLocationNames();
+
+      // Prepare the request payload including company_id
       const payload = {
         fileName: currentFile.fileName,
         fileContent: currentFile.fileContent,
-        // Send all selected locations, not just the first one
-        locations: selectedLocations.length > 0 ? selectedLocations : [currentFile.location],
-        // Keep single location for backward compatibility
-        location: selectedLocations.length > 0 ? selectedLocations[0] : currentFile.location,
+        locations: locationNames,
+        location: locationNames.length > 0 ? locationNames[0] : '',
         startDate: selectedDateRange?.startDateStr || null,
         endDate: selectedDateRange?.endDateStr || null,
         dashboard: 'Sales Wide',
-        company_id: activeCompanyId // NEW: Include active company_id
+        company_id: selectedCompanies[0] || null // Include first selected company
       };
 
-      console.log('🚀 Sending Sales Wide filter request with company_id:', payload);
+      console.log('🚀 SalesDashboard: Auto-filtering API request:', payload);
 
       // Make API call to sales wide filter endpoint
       const response = await axios.post(SALES_WIDE_FILTER_API_URL, payload);
 
-      console.log('📥 Received Sales Wide filter response:', response.data);
+      console.log('📥 SalesDashboard: Auto-filtering response:', response.data);
 
       if (response.data) {
         // Update local table data state
@@ -1004,35 +1091,41 @@ export default function SalesDashboard() {
           table7: response.data.table7 || []
         });
 
-        // Also update Redux state if needed
+        // Update Redux state
         dispatch(setTableData(response.data));
 
-        // Update Redux filters with company_id
+        // Update Redux filters
         dispatch(updateSalesWideFilters({ 
-          location: selectedLocations.join(','), // Store all locations as comma-separated string
+          location: locationNames.join(','),
           dateRange: selectedDateRange ? `${selectedDateRange.startDateStr} - ${selectedDateRange.endDateStr}` : '',
-          company_id: activeCompanyId // NEW: Include company_id in filters
+          company_id: selectedCompanies[0] || ''
         }));
 
-        // Update current location if changed (use first selected location)
-        if (selectedLocations.length > 0 && selectedLocations[0] !== currentSalesWideLocation) {
-          dispatch(selectSalesWideLocation(selectedLocations[0]));
+        // Update current location if changed
+        if (locationNames.length > 0 && locationNames[0] !== currentSalesWideLocation) {
+          dispatch(selectSalesWideLocation(locationNames[0]));
         }
 
-        console.log('✅ Sales Wide filters applied successfully with company_id:', activeCompanyId);
+        // Update previous values for next comparison
+        previousValuesRef.current = {
+          companies: [...selectedCompanies].sort(),
+          locations: [...selectedLocations].sort(),
+          dateRange: selectedDateRange
+        };
+
+        console.log('✅ SalesDashboard: Auto-filtering completed successfully');
       }
 
     } catch (err: any) {
-      console.error('❌ Sales Wide filter error:', err);
+      console.error('❌ SalesDashboard: Auto-filtering error:', err);
       
-      let errorMessage = 'Error applying filters';
-      
+      let errorMessage = 'Auto-filtering failed';
       if (axios.isAxiosError(err)) {
         if (err.response) {
           const detail = err.response.data?.detail;
           errorMessage = detail || `Server error: ${err.response.status}`;
         } else if (err.request) {
-          errorMessage = 'No response from server. Please check if the backend is running.';
+          errorMessage = 'Cannot connect to server. Please check connection.';
         }
       } else if (err.message) {
         errorMessage = err.message;
@@ -1042,16 +1135,71 @@ export default function SalesDashboard() {
       dispatch(setError(errorMessage));
       
     } finally {
-      setIsLoading(false);
+      setIsAutoFiltering(false);
     }
   };
 
-  // Handlers for filter changes
+  // NEW: Auto-filtering effect with debouncing
+  useEffect(() => {
+    // Clear any existing timeout
+    if (autoFilteringTimeoutRef.current) {
+      clearTimeout(autoFilteringTimeoutRef.current);
+    }
+
+    // Set up debounced auto-filtering
+    autoFilteringTimeoutRef.current = setTimeout(() => {
+      triggerAutoFiltering();
+    }, 500); // 500ms debounce
+
+    // Cleanup function
+    return () => {
+      if (autoFilteringTimeoutRef.current) {
+        clearTimeout(autoFilteringTimeoutRef.current);
+      }
+    };
+  }, [selectedCompanies, selectedLocations, selectedDateRange, autoFilteringInitialized]);
+
+  // NEW: Initialize auto-filtering after component mounts and data loads
+  useEffect(() => {
+    if (companiesData.length > 0 && !autoFilteringInitialized) {
+      console.log('🚀 SalesDashboard: Initializing auto-filtering');
+      setAutoFilteringInitialized(true);
+    }
+  }, [companiesData, autoFilteringInitialized]);
+
+  // NEW: Handlers for company/location changes
+  const handleCompanyChange = (event: SelectChangeEvent<string[]>) => {
+    const newCompanies = typeof event.target.value === 'string' 
+      ? [event.target.value] 
+      : event.target.value;
+    
+    console.log('🏢 SalesDashboard: Company selection changed:', newCompanies);
+    dispatch(setSelectedCompanies(newCompanies));
+    
+    // Clear locations when company changes
+    dispatch(setSelectedLocations([]));
+  };
+
   const handleLocationChange = (newLocations: string[]) => {
-    setSelectedLocations(newLocations);
+    console.log('📍 SalesDashboard: Location selection changed:', newLocations);
+    
+    // Convert location names to IDs for Redux storage
+    const locationIds: string[] = [];
+    newLocations.forEach(locationName => {
+      for (const company of companiesData) {
+        const location = company.locations.find(l => l.location_name === locationName);
+        if (location) {
+          locationIds.push(location.location_id.toString());
+          break;
+        }
+      }
+    });
+    
+    dispatch(setSelectedLocations(locationIds));
   };
 
   const handleDateRangeSelect = (dateRange: any) => {
+    console.log('📅 SalesDashboard: Date range changed:', dateRange);
     setSelectedDateRange(dateRange);
   };
 
@@ -1116,11 +1264,10 @@ export default function SalesDashboard() {
     ['Tw Fc %', 'Lw Fc %']
   );
 
-  // UPDATED: Create properly formatted financial tables data for FinancialTablesComponent
+  // Create properly formatted financial tables data for FinancialTablesComponent
   const financialTablesData = React.useMemo(() => {
     console.log('🔄 Creating financial tables data from currentTableData:', currentTableData);
-    console.log('salesData:-----', salesData);
-    // Return the data in the exact format expected by FinancialTablesComponent
+    
     const formattedData = {
       table1: currentTableData.table1 || [], // Sales Performance
       table2: currentTableData.table2 || [], // Order Volume  
@@ -1154,7 +1301,7 @@ export default function SalesDashboard() {
     })}`;
   };
 
-  // UPDATED: Function to create charts - Fixed to show both bars for Sales/Orders/Avg Ticket
+  // Function to create charts - Fixed to show both bars for Sales/Orders/Avg Ticket
   const createNivoBarChart = (
     data: any[], 
     keys: string[], 
@@ -1180,7 +1327,7 @@ export default function SalesDashboard() {
       );
     }
 
-    // FIXED: For Sales/Orders/Avg Ticket, show both bars using Recharts
+    // For Sales/Orders/Avg Ticket, show both bars using Recharts
     const isSingleBarChart = chartType === 'salesPercentage' || chartType === 'ordersPercentage' || chartType === 'avgTicket';
     
     if (isSingleBarChart) {
@@ -1205,7 +1352,6 @@ export default function SalesDashboard() {
             <RechartsTooltip content={<CustomTooltip />} />
             <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '14px', fontWeight: 'bold' }} />
             
-            {/* FIXED: Show both bars instead of just one */}
             <Bar
               dataKey={keys[0]} // "Tw vs. Lw"
               fill={colors[0] || '#4285f4'}
@@ -1225,7 +1371,7 @@ export default function SalesDashboard() {
       );
     }
 
-    // Labor $ Spent, Labor %, Labor Hrs, SPMH, COGS $, COGS %: Use Nivo with STACKED bars
+    // Labor charts: Use Nivo with STACKED bars
     const isStackedChart = chartType === 'laborCost' || chartType === 'laborPercentage' || 
                           chartType === 'laborHrs' || chartType === 'spmh' || 
                           chartType === 'cogs' || chartType === 'cogsPercentage';
@@ -1249,139 +1395,234 @@ export default function SalesDashboard() {
           justifyContent: 'center',
           width: '100%'
         }}>
-            <h1 
-              style={{ 
-                fontWeight: 800,
-                background: 'linear-gradient(135deg, #1976d2 0%, #9c27b0 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                fontSize: 'clamp(1.75rem, 5vw, 3rem)',
-                marginBottom: '8px',
-                letterSpacing: '-0.02em',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '16px',
-                margin: '0',
-                textAlign: 'center'
-              }}
-            >
-              <span style={{ 
-                color: '#1976d2',
-                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
-                fontSize: 'inherit',
-                display: 'inline-flex',
-                alignItems: 'center'
-              }}>
-                <svg 
-                  width="1em" 
-                  height="1em" 
-                  viewBox="0 0 100 100" 
-                  fill="currentColor"
-                  style={{ fontSize: 'inherit' }}
-                >
-                  {/* 4-square logo matching your design */}
-                  <rect x="10" y="10" width="35" height="35" rx="4" fill="#5A8DEE"/>
-                  <rect x="55" y="10" width="35" height="35" rx="4" fill="#4285F4"/>
-                  <rect x="10" y="55" width="35" height="35" rx="4" fill="#1976D2"/>
-                  <rect x="55" y="55" width="35" height="35" rx="4" fill="#3F51B5"/>
-                </svg>
-              </span>
-            Companywide Sales Dashboard 
-            {/* Show company context in header */}
-            {activeCompanyId && (
-              <CompanyInfoChip
-                icon={<BusinessIcon />}
-                label={selectedCompanyName}
+          <h1 
+            style={{ 
+              fontWeight: 800,
+              background: 'linear-gradient(135deg, #1976d2 0%, #9c27b0 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              fontSize: 'clamp(1.75rem, 5vw, 3rem)',
+              marginBottom: '8px',
+              letterSpacing: '-0.02em',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '16px',
+              margin: '0',
+              textAlign: 'center'
+            }}
+          >
+            <span style={{ 
+              color: '#1976d2',
+              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+              fontSize: 'inherit',
+              display: 'inline-flex',
+              alignItems: 'center'
+            }}>
+              <svg 
+                width="1em" 
+                height="1em" 
+                viewBox="0 0 100 100" 
+                fill="currentColor"
+                style={{ fontSize: 'inherit' }}
+              >
+                <rect x="10" y="10" width="35" height="35" rx="4" fill="#5A8DEE"/>
+                <rect x="55" y="10" width="35" height="35" rx="4" fill="#4285F4"/>
+                <rect x="10" y="55" width="35" height="35" rx="4" fill="#1976D2"/>
+                <rect x="55" y="55" width="35" height="35" rx="4" fill="#3F51B5"/>
+              </svg>
+            </span>
+            Sales Wide Dashboard 
+            {/* Show auto-filtering indicator */}
+            {autoFilteringInitialized && (
+              <AutoFilteringChip
+                icon={<AutorenewIcon />}
+                label="Auto-Update"
                 size="small"
                 sx={{ ml: 2, fontSize: '0.75rem' }}
               />
             )}
-            </h1>
-          </div>
+          </h1>
+        </div>
       </Box>
 
       {/* NEW: Company Selection Section */}
-      {companies.length > 0 && (
-        <Card elevation={3} sx={{ 
-          mb: 3, 
-          borderRadius: 2, 
-          overflow: "hidden",
-          border: '2px solid #e3f2fd'
-        }}>
-          <CardContent sx={{ p: { xs: 2, md: 3 }, bgcolor: '#f8f9fa' }}>
-            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <BusinessIcon color="primary" />
-              <Typography variant="h6" sx={{ fontWeight: 600, color: '#1976d2' }}>
-                Select Company
-              </Typography>
-              {companiesLoading && <CircularProgress size={20} />}
-            </Box>
-            
-            {companiesError && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {companiesError}
-              </Alert>
-            )}
-            
-            <FormControl fullWidth size="small" disabled={companiesLoading}>
-              <InputLabel id="company-select-label">
-              
-              </InputLabel>
-              <Select
-                labelId="company-select-label"
-                value={selectedCompanyId}
-                onChange={handleCompanyChange}
-                displayEmpty
-                sx={{ 
-                  '& .MuiSelect-select': {
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1
-                  }
-                }}
-              >
-                <MenuItem value="">
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
-                    <BusinessIcon fontSize="small" />
-                    Select Company
-                  </Box>
+      <Card elevation={3} sx={{ 
+        mb: 3, 
+        borderRadius: 2, 
+        overflow: "hidden",
+        border: '2px solid #e3f2fd'
+      }}>
+        <CardContent sx={{ p: { xs: 2, md: 3 }, bgcolor: '#f8f9fa' }}>
+          <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <BusinessIcon color="primary" />
+            <Typography variant="h6" sx={{ fontWeight: 600, color: '#1976d2' }}>
+              Company Selection
+            </Typography>
+            {(companiesLoading || isAutoFiltering) && <CircularProgress size={20} />}
+          </Box>
+          
+          {/* Error displays */}
+          {companiesError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {companiesError}
+            </Alert>
+          )}
+
+          {masterFileError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {masterFileError}
+            </Alert>
+          )}
+          
+          {/* Company Selection */}
+          <FormControl fullWidth size="small" disabled={companiesLoading}>
+            <InputLabel id="company-select-label">Select Company *</InputLabel>
+            <Select
+              labelId="company-select-label"
+              multiple
+              value={selectedCompanies}
+              onChange={handleCompanyChange}
+              label="Select Company *"
+              renderValue={(selected) => (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {getSelectedCompanyNames().map((name) => (
+                    <Chip key={name} label={name} size="small" />
+                  ))}
+                </Box>
+              )}
+              sx={{ 
+                '& .MuiSelect-select': {
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }
+              }}
+            >
+              {companiesData.map((company) => (
+                <MenuItem key={company.company_id} value={company.company_id.toString()}>
+                  <Checkbox checked={selectedCompanies.includes(company.company_id.toString())} />
+                  <ListItemText primary={company.company_name} />
                 </MenuItem>
-                {companies.map((company) => (
-                  <MenuItem key={company.id} value={company.id}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <BusinessIcon fontSize="small" color="primary" />
-                      {company.name}
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            
-            {selectedCompanyId && (
-              <Box sx={{ mt: 2 }}>
+              ))}
+            </Select>
+          </FormControl>
+          
+          {/* Active company selection display */}
+          {selectedCompanies.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Selected Company:
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 <Chip
                   icon={<BusinessIcon />}
-                  label={`Selected: ${selectedCompanyName}`}
+                  label={`${getSelectedCompanyNames().join(', ')}`}
                   color="primary"
                   variant="outlined"
                   sx={{ fontWeight: 500 }}
                 />
               </Box>
-            )}
-            
-            {/* Note about existing data */}
-            {currentCompanyId && currentCompanyId !== selectedCompanyId && (
-              <Alert severity="info" sx={{ mt: 2 }}>
-                <Typography variant="body2">
-                  <strong>Note:</strong> Your uploaded files are associated with Company ID: {currentCompanyId}. 
-                  Select a different company above to override this for new operations.
-                </Typography>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Filters Section - Location and Date Range */}
+      <Card elevation={3} sx={{ mb: 3, borderRadius: 2, overflow: 'hidden' }}>
+        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+            <FilterListIcon color="primary" />
+            <Typography variant="h6" sx={{ fontWeight: 500 }}>
+              Filters
+            </Typography>
+            {isAutoFiltering && <CircularProgress size={16} />}
+          </Box>
+
+          <Grid container spacing={3}>
+            {/* Location filter */}
+            <Grid item xs={12} sm={6}>
+              <MultiSelectFilter
+                id="location-filter"
+                label="Location"
+                value={getSelectedLocationNames()}
+                options={getAvailableLocations().map(loc => loc.location_name)}
+                onChange={handleLocationChange}
+                placeholder="Select locations..."
+                icon={<PlaceIcon />}
+                required={true}
+              />
+            </Grid>
+
+            {/* Date Range filter */}
+            <Grid item xs={12} sm={6}>
+              <DateRangeSelectorComponent
+                onDateRangeSelect={handleDateRangeSelect}
+              />
+            </Grid>
+          </Grid>
+
+          {/* Active filters display */}
+          {(selectedLocations.length > 0 || selectedDateRange) && (
+            <>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1, mt: 2 }}>
+                Active Filters:
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                {selectedLocations.length > 0 && (
+                  <Chip
+                    icon={<PlaceIcon />}
+                    label={`Locations: ${getSelectedLocationNames().join(', ')}`}
+                    color="secondary"
+                    variant="outlined"
+                    sx={{ fontWeight: 500 }}
+                  />
+                )}
+                
+                {selectedDateRange && (
+                  <Chip
+                    label={`Date Range: ${selectedDateRange.startDate.toLocaleDateString()} - ${selectedDateRange.endDate.toLocaleDateString()}`}
+                    onDelete={() => setSelectedDateRange(null)}
+                    sx={{
+                      backgroundColor: '#e8d5f2',
+                      color: '#7b1fa2',
+                      border: '1px solid #ce93d8',
+                      borderRadius: '20px',
+                      height: '32px',
+                      fontSize: '0.875rem',
+                      '& .MuiChip-deleteIcon': {
+                        color: '#7b1fa2',
+                        fontSize: '18px'
+                      }
+                    }}
+                    deleteIcon={<CloseIcon />}
+                  />
+                )}
+              </Box>
+            </>
+          )}
+
+          {/* Requirements info
+          <Box sx={{ mt: 2, p: 2, bgcolor: '#fff3e0', borderRadius: 1, border: '1px solid #ffcc02' }}>
+            <Typography variant="body2" color="text.secondary">
+              <strong>Auto-Filtering:</strong> Data will automatically update when you select company and location. 
+              {!checkMinimumRequirements() && (
+                <span style={{ color: '#f44336' }}> Please select at least one company and one location to enable auto-filtering.</span>
+              )}
+            </Typography>
+          </Box> */}
+        </CardContent>
+      </Card>
+
+      {/* Error Alert */}
+      {(filterError || error) && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => {
+          setFilterError('');
+          dispatch(setError(null));
+        }}>
+          {filterError || error}
+        </Alert>
       )}
 
       {/* Alert message when no data is available */}
@@ -1392,8 +1633,8 @@ export default function SalesDashboard() {
           </Typography>
           <Typography variant="body1">
             Please upload files with "Sales Wide" dashboard type from the Excel Upload page.
-            {activeCompanyId && (
-              <span><br />Current Company: {selectedCompanyName}</span>
+            {selectedCompanies.length > 0 && (
+              <span><br />Current Company: {getSelectedCompanyNames().join(', ')}</span>
             )}
           </Typography>
           <Button 
@@ -1407,167 +1648,7 @@ export default function SalesDashboard() {
         </Card>
       )}
 
-      {/* Error Alert */}
-      {(filterError || error) && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => {
-          setFilterError('');
-          dispatch(setError(null));
-        }}>
-          {filterError || error}
-        </Alert>
-      )}
-
-      {/* Filters Section */}
-      <Card elevation={3} sx={{ mb: 3, borderRadius: 2, overflow: 'hidden' }}>
-        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-            <FilterListIcon color="primary" />
-            <Typography variant="h6" sx={{ fontWeight: 500 }}>
-              Filters
-            </Typography>
-          </Box>
-
-          <Grid container spacing={3}>
-            {/* Location filter - Using MultiSelectFilter to match design */}
-            <Grid item xs={12} sm={6}>
-              <MultiSelectFilter
-                id="location-filter"
-                label="Location"
-                value={selectedLocations}
-                options={locations}
-                onChange={handleLocationChange}
-                placeholder="Multiple Loc..."
-                icon={<PlaceIcon />}
-              />
-            </Grid>
-
-            {/* Date Range filter */}
-            <Grid item xs={12} sm={6}>
-              <DateRangeSelectorComponent
-                onDateRangeSelect={handleDateRangeSelect}
-              />
-            </Grid>
-          </Grid>
-
-          {/* Active filters and Apply button */}
-          <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {/* Active filter chips */}
-            {(activeCompanyId || selectedLocations.length > 0 || selectedDateRange) && (
-              <>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  Active Filters:
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                  {/* Company filter chip */}
-                  {activeCompanyId && (
-                    <Chip 
-                      label={`Company: ${selectedCompanyName}`}
-                      sx={{
-                        backgroundColor: '#e3f2fd',
-                        color: '#1976d2',
-                        border: '1px solid #90caf9',
-                        borderRadius: '20px',
-                        height: '32px',
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        '& .MuiChip-icon': {
-                          color: '#1976d2',
-                        }
-                      }}
-                      icon={<BusinessIcon />}
-                    />
-                  )}
-
-                  {selectedLocations.length > 0 && (
-                    <Chip 
-                      label={selectedLocations.length === 1 
-                        ? `Location: ${selectedLocations[0]}` 
-                        : `Location: Multiple Locations`
-                      }
-                      onDelete={() => setSelectedLocations([])}
-                      sx={{
-                        backgroundColor: '#e8f5e8',
-                        color: '#2e7d32',
-                        border: '1px solid #a5d6a7',
-                        borderRadius: '20px',
-                        height: '32px',
-                        fontSize: '0.875rem',
-                        '& .MuiChip-icon': {
-                          color: '#2e7d32',
-                        },
-                        '& .MuiChip-deleteIcon': {
-                          color: '#2e7d32',
-                          fontSize: '18px'
-                        }
-                      }}
-                      deleteIcon={<CloseIcon />}
-                    />
-                  )}
-                  
-                  {selectedDateRange && (
-                    <Chip
-                      label={`Date Range: ${selectedDateRange.startDate.toLocaleDateString()} - ${selectedDateRange.endDate.toLocaleDateString()}`}
-                      onDelete={() => setSelectedDateRange(null)}
-                      sx={{
-                        backgroundColor: '#e8d5f2',
-                        color: '#7b1fa2',
-                        border: '1px solid #ce93d8',
-                        borderRadius: '20px',
-                        height: '32px',
-                        fontSize: '0.875rem',
-                        '& .MuiChip-icon': {
-                          color: '#7b1fa2',
-                        },
-                        '& .MuiChip-deleteIcon': {
-                          color: '#7b1fa2',
-                          fontSize: '18px'
-                        }
-                      }}
-                      deleteIcon={<CloseIcon />}
-                    />
-                  )}
-                </Box>
-              </>
-            )}
-
-            {/* Apply Filters Button - positioned at bottom left */}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
-              <Button
-                variant="contained"
-                onClick={handleApplyFilters}
-                disabled={isLoading || loading}
-                startIcon={
-                  (isLoading || loading) ? (
-                    <CircularProgress size={16} color="inherit" />
-                  ) : null
-                }
-                sx={{
-                  backgroundColor: '#1976d2',
-                  color: 'white',
-                  fontWeight: 600,
-                  py: 1.5,
-                  px: 4,
-                  borderRadius: '8px',
-                  textTransform: 'uppercase',
-                  fontSize: '0.875rem',
-                  minWidth: '160px',
-                  '&:hover': {
-                    backgroundColor: '#1565c0',
-                  },
-                  '&:disabled': {
-                    backgroundColor: '#ccc',
-                    color: '#666'
-                  }
-                }}
-              >
-                {(isLoading || loading) ? 'Loading...' : 'APPLY FILTERS'}
-              </Button>
-            </Box>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* Only render dashboard content if data is available (even without company selection initially) */}
+      {/* Only render dashboard content if data is available */}
       {currentSalesWideData && (
         <>
           {/* Tabs - Styled to match Image 2 */}
@@ -1597,33 +1678,32 @@ export default function SalesDashboard() {
               <Tab label="Graphs" />
             </Tabs>
   
-            {/* Financial Dashboard Tab - UPDATED to pass real backend data */}
+            {/* Financial Dashboard Tab */}
             <TabPanel value={tabValue} index={0}>
               <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
                 {/* Show company context in tables */}
-                {activeCompanyId && (
+                {selectedCompanies.length > 0 && (
                   <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
                     <CompanyInfoChip
                       icon={<BusinessIcon />}
-                      label={`Data for: ${selectedCompanyName}`}
+                      label={`Data for: ${getSelectedCompanyNames().join(', ')}`}
                       variant="outlined"
                     />
                   </Box>
                 )}
-                {/* UPDATED: Pass the formatted backend data to FinancialTablesComponent */}
                 <FinancialTablesComponent financialTables={financialTablesData} />
               </Box>
             </TabPanel>
   
-            {/* Day of Week Analysis Tab */}
+            {/* Charts Tab */}
             <TabPanel value={tabValue} index={1}>
               <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
                 {/* Show company context in graphs */}
-                {activeCompanyId && (
+                {selectedCompanies.length > 0 && (
                   <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
                     <CompanyInfoChip
                       icon={<BusinessIcon />}
-                      label={`Charts for: ${selectedCompanyName}`}
+                      label={`Charts for: ${getSelectedCompanyNames().join(', ')}`}
                       variant="outlined"
                     />
                   </Box>
