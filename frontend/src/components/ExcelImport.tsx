@@ -1,6 +1,6 @@
-// Updated ExcelImport.tsx with Company Selection Dropdown
+// Fixed ExcelImport.tsx with proper React imports
 
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
 import axios from 'axios';
 
 import Box from '@mui/material/Box';
@@ -8,12 +8,10 @@ import Card from '@mui/material/Card';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
-import LinearProgress from '@mui/material/LinearProgress';
 import Alert from '@mui/material/Alert';
 import Grid from '@mui/material/Grid';
 import Snackbar from '@mui/material/Snackbar';
 import { SelectChangeEvent } from '@mui/material/Select';
-import Divider from '@mui/material/Divider';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -23,7 +21,6 @@ import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Skeleton from '@mui/material/Skeleton';
 import Fade from '@mui/material/Fade';
-import Grow from '@mui/material/Grow';
 import Chip from '@mui/material/Chip';
 import Paper from '@mui/material/Paper';
 import Backdrop from '@mui/material/Backdrop';
@@ -44,7 +41,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import BusinessIcon from '@mui/icons-material/Business'; // Company icon
+import BusinessIcon from '@mui/icons-material/Business';
 
 // Import components
 import FilterSection from './FilterSection';
@@ -61,7 +58,7 @@ import SalesDashboard from './SalesDashboard';
 import SalesSplitDashboard from './SalesSplitDashboard';
 import { API_URL_Local } from '../constants';
 
-// Import Redux hooks and actions
+// UPDATED: Import Redux hooks and actions from both slices
 import { useAppDispatch, useAppSelector } from '../typedHooks';
 import { 
   excelSlice,
@@ -75,20 +72,35 @@ import {
   selectCategoriesByLocation,
   selectSalesFilters,
   updateSalesFilters,
-  selectCompanyId, // Import company ID selector
+  selectCompanyId,
 } from '../store/excelSlice';
+
+// UPDATED: Import masterFileSlice Redux actions and selectors
+import { useSelector, useDispatch } from "react-redux";
+import {
+  setSelectedCompanies, 
+  setSelectedLocations,
+  selectSelectedCompanies,
+  selectSelectedLocations 
+} from "../store/slices/masterFileSlice";
 
 // Extract actions from the slice
 const { setLoading, setError } = excelSlice.actions;
 
-// Company interface
+// Company interface (updated to match API response)
 interface Company {
-  id: string;
-  name: string;
-  [key: string]: any; // Allow for additional company properties
+  company_id: number;
+  company_name: string;
+  locations: Location[];
 }
 
-// Styled components (keeping existing styles)
+// Location interface (updated to match API response)
+interface Location {
+  location_id: number;
+  location_name: string;
+}
+
+// Styled components
 const slideIn = keyframes`
   from {
     opacity: 0;
@@ -112,115 +124,6 @@ const CleanCard = styled(Card)(({ theme }) => ({
   }
 }));
 
-const ChartContainer = styled(Card)(({ theme }) => ({
-  background: '#ffffff',
-  borderRadius: 12,
-  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-  border: '1px solid #e0e0e0',
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  overflow: 'visible',
-  display: 'flex',
-  flexDirection: 'column',
-  '&:hover': {
-    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
-  },
-  '&.chart-small': {
-    minHeight: '420px',
-    [theme.breakpoints.down('md')]: {
-      minHeight: '380px',
-    },
-    [theme.breakpoints.down('sm')]: {
-      minHeight: '350px',
-    }
-  },
-  '&.chart-medium': {
-    minHeight: '480px',
-    [theme.breakpoints.down('md')]: {
-      minHeight: '420px',
-    },
-    [theme.breakpoints.down('sm')]: {
-      minHeight: '380px',
-    }
-  },
-  '&.chart-large': {
-    minHeight: '520px',
-    [theme.breakpoints.down('md')]: {
-      minHeight: '480px',
-    },
-    [theme.breakpoints.down('sm')]: {
-      minHeight: '420px',
-    }
-  }
-}));
-
-const ChartContent = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(3),
-  display: 'flex',
-  flexDirection: 'column',
-  height: '100%',
-  flex: 1,
-  overflow: 'visible',
-  '& > *:not(:last-child)': {
-    marginBottom: theme.spacing(2),
-  },
-  '& .chart-wrapper': {
-    flex: 1,
-    minHeight: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'visible',
-  }
-}));
-
-const ProductMixTab = styled(Tab)(({ theme }) => ({
-  textTransform: 'none',
-  fontWeight: 500,
-  fontSize: '1rem',
-  minHeight: 48,
-  padding: '12px 24px',
-  margin: '0 2px',
-  color: '#6B7280',
-  transition: 'all 0.2s ease',
-  '&.Mui-selected': {
-    color: '#3B82F6',
-    fontWeight: 600,
-  },
-  '&:hover': {
-    color: '#3B82F6',
-  }
-}));
-
-const ProductMixTabs = styled(Tabs)(({ theme }) => ({
-  '& .MuiTabs-indicator': {
-    backgroundColor: '#3B82F6',
-    height: 2,
-    borderRadius: 1,
-  },
-  '& .MuiTabs-flexContainer': {
-    borderBottom: '1px solid #E5E7EB',
-  },
-  minHeight: 48,
-}));
-
-const StatsCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(3),
-  borderRadius: 12,
-  background: '#ffffff',
-  border: '1px solid #e0e0e0',
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
-  }
-}));
-
-const LoadingOverlay = styled(Backdrop)(({ theme }) => ({
-  zIndex: theme.zIndex.drawer + 1,
-  background: 'rgba(255, 255, 255, 0.9)',
-  backdropFilter: 'blur(8px)',
-}));
-
-// Company info display component
 const CompanyInfoChip = styled(Chip)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.primary.main, 0.1),
   border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
@@ -231,6 +134,12 @@ const CompanyInfoChip = styled(Chip)(({ theme }) => ({
     color: theme.palette.primary.main,
     fontWeight: 600,
   },
+}));
+
+const LoadingOverlay = styled(Backdrop)(({ theme }) => ({
+  zIndex: theme.zIndex.drawer + 1,
+  background: 'rgba(255, 255, 255, 0.9)',
+  backdropFilter: 'blur(8px)',
 }));
 
 const ModernLoader = () => (
@@ -261,80 +170,18 @@ const ModernLoader = () => (
   </Box>
 );
 
-// API URLs
+// API URLs (updated to use company-locations/all endpoint)
 const API_URL = API_URL_Local + '/api/excel/upload';
 const FILTER_API_URL = API_URL_Local + '/api/salessplit/filter';
-const COMPANIES_API_URL = API_URL_Local + '/companies'; // NEW: Companies API endpoint
-
-// Tab Panel Component
-interface TabPanelProps {
-  children?: React.ReactNode;
-  value: number;
-  index: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`dashboard-tabpanel-${index}`}
-      aria-labelledby={`dashboard-tab-${index}`}
-      {...other}
-    >
-      {value === index && (
-        <Fade in={value === index} timeout={500}>
-          <Box sx={{ pt: 0 }}>
-            {children}
-          </Box>
-        </Fade>
-      )}
-    </div>
-  );
-}
-
-// Chart Wrapper Component
-interface ChartWrapperProps {
-  title: string;
-  children: React.ReactNode;
-  size?: 'small' | 'medium' | 'large';
-  className?: string;
-}
-
-const ChartWrapper: React.FC<ChartWrapperProps> = ({ 
-  title, 
-  children, 
-  size = 'small',
-  className = ''
-}) => (
-  <ChartContainer className={`chart-${size} ${className}`}>
-    <ChartContent>
-      <Typography 
-        variant="h6" 
-        sx={{ 
-          fontWeight: 600,
-          color: '#374151',
-          mb: 2,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1
-        }}
-      >
-        <TrendingUpIcon sx={{ fontSize: 20, color: 'primary.main' }} />
-        {title}
-      </Typography>
-      <Box className="chart-wrapper">
-        {children}
-      </Box>
-    </ChartContent>
-  </ChartContainer>
-);
+const COMPANY_LOCATIONS_API_URL = API_URL_Local + '/company-locations/all';
 
 // Main Component
 export function ExcelImport() {
-  // Get state from Redux
+  // UPDATED: Use both Redux dispatches
+  const dispatch = useAppDispatch();
+  const reduxDispatch = useDispatch();
+  
+  // Get state from Excel Redux slice
   const { 
     fileName, 
     fileContent, 
@@ -352,79 +199,83 @@ export function ExcelImport() {
   } = useAppSelector((state) => state.excel);
   
   const salesFilters = useAppSelector(selectSalesFilters);
-  
-  // Get company_id from Redux (might come from uploaded files)
   const currentCompanyId = useAppSelector(selectCompanyId);
   
-  const dispatch = useAppDispatch();
+  // UPDATED: Get current selections from Redux (masterFileSlice)
+  const selectedCompanies = useSelector(selectSelectedCompanies);
+  const selectedLocations = useSelector(selectSelectedLocations);
   
-  // NEW: Company-related state
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
-  const [companiesLoading, setCompaniesLoading] = useState(false);
-  const [companiesError, setCompaniesError] = useState<string>("");
+  // UPDATED: Convert to single values for dropdowns (using new API structure)
+  const selectedCompany = selectedCompanies.length > 0 ? selectedCompanies[0] : '';
+  const selectedLocation = selectedLocations.length > 0 ? selectedLocations[0] : '';
   
-  // Local state
-  const [file, setFile] = useState<File | null>(null);
-  const [error, setLocalError] = useState<string>('');
-  const [salesSplitTab, setSalesSplitTab] = useState<number>(0);
-  const [tableTab, setTableTab] = useState<number>(0);
-  const [viewMode, setViewMode] = useState<string>('tabs');
-  const [showTutorial, setShowTutorial] = useState<boolean>(false);
+  // State for API data (simplified to single companies array)
+  const [companies, setCompanies] = React.useState<Company[]>([]);
+  const [companiesLoading, setCompaniesLoading] = React.useState(false);
+  const [companiesError, setCompaniesError] = React.useState<string>("");
   
-  // FIXED: Initialize with empty string instead of current location
-  const [selectedLocation, setSelectedLocation] = useState<string>('');
+  // Get available locations for selected company
+  const availableLocations = React.useMemo(() => {
+    if (!selectedCompany) return [];
+    const company = companies.find(c => c.company_id.toString() === selectedCompany);
+    return company ? company.locations : [];
+  }, [companies, selectedCompany]);
   
-  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState<boolean>(false);
-  const [locationInput, setLocationInput] = useState<string>('');
-  const [locationError, setLocationError] = useState<string>('');
-  const [showSuccessNotification, setShowSuccessNotification] = useState<boolean>(false);
-  const [chartKey, setChartKey] = useState<number>(0);
+  // Local component state
+  const [file, setFile] = React.useState<File | null>(null);
+  const [error, setLocalError] = React.useState<string>('');
+  const [salesSplitTab, setSalesSplitTab] = React.useState<number>(0);
+  const [tableTab, setTableTab] = React.useState<number>(0);
+  const [viewMode, setViewMode] = React.useState<string>('tabs');
+  const [showTutorial, setShowTutorial] = React.useState<boolean>(false);
+  const [isLocationDialogOpen, setIsLocationDialogOpen] = React.useState<boolean>(false);
+  const [locationInput, setLocationInput] = React.useState<string>('');
+  const [locationError, setLocationError] = React.useState<string>('');
+  const [showSuccessNotification, setShowSuccessNotification] = React.useState<boolean>(false);
+  const [chartKey, setChartKey] = React.useState<number>(0);
   
-  // FIXED: Use local state for date values to avoid sync issues
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-  const [dateRangeType, setDateRangeType] = useState<string>('');
-  const [availableDateRanges, setAvailableDateRanges] = useState<string[]>([]);
-  const [customDateRange, setCustomDateRange] = useState<boolean>(false);
-  
-  // NEW: State to track if we're waiting for backend response
-  const [isWaitingForBackendResponse, setIsWaitingForBackendResponse] = useState<boolean>(false);
-  const [hasValidData, setHasValidData] = useState<boolean>(false);
+  // Date and filter state
+  const [startDate, setStartDate] = React.useState<string>('');
+  const [endDate, setEndDate] = React.useState<string>('');
+  const [dateRangeType, setDateRangeType] = React.useState<string>('');
+  const [availableDateRanges, setAvailableDateRanges] = React.useState<string[]>([]);
+  const [customDateRange, setCustomDateRange] = React.useState<boolean>(false);
+  const [isWaitingForBackendResponse, setIsWaitingForBackendResponse] = React.useState<boolean>(false);
+  const [hasValidData, setHasValidData] = React.useState<boolean>(false);
   
   // Loading states
-  const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
-  const [loadingProgress, setLoadingProgress] = useState<number>(0);
-  const [loadingMessage, setLoadingMessage] = useState<string>('');
+  const [isLoadingData, setIsLoadingData] = React.useState<boolean>(false);
+  const [loadingProgress, setLoadingProgress] = React.useState<number>(0);
+  const [loadingMessage, setLoadingMessage] = React.useState<string>('');
 
-  // NEW: Fetch companies on component mount
-  useEffect(() => {
-    const fetchCompanies = async () => {
+  // UPDATED: Fetch company-locations data on component mount
+  React.useEffect(() => {
+    const fetchCompanyLocations = async () => {
       setCompaniesLoading(true);
       setCompaniesError("");
       
       try {
-        console.log('🏢 ExcelImport: Fetching companies from:', COMPANIES_API_URL);
-        const response = await axios.get(COMPANIES_API_URL);
+        console.log('🏢 ExcelImport: Fetching company-locations from:', COMPANY_LOCATIONS_API_URL);
+        const response = await axios.get(COMPANY_LOCATIONS_API_URL);
         
-        console.log('📥 ExcelImport: Companies response:', response.data);
+        console.log('📥 ExcelImport: Company-locations response:', response.data);
         setCompanies(response.data || []);
         
-        // Optionally auto-select the first company if there's only one
-        if (response.data && response.data.length === 1) {
-          setSelectedCompanyId(response.data[0].id);
+        // Auto-select the first company if there's only one and none is selected
+        if (response.data && response.data.length === 1 && selectedCompanies.length === 0) {
+          reduxDispatch(setSelectedCompanies([response.data[0].company_id.toString()]));
           console.log('🎯 ExcelImport: Auto-selected single company:', response.data[0]);
         }
         
       } catch (error) {
-        console.error('❌ ExcelImport: Error fetching companies:', error);
+        console.error('❌ ExcelImport: Error fetching company-locations:', error);
         
-        let errorMessage = "Error loading companies";
+        let errorMessage = "Error loading companies and locations";
         if (axios.isAxiosError(error)) {
           if (error.response) {
             errorMessage = `Server error: ${error.response.status}`;
           } else if (error.request) {
-            errorMessage = 'Cannot connect to companies API. Please check server status.';
+            errorMessage = 'Cannot connect to company-locations API. Please check server status.';
           }
         }
         
@@ -434,48 +285,70 @@ export function ExcelImport() {
       }
     };
 
-    fetchCompanies();
-  }, []);
+    fetchCompanyLocations();
+  }, [selectedCompanies.length, reduxDispatch]);
 
-  // NEW: Sync selectedCompanyId with Redux currentCompanyId if it exists (from uploaded files)
-  useEffect(() => {
-    if (currentCompanyId && !selectedCompanyId) {
-      console.log('🏢 ExcelImport: Syncing company ID from Redux files:', currentCompanyId);
-      setSelectedCompanyId(currentCompanyId);
+  // UPDATED: Auto-select first location when company changes and has only one location
+  React.useEffect(() => {
+    if (selectedCompany && availableLocations.length === 1 && selectedLocations.length === 0) {
+      reduxDispatch(setSelectedLocations([availableLocations[0].location_id.toString()]));
+      console.log('🎯 ExcelImport: Auto-selected single location:', availableLocations[0]);
     }
-  }, [currentCompanyId, selectedCompanyId]);
+  }, [selectedCompany, availableLocations, selectedLocations.length, reduxDispatch]);
 
-  // NEW: Handle company selection
+  // UPDATED: Sync with currentCompanyId from Excel slice if it exists
+  React.useEffect(() => {
+    if (currentCompanyId && selectedCompanies.length === 0) {
+      console.log('🏢 ExcelImport: Syncing company ID from Excel Redux:', currentCompanyId);
+      reduxDispatch(setSelectedCompanies([currentCompanyId]));
+    }
+  }, [currentCompanyId, selectedCompanies.length, reduxDispatch]);
+
+  // UPDATED: Handle company selection change (updated for new API structure)
   const handleCompanyChange = (event: SelectChangeEvent) => {
     const companyId = event.target.value;
-    setSelectedCompanyId(companyId);
-    console.log('🏢 ExcelImport: Company selected:', companyId);
+    console.log('🏢 ExcelImport: Company selection changed to:', companyId);
+    
+    // Update Redux state with array format
+    reduxDispatch(setSelectedCompanies([companyId]));
+    
+    // Clear locations when company changes (as per requirements)
+    reduxDispatch(setSelectedLocations([]));
+    
+    console.log('🏢 ExcelImport: Cleared locations due to company change');
   };
 
-  // Get selected company name for display
-  const selectedCompanyName = companies.find(c => c.id === selectedCompanyId)?.name || 
-                               (selectedCompanyId ? `Company ID: ${selectedCompanyId}` : 'No Company Selected');
+  // UPDATED: Handle location selection change (new method for location dropdown)
+  const handleLocationChange = (event: SelectChangeEvent) => {
+    const locationId = event.target.value;
+    console.log('📍 ExcelImport: Location selection changed to:', locationId);
+    
+    // Update Redux state with array format
+    reduxDispatch(setSelectedLocations([locationId]));
+  };
 
-  // Get active company ID (prioritize selectedCompanyId, fallback to Redux currentCompanyId)
-  const activeCompanyId = selectedCompanyId || currentCompanyId;
-
-  // Log company_id changes for debugging
-  useEffect(() => {
-    if (activeCompanyId) {
-      console.log('🏢 ExcelImport: Active company ID:', activeCompanyId);
-    }
-  }, [activeCompanyId]);
-
-  // FIXED: Only update selected location when Redux location changes AND we have valid data
-  useEffect(() => {
-    if (currentLocation && hasValidData && currentLocation !== selectedLocation) {
-      console.log('📍 Updating selected location from Redux:', currentLocation);
-      setSelectedLocation(currentLocation);
-    }
-  }, [currentLocation, hasValidData, selectedLocation]);
+  // Get selected company and location names for display (updated for new API structure)
+  const selectedCompanyName = companies.find(c => c.company_id.toString() === selectedCompany)?.company_name || 
+                               (selectedCompany ? `Company ID: ${selectedCompany}` : 'No Company Selected');
   
+  const selectedLocationName = availableLocations.find(l => l.location_id.toString() === selectedLocation)?.location_name || 
+                                (selectedLocation ? `Location ID: ${selectedLocation}` : 'No Location Selected');
+
+  // Get active company ID
+  const activeCompanyId = selectedCompany || currentCompanyId;
+
+  // Log changes for debugging
+  React.useEffect(() => {
+    console.log('🏢 ExcelImport: Redux state updated:', {
+      selectedCompanies,
+      selectedLocations,
+      selectedCompany,
+      activeCompanyId
+    });
+  }, [selectedCompanies, selectedLocations, selectedCompany, activeCompanyId]);
+
   // Set file processed notification when tableData changes
-  useEffect(() => {
+  React.useEffect(() => {
     if (fileProcessed && reduxTableData && Object.keys(reduxTableData).length > 0) {
       console.log('✅ Data processed successfully, setting hasValidData to true');
       setHasValidData(true);
@@ -484,9 +357,9 @@ export function ExcelImport() {
       setChartKey(prevKey => prevKey + 1);
     }
   }, [fileProcessed, reduxTableData]);
-  
-  // Update available date ranges when data changes or location changes
-  useEffect(() => {
+
+  // Update available date ranges when data changes
+  React.useEffect(() => {
     if (reduxTableData && reduxTableData.dateRanges && reduxTableData.dateRanges.length > 0) {
       setAvailableDateRanges(reduxTableData.dateRanges);
       
@@ -494,38 +367,15 @@ export function ExcelImport() {
         setDateRangeType(reduxTableData.dateRanges[0]);
       }
     }
-    
-    // FIXED: Only set default location when we have valid data and no location is selected
-    if (hasValidData && allLocations && allLocations.length > 0 && !selectedLocation) {
-      const firstLocation = currentLocation || allLocations[0];
-      console.log('📍 Setting initial location:', firstLocation);
-      setSelectedLocation(firstLocation);
-      dispatch(selectLocation(firstLocation));
-    }
-  }, [reduxTableData, dateRangeType, selectedLocation, allLocations, currentLocation, dispatch, hasValidData]);
+  }, [reduxTableData, dateRangeType]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (dateRangeType === 'Custom Date Range') {
       setCustomDateRange(true);
     } else {
       setCustomDateRange(false);
     }
   }, [dateRangeType]);
-
-  // Simulate loading progress
-  const simulateProgress = (duration: number) => {
-    setLoadingProgress(0);
-    const interval = setInterval(() => {
-      setLoadingProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        return prev + (100 / (duration / 100));
-      });
-    }, 100);
-    return interval;
-  };
 
   // Handle tab changes
   const handleSalesSplitTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -536,14 +386,6 @@ export function ExcelImport() {
     setTableTab(newValue);
   };
 
-  // FIXED: Handle location change without immediately loading data
-  const handleLocationChange = (event: SelectChangeEvent) => {
-    const newLocation = event.target.value;
-    console.log('📍 Location changed to:', newLocation, '(data will not load until Apply Filters is pressed)');
-    setSelectedLocation(newLocation);
-    // Don't update Redux state or load data until Apply Filters is pressed
-  };
-
   // Handle date range type change
   const handleDateRangeChange = (event: SelectChangeEvent) => {
     const newDateRange = event.target.value;
@@ -551,19 +393,19 @@ export function ExcelImport() {
     setChartKey(prevKey => prevKey + 1);
   };
 
-  // UPDATED: Enhanced handleApplyFiltersWithDates with active company_id
+  // UPDATED: Enhanced handleApplyFiltersWithDates with full backend integration
   const handleApplyFiltersWithDates = (
     explicitStartDate: string, 
     explicitEndDate: string, 
     categories: string[],
-    selectedLocations: string[]
+    selectedFilterLocations: string[]
   ) => {
-    console.log('🎯 ExcelImport: Applying filters with explicit values:', {
+    console.log('🎯 ExcelImport: Applying filters with Redux state:', {
       startDate: explicitStartDate,
       endDate: explicitEndDate,
       categories,
-      selectedLocations,
-      activeCompanyId // Use active company ID
+      selectedFilterLocations,
+      activeCompanyId
     });
 
     // Check if we have any files loaded
@@ -572,8 +414,8 @@ export function ExcelImport() {
       return;
     }
 
-    // ✅ FIXED: Handle multiple locations - find files for all selected locations
-    const filesForLocations = selectedLocations.map(location => {
+    // Handle multiple locations - find files for all selected locations
+    const filesForLocations = selectedFilterLocations.map(location => {
       const file = files.find(f => f.location === location);
       if (!file) {
         console.warn(`No file found for location: ${location}`);
@@ -582,30 +424,24 @@ export function ExcelImport() {
     }).filter(item => item.file !== undefined);
 
     if (filesForLocations.length === 0) {
-      setLocalError(`No files found for selected locations: ${selectedLocations.join(', ')}`);
+      setLocalError(`No files found for selected locations: ${selectedFilterLocations.join(', ')}`);
       return;
     }
 
-    // Use the first file for the request (or you could send multiple files)
+    // Use the first file for the request
     const primaryFile = filesForLocations[0].file!;
 
     try {
-      console.log('🔄 Starting backend request with active company_id:', activeCompanyId);
+      console.log('🔄 Starting backend request with Redux state');
       setIsWaitingForBackendResponse(true);
       setHasValidData(false);
       
-      if (setLoading && typeof setLoading === 'function') {
-        dispatch(setLoading(true));
-      }
-      
-      if (setError && typeof setError === 'function') {
-        dispatch(setError(null));
-      }
-      
+      dispatch(setLoading(true));
+      dispatch(setError(null));
       setLocalError('');
       
-      // ✅ Update Redux state with the first selected location for backward compatibility
-      dispatch(selectLocation(selectedLocations[0]));
+      // Update Redux state with the first selected location for backward compatibility
+      dispatch(selectLocation(selectedFilterLocations[0]));
       
       // Format dates correctly for API
       let formattedStartDate: string | null = null;
@@ -630,26 +466,26 @@ export function ExcelImport() {
         formatted: { start: formattedStartDate, end: formattedEndDate }
       });
       
-      // ✅ UPDATED: Prepare filter data with ALL selected locations AND active company_id
+      // Prepare filter data with Redux state
       const filterData = {
         fileName: primaryFile.fileName,
         startDate: formattedStartDate,
         endDate: formattedEndDate,
-        // ✅ Send ALL selected locations as an array
-        locations: selectedLocations,
+        // Send ALL selected locations as an array
+        locations: selectedFilterLocations,
         // Keep single location for backward compatibility
-        location: selectedLocations[0] || null,
+        location: selectedFilterLocations[0] || null,
         dateRangeType: 'Custom Date Range',
         selectedCategories: categories,
         categories: categories.join(','),
-        // ✅ UPDATED: Use active company_id (selectedCompanyId or currentCompanyId)
+        // Use Redux company_id
         company_id: activeCompanyId,
-        // ✅ Additional metadata for multiple location handling
-        multipleLocations: selectedLocations.length > 1,
+        // Additional metadata for multiple location handling
+        multipleLocations: selectedFilterLocations.length > 1,
         allFileNames: filesForLocations.map(item => item.file!.fileName)
       };
       
-      console.log('📤 Sending filter request with active company_id and multiple locations:', filterData);
+      console.log('📤 Sending filter request with Redux state:', filterData);
       
       // Call filter API
       axios.post(FILTER_API_URL, filterData)
@@ -672,7 +508,7 @@ export function ExcelImport() {
             setHasValidData(true);
             setIsWaitingForBackendResponse(false);
             
-            console.log('✅ Filter applied successfully with active company_id:', activeCompanyId, 'and locations:', selectedLocations);
+            console.log('✅ Filter applied successfully with Redux state:', selectedFilterLocations);
           } else {
             throw new Error('Invalid response data');
           }
@@ -700,14 +536,10 @@ export function ExcelImport() {
           }
           
           setLocalError(errorMessage);
-          if (setError && typeof setError === 'function') {
-            dispatch(setError(errorMessage));
-          }
+          dispatch(setError(errorMessage));
         })
         .finally(() => {
-          if (setLoading && typeof setLoading === 'function') {
-            dispatch(setLoading(false));
-          }
+          dispatch(setLoading(false));
         });
       
     } catch (err: any) {
@@ -717,20 +549,14 @@ export function ExcelImport() {
       
       const errorMessage = 'Error applying filters: ' + (err.message || 'Unknown error');
       setLocalError(errorMessage);
-      
-      if (setError && typeof setError === 'function') {
-        dispatch(setError(errorMessage));
-      }
-      
-      if (setLoading && typeof setLoading === 'function') {
-        dispatch(setLoading(false));
-      }
+      dispatch(setError(errorMessage));
+      dispatch(setLoading(false));
     }
   };
 
-  // UPDATED: Legacy method with active company_id for backward compatibility
+  // UPDATED: Legacy method with full backend integration for backward compatibility
   const handleApplyFilters = (location = selectedLocation, dateRange = dateRangeType) => {
-    console.log('⚠️ ExcelImport: Using legacy handleApplyFilters with active company_id:', activeCompanyId);
+    console.log('⚠️ ExcelImport: Using legacy handleApplyFilters with Redux state');
     
     // Check if we have any files loaded
     if (!files || files.length === 0) {
@@ -750,14 +576,8 @@ export function ExcelImport() {
       setIsWaitingForBackendResponse(true);
       setHasValidData(false);
       
-      if (setLoading && typeof setLoading === 'function') {
-        dispatch(setLoading(true));
-      }
-      
-      if (setError && typeof setError === 'function') {
-        dispatch(setError(null));
-      }
-      
+      dispatch(setLoading(true));
+      dispatch(setError(null));
       setLocalError('');
       
       // Update Redux state with the new location
@@ -783,7 +603,7 @@ export function ExcelImport() {
       
       const selectedCategories = salesFilters?.selectedCategories || [];
       
-      // UPDATED: Include active company_id in legacy filter data
+      // Include Redux company_id in legacy filter data
       const filterData = {
         fileName: fileForLocation.fileName,
         startDate: formattedStartDate,
@@ -792,10 +612,10 @@ export function ExcelImport() {
         dateRangeType: dateRange,
         selectedCategories: selectedCategories,
         categories: selectedCategories.join(','),
-        company_id: activeCompanyId // UPDATED: Use active company_id
+        company_id: activeCompanyId
       };
       
-      console.log('📤 Sending filter request (legacy) with active company_id:', filterData);
+      console.log('📤 Sending filter request (legacy) with Redux state:', filterData);
       
       // Call filter API
       axios.post(FILTER_API_URL, filterData)
@@ -809,7 +629,7 @@ export function ExcelImport() {
             setHasValidData(true);
             setIsWaitingForBackendResponse(false);
             
-            console.log('✅ Filter applied successfully (legacy) with active company_id:', activeCompanyId);
+            console.log('✅ Filter applied successfully (legacy) with Redux state');
           } else {
             throw new Error('Invalid response data');
           }
@@ -837,14 +657,10 @@ export function ExcelImport() {
           }
           
           setLocalError(errorMessage);
-          if (setError && typeof setError === 'function') {
-            dispatch(setError(errorMessage));
-          }
+          dispatch(setError(errorMessage));
         })
         .finally(() => {
-          if (setLoading && typeof setLoading === 'function') {
-            dispatch(setLoading(false));
-          }
+          dispatch(setLoading(false));
         });
       
     } catch (err: any) {
@@ -854,14 +670,8 @@ export function ExcelImport() {
       
       const errorMessage = 'Error applying filters: ' + (err.message || 'Unknown error');
       setLocalError(errorMessage);
-      
-      if (setError && typeof setError === 'function') {
-        dispatch(setError(errorMessage));
-      }
-      
-      if (setLoading && typeof setLoading === 'function') {
-        dispatch(setLoading(false));
-      }
+      dispatch(setError(errorMessage));
+      dispatch(setLoading(false));
     }
   };
 
@@ -886,25 +696,8 @@ export function ExcelImport() {
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = error => reject(error);
   });
-  
-  // Handle location dialog save
-  const handleLocationSave = () => {
-    if (!locationInput.trim()) {
-      setLocationError('Location name is required');
-      return;
-    }
-    
-    if (allLocations && allLocations.some(loc => loc.toLowerCase() === locationInput.trim().toLowerCase())) {
-      setLocationError('Location name must be unique');
-      return;
-    }
-    
-    setIsLocationDialogOpen(false);
-    setSelectedLocation(locationInput.trim());
-    handleUpload(locationInput.trim());
-  };
 
-  // UPDATED: Upload function with active company_id
+  // UPDATED: Upload function with Redux state
   const handleUpload = async (locationName?: string) => {
     if (!file) {
       setLocalError('Please select a file first');
@@ -914,16 +707,9 @@ export function ExcelImport() {
     try {
       setIsLoadingData(true);
       setLoadingMessage('Uploading file...');
-      const progressInterval = simulateProgress(3000);
       
-      if (setLoading && typeof setLoading === 'function') {
-        dispatch(setLoading(true));
-      }
-      
-      if (setError && typeof setError === 'function') {
-        dispatch(setError(null));
-      }
-      
+      dispatch(setLoading(true));
+      dispatch(setError(null));
       setLocalError('');
       
       const base64File = await toBase64(file);
@@ -931,27 +717,29 @@ export function ExcelImport() {
       
       setLoadingMessage('Processing Excel data...');
       
-      // UPDATED: Include active company_id in setExcelFile dispatch
+      // Include Redux state in setExcelFile dispatch
       dispatch(setExcelFile({
         fileName: file.name,
         fileContent: base64Content,
         location: locationName,
-        company_id: activeCompanyId // UPDATED: Use active company_id
+        company_id: activeCompanyId
       }));
       
-      // UPDATED: Include active company_id in upload payload
+      // Include Redux state in upload payload
       const uploadPayload = {
         fileName: file.name,
         fileContent: base64Content,
         location: locationName,
-        company_id: activeCompanyId // UPDATED: Use active company_id
+        company_id: activeCompanyId
       };
       
-      console.log('📤 Uploading file with active company_id:', activeCompanyId);
+      console.log('📤 Uploading file with Redux state:', {
+        company_id: activeCompanyId
+      });
       
       const response = await axios.post(API_URL, uploadPayload);
       
-      console.log('📥 Received upload response for the sales split:', response.data);
+      console.log('📥 Received upload response:', response.data);
       setLoadingMessage('Generating insights...');
       
       if (response.data) {
@@ -961,7 +749,7 @@ export function ExcelImport() {
             fileContent: base64Content,
             location: locationName,
             data: response.data,
-            company_id: activeCompanyId // UPDATED: Use active company_id
+            company_id: activeCompanyId
           }));
           
           dispatch(setLocations(locationName ? [locationName] : response.data.locations || []));
@@ -969,13 +757,11 @@ export function ExcelImport() {
         
         dispatch(setTableData(response.data));
         setShowSuccessNotification(true);
-        setHasValidData(true); // Mark that we have valid data
+        setHasValidData(true);
         
         if (locationName) {
-          setSelectedLocation(locationName);
           dispatch(selectLocation(locationName));
         } else if (response.data.locations && response.data.locations.length > 0) {
-          setSelectedLocation(response.data.locations[0]);
           dispatch(selectLocation(response.data.locations[0]));
         }
         
@@ -984,17 +770,11 @@ export function ExcelImport() {
           setDateRangeType(response.data.dateRanges[0]);
         }
         
-        if (!localStorage.getItem('tutorialShown')) {
-          setShowTutorial(true);
-          localStorage.setItem('tutorialShown', 'true');
-        }
-        
         setChartKey(prevKey => prevKey + 1);
         setLoadingMessage('Complete!');
         
         setTimeout(() => {
           setIsLoadingData(false);
-          clearInterval(progressInterval);
         }, 500);
       } else {
         throw new Error('Invalid response data');
@@ -1011,18 +791,6 @@ export function ExcelImport() {
         if (err.response) {
           const detail = err.response.data?.detail;
           errorMessage = `Server error: ${detail || err.response.status}`;
-          
-          if (detail && typeof detail === 'string' && detail.includes('isinf')) {
-            errorMessage = 'Backend error: Please update the backend code to use numpy.isinf instead of pandas.isinf';
-          } else if (err.response.status === 404) {
-            errorMessage = 'API endpoint not found. Is the server running?';
-          } else if (detail) {
-            if (typeof detail === 'string' && detail.includes('Column')) {
-              errorMessage = `File format error: ${detail}`;
-            } else {
-              errorMessage = `Processing error: ${detail}`;
-            }
-          }
         } else if (err.request) {
           errorMessage = 'No response from server. Please check if the backend is running.';
         }
@@ -1031,316 +799,235 @@ export function ExcelImport() {
       }
       
       setLocalError(errorMessage);
-      if (setError && typeof setError === 'function') {
-        dispatch(setError(errorMessage));
-      }
+      dispatch(setError(errorMessage));
     } finally {
-      if (setLoading && typeof setLoading === 'function') {
-        dispatch(setLoading(false));
-      }
+      dispatch(setLoading(false));
     }
   };
 
-  // Success notification
-  const renderSuccessNotification = () => (
-    <Snackbar
-      open={showSuccessNotification}
-      autoHideDuration={5000}
-      onClose={() => setShowSuccessNotification(false)}
-      anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-    >
-      <Alert 
-        onClose={() => setShowSuccessNotification(false)} 
-        severity="success" 
-        sx={{ 
-          width: '100%',
-          borderRadius: 2,
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
-        }}
-        icon={<CheckCircleIcon />}
-      >
-        <Typography variant="subtitle2" fontWeight={600}>
-          Success!
-        </Typography>
-        Excel file processed successfully and insights generated.
-      </Alert>
-    </Snackbar>
-  );
-
-  // Tutorial snackbar
-  const renderTutorial = () => (
-    <Snackbar
-      open={showTutorial}
-      autoHideDuration={15000}
-      onClose={() => setShowTutorial(false)}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-    >
-      <Alert 
-        onClose={() => setShowTutorial(false)} 
-        severity="info" 
-        sx={{ 
-          width: '100%', 
-          maxWidth: '500px',
-          borderRadius: 2,
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
-        }}
-      >
-        <Typography variant="subtitle1" gutterBottom fontWeight={600}>
-          🎉 Welcome to the Sales Analyzer!
-        </Typography>
-        <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
-          <strong>Overview</strong>: Interactive dashboard overview<br />
-          <strong>Detailed Analysis</strong>: Advanced sales insights<br />
-          <br />
-          <strong>Tip:</strong> Use the filters to analyze specific time periods and locations!
-        </Typography>
-      </Alert>
-    </Snackbar>
-  );
-  
-  // Location dialog
-  const renderLocationDialog = () => (
-    <Dialog
-      open={isLocationDialogOpen}
-      onClose={() => setIsLocationDialogOpen(false)}
-      aria-labelledby="location-dialog-title"
-      fullWidth
-      maxWidth="sm"
-      PaperProps={{
-        sx: {
-          borderRadius: 3,
-          background: '#ffffff',
-        }
-      }}
-    >
-      <DialogTitle id="location-dialog-title" sx={{ pb: 1 }}>
-        <Typography variant="h5" fontWeight={600}>
-          📍 Enter Location Name
-        </Typography>
-      </DialogTitle>
-      <DialogContent>
-        <Typography variant="body1" paragraph sx={{ color: 'text.secondary' }}>
-          Please enter a location name for this Excel file. Each file should represent data from a single location.
-        </Typography>
-        <TextField
-          autoFocus
-          margin="dense"
-          id="location"
-          label="Location Name"
-          type="text"
-          fullWidth
-          variant="outlined"
-          value={locationInput}
-          onChange={(e) => setLocationInput(e.target.value)}
-          error={!!locationError}
-          helperText={locationError}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              borderRadius: 2,
-            }
-          }}
-        />
-      </DialogContent>
-      <DialogActions sx={{ p: 3, pt: 1 }}>
-        <Button 
-          onClick={() => setIsLocationDialogOpen(false)} 
-          color="inherit"
-          sx={{ borderRadius: 2 }}
-        >
-          Cancel
-        </Button>
-        <Button 
-          onClick={handleLocationSave} 
-          color="primary" 
-          variant="contained"
-          sx={{ 
-            borderRadius: 2,
-            px: 3
-          }}
-        >
-          Save
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-
-  // FIXED: Helper function to determine if we should show data
+  // Helper function to determine if we should show data
   const shouldShowData = () => {
     return hasValidData && !isWaitingForBackendResponse && reduxTableData && Object.keys(reduxTableData).length > 0;
   };
 
   return (
     <>
-      {/* Clean white background */}
       <Box sx={{ 
         background: '#ffffff',
         minHeight: '100vh',
         p: 3
       }}>
-        {/* Sales Split Dashboard Header */}
+        {/* Header */}
         <Box mb={4}>
-           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-      <h1 
-        style={{ 
-          fontWeight: 800,
-          background: 'linear-gradient(135deg, #1976d2 0%, #9c27b0 100%)',
-          backgroundClip: 'text',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          fontSize: 'clamp(1.75rem, 5vw, 3rem)',
-          marginBottom: '8px',
-          letterSpacing: '-0.02em',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '16px',
-          margin: '0 0 8px 0'
-        }}
-      >
-        <span style={{ 
-          color: '#1976d2',
-          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
-          fontSize: 'inherit',
-          display: 'inline-flex',
-          alignItems: 'center'
-        }}>
-          <svg 
-            width="1em" 
-            height="1em" 
-            viewBox="0 0 100 100" 
-            fill="currentColor"
-            style={{ fontSize: 'inherit' }}
-          >
-            {/* 4-square logo matching your design */}
-            <rect x="10" y="10" width="35" height="35" rx="4" fill="#5A8DEE"/>
-            <rect x="55" y="10" width="35" height="35" rx="4" fill="#4285F4"/>
-            <rect x="10" y="55" width="35" height="35" rx="4" fill="#1976D2"/>
-            <rect x="55" y="55" width="35" height="35" rx="4" fill="#3F51B5"/>
-          </svg>
-        </span>
-  Sales Split Dashboard
-      </h1>
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <h1 
+              style={{ 
+                fontWeight: 800,
+                background: 'linear-gradient(135deg, #1976d2 0%, #9c27b0 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontSize: 'clamp(1.75rem, 5vw, 3rem)',
+                marginBottom: '8px',
+                letterSpacing: '-0.02em',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '16px',
+                margin: '0 0 8px 0'
+              }}
+            >
+              Sales Split Dashboard
+            </h1>
 
-      {/* Company Info Display */}
-      {activeCompanyId && (
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          mt: 2,
-          mb: 1 
-        }}>
-          <CompanyInfoChip
-            icon={<BusinessIcon />}
-            label={`Company: ${selectedCompanyName}`}
-            variant="outlined"
-          />
-        </Box>
-      )}
-    </div>
-          
-        </Box>
-
-        {/* NEW: Company Selection Section */}
-        {companies.length > 0 && (
-          <CleanCard elevation={3} sx={{ 
-            mb: 3, 
-            borderRadius: 2, 
-            overflow: "hidden",
-            border: '2px solid #e3f2fd'
-          }}>
-            <CardContent sx={{ p: { xs: 2, md: 3 }, bgcolor: '#f8f9fa' }}>
-              <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <BusinessIcon color="primary" />
-                <Typography variant="h6" sx={{ fontWeight: 600, color: '#1976d2' }}>
-                  Select Company
-                </Typography>
-                {companiesLoading && <CircularProgress size={20} />}
+            {/* Company and Location Info Display */}
+            {(activeCompanyId || selectedLocation) && (
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                flexWrap: 'wrap',
+                gap: 1,
+                mt: 2,
+                mb: 1 
+              }}>
+                {activeCompanyId && (
+                  <CompanyInfoChip
+                    icon={<BusinessIcon />}
+                    label={`Company: ${selectedCompanyName}`}
+                    variant="outlined"
+                  />
+                )}
+                {selectedLocation && (
+                  <CompanyInfoChip
+                    icon={<BusinessIcon />}
+                    label={`Location: ${selectedLocationName}`}
+                    variant="outlined"
+                  />
+                )}
               </Box>
-              
-              {companiesError && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {companiesError}
-                </Alert>
-              )}
-              
-              <FormControl fullWidth size="small" disabled={companiesLoading}>
-          
-                <Select
-                  labelId="company-select-label"
-                  value={selectedCompanyId}
-                  onChange={handleCompanyChange}
-                  displayEmpty
-                  sx={{ 
-                    '& .MuiSelect-select': {
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1
-                    }
-                  }}
-                >
-                  <MenuItem value="">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
-                      <BusinessIcon fontSize="small" />
-                      Select Company
-                    </Box>
-                  </MenuItem>
-                  {companies.map((company) => (
-                    <MenuItem key={company.id} value={company.id}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <BusinessIcon fontSize="small" color="primary" />
-                        {company.name}
+            )}
+          </div>
+        </Box>
+
+        {/* Company and Location Selection Section */}
+        <CleanCard elevation={3} sx={{ 
+          mb: 3, 
+          borderRadius: 2, 
+          overflow: "hidden",
+          border: '2px solid #e3f2fd'
+        }}>
+          <CardContent sx={{ p: { xs: 2, md: 3 }, bgcolor: '#f8f9fa' }}>
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <BusinessIcon color="primary" />
+              <Typography variant="h6" sx={{ fontWeight: 600, color: '#1976d2' }}>
+                Company & Location Selection
+              </Typography>
+              {companiesLoading && <CircularProgress size={20} />}
+            </Box>
+            
+            {/* Error display */}
+            {companiesError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {companiesError}
+              </Alert>
+            )}
+            
+            <Grid container spacing={2}>
+              {/* Company Selection */}
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth size="small" disabled={companiesLoading}>
+                  <InputLabel>Company</InputLabel>
+                  <Select
+                    value={selectedCompany}
+                    label="Company"
+                    onChange={handleCompanyChange}
+                    displayEmpty
+                  >
+                    <MenuItem value="">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
+                        <BusinessIcon fontSize="small" />
+                        Select Company
                       </Box>
                     </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              
-              {selectedCompanyId && (
-                <Box sx={{ mt: 2 }}>
+                    {companies.map((company) => (
+                      <MenuItem key={company.company_id} value={company.company_id.toString()}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <BusinessIcon fontSize="small" color="primary" />
+                          {company.company_name}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Location Selection */}
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth size="small" disabled={!selectedCompany || availableLocations.length === 0}>
+                  <InputLabel>Location</InputLabel>
+                  <Select
+                    value={selectedLocation}
+                    label="Location"
+                    onChange={handleLocationChange}
+                    displayEmpty
+                  >
+                    <MenuItem value="">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
+                        <BusinessIcon fontSize="small" />
+                        {!selectedCompany 
+                          ? 'Select Company First' 
+                          : availableLocations.length === 0 
+                            ? 'No Locations Available'
+                            : 'Select Location'
+                        }
+                      </Box>
+                    </MenuItem>
+                    {availableLocations.map((location) => (
+                      <MenuItem key={location.location_id} value={location.location_id.toString()}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <BusinessIcon fontSize="small" color="secondary" />
+                          {location.location_name}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+            
+            {/* Selection Summary */}
+            {(selectedCompany || selectedLocation) && (
+              <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {selectedCompany && (
                   <Chip
                     icon={<BusinessIcon />}
-                    label={`Selected: ${selectedCompanyName}`}
+                    label={`Company: ${selectedCompanyName}`}
                     color="primary"
                     variant="outlined"
                     sx={{ fontWeight: 500 }}
                   />
-                </Box>
-              )}
-              
-              {/* Note about existing data */}
-              {currentCompanyId && currentCompanyId !== selectedCompanyId && (
-                <Alert severity="info" sx={{ mt: 2 }}>
-                  <Typography variant="body2">
-                    <strong>Note:</strong> Your uploaded files are associated with Company ID: <b> {selectedCompanyName}</b> . 
-                    Select a different company above to override this for new operations.
-                  </Typography>
-                </Alert>
-              )}
-            </CardContent>
-          </CleanCard>
-        )}
+                )}
+                {selectedLocation && (
+                  <Chip
+                    icon={<BusinessIcon />}
+                    label={`Location: ${selectedLocationName}`}
+                    color="secondary"
+                    variant="outlined"
+                    sx={{ fontWeight: 500 }}
+                  />
+                )}
+              </Box>
+            )}
+            
+            {/* Location count info */}
+            {selectedCompany && availableLocations.length > 0 && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                <Typography variant="body2">
+                  <strong>{selectedCompanyName}</strong> has {availableLocations.length} location{availableLocations.length > 1 ? 's' : ''} available.
+                  {availableLocations.length === 1 && ' Location auto-selected.'}
+                </Typography>
+              </Alert>
+            )}
+            
+            {/* Redux state info */}
+            <Alert severity="success" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                <strong>Redux State:</strong> Companies: [{selectedCompanies.join(', ')}] | Locations: [{selectedLocations.join(', ')}]
+              </Typography>
+            </Alert>
+          </CardContent>
+        </CleanCard>
 
         {/* Status Card */}
         <CleanCard sx={{ p: 3, mb: 4 }}>
           <Grid container spacing={2}>
-            {files.length === -1 ? (
+            {files.length === 0 ? (
               <Grid item xs={12}>
-                <StatsCard sx={{ textAlign: 'center', py: 6 }}>
+                <Paper sx={{ textAlign: 'center', py: 6, p: 3 }}>
                   <CloudUploadIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
                   <Typography variant="h5" color="text.secondary" gutterBottom fontWeight={600}>
-                    Ready to Analyze Your Data. 
+                    Ready to Analyze Your Data
                   </Typography>
                   <Typography variant="body1" color="text.secondary" paragraph>
                     Upload your Excel files to get started with powerful sales insights
                   </Typography>
-                  {/* Show company selection status */}
-                  {selectedCompanyId && (
-                    <Box sx={{ mb: 2 }}>
-                      <CompanyInfoChip
-                        icon={<BusinessIcon />}
-                        label={`Ready for: ${selectedCompanyName}`}
-                        size="small"
-                      />
+                  {/* Show company and location selection status */}
+                  {(selectedCompany || selectedLocation) && (
+                    <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 1 }}>
+                      {selectedCompany && (
+                        <CompanyInfoChip
+                          icon={<BusinessIcon />}
+                          label={`Company: ${selectedCompanyName}`}
+                          size="small"
+                        />
+                      )}
+                      {selectedLocation && (
+                        <CompanyInfoChip
+                          icon={<BusinessIcon />}
+                          label={`Location: ${selectedLocationName}`}
+                          size="small"
+                        />
+                      )}
                     </Box>
                   )}
                   <Button 
@@ -1357,30 +1044,35 @@ export function ExcelImport() {
                   >
                     Upload Files
                   </Button>
-                </StatsCard>
+                </Paper>
               </Grid>
             ) : (
               <>
-  
-                {/* Filter Section - FIXED with new callback */}
+                {/* Filter Section */}
                 <Grid item xs={12} sx={{ mt: 2 }}>
-               
-                    <FilterSection 
-                      dateRangeType={dateRangeType}
-                      availableDateRanges={availableDateRanges}
-                      onDateRangeChange={handleDateRangeChange}
-                      customDateRange={customDateRange}
-                      startDate={startDate}
-                      endDate={endDate}
-                      onStartDateChange={handleStartDateChange}
-                      onEndDateChange={handleEndDateChange}
-                      locations={salesLocations} 
-                      selectedLocation={selectedLocation}
-                      onLocationChange={handleLocationChange}
-                      onApplyFilters={handleApplyFilters}
-                      onApplyFiltersWithDates={handleApplyFiltersWithDates} // FIXED: New callback
-                    />
-                
+                  <FilterSection 
+                    dateRangeType={dateRangeType}
+                    availableDateRanges={availableDateRanges}
+                    onDateRangeChange={handleDateRangeChange}
+                    customDateRange={customDateRange}
+                    startDate={startDate}
+                    endDate={endDate}
+                    onStartDateChange={handleStartDateChange}
+                    onEndDateChange={handleEndDateChange}
+                    locations={salesLocations} // Legacy fallback
+                    selectedLocation={selectedLocation}
+                    onLocationChange={() => {}} // Legacy fallback
+                    onApplyFilters={handleApplyFilters}
+                    onApplyFiltersWithDates={handleApplyFiltersWithDates}
+                    // NEW: Redux integration props
+                    availableLocationObjects={availableLocations}
+                    selectedCompanyId={selectedCompany}
+                    reduxSelectedLocations={selectedLocations}
+                    onReduxLocationChange={(locationIds: string[]) => {
+                      console.log('📍 ExcelImport: Received location change from FilterSection:', locationIds);
+                      reduxDispatch(setSelectedLocations(locationIds));
+                    }}
+                  />
                 </Grid>
               </>
             )}
@@ -1394,9 +1086,6 @@ export function ExcelImport() {
                 sx={{ 
                   mt: 2,
                   borderRadius: 2,
-                  '& .MuiAlert-icon': {
-                    fontSize: 24
-                  }
                 }}
                 icon={<ErrorIcon />}
                 action={
@@ -1428,209 +1117,156 @@ export function ExcelImport() {
                 sx={{ 
                   mt: 2,
                   borderRadius: 2,
-                  '& .MuiAlert-icon': {
-                    fontSize: 24
-                  }
                 }}
                 icon={<CircularProgress size={20} />}
               >
                 <Typography variant="subtitle2" fontWeight={600}>
-                  Loading Data for {selectedCompanyName}...
+                  Loading Data...
                 </Typography>
                 Please wait while we fetch the latest data from the backend.
+                <br />
+                <small>Company: {selectedCompanyName} | Location: {selectedLocationName}</small>
               </Alert>
             </Fade>
           )}
         </CleanCard>
 
-        {/* Main Dashboard - Product Mix Style */}
-        {/* NOTE: Show data even without company selection initially (as requested) */}
+        {/* Main Dashboard */}
         {files.length > 0 && (
           <CleanCard sx={{ borderRadius: 2, mb: 3, overflow: 'hidden' }}>
-            {/* Product Mix Style Tabs */}
             <Box sx={{ 
               background: '#ffffff',
               borderBottom: '1px solid #E5E7EB'
             }}>
-              <ProductMixTabs 
+              <Tabs 
                 value={salesSplitTab} 
                 onChange={handleSalesSplitTabChange} 
                 variant="fullWidth"
               >
-                <ProductMixTab 
-                  label="Overview" 
-                />
-                <ProductMixTab 
-                  label="Detailed Analysis" 
-                />
-              </ProductMixTabs>
+                <Tab label="Overview" />
+                <Tab label="Detailed Analysis" />
+              </Tabs>
             </Box>
 
             {/* Overview Tab */}
-            <TabPanel value={salesSplitTab} index={0}>
-              <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
-                {/* Show data even without company selection initially (as requested) */}
-                {shouldShowData() ? (
-                  <Fade in timeout={600}>
-                    <Box>
-                      <SalesSplitDashboard 
-                        tableData={reduxTableData}
-                        selectedLocation={selectedLocation}
-                      />
+            <div
+              role="tabpanel"
+              hidden={salesSplitTab !== 0}
+            >
+              {salesSplitTab === 0 && (
+                <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+                  {shouldShowData() ? (
+                    <Fade in timeout={600}>
+                      <Box>
+                        <SalesSplitDashboard 
+                          tableData={reduxTableData}
+                          selectedLocation={selectedLocation}
+                        />
+                      </Box>
+                    </Fade>
+                  ) : isWaitingForBackendResponse ? (
+                    <Box sx={{ textAlign: 'center', py: 6 }}>
+                      <CircularProgress size={40} sx={{ mb: 2 }} />
+                      <Typography variant="h6" color="text.secondary" gutterBottom>
+                        Loading data...
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Company: {selectedCompanyName} | Location: {selectedLocationName}
+                      </Typography>
                     </Box>
-                  </Fade>
-                ) : isWaitingForBackendResponse ? (
-                  <Box sx={{ textAlign: 'center', py: 6 }}>
-                    <CircularProgress size={40} sx={{ mb: 2 }} />
-                    <Typography variant="h6" color="text.secondary" gutterBottom>
-                      Loading data for {selectedLocation}...
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Company: {selectedCompanyName} | Please wait while we fetch the latest data
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Box sx={{ textAlign: 'center', py: 6 }}>
-                    <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, mb: 2 }} />
-                    <Skeleton variant="text" width="60%" />
-                    <Skeleton variant="text" width="40%" />
-                  </Box>
-                )}
-              </Box>
-            </TabPanel>
+                  ) : (
+                    <Box sx={{ textAlign: 'center', py: 6 }}>
+                      <Skeleton variant="rectangular" height={200} sx={{ borderRadius: 2, mb: 2 }} />
+                      <Skeleton variant="text" width="60%" />
+                      <Skeleton variant="text" width="40%" />
+                    </Box>
+                  )}
+                </Box>
+              )}
+            </div>
 
             {/* Detailed Analysis Tab */}
-            <TabPanel value={salesSplitTab} index={1}>
-              <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
-                {/* Show data even without company selection initially (as requested) */}
-                {shouldShowData() && reduxTableData.table1 && reduxTableData.table1.length > 0 ? (
-                  <Fade in timeout={600}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                        <InsightsIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
-                        <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                          Detailed Analysis
-                          {activeCompanyId && (
-                            <CompanyInfoChip
-                              icon={<BusinessIcon />}
-                              label={`Company: ${selectedCompanyName}`}
-                              size="small"
-                              sx={{ ml: 2 }}
-                            />
+            <div
+              role="tabpanel"
+              hidden={salesSplitTab !== 1}
+            >
+              {salesSplitTab === 1 && (
+                <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+                  {shouldShowData() && reduxTableData.table1 && reduxTableData.table1.length > 0 ? (
+                    <Fade in timeout={600}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                          <InsightsIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
+                          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                            Detailed Analysis
+                          </Typography>
+                          {(activeCompanyId || selectedLocation) && (
+                            <Box sx={{ ml: 2, display: 'flex', gap: 1 }}>
+                              {activeCompanyId && (
+                                <CompanyInfoChip
+                                  icon={<BusinessIcon />}
+                                  label={`${selectedCompanyName}`}
+                                  size="small"
+                                />
+                              )}
+                              {selectedLocation && (
+                                <CompanyInfoChip
+                                  icon={<BusinessIcon />}
+                                  label={`${selectedLocationName}`}
+                                  size="small"
+                                />
+                              )}
+                            </Box>
                           )}
+                        </Box>
+
+                        {/* Analytics Charts Section */}
+                        <CleanCard sx={{ p: 3, mb: 3 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                            <AnalyticsIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
+                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                              Sales Analytics 
+                            </Typography>
+                          </Box>
+                          
+                          <div key={`sales-chart-${chartKey}`}>
+                            <SalesCharts 
+                              tableData={reduxTableData}
+                              dateRangeType={dateRangeType}
+                              selectedLocation={selectedLocation}
+                              height={250}
+                            />
+                          </div>
+                        </CleanCard>
+
+                        <Typography variant="body1" color="text.secondary">
+                          More detailed analysis components would go here...
                         </Typography>
                       </Box>
-
-                      {/* Analytics Charts Section */}
-                      <CleanCard sx={{ p: 3, mb: 3 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                          <AnalyticsIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
-                          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                            Sales Analytics 
-                          </Typography>
-                        </Box>
-                        <Divider sx={{ mb: 3 }} />
-                        
-                        <div key={`sales-chart-${chartKey}`}>
-                          <SalesCharts 
-                            tableData={reduxTableData}
-                            dateRangeType={dateRangeType}
-                            selectedLocation={selectedLocation}
-                            height={250}
-                          />
-                        </div>
-                      </CleanCard>
-
-                      {/* Data Tables Section */}
-                      <CleanCard sx={{ p: 3, mb: 3 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                          <TableChartIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
-                          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                            Data Tables
-                          </Typography>
-                        </Box>
-                        <TableDisplay 
-                          tableData={reduxTableData}
-                          viewMode="tabs"
-                          activeTab={tableTab}
-                          onTabChange={handleTableTabChange}
-                        />
-                      </CleanCard>
-
-                      {/* Detailed Charts Grid */}
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 3, color: '#374151' }}>
-                        Detailed Charts
+                    </Fade>
+                  ) : isWaitingForBackendResponse ? (
+                    <Box sx={{ textAlign: 'center', py: 6 }}>
+                      <CircularProgress size={40} sx={{ mb: 2 }} />
+                      <Typography variant="h6" color="text.secondary" gutterBottom>
+                        Loading detailed analysis...
                       </Typography>
-                      
-                      <Grid container spacing={4}>
-                        <Grid item xs={12} lg={12}>
-                          <DeliveryPercentageChart 
-                            tableData={reduxTableData} 
-                            height={100} 
-                          />
-                        </Grid>
-                        
-                        <Grid item xs={12} lg={12}>
-                          <InHousePercentageChart 
-                            tableData={reduxTableData} 
-                            height={100} 
-                          />
-                        </Grid>
-
-                        <Grid item xs={12} lg={12}>
-                          <CateringPercentageChart 
-                            tableData={reduxTableData} 
-                            height={100} 
-                          />
-                        </Grid>
-                        
-                        <Grid item xs={12} lg={12}>
-                          <TotalSalesChart 
-                            tableData={reduxTableData} 
-                            height={100} 
-                          />
-                        </Grid>
-
-                        {reduxTableData.table4 && reduxTableData.table4.length > 0 && (
-                          <Grid item xs={12}>
-                            <WowTrendsChart 
-                              tableData={reduxTableData} 
-                              height={420} 
-                            />
-                          </Grid>
-                        )}
-
-                        <Grid item xs={12}>
-                          <PercentageFirstThirdPartyChart 
-                            tableData={reduxTableData} 
-                            height={420} 
-                          />
-                        </Grid>
-                      </Grid>
+                      <Typography variant="body2" color="text.secondary">
+                        Company: {selectedCompanyName} | Location: {selectedLocationName}
+                      </Typography>
                     </Box>
-                  </Fade>
-                ) : isWaitingForBackendResponse ? (
-                  <Box sx={{ textAlign: 'center', py: 6 }}>
-                    <CircularProgress size={40} sx={{ mb: 2 }} />
-                    <Typography variant="h6" color="text.secondary" gutterBottom>
-                      Loading detailed analysis...
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Company: {selectedCompanyName} | Please wait while we process your data
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Box sx={{ textAlign: 'center', py: 6 }}>
-                    <Typography variant="h6" color="text.secondary" gutterBottom>
-                      No detailed data available
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Upload files or apply filters to see detailed analysis
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            </TabPanel>
+                  ) : (
+                    <Box sx={{ textAlign: 'center', py: 6 }}>
+                      <Typography variant="h6" color="text.secondary" gutterBottom>
+                        No detailed data available
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Upload files or apply filters to see detailed analysis
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              )}
+            </div>
           </CleanCard>
         )}
       </Box>
@@ -1642,8 +1278,29 @@ export function ExcelImport() {
         </LoadingOverlay>
       )}
 
-      {renderTutorial()}
-      {renderLocationDialog()}
+      {/* Success notification */}
+      <Snackbar
+        open={showSuccessNotification}
+        autoHideDuration={5000}
+        onClose={() => setShowSuccessNotification(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={() => setShowSuccessNotification(false)} 
+          severity="success" 
+          sx={{ 
+            width: '100%',
+            borderRadius: 2,
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
+          }}
+          icon={<CheckCircleIcon />}
+        >
+          <Typography variant="subtitle2" fontWeight={600}>
+            Success!
+          </Typography>
+          Excel file processed successfully and insights generated.
+        </Alert>
+      </Snackbar>
     </>
   );
 }

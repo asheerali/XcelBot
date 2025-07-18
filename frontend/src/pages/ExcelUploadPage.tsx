@@ -1,4 +1,4 @@
-// ExcelUploadPage.tsx - Updated with company dropdown and responsive location handling
+// ExcelUploadPage.tsx - Updated with company-locations API and responsive location handling
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
@@ -78,6 +78,7 @@ import LaunchIcon from "@mui/icons-material/Launch";
 
 // Import Redux hooks
 import { useAppDispatch } from "../typedHooks";
+import { useSelector, useDispatch } from "react-redux";
 import {
   setExcelFile,
   setLoading,
@@ -91,24 +92,23 @@ import {
   addSalesWideData,
   addProductMixData,
 } from "../store/excelSlice";
+import {
+  setSelectedCompanies,
+  setSelectedLocations,
+  selectSelectedCompanies,
+  selectSelectedLocations,
+} from "../store/slices/masterFileSlice";
 import { API_URL_Local } from "../constants";
 import apiClient from "../api/axiosConfig";
 
 // API URLs
 const API_URL = API_URL_Local + "/api/excel/upload";
-const COMPANIES_API_URL = API_URL_Local + "/companies/";
+const COMPANY_LOCATIONS_API_URL = API_URL_Local + "/company-locations/all";
 
-// Company interface
+// UPDATED: Company interface based on new API structure
 interface Company {
-  id: number;
-  name: string;
-  address?: string;
-  state?: string;
-  postcode?: string;
-  phone?: string;
-  email?: string;
-  website?: string;
-  isActive?: boolean;
+  company_id: number;
+  company_name: string;
 }
 
 // Styled components (keeping existing ones)
@@ -500,7 +500,18 @@ const ExcelUploadPage: React.FC = () => {
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [selectedDashboard, setSelectedDashboard] = useState("Financials");
 
-  // NEW: Company state management
+  // UPDATED: Redux state management for company selection
+  const dispatch = useDispatch();
+  const appDispatch = useAppDispatch();
+  
+  // Get current selections from Redux
+  const selectedCompanies = useSelector(selectSelectedCompanies);
+  const selectedLocations = useSelector(selectSelectedLocations);
+  
+  // Convert to single values for dropdowns
+  const selectedCompanyId = selectedCompanies.length > 0 ? selectedCompanies[0] : '';
+  
+  // UPDATED: Company state management for API fetching
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [companiesLoading, setCompaniesLoading] = useState(false);
@@ -508,31 +519,44 @@ const ExcelUploadPage: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
 
-  // NEW: Fetch companies on component mount
+  // UPDATED: Fetch companies on component mount
   useEffect(() => {
     fetchCompanies();
   }, []);
 
-  // NEW: Fetch companies function
+  // UPDATED: Sync local selectedCompany with Redux state
+  useEffect(() => {
+    if (selectedCompanyId && companies.length > 0) {
+      const company = companies.find(c => c.company_id.toString() === selectedCompanyId);
+      if (company && company !== selectedCompany) {
+        setSelectedCompany(company);
+        console.log('🔄 Synced selectedCompany from Redux:', company);
+      }
+    } else if (!selectedCompanyId && selectedCompany) {
+      setSelectedCompany(null);
+      console.log('🔄 Cleared selectedCompany from Redux');
+    }
+  }, [selectedCompanyId, companies, selectedCompany]);
+
+  // UPDATED: Fetch companies function using new API
   const fetchCompanies = async () => {
     try {
       setCompaniesLoading(true);
       setCompaniesError(null);
 
-      console.log("🏢 Fetching companies from:", COMPANIES_API_URL);
-      const response = await apiClient.get("/companies/");
+      console.log("🏢 Fetching companies and locations from:", COMPANY_LOCATIONS_API_URL);
+      const response = await apiClient.get("/company-locations/all");
 
       if (response.data && Array.isArray(response.data)) {
         setCompanies(response.data);
-        console.log("✅ Companies fetched successfully:", response.data);
+        console.log("✅ Companies with locations fetched successfully:", response.data);
       } else {
         throw new Error("Invalid response format");
       }
     } catch (error) {
       console.error("❌ Error fetching companies:", error);
-      setCompaniesError("Failed to fetch companies");
+      setCompaniesError("Failed to fetch companies and locations");
     } finally {
       setCompaniesLoading(false);
     }
@@ -614,10 +638,23 @@ const ExcelUploadPage: React.FC = () => {
     setSelectedDashboard(dashboardType);
   };
 
-  // NEW: Company selection handler
+  // UPDATED: Company selection handler with Redux integration
   const handleCompanyChange = (event: any, newValue: Company | null) => {
+    console.log("🏢 Company selection changed:", newValue);
+    
+    // Update local state
     setSelectedCompany(newValue);
-    console.log("🏢 Selected company:", newValue);
+    
+    // Update Redux state
+    if (newValue) {
+      dispatch(setSelectedCompanies([newValue.company_id.toString()]));
+      dispatch(setSelectedLocations([])); // Clear locations when company changes
+      console.log('📦 Updated Redux: selectedCompanies =', [newValue.company_id.toString()]);
+    } else {
+      dispatch(setSelectedCompanies([]));
+      dispatch(setSelectedLocations([]));
+      console.log('📦 Cleared Redux: selectedCompanies and selectedLocations');
+    }
   };
 
   const toBase64 = (file: File): Promise<string> => {
@@ -663,7 +700,7 @@ const ExcelUploadPage: React.FC = () => {
         setExcelFile({
           fileName: fileInfo.file.name,
           fileContent: base64Content,
-          company_id: selectedCompany.id.toString(),
+          company_id: selectedCompany.company_id.toString(),
         })
       );
 
@@ -689,20 +726,20 @@ const ExcelUploadPage: React.FC = () => {
         fileName: fileInfo.file.name,
         fileContent: base64Content,
         dashboard: fileInfo.dashboard,
-        company_id: selectedCompany.id, // NEW: Add company ID
+        company_id: selectedCompany.company_id, // UPDATED: Use company_id
       };
 
       console.log("📤 Uploading with payload:", {
         ...uploadPayload,
         fileContent: "[BASE64_DATA]", // Don't log the full content
-        company: selectedCompany.name,
+        company: selectedCompany.company_name,
       });
 
       const response = await apiClient.post("/api/excel/upload", uploadPayload);
 
       clearInterval(progressInterval);
 
-      console.log("✅ Upload response for the sales split:", response);
+      console.log("✅ Upload response:", response);
 
       if (response.data) {
         console.log("📨 Received response data:", response.data);
@@ -748,8 +785,8 @@ const ExcelUploadPage: React.FC = () => {
             const enhancedDashboardData = {
               ...dashboardData,
               categories: extractedCategories,
-              company_id: selectedCompany.id, // Include company ID
-              company_name: selectedCompany.name, // Include company name
+              company_id: selectedCompany.company_id, // UPDATED: Use company_id
+              company_name: selectedCompany.company_name, // UPDATED: Use company_name
             };
 
             // Store data for all locations
@@ -762,58 +799,58 @@ const ExcelUploadPage: React.FC = () => {
 
               // Dispatch to appropriate store based on dashboard type
               if (dashboardName === "Sales Split") {
-                dispatch(
+                appDispatch(
                   addSalesData({
                     fileName: extractedFileName,
                     fileContent: base64Content,
                     location: location,
                     data: enhancedDashboardData,
                     categories: extractedCategories,
-                    company_id: selectedCompany.id.toString(),
+                    company_id: selectedCompany.company_id.toString(),
                   })
                 );
 
-                dispatch(
+                appDispatch(
                   addFileData({
                     fileName: extractedFileName,
                     fileContent: base64Content,
                     location: location,
                     data: enhancedDashboardData,
                     categories: extractedCategories,
-                    company_id: selectedCompany.id.toString(),
+                    company_id: selectedCompany.company_id.toString(),
                   })
                 );
               } else if (dashboardName === "Product Mix") {
-                dispatch(
+                appDispatch(
                   addProductMixData({
                     fileName: extractedFileName,
                     fileContent: base64Content,
                     location: location,
                     data: enhancedDashboardData,
                     categories: extractedCategories,
-                    company_id: selectedCompany.id.toString(),
+                    company_id: selectedCompany.company_id.toString(),
                   })
                 );
               } else if (dashboardName === "Financials") {
-                dispatch(
+                appDispatch(
                   addFinancialData({
                     fileName: extractedFileName,
                     fileContent: base64Content,
                     location: location,
                     data: enhancedDashboardData,
                     categories: extractedCategories,
-                    company_id: selectedCompany.id.toString(),
+                    company_id: selectedCompany.company_id.toString(),
                   })
                 );
               } else if (dashboardName === "Sales Wide") {
-                dispatch(
+                appDispatch(
                   addSalesWideData({
                     fileName: extractedFileName,
                     fileContent: base64Content,
                     location: location,
                     data: enhancedDashboardData,
                     categories: extractedCategories,
-                    company_id: selectedCompany.id.toString(),
+                    company_id: selectedCompany.company_id.toString(),
                   })
                 );
               }
@@ -831,8 +868,8 @@ const ExcelUploadPage: React.FC = () => {
           const enhancedDashboardData = {
             ...response.data,
             categories: extractedCategories,
-            company_id: selectedCompany.id, // Include company ID
-            company_name: selectedCompany.name, // Include company name
+            company_id: selectedCompany.company_id, // UPDATED: Use company_id
+            company_name: selectedCompany.company_name, // UPDATED: Use company_name
           };
 
           // Store data for all locations
@@ -845,58 +882,58 @@ const ExcelUploadPage: React.FC = () => {
 
             // Dispatch to appropriate store
             if (dashboardName === "Financials") {
-              dispatch(
+              appDispatch(
                 addFinancialData({
                   fileName: extractedFileName,
                   fileContent: base64Content,
                   location: location,
                   data: enhancedDashboardData,
                   categories: extractedCategories,
-                  company_id: selectedCompany.id.toString(),
+                  company_id: selectedCompany.company_id.toString(),
                 })
               );
             } else if (dashboardName === "Sales Split") {
-              dispatch(
+              appDispatch(
                 addSalesData({
                   fileName: extractedFileName,
                   fileContent: base64Content,
                   location: location,
                   data: enhancedDashboardData,
                   categories: extractedCategories,
-                  company_id: selectedCompany.id.toString(),
+                  company_id: selectedCompany.company_id.toString(),
                 })
               );
 
-              dispatch(
+              appDispatch(
                 addFileData({
                   fileName: extractedFileName,
                   fileContent: base64Content,
                   location: location,
                   data: enhancedDashboardData,
                   categories: extractedCategories,
-                  company_id: selectedCompany.id.toString(),
+                  company_id: selectedCompany.company_id.toString(),
                 })
               );
             } else if (dashboardName === "Sales Wide") {
-              dispatch(
+              appDispatch(
                 addSalesWideData({
                   fileName: extractedFileName,
                   fileContent: base64Content,
                   location: location,
                   data: enhancedDashboardData,
                   categories: extractedCategories,
-                  company_id: selectedCompany.id.toString(),
+                  company_id: selectedCompany.company_id.toString(),
                 })
               );
             } else if (dashboardName === "Product Mix") {
-              dispatch(
+              appDispatch(
                 addProductMixData({
                   fileName: extractedFileName,
                   fileContent: base64Content,
                   location: location,
                   data: enhancedDashboardData,
                   categories: extractedCategories,
-                  company_id: selectedCompany.id.toString(),
+                  company_id: selectedCompany.company_id.toString(),
                 })
               );
             }
@@ -904,11 +941,11 @@ const ExcelUploadPage: React.FC = () => {
         }
 
         // UPDATED: Update Redux with all locations
-        dispatch(setLocations(extractedLocations));
+        appDispatch(setLocations(extractedLocations));
 
         // Set primary location as selected
         if (primaryLocation) {
-          dispatch(selectLocation(primaryLocation));
+          appDispatch(selectLocation(primaryLocation));
         }
 
         // UPDATED: Update file state with all location data
@@ -930,7 +967,7 @@ const ExcelUploadPage: React.FC = () => {
 
         console.log(
           "✅ File upload completed successfully with company_id:",
-          selectedCompany.id,
+          selectedCompany.company_id,
           "and locations:",
           extractedLocations
         );
@@ -1101,7 +1138,7 @@ const ExcelUploadPage: React.FC = () => {
         </HeaderCard>
       </Fade>
 
-      {/* NEW: Company Selection */}
+      {/* UPDATED: Company Selection with new API structure */}
       <Fade in timeout={900}>
         <CompanySelectionCard>
           <CardContent sx={{ p: 4 }}>
@@ -1125,17 +1162,17 @@ const ExcelUploadPage: React.FC = () => {
                 value={selectedCompany}
                 onChange={handleCompanyChange}
                 options={companies}
-                getOptionLabel={(option) => option.name}
+                getOptionLabel={(option) => option.company_name}
                 loading={companiesLoading}
                 renderInput={(params) => (
                   <TextField
                     {...params}
-              
+                    label="Choose a company"
                     variant="outlined"
                     fullWidth
                     error={!!companiesError}
                     helperText={
-                      companiesError || ""
+                      companiesError || "Select a company to upload files for"
                     }
                     InputProps={{
                       ...params.InputProps,
@@ -1162,13 +1199,8 @@ const ExcelUploadPage: React.FC = () => {
                     <BusinessIcon fontSize="small" color="action" />
                     <Box>
                       <Typography variant="body1" fontWeight={500}>
-                        {option.name}
+                        {option.company_name}
                       </Typography>
-                      {option.address && (
-                        <Typography variant="body2" color="text.secondary">
-                          {option.address}
-                        </Typography>
-                      )}
                     </Box>
                   </Box>
                 )}
@@ -1178,8 +1210,6 @@ const ExcelUploadPage: React.FC = () => {
                   },
                 }}
               />
-
-         
             </Box>
           </CardContent>
         </CompanySelectionCard>
@@ -1392,7 +1422,7 @@ const ExcelUploadPage: React.FC = () => {
                 >
                   <BusinessIcon color="primary" />
                   <Typography variant="body1" fontWeight={500}>
-                    Uploading for: {selectedCompany.name} (ID: {selectedCompany.id})
+                    Uploading for: {selectedCompany.company_name} (ID: {selectedCompany.company_id})
                   </Typography>
                 </Box>
               )}
@@ -1443,7 +1473,7 @@ const ExcelUploadPage: React.FC = () => {
                                   />
                                   {selectedCompany && (
                                     <Chip
-                                      label={`Company: ${selectedCompany.id}`}
+                                      label={`Company: ${selectedCompany.company_id}`}
                                       size="small"
                                       color="secondary"
                                       variant="outlined"

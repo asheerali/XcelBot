@@ -1,4 +1,4 @@
-// FilterSection.tsx - Updated with Redux Integration for Company-Location API
+// FilterSection.tsx - Updated with no default value but initially all selected
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -23,8 +23,7 @@ import {
   IconButton,
   MenuList,
   Divider,
-  OutlinedInput,
-  Alert
+  OutlinedInput
 } from '@mui/material';
 import { format } from 'date-fns';
 
@@ -38,7 +37,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
-import BusinessIcon from '@mui/icons-material/Business';
 
 // Import DateRangeSelector component
 import DateRangeSelector from './DateRangeSelector';
@@ -54,20 +52,7 @@ import {
   updateSalesFilters
 } from '../store/excelSlice';
 
-// UPDATED: Import masterFileSlice Redux
-import { useSelector, useDispatch } from "react-redux";
-import {
-  setSelectedLocations,
-  selectSelectedLocations 
-} from "../store/slices/masterFileSlice";
-
-// UPDATED: Location interface to match company-locations API
-interface LocationObject {
-  location_id: number;
-  location_name: string;
-}
-
-// Custom MultiSelect component with search functionality (keeping existing implementation)
+// Custom MultiSelect component with search functionality (exact copy from ProductMixDashboard)
 interface MultiSelectProps {
   id: string;
   label: string;
@@ -340,7 +325,6 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   );
 };
 
-// UPDATED: Interface with new Redux-related props
 interface FilterSectionProps {
   dateRangeType: string;
   availableDateRanges: string[];
@@ -354,15 +338,11 @@ interface FilterSectionProps {
   selectedLocation: string;
   onLocationChange: (event: SelectChangeEvent) => void;
   onApplyFilters: () => void;
+  // NEW: Add a callback that accepts explicit values including selected locations
   onApplyFiltersWithDates?: (startDate: string, endDate: string, categories: string[], selectedLocations: string[]) => void;
   categoriesOverride?: string[];
   dashboardType?: 'Sales Split' | 'Financials' | 'Sales Wide' | 'Product Mix';
   initiallySelectAll?: boolean;
-  // NEW: Redux-related props for company-location integration
-  availableLocationObjects?: LocationObject[];
-  selectedCompanyId?: string;
-  reduxSelectedLocations?: string[];
-  onReduxLocationChange?: (locationIds: string[]) => void;
 }
 
 const FilterSection: React.FC<FilterSectionProps> = ({
@@ -378,18 +358,12 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   selectedLocation,
   onLocationChange,
   onApplyFilters,
-  onApplyFiltersWithDates,
+  onApplyFiltersWithDates, // NEW prop
   categoriesOverride,
   dashboardType = 'Sales Split',
   initiallySelectAll = false,
-  // NEW: Redux props
-  availableLocationObjects = [],
-  selectedCompanyId,
-  reduxSelectedLocations = [],
-  onReduxLocationChange,
 }) => {
   const dispatch = useAppDispatch();
-  const reduxDispatch = useDispatch();
   
   // Get categories from Redux state based on dashboard type
   const salesCategories = useAppSelector(selectSalesCategories);
@@ -398,9 +372,6 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   const salesWideCategories = useAppSelector(selectSalesWideCategories);
   const productMixCategories = useAppSelector(selectProductMixCategories);
   const salesFilters = useAppSelector(state => state.excel.salesFilters);
-  
-  // UPDATED: Get Redux locations state
-  const reduxLocationSelections = useSelector(selectSelectedLocations);
   
   // Loading state
   const [isLoading, setIsLoading] = useState(false);
@@ -448,12 +419,9 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     [availableCategories, filterCategories]
   );
   
-  // UPDATED: State for multi-select arrays - use Redux state for locations when available
+  // FIXED: State for multi-select arrays - NO DEFAULT VALUES, but will be populated by initiallySelectAll
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  
-  // UPDATED: Use Redux state for locations if available, fallback to local state
-  const [localSelectedLocations, setLocalSelectedLocations] = useState<string[]>([]);
-  const selectedLocations = onReduxLocationChange ? reduxSelectedLocations : localSelectedLocations;
   
   // State for date range - LOCAL state that we manage directly
   const [localStartDate, setLocalStartDate] = useState<string>(startDate || '');
@@ -472,6 +440,9 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     setLocalEndDate(endDate || '');
   }, [startDate, endDate]);
 
+  // REMOVED: Auto-selection based on selectedLocation prop
+  // No default values, but initiallySelectAll will handle the initial population
+
   // Update local state when Redux filters change
   useEffect(() => {
     if (salesFilters.selectedCategories && salesFilters.selectedCategories.length > 0) {
@@ -479,29 +450,11 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     }
   }, [salesFilters.selectedCategories]);
 
-  // UPDATED: Handle location change with Redux integration
+  // Handle location change (multi-select) - UPDATED to not trigger parent onChange immediately
   const handleLocationChange = (newValue: string[]) => {
     console.log('📍 FilterSection: Location selection changed to:', newValue);
-    
-    if (onReduxLocationChange) {
-      // Use Redux dispatch - need to convert names to IDs
-      if (availableLocationObjects.length > 0) {
-        const locationIds = newValue.map(name => {
-          const location = availableLocationObjects.find(loc => loc.location_name === name);
-          return location ? location.location_id.toString() : name;
-        });
-        console.log('📍 FilterSection: Converting location names to IDs for Redux:', {
-          names: newValue,
-          ids: locationIds
-        });
-        onReduxLocationChange(locationIds);
-      } else {
-        onReduxLocationChange(newValue);
-      }
-    } else {
-      // Use local state
-      setLocalSelectedLocations(newValue);
-    }
+    setSelectedLocations(newValue);
+    // Don't trigger parent onChange - wait for Apply Filters
   };
 
   // Handle category change (multi-select)
@@ -555,26 +508,19 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     }
   };
 
-  // UPDATED: Enhanced apply filters with Redux location handling
+  // Enhanced apply filters - use callback with explicit values including selected locations
   const handleApplyFilters = () => {
-    console.log('🎯 FilterSection: Applying filters with Redux location state:', {
+    console.log('🎯 FilterSection: Applying filters with explicit values:', {
       startDate: localStartDate,
       endDate: localEndDate,
       selectedCategories,
       selectedLocations,
-      useRedux: !!onReduxLocationChange,
-      companyId: selectedCompanyId
+      useNewCallback: !!onApplyFiltersWithDates
     });
 
     // Check if at least one location is selected
     if (selectedLocations.length === 0) {
       console.warn('⚠️ No locations selected');
-      return;
-    }
-
-    // Check if company is selected (when using Redux)
-    if (onReduxLocationChange && !selectedCompanyId) {
-      console.warn('⚠️ No company selected');
       return;
     }
 
@@ -589,27 +535,8 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     
     // Use the new callback if available to pass explicit values including locations
     if (onApplyFiltersWithDates) {
-      console.log('🚀 Using new callback with Redux location state');
-      
-      // UPDATED: Convert location IDs back to location names for API compatibility
-      let locationNamesForApi: string[] = [];
-      
-      if (availableLocationObjects.length > 0 && onReduxLocationChange) {
-        // Convert location IDs to names for API
-        locationNamesForApi = selectedLocations.map(locationId => {
-          const location = availableLocationObjects.find(loc => loc.location_id.toString() === locationId);
-          return location ? location.location_name : locationId;
-        });
-        console.log('📍 FilterSection: Converted location IDs to names for API:', {
-          locationIds: selectedLocations,
-          locationNames: locationNamesForApi
-        });
-      } else {
-        // Use location values as-is (legacy mode)
-        locationNamesForApi = selectedLocations;
-      }
-      
-      onApplyFiltersWithDates(localStartDate, localEndDate, selectedCategories, locationNamesForApi);
+      console.log('🚀 Using new callback with explicit values including selected locations');
+      onApplyFiltersWithDates(localStartDate, localEndDate, selectedCategories, selectedLocations);
     } else {
       console.log('⚠️ Using legacy callback - may have timing issues');
       
@@ -643,25 +570,6 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     }
   };
 
-  // UPDATED: Determine which locations to use and convert for display
-  const displayLocations = React.useMemo(() => {
-    if (availableLocationObjects.length > 0) {
-      return availableLocationObjects.map(loc => loc.location_name);
-    }
-    return locations || [];
-  }, [availableLocationObjects, locations]);
-
-  // UPDATED: Convert selected location IDs to names for display
-  const displaySelectedLocations = React.useMemo(() => {
-    if (availableLocationObjects.length > 0 && onReduxLocationChange) {
-      return selectedLocations.map(id => {
-        const location = availableLocationObjects.find(loc => loc.location_id.toString() === id);
-        return location ? location.location_name : id;
-      });
-    }
-    return selectedLocations;
-  }, [selectedLocations, availableLocationObjects, onReduxLocationChange]);
-
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
       {/* Header */}
@@ -670,47 +578,20 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         <Typography variant="h6" sx={{ fontWeight: 500 }}>
           Filters
         </Typography>
-        {selectedCompanyId && (
-          <Chip 
-            icon={<BusinessIcon />}
-            label={`Company Selected`}
-            size="small"
-            color="primary"
-            variant="outlined"
-          />
-        )}
       </Box>
 
-      {/* Company Selection Alert */}
-      {onReduxLocationChange && !selectedCompanyId && (
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            Please select a company above to see available locations for filtering.
-          </Typography>
-        </Alert>
-      )}
-
-      {/* No locations available alert */}
-      {onReduxLocationChange && selectedCompanyId && displayLocations.length === 0 && (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            No locations available for the selected company.
-          </Typography>
-        </Alert>
-      )}
-
       <Grid container spacing={2}>
-        {/* Location filter - UPDATED to use Redux state */}
+        {/* Location filter - Using MultiSelect with NO default but initially all selected */}
         <Grid item xs={12} sm={6} md={4}>
           <MultiSelect
             id="location-select"
             label="Location"
-            options={displayLocations}
-            value={displaySelectedLocations}
+            options={locations}
+            value={selectedLocations}
             onChange={handleLocationChange}
             icon={<PlaceIcon />}
-            placeholder={selectedCompanyId ? "Select locations" : "Select company first"}
-            initiallySelectAll={initiallySelectAll && displayLocations.length > 0}
+            placeholder="Select locations"
+            initiallySelectAll={initiallySelectAll}
           />
         </Grid>
 
@@ -759,24 +640,24 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       </Grid>
 
       {/* Active filters display */}
-      {(displaySelectedLocations.length > 0 || selectedCategories.length > 0 || (localStartDate && localEndDate)) && (
+      {(selectedLocations.length > 0 || selectedCategories.length > 0 || (localStartDate && localEndDate)) && (
         <Box sx={{ mt: 2 }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             Active Filters:
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {displaySelectedLocations.length > 0 && (
+            {selectedLocations.length > 0 && (
               <Chip 
                 label={
-                  displaySelectedLocations.length === 1
-                    ? `Location: ${displaySelectedLocations[0]}`
-                    : `Locations: ${displaySelectedLocations.length} selected`
+                  selectedLocations.length === 1
+                    ? `Location: ${selectedLocations[0]}`
+                    : `Locations: ${selectedLocations.length} selected`
                 } 
                 color="primary" 
                 variant="outlined" 
                 size="small" 
                 icon={<PlaceIcon />} 
-                onDelete={() => handleLocationChange([])}
+                onDelete={() => setSelectedLocations([])}
               />
             )}
             
@@ -818,35 +699,17 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           variant="contained" 
           color="primary"
           onClick={handleApplyFilters}
-          disabled={displaySelectedLocations.length === 0 || (onReduxLocationChange && !selectedCompanyId)}
+          disabled={selectedLocations.length === 0}
           sx={{ px: 3 }}
         >
           Apply Filters 
         </Button>
-        {displaySelectedLocations.length === 0 && displayLocations.length > 0 && (
+        {selectedLocations.length === 0 && locations.length > 0 && (
           <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
             Please select at least one location
           </Typography>
         )}
-        {onReduxLocationChange && !selectedCompanyId && (
-          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-            Please select a company first
-          </Typography>
-        )}
       </Box>
-
-      {/* Debug Info - Show Redux state in development */}
-      {process.env.NODE_ENV === 'development' && onReduxLocationChange && (
-        <Alert severity="info" sx={{ mt: 2 }}>
-          <Typography variant="body2">
-            <strong>Debug - Redux Integration:</strong><br />
-            Company ID: {selectedCompanyId || 'None'}<br />
-            Redux Location IDs: [{selectedLocations.join(', ')}]<br />
-            Display Location Names: [{displaySelectedLocations.join(', ')}]<br />
-            Available Locations: [{displayLocations.join(', ')}]
-          </Typography>
-        </Alert>
-      )}
 
       {/* Date Range Picker Dialog */}
       <Dialog
