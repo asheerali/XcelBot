@@ -44,7 +44,8 @@ import {
   FilterList as FilterListIcon,
   CalendarToday as CalendarTodayIcon,
   Clear as ClearIcon,
-  Place as PlaceIcon
+  Place as PlaceIcon,
+  BugReport as BugReportIcon
 } from '@mui/icons-material';
 
 // Import Redux actions and selectors
@@ -269,16 +270,15 @@ const OrderIQDashboard = () => {
   const reduxSelectedCompanies = useSelector(selectSelectedCompanies);
   const reduxSelectedLocations = useSelector(selectSelectedLocations);
 
-  // NEW: Redux date range selectors
+  // ENHANCED: Redux date range selectors with debugging
   const reduxDateRange = useSelector(selectOrderIQDashboardDateRange);
   const hasDateRange = useSelector(selectHasOrderIQDashboardDateRange);
   
-  console.log('🔍 OrderIQ Redux Date Range:', {
-    reduxDateRange,
-    hasDateRange,
-    startDate: reduxDateRange?.startDate,
-    endDate: reduxDateRange?.endDate
-  });
+  console.log('🔍 DEBUG: OrderIQ Redux State Investigation:');
+  console.log('reduxDateRange:', reduxDateRange);
+  console.log('hasDateRange:', hasDateRange);
+  console.log('reduxDateRange type:', typeof reduxDateRange);
+  console.log('reduxDateRange keys:', reduxDateRange ? Object.keys(reduxDateRange) : 'null');
 
   // State management
   const [filters, setFilters] = useState({});
@@ -319,36 +319,114 @@ const OrderIQDashboard = () => {
     return reduxSelectedLocations.length > 0 ? reduxSelectedLocations[0] : null;
   });
 
-  // NEW: Computed date range display string
-  const dateRangeDisplayString = useMemo(() => {
-    if (!hasDateRange || !reduxDateRange.startDate || !reduxDateRange.endDate) {
-      return null;
-    }
-    
-    // Convert YYYY-MM-DD strings back to Date objects for display
-    const startDate = new Date(reduxDateRange.startDate + 'T00:00:00');
-    const endDate = new Date(reduxDateRange.endDate + 'T00:00:00');
-    
-    return `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
-  }, [hasDateRange, reduxDateRange]);
-
-  // NEW: Computed date range for API calls
+  // ENHANCED: Improved apiDateRange computation with comprehensive debugging
   const apiDateRange = useMemo(() => {
-    if (!hasDateRange || !reduxDateRange.startDate || !reduxDateRange.endDate) {
+    console.log('🔍 Computing apiDateRange with:', {
+      hasDateRange,
+      reduxDateRange,
+      startDate: reduxDateRange?.startDate,
+      endDate: reduxDateRange?.endDate
+    });
+
+    // Check all possible date range formats that might exist in Redux
+    if (!hasDateRange) {
+      console.log('❌ No date range in Redux (hasDateRange is false)');
       return null;
     }
-    
-    // Convert YYYY-MM-DD strings to Date objects and create the format expected by API
-    const startDate = new Date(reduxDateRange.startDate + 'T00:00:00');
-    const endDate = new Date(reduxDateRange.endDate + 'T00:00:00');
-    
-    return {
+
+    if (!reduxDateRange) {
+      console.log('❌ reduxDateRange is null/undefined');
+      return null;
+    }
+
+    // Try different possible field names that might exist in Redux
+    let startDateStr = null;
+    let endDateStr = null;
+
+    // Check various possible field names
+    if (reduxDateRange.startDate && reduxDateRange.endDate) {
+      startDateStr = reduxDateRange.startDate;
+      endDateStr = reduxDateRange.endDate;
+      console.log('✅ Found dates in startDate/endDate fields');
+    } else if (reduxDateRange.start_date && reduxDateRange.end_date) {
+      startDateStr = reduxDateRange.start_date;
+      endDateStr = reduxDateRange.end_date;
+      console.log('✅ Found dates in start_date/end_date fields');
+    } else if (reduxDateRange.startDateStr && reduxDateRange.endDateStr) {
+      startDateStr = reduxDateRange.startDateStr;
+      endDateStr = reduxDateRange.endDateStr;
+      console.log('✅ Found dates in startDateStr/endDateStr fields');
+    } else {
+      console.log('❌ No valid date fields found in reduxDateRange:', reduxDateRange);
+      return null;
+    }
+
+    if (!startDateStr || !endDateStr) {
+      console.log('❌ Missing start or end date:', { startDateStr, endDateStr });
+      return null;
+    }
+
+    // Ensure dates are in YYYY-MM-DD format
+    const formatDateString = (dateStr) => {
+      // If already in YYYY-MM-DD format, return as-is
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return dateStr;
+      }
+      
+      // If it's a Date object or Date string, convert it
+      try {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) {
+          throw new Error('Invalid date');
+        }
+        return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+      } catch (error) {
+        console.error('Error formatting date:', dateStr, error);
+        return null;
+      }
+    };
+
+    const formattedStartDate = formatDateString(startDateStr);
+    const formattedEndDate = formatDateString(endDateStr);
+
+    if (!formattedStartDate || !formattedEndDate) {
+      console.log('❌ Failed to format dates:', { startDateStr, endDateStr });
+      return null;
+    }
+
+    // Convert YYYY-MM-DD strings to Date objects for display
+    const startDate = new Date(formattedStartDate + 'T00:00:00');
+    const endDate = new Date(formattedEndDate + 'T00:00:00');
+
+    const result = {
       startDate: startDate,
       endDate: endDate,
-      startDateStr: reduxDateRange.startDate,
-      endDateStr: reduxDateRange.endDate
+      startDateStr: formattedStartDate,
+      endDateStr: formattedEndDate
     };
+
+    console.log('✅ Successfully computed apiDateRange:', result);
+    return result;
   }, [hasDateRange, reduxDateRange]);
+
+  // ENHANCED: Better date range display string computation
+  const dateRangeDisplayString = useMemo(() => {
+    console.log('🔍 Computing dateRangeDisplayString with apiDateRange:', apiDateRange);
+    
+    if (!apiDateRange || !apiDateRange.startDate || !apiDateRange.endDate) {
+      console.log('❌ No valid apiDateRange for display');
+      return null;
+    }
+    
+    try {
+      const displayString = `${apiDateRange.startDate.toLocaleDateString()} - ${apiDateRange.endDate.toLocaleDateString()}`;
+      console.log('✅ Date range display string:', displayString);
+      return displayString;
+    } catch (error) {
+      console.error('Error creating display string:', error);
+      return null;
+    }
+  }, [apiDateRange]);
 
   // Derived data for dropdowns
   const companies = companyLocations.map(item => ({
@@ -443,6 +521,21 @@ const OrderIQDashboard = () => {
         [itemId]: quantity
       }));
     }
+  };
+
+  // TESTING: Add a test function to manually set a date range for debugging
+  const testDateRange = () => {
+    console.log('🧪 Testing date range functionality...');
+    
+    const testRange = {
+      startDate: new Date('2024-01-01'),
+      endDate: new Date('2024-01-31'),
+      startDateStr: '2024-01-01',
+      endDateStr: '2024-01-31'
+    };
+    
+    console.log('Setting test date range:', testRange);
+    handleDateRangeSelect(testRange);
   };
 
   // Fetch company-locations data on component mount
@@ -783,14 +876,41 @@ const OrderIQDashboard = () => {
     // Data will auto-fetch via useEffect when both company and location are selected
   };
 
-  // NEW: Updated date range handler to use Redux
+  // ENHANCED: Updated date range handler to use Redux with better debugging
   const handleDateRangeSelect = (range) => {
     console.log('🔥 OrderIQ: handleDateRangeSelect called with:', range);
+    console.log('Range startDate type:', typeof range.startDate);
+    console.log('Range endDate type:', typeof range.endDate);
+    console.log('Range startDateStr:', range.startDateStr);
+    console.log('Range endDateStr:', range.endDateStr);
+    
+    // Ensure we have the proper format
+    let startDateStr, endDateStr;
+    
+    if (range.startDateStr && range.endDateStr) {
+      // Use the pre-formatted strings if available
+      startDateStr = range.startDateStr;
+      endDateStr = range.endDateStr;
+    } else if (range.startDate && range.endDate) {
+      // Format the Date objects
+      try {
+        startDateStr = range.startDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        endDateStr = range.endDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      } catch (error) {
+        console.error('Error formatting dates for Redux:', error);
+        return;
+      }
+    } else {
+      console.error('Invalid date range format:', range);
+      return;
+    }
+    
+    console.log('📤 Dispatching to Redux:', { startDateStr, endDateStr });
     
     // Dispatch to Redux to store the date range
     dispatch(setOrderIQDashboardDateRange({
-      startDate: range.startDate,
-      endDate: range.endDate
+      startDate: startDateStr,
+      endDate: endDateStr
     }));
     
     console.log('✅ OrderIQ: Date range dispatched to Redux, this will trigger data refresh via useEffect');
@@ -901,8 +1021,144 @@ const OrderIQDashboard = () => {
     setCurrentOrder([]);
   };
 
+  // ENHANCED: Order submission with comprehensive date range handling and debugging
+  const handleSubmitOrder = async (e) => {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
+    
+    if (!selectedCompanyId || !selectedLocationId) {
+      setError('Please select company and location before submitting order');
+      return;
+    }
+
+    if (currentOrder.length === 0) {
+      setError('Please add items to your order before submitting');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Get local time
+      const now = new Date();
+      const localTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString();
+      
+      // DEBUGGING: Log the date range state before using it
+      console.log('🔍 SUBMIT ORDER - Date Range Debug:');
+      console.log('hasDateRange:', hasDateRange);
+      console.log('reduxDateRange:', reduxDateRange);
+      console.log('apiDateRange:', apiDateRange);
+      console.log('apiDateRange type:', typeof apiDateRange);
+      
+      // Build order data with comprehensive date range handling
+      const orderData = {
+        company_id: parseInt(selectedCompanyId),
+        location_id: parseInt(selectedLocationId),
+        items: currentOrder.map(item => ({
+          item_id: item.id,
+          name: item.name,
+          category: item.category,
+          quantity: item.quantity,
+          unit_price: item.price,
+          unit: item.unit,
+          total_price: item.price * item.quantity
+        })),
+        total_amount: calculateOrderTotal(),
+        email_order: emailOrder,
+        order_date: localTime
+      };
+
+      // Add date range information if available
+      if (apiDateRange && apiDateRange.startDateStr && apiDateRange.endDateStr) {
+        console.log('✅ Adding date range to order data:', {
+          start: apiDateRange.startDateStr,
+          end: apiDateRange.endDateStr
+        });
+        
+        // Add multiple formats for backend compatibility
+        orderData.date_range = {
+          start_date: apiDateRange.startDateStr,
+          end_date: apiDateRange.endDateStr
+        };
+        orderData.start_date = apiDateRange.startDateStr;
+        orderData.end_date = apiDateRange.endDateStr;
+        orderData.has_date_range = true;
+        
+      } else {
+        console.log('❌ No valid date range to add to order data');
+        orderData.date_range = null;
+        orderData.start_date = null;
+        orderData.end_date = null;
+        orderData.has_date_range = false;
+      }
+
+      console.log('=== FINAL ORDER DATA FOR BACKEND ===');
+      console.log('Endpoint: /api/storeorders/orderitems');
+      console.log('Method: POST');
+      console.log('Has Date Range:', orderData.has_date_range);
+      if (orderData.has_date_range) {
+        console.log('Date Range:', orderData.date_range);
+        console.log('Start Date:', orderData.start_date);
+        console.log('End Date:', orderData.end_date);
+      }
+
+      console.log(`=== FINAL ORDER DATA FOR BACKEND ===
+      Endpoint: /api/storeorders/orderitems
+      Method: POST
+      Has Date Range: ${orderData.has_date_range}
+      ${orderData.has_date_range ? `Date Range: ${JSON.stringify(orderData.date_range)}
+      Start Date: ${orderData.start_date}
+      End Date: ${orderData.end_date}` : ''}
+      `);
+      console.log('Full Payload:', JSON.stringify(orderData, null, 2));
+      console.log('=====================================');
+
+      const response = await apiClient.post('/api/storeorders/orderitems', orderData);
+
+      console.log('Order submitted successfully:', response.data);
+      
+      showNotification('Order submitted successfully! 🎉');
+      setCurrentOrder([]);
+      setEmailOrder(false);
+      setError(null);
+      
+      // Refresh data
+      if (selectedCompanyId && selectedLocationId) {
+        console.log('🔄 Refreshing all data after order submission with date range:', {
+          companyId: selectedCompanyId,
+          locationId: selectedLocationId,
+          dateRange: apiDateRange,
+          hasDateRange: !!apiDateRange
+        });
+        fetchAvailableItems(selectedCompanyId, selectedLocationId, apiDateRange);
+        fetchRecentOrders(selectedCompanyId, selectedLocationId, apiDateRange);
+        fetchAnalytics(selectedCompanyId, selectedLocationId, apiDateRange);
+      }
+      
+    } catch (err) {
+      console.error('Error submitting order:', err);
+      let errorMessage = 'Failed to submit order.';
+      
+      if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Access forbidden. You do not have permission to submit orders.';
+      } else if (err.response?.data?.message) {
+        errorMessage = `Failed to submit order: ${err.response.data.message}`;
+      }
+      
+      setError(errorMessage);
+      showNotification(errorMessage, 'error');
+      
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ENHANCED: Order update with same comprehensive date range handling
   const handleSubmitOrderUpdate = async (e) => {
-    // Prevent any potential form submission/page refresh
     if (e && e.preventDefault) {
       e.preventDefault();
     }
@@ -919,12 +1175,19 @@ const OrderIQDashboard = () => {
 
     try {
       setLoading(true);
-      setError(null); // Clear any existing errors
+      setError(null);
       
-      // Get local time instead of UTC
+      // Get local time
       const now = new Date();
       const localTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString();
       
+      // DEBUGGING: Log the date range state for updates too
+      console.log('🔍 UPDATE ORDER - Date Range Debug:');
+      console.log('hasDateRange:', hasDateRange);
+      console.log('reduxDateRange:', reduxDateRange);
+      console.log('apiDateRange:', apiDateRange);
+      
+      // Build update data with same comprehensive date range handling
       const updateData = {
         order_id: orderToUpdate.id,
         company_id: parseInt(selectedCompanyId),
@@ -940,23 +1203,44 @@ const OrderIQDashboard = () => {
         })),
         total_amount: calculateOrderTotal(),
         email_order: emailOrder,
-        updated_date: localTime,
-        date_range: apiDateRange ? {
-          start_date: apiDateRange.startDateStr,
-          end_date: apiDateRange.endDateStr
-        } : null
+        updated_date: localTime
       };
 
-      console.log('=== ORDER UPDATE DATA BEING SENT TO BACKEND ===');
+      // Add date range information if available
+      if (apiDateRange && apiDateRange.startDateStr && apiDateRange.endDateStr) {
+        console.log('✅ Adding date range to update data:', {
+          start: apiDateRange.startDateStr,
+          end: apiDateRange.endDateStr
+        });
+        
+        // Add multiple formats for backend compatibility
+        updateData.date_range = {
+          start_date: apiDateRange.startDateStr,
+          end_date: apiDateRange.endDateStr
+        };
+        updateData.start_date = apiDateRange.startDateStr;
+        updateData.end_date = apiDateRange.endDateStr;
+        updateData.has_date_range = true;
+        
+      } else {
+        console.log('❌ No valid date range to add to update data');
+        updateData.date_range = null;
+        updateData.start_date = null;
+        updateData.end_date = null;
+        updateData.has_date_range = false;
+      }
+
+      console.log('=== ENHANCED ORDER UPDATE DATA BEING SENT TO BACKEND ===');
       console.log('Endpoint: /api/storeorders/orderupdate');
       console.log('Method: POST');
-      console.log('Local Time:', now.toLocaleString());
-      console.log('UTC Time:', now.toISOString());
-      console.log('Sending Local Time as ISO:', localTime);
-      console.log('Date Range being sent:', apiDateRange);
-      console.log('Has Date Range:', !!apiDateRange);
-      console.log('Data:', JSON.stringify(updateData, null, 2));
-      console.log('================================================');
+      console.log('Has Date Range:', updateData.has_date_range);
+      if (updateData.has_date_range) {
+        console.log('Date Range:', updateData.date_range);
+        console.log('Start Date fuck this bith:', updateData.start_date);
+        console.log('End Date:', updateData.end_date);
+      }
+      console.log('Full Update Payload:', JSON.stringify(updateData, null, 2));
+      console.log('========================================================');
 
       const response = await apiClient.post('/api/storeorders/orderupdate', updateData);
 
@@ -989,104 +1273,6 @@ const OrderIQDashboard = () => {
         errorMessage = 'Access forbidden. You do not have permission to update orders.';
       } else if (err.response?.data?.message) {
         errorMessage = `Failed to update order: ${err.response.data.message}`;
-      }
-      
-      setError(errorMessage);
-      showNotification(errorMessage, 'error');
-      
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmitOrder = async (e) => {
-    // Prevent any potential form submission/page refresh
-    if (e && e.preventDefault) {
-      e.preventDefault();
-    }
-    
-    if (!selectedCompanyId || !selectedLocationId) {
-      setError('Please select company and location before submitting order');
-      return;
-    }
-
-    if (currentOrder.length === 0) {
-      setError('Please add items to your order before submitting');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null); // Clear any existing errors
-      
-      // Get local time instead of UTC
-      const now = new Date();
-      const localTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString();
-      
-      const orderData = {
-        company_id: parseInt(selectedCompanyId),
-        location_id: parseInt(selectedLocationId),
-        items: currentOrder.map(item => ({
-          item_id: item.id,
-          name: item.name,
-          category: item.category,
-          quantity: item.quantity,
-          unit_price: item.price,
-          unit: item.unit,
-          total_price: item.price * item.quantity
-        })),
-        total_amount: calculateOrderTotal(),
-        email_order: emailOrder,
-        order_date: localTime,
-        date_range: apiDateRange ? {
-          start_date: apiDateRange.startDateStr,
-          end_date: apiDateRange.endDateStr
-        } : null
-      };
-
-      console.log('=== NEW ORDER DATA BEING SENT TO BACKEND ===');
-      console.log('Endpoint: /api/storeorders/orderitems');
-      console.log('Method: POST');
-      console.log('Local Time:', now.toLocaleString());
-      console.log('UTC Time:', now.toISOString());
-      console.log('Sending Local Time as ISO:', localTime);
-      console.log('Date Range being sent:', apiDateRange);
-      console.log('Has Date Range:', !!apiDateRange);
-      console.log('Data:', JSON.stringify(orderData, null, 2));
-      console.log('============================================');
-
-      const response = await apiClient.post('/api/storeorders/orderitems', orderData);
-
-      console.log('Order submitted successfully:', response.data);
-      
-      showNotification('Order submitted successfully! 🎉');
-      setCurrentOrder([]);
-      setEmailOrder(false);
-      setError(null);
-      
-      // Refresh all data after successful order submission
-      if (selectedCompanyId && selectedLocationId) {
-        console.log('🔄 Refreshing all data after order submission with date range:', {
-          companyId: selectedCompanyId,
-          locationId: selectedLocationId,
-          dateRange: apiDateRange,
-          hasDateRange: !!apiDateRange
-        });
-        fetchAvailableItems(selectedCompanyId, selectedLocationId, apiDateRange);
-        fetchRecentOrders(selectedCompanyId, selectedLocationId, apiDateRange);
-        fetchAnalytics(selectedCompanyId, selectedLocationId, apiDateRange);
-      }
-      
-    } catch (err) {
-      console.error('Error submitting order:', err);
-      let errorMessage = 'Failed to submit order.';
-      
-      if (err.response?.status === 401) {
-        errorMessage = 'Authentication failed. Please log in again.';
-      } else if (err.response?.status === 403) {
-        errorMessage = 'Access forbidden. You do not have permission to submit orders.';
-      } else if (err.response?.data?.message) {
-        errorMessage = `Failed to submit order: ${err.response.data.message}`;
       }
       
       setError(errorMessage);
@@ -1146,8 +1332,36 @@ const OrderIQDashboard = () => {
               selectedRange={dateRangeDisplayString}
               onClear={handleDateRangeClear}
             />
+            {/* DEBUG: Test button for date range functionality */}
+            <Button 
+              onClick={() => {
+                console.log('🧪 Testing date range...');
+                dispatch(setOrderIQDashboardDateRange({
+                  startDate: '2024-01-01',
+                  endDate: '2024-01-31'
+                }));
+              }} 
+              variant="outlined" 
+              size="small"
+              startIcon={<BugReportIcon />}
+              sx={{ ml: 1 }}
+            >
+              🧪 Test Date Range
+            </Button>
           </Box>
         </Box>
+
+        {/* Debug Info Panel */}
+        <Card sx={{ p: 2, mb: 3, bgcolor: '#f5f5f5', borderLeft: '4px solid #2196f3' }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+            🔍 Debug Info:
+          </Typography>
+          <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+            hasDateRange: {hasDateRange ? 'true' : 'false'} | 
+            reduxDateRange: {reduxDateRange ? JSON.stringify(reduxDateRange) : 'null'} | 
+            apiDateRange: {apiDateRange ? JSON.stringify(apiDateRange) : 'null'}
+          </Typography>
+        </Card>
 
         {/* Filters Section */}
         <Card sx={{ p: 3, borderRadius: 2, mb: 3 }}>
