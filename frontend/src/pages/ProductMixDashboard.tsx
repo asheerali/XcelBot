@@ -1836,39 +1836,14 @@ export default function ProductMixDashboard() {
               />
             </Box>
           )}
+      
           
-          {/* Location count info */}
-          {selectedCompany && availableLocations.length > 0 && (
-            <Alert severity="info" sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                <strong>{selectedCompanyName}</strong> has {availableLocations.length} location{availableLocations.length > 1 ? 's' : ''} available.
-                Location selection is handled in the filters section below.
-              </Typography>
-            </Alert>
-          )}
-          
-          {/* Note about location selection */}
-          <Alert severity="success" sx={{ mt: 2 }}>
-            <Typography variant="body2">
-              <strong>Note:</strong> Location selection is managed in the Filters section below. 
-              Redux State - Company: [{selectedCompanies.join(', ')}]
-            </Typography>
-          </Alert>
+      
         </CardContent>
       </Card>
 
       {/* Company Selection Alert */}
-      {selectedCompany && (
-        <Alert 
-          severity="info" 
-          sx={{ mb: 3, width: "100%" }}
-          icon={<BusinessIcon />}
-        >
-          <Typography variant="body2">
-            <strong>Selected Company:</strong> {selectedCompanyName} (ID: {selectedCompany})
-          </Typography>
-        </Alert>
-      )}
+    
 
       {/* Alert message when no data is available */}
       {!currentProductMixData && (
@@ -1982,13 +1957,6 @@ export default function ProductMixDashboard() {
             </Alert>
           )}
 
-          {/* Auto-Filter Info */}
-          <Alert severity="info" sx={{ mb: 3 }}>
-            <Typography variant="body2">
-              <strong>Auto-Filter Mode:</strong> Data will update automatically when you change any filter. 
-              Company and location selection are required, other filters are optional.
-            </Typography>
-          </Alert>
 
           <Grid container spacing={2} sx={{ width: "100%" }}>
             {/* Location filter - UPDATED to use Redux state */}
