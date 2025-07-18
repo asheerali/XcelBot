@@ -924,6 +924,21 @@ def get_analytics_dashboard(
     try:
         storeorders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
 
+               # Apply date filtering if start_date and end_date are provided
+        if start_date and end_date:
+            try:
+                start = datetime.strptime(start_date, "%Y-%m-%d").date()
+                end = datetime.strptime(end_date, "%Y-%m-%d").date()
+                print("Filtering store orders between dates:", start, end)
+                storeorders = [
+                    order for order in storeorders
+                    if (order.updated_at or order.created_at)
+                    and start <= (order.updated_at or order.created_at).date() <= end
+                ]
+            except ValueError:
+                return {"message": "Invalid date format. Use YYYY-MM-DD", "data": []}
+        
+        
         if not storeorders:
             return {
                 "message": "No store orders found for this company and location", 
@@ -1026,6 +1041,8 @@ def get_analytics_dashboard(
 def get_analytics_dashboard(
     company_id: int, 
     location_id: int, 
+    start_date: str = Query(None),
+    end_date: str = Query(None),
     db: Session = Depends(get_db)
 ):
     """Get total sales, total orders, average order value, and daily analytics tables"""
@@ -1036,6 +1053,23 @@ def get_analytics_dashboard(
 
         if not isinstance(storeorders, list):
             storeorders = [storeorders] if storeorders else []
+
+        # Apply date filtering if start_date and end_date are provided
+        if start_date and end_date:
+            try:
+                start = datetime.strptime(start_date, "%Y-%m-%d").date()
+                end = datetime.strptime(end_date, "%Y-%m-%d").date()
+                print("Filtering store orders between dates:", start, end)
+                storeorders = [
+                    order for order in storeorders
+                    if (order.updated_at or order.created_at)
+                    and start <= (order.updated_at or order.created_at).date() <= end
+                ]
+            except ValueError:
+                return {"message": "Invalid date format. Use YYYY-MM-DD", "data": []}
+        
+        
+
 
         total_sales = 0.0
         # Build rows with date and order_sales
@@ -1088,12 +1122,33 @@ def get_analytics_dashboard(
 
 
 @router.get("/consolidatedproduction/{company_id}")
-def get_consolidated_production(company_id: int, db: Session = Depends(get_db)):
+def get_consolidated_production(company_id: int, 
+                                start_date: str = Query(None),
+                                end_date: str = Query(None),
+                                db: Session = Depends(get_db)):
     try:
         storeorders = storeorders_crud.get_storeorders_by_company(db, company_id)
+        
+        
         if not storeorders:
             return {"message": "No store orders found for this company", "data": []}
 
+
+        # Apply date filtering if start_date and end_date are provided
+        if start_date and end_date:
+            try:
+                start = datetime.strptime(start_date, "%Y-%m-%d").date()
+                end = datetime.strptime(end_date, "%Y-%m-%d").date()
+                print("Filtering store orders between dates:", start, end)
+                storeorders = [
+                    order for order in storeorders
+                    if (order.updated_at or order.created_at)
+                    and start <= (order.updated_at or order.created_at).date() <= end
+                ]
+            except ValueError:
+                return {"message": "Invalid date format. Use YYYY-MM-DD", "data": []}
+        
+        
         # Get all unique locations
         location_ids = list(set(order.location_id for order in storeorders if order.location_id))
         locations = db.query(Store).filter(Store.id.in_(location_ids)).all()
@@ -1144,12 +1199,32 @@ def get_consolidated_production(company_id: int, db: Session = Depends(get_db)):
 def get_financial_summary(
     company_id: int, 
     location_id: int, 
+    start_date: str = Query(None),
+    end_date: str = Query(None),
     db: Session = Depends(get_db)
 ):
     
     """Get total sales, total orders, average order value, and daily analytics tables"""
     try:
         storeorders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
+
+
+
+        # Apply date filtering if start_date and end_date are provided
+        if start_date and end_date:
+            try:
+                start = datetime.strptime(start_date, "%Y-%m-%d").date()
+                end = datetime.strptime(end_date, "%Y-%m-%d").date()
+                print("Filtering store orders between dates:", start, end)
+                storeorders = [
+                    order for order in storeorders
+                    if (order.updated_at or order.created_at)
+                    and start <= (order.updated_at or order.created_at).date() <= end
+                ]
+            except ValueError:
+                return {"message": "Invalid date format. Use YYYY-MM-DD", "data": []}
+        
+        
 
         if not storeorders:
             return {
@@ -1279,12 +1354,30 @@ def get_financial_summary(
 @router.get("/companysummary/{company_id}")
 def get_company_summary(
     company_id: int,
+    start_date: str = Query(None),
+    end_date: str = Query(None),
     db: Session = Depends(get_db)
 ):
     """Get cost breakdown by store and cost summary table (date vs store matrix)"""
     try:
         storeorders = storeorders_crud.get_storeorders_by_company(db, company_id)
 
+
+        # Apply date filtering if start_date and end_date are provided
+        if start_date and end_date:
+            try:
+                start = datetime.strptime(start_date, "%Y-%m-%d").date()
+                end = datetime.strptime(end_date, "%Y-%m-%d").date()
+                print("Filtering store orders between dates:", start, end)
+                storeorders = [
+                    order for order in storeorders
+                    if (order.updated_at or order.created_at)
+                    and start <= (order.updated_at or order.created_at).date() <= end
+                ]
+            except ValueError:
+                return {"message": "Invalid date format. Use YYYY-MM-DD", "data": []}
+        
+        
         if not storeorders:
             return {
                 "message": "No store orders found for this company",
