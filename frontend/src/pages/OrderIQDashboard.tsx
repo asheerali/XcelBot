@@ -55,6 +55,18 @@ import {
   selectSelectedLocations
 } from '../store/slices/masterFileSlice'; // Adjust path as needed
 
+// Import OrderIQ Dashboard date range Redux actions and selectors
+import {
+  setOrderIQDashboardDateRange,
+  setOrderIQDashboardStartDate,
+  setOrderIQDashboardEndDate,
+  clearOrderIQDashboardDateRange,
+  selectOrderIQDashboardStartDate,
+  selectOrderIQDashboardEndDate,
+  selectOrderIQDashboardDateRange,
+  selectHasOrderIQDashboardDateRange
+} from '../store/slices/dateRangeSlice'; // Adjust path as needed
+
 import { API_URL_Local } from '../constants';
 import apiClient from "../api/axiosConfig";
 
@@ -62,9 +74,8 @@ import apiClient from "../api/axiosConfig";
 import DateRangeSelector from '../components/DateRangeSelector'; // Adjust path as needed
 
 // DateRangeSelector Button Component
-const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
+const DateRangeSelectorButton = ({ onDateRangeSelect, selectedRange, onClear }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedRange, setSelectedRange] = useState('Date Range');
   const [tempRange, setTempRange] = useState(null);
 
   const handleOpen = () => setIsOpen(true);
@@ -79,9 +90,6 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
 
   const handleApply = () => {
     if (tempRange) {
-      const startDate = tempRange.startDate.toLocaleDateString();
-      const endDate = tempRange.endDate.toLocaleDateString();
-      setSelectedRange(`${startDate} - ${endDate}`);
       onDateRangeSelect(tempRange);
     }
     setIsOpen(false);
@@ -89,8 +97,7 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
 
   const handleClear = (event) => {
     event.stopPropagation();
-    setSelectedRange('Date Range');
-    onDateRangeSelect(null);
+    onClear();
   };
 
   return (
@@ -98,7 +105,7 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
       <Button
         variant="outlined"
         startIcon={<CalendarTodayIcon />}
-        endIcon={selectedRange !== 'Date Range' && (
+        endIcon={selectedRange && (
           <IconButton 
             size="small" 
             onClick={handleClear}
@@ -119,7 +126,7 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
           }
         }}
       >
-        {selectedRange}
+        {selectedRange || 'Date Range'}
       </Button>
 
       <Dialog
@@ -262,6 +269,17 @@ const OrderIQDashboard = () => {
   const reduxSelectedCompanies = useSelector(selectSelectedCompanies);
   const reduxSelectedLocations = useSelector(selectSelectedLocations);
 
+  // NEW: Redux date range selectors
+  const reduxDateRange = useSelector(selectOrderIQDashboardDateRange);
+  const hasDateRange = useSelector(selectHasOrderIQDashboardDateRange);
+  
+  console.log('🔍 OrderIQ Redux Date Range:', {
+    reduxDateRange,
+    hasDateRange,
+    startDate: reduxDateRange?.startDate,
+    endDate: reduxDateRange?.endDate
+  });
+
   // State management
   const [filters, setFilters] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -285,9 +303,6 @@ const OrderIQDashboard = () => {
   const [loadingAISuggestions, setLoadingAISuggestions] = useState(false);
   const [error, setError] = useState(null);
   
-  // Date range selector state
-  const [selectedDateRange, setSelectedDateRange] = useState(null);
-
   // Success notification state
   const [notification, setNotification] = useState({
     open: false,
@@ -303,6 +318,37 @@ const OrderIQDashboard = () => {
   const [selectedLocationId, setSelectedLocationId] = useState(() => {
     return reduxSelectedLocations.length > 0 ? reduxSelectedLocations[0] : null;
   });
+
+  // NEW: Computed date range display string
+  const dateRangeDisplayString = useMemo(() => {
+    if (!hasDateRange || !reduxDateRange.startDate || !reduxDateRange.endDate) {
+      return null;
+    }
+    
+    // Convert YYYY-MM-DD strings back to Date objects for display
+    const startDate = new Date(reduxDateRange.startDate + 'T00:00:00');
+    const endDate = new Date(reduxDateRange.endDate + 'T00:00:00');
+    
+    return `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
+  }, [hasDateRange, reduxDateRange]);
+
+  // NEW: Computed date range for API calls
+  const apiDateRange = useMemo(() => {
+    if (!hasDateRange || !reduxDateRange.startDate || !reduxDateRange.endDate) {
+      return null;
+    }
+    
+    // Convert YYYY-MM-DD strings to Date objects and create the format expected by API
+    const startDate = new Date(reduxDateRange.startDate + 'T00:00:00');
+    const endDate = new Date(reduxDateRange.endDate + 'T00:00:00');
+    
+    return {
+      startDate: startDate,
+      endDate: endDate,
+      startDateStr: reduxDateRange.startDate,
+      endDateStr: reduxDateRange.endDate
+    };
+  }, [hasDateRange, reduxDateRange]);
 
   // Derived data for dropdowns
   const companies = companyLocations.map(item => ({
@@ -329,20 +375,27 @@ const OrderIQDashboard = () => {
     }
   }, [reduxSelectedCompanies, reduxSelectedLocations]);
 
-  // Auto-fetch data when both company and location are available and company-locations are loaded
+  // Auto-fetch data when company, location, OR date range changes
   useEffect(() => {
-    if (selectedCompanyId && selectedLocationId && companyLocations.length > 0 && availableItems.length === 0) {
-      console.log('OrderIQ: Auto-fetching data:', { 
+    if (selectedCompanyId && selectedLocationId && companyLocations.length > 0) {
+      console.log('🚀 OrderIQ: Auto-fetching data due to filter change:', { 
         companyId: selectedCompanyId, 
-        locationId: selectedLocationId 
+        locationId: selectedLocationId,
+        dateRange: apiDateRange,
+        companyLocationsLoaded: companyLocations.length > 0
       });
       
-      // Only auto-fetch if we don't already have data
-      fetchAvailableItems(selectedCompanyId, selectedLocationId);
-      fetchRecentOrders(selectedCompanyId, selectedLocationId);
-      fetchAnalytics(selectedCompanyId, selectedLocationId);
+      fetchAvailableItems(selectedCompanyId, selectedLocationId, apiDateRange);
+      fetchRecentOrders(selectedCompanyId, selectedLocationId, apiDateRange);
+      fetchAnalytics(selectedCompanyId, selectedLocationId, apiDateRange);
+    } else {
+      console.log('⏸️ OrderIQ: Not fetching data:', {
+        selectedCompanyId: !!selectedCompanyId,
+        selectedLocationId: !!selectedLocationId,
+        companyLocationsLoaded: companyLocations.length > 0
+      });
     }
-  }, [selectedCompanyId, selectedLocationId, companyLocations.length]);
+  }, [selectedCompanyId, selectedLocationId, companyLocations.length, apiDateRange]);
 
   // Initialize item quantities when available items change
   useEffect(() => {
@@ -490,14 +543,13 @@ const OrderIQDashboard = () => {
           : 0,
         qty: order.items_ordered?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0,
         date: new Date(order.created_at).toLocaleString('en-US', {
-  month: 'numeric',
-  day: 'numeric', 
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: true
-}),
-        // date: new Date(order.created_at).toLocaleDateString(),
+          month: 'numeric',
+          day: 'numeric', 
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        }),
         created_at: order.created_at,
         company_name: order.company_name,
         location_name: order.location_name,
@@ -574,16 +626,26 @@ const OrderIQDashboard = () => {
     }
   };
 
-  const fetchAvailableItems = async (companyId, locationId) => {
+  const fetchAvailableItems = async (companyId, locationId, dateRange = null) => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log('Fetching available items...');
+      console.log('📦 Fetching available items for:', { companyId, locationId, dateRange });
       
-      const response = await apiClient.get(`/api/masterfile/availableitems/${companyId}/${locationId}`);
+      // Build URL with date range parameters if provided
+      let url = `/api/masterfile/availableitems/${companyId}/${locationId}`;
+      const params = new URLSearchParams();
       
-      console.log('Available items data:', response.data);
+      if (dateRange && dateRange.startDateStr && dateRange.endDateStr) {
+        params.append('start_date', dateRange.startDateStr);
+        params.append('end_date', dateRange.endDateStr);
+        url += `?${params.toString()}`;
+      }
+      
+      const response = await apiClient.get(url);
+      
+      console.log('📦 Available items API response:', response.data);
       
       // Check if data has expected structure
       if (!response.data.data || !response.data.data.dataframe || !Array.isArray(response.data.data.dataframe)) {
@@ -601,19 +663,26 @@ const OrderIQDashboard = () => {
         previousPrice: item.column5 !== "-" && item.column5 ? parseFloat(item.column5) : null
       }));
       
+      console.log('📦 Transformed items:', transformedItems.length, 'items');
       setAvailableItems(transformedItems);
-      console.log('Transformed items:', transformedItems);
+      
     } catch (err) {
-      console.error('Error fetching available items:', err);
+      console.error('❌ Error fetching available items:', err);
       let errorMessage = 'Failed to load available items.';
       
       if (err.response?.status === 401) {
         errorMessage = 'Authentication failed. Please log in again.';
       } else if (err.response?.status === 403) {
         errorMessage = 'Access forbidden. You do not have permission to view available items.';
+      } else if (err.response?.data?.message) {
+        errorMessage = `API Error: ${err.response.data.message}`;
+      } else if (err.message) {
+        errorMessage = `Error: ${err.message}`;
       }
       
       setError(errorMessage);
+      setAvailableItems([]); // Clear items on error
+      
     } finally {
       setLoading(false);
     }
@@ -711,49 +780,26 @@ const OrderIQDashboard = () => {
     // Update Redux - store as array to match the existing pattern
     dispatch(setSelectedLocations(locationId ? [locationId] : []));
     
-    // Don't auto-fetch data - wait for user to click Apply Filters
+    // Data will auto-fetch via useEffect when both company and location are selected
   };
 
-  const handleApplyFilters = () => {
-    console.log('OrderIQ: Applying filters:', { selectedCompanyId, selectedLocationId, selectedDateRange });
-    
-    // Ensure date range is properly formatted for backend
-    let formattedDateRange = null;
-    if (selectedDateRange && selectedDateRange.startDate && selectedDateRange.endDate) {
-      formattedDateRange = {
-        startDateStr: selectedDateRange.startDateStr || selectedDateRange.startDate.toISOString().split('T')[0],
-        endDateStr: selectedDateRange.endDateStr || selectedDateRange.endDate.toISOString().split('T')[0],
-        startDate: selectedDateRange.startDate,
-        endDate: selectedDateRange.endDate
-      };
-      console.log('Formatted date range for API:', formattedDateRange);
-    }
-    
-    // Fetch available items, recent orders, and analytics when both company and location are selected
-    if (selectedCompanyId && selectedLocationId) {
-      fetchAvailableItems(selectedCompanyId, selectedLocationId);
-      fetchRecentOrders(selectedCompanyId, selectedLocationId, formattedDateRange);
-      fetchAnalytics(selectedCompanyId, selectedLocationId, formattedDateRange);
-    } else {
-      setError('Please select both a company and location to view available items and recent orders');
-    }
-  };
-
-  // Date range handler - Updated to NOT automatically apply filters when date range changes
+  // NEW: Updated date range handler to use Redux
   const handleDateRangeSelect = (range) => {
-    // Ensure the range has the proper format for backend
-    const formattedRange = {
+    console.log('🔥 OrderIQ: handleDateRangeSelect called with:', range);
+    
+    // Dispatch to Redux to store the date range
+    dispatch(setOrderIQDashboardDateRange({
       startDate: range.startDate,
-      endDate: range.endDate,
-      startDateStr: range.startDateStr || range.startDate.toISOString().split('T')[0],
-      endDateStr: range.endDateStr || range.endDate.toISOString().split('T')[0]
-    };
+      endDate: range.endDate
+    }));
     
-    setSelectedDateRange(formattedRange);
-    console.log('Selected date range for orders:', formattedRange);
-    
-    // DON'T auto-apply filters - wait for user to click Apply Filters button
-    console.log('Date range selected - waiting for user to click Apply Filters');
+    console.log('✅ OrderIQ: Date range dispatched to Redux, this will trigger data refresh via useEffect');
+  };
+
+  // NEW: Handle date range clear
+  const handleDateRangeClear = () => {
+    console.log('🧹 OrderIQ: Clearing date range from Redux, this will trigger data refresh');
+    dispatch(clearOrderIQDashboardDateRange());
   };
 
   // UPDATED: Now uses quantity from itemQuantities state
@@ -855,7 +901,12 @@ const OrderIQDashboard = () => {
     setCurrentOrder([]);
   };
 
-  const handleSubmitOrderUpdate = async () => {
+  const handleSubmitOrderUpdate = async (e) => {
+    // Prevent any potential form submission/page refresh
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
+    
     if (!orderToUpdate) {
       setError('No order selected for update');
       return;
@@ -868,6 +919,7 @@ const OrderIQDashboard = () => {
 
     try {
       setLoading(true);
+      setError(null); // Clear any existing errors
       
       // Get local time instead of UTC
       const now = new Date();
@@ -889,9 +941,9 @@ const OrderIQDashboard = () => {
         total_amount: calculateOrderTotal(),
         email_order: emailOrder,
         updated_date: localTime,
-        date_range: selectedDateRange ? {
-          start_date: selectedDateRange.startDateStr || selectedDateRange.startDate?.toISOString(),
-          end_date: selectedDateRange.endDateStr || selectedDateRange.endDate?.toISOString()
+        date_range: apiDateRange ? {
+          start_date: apiDateRange.startDateStr,
+          end_date: apiDateRange.endDateStr
         } : null
       };
 
@@ -901,6 +953,8 @@ const OrderIQDashboard = () => {
       console.log('Local Time:', now.toLocaleString());
       console.log('UTC Time:', now.toISOString());
       console.log('Sending Local Time as ISO:', localTime);
+      console.log('Date Range being sent:', apiDateRange);
+      console.log('Has Date Range:', !!apiDateRange);
       console.log('Data:', JSON.stringify(updateData, null, 2));
       console.log('================================================');
 
@@ -912,10 +966,17 @@ const OrderIQDashboard = () => {
       handleCancelOrderUpdate();
       setError(null);
       
-      // Refresh recent orders and analytics after successful update
+      // Refresh all data after successful order update
       if (selectedCompanyId && selectedLocationId) {
-        fetchRecentOrders(selectedCompanyId, selectedLocationId, selectedDateRange);
-        fetchAnalytics(selectedCompanyId, selectedLocationId, selectedDateRange);
+        console.log('🔄 Refreshing all data after order update with date range:', {
+          companyId: selectedCompanyId,
+          locationId: selectedLocationId,
+          dateRange: apiDateRange,
+          hasDateRange: !!apiDateRange
+        });
+        fetchAvailableItems(selectedCompanyId, selectedLocationId, apiDateRange);
+        fetchRecentOrders(selectedCompanyId, selectedLocationId, apiDateRange);
+        fetchAnalytics(selectedCompanyId, selectedLocationId, apiDateRange);
       }
       
     } catch (err) {
@@ -931,13 +992,19 @@ const OrderIQDashboard = () => {
       }
       
       setError(errorMessage);
+      showNotification(errorMessage, 'error');
       
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmitOrder = async () => {
+  const handleSubmitOrder = async (e) => {
+    // Prevent any potential form submission/page refresh
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
+    
     if (!selectedCompanyId || !selectedLocationId) {
       setError('Please select company and location before submitting order');
       return;
@@ -950,6 +1017,7 @@ const OrderIQDashboard = () => {
 
     try {
       setLoading(true);
+      setError(null); // Clear any existing errors
       
       // Get local time instead of UTC
       const now = new Date();
@@ -970,9 +1038,9 @@ const OrderIQDashboard = () => {
         total_amount: calculateOrderTotal(),
         email_order: emailOrder,
         order_date: localTime,
-        date_range: selectedDateRange ? {
-          start_date: selectedDateRange.startDateStr || selectedDateRange.startDate?.toISOString(),
-          end_date: selectedDateRange.endDateStr || selectedDateRange.endDate?.toISOString()
+        date_range: apiDateRange ? {
+          start_date: apiDateRange.startDateStr,
+          end_date: apiDateRange.endDateStr
         } : null
       };
 
@@ -982,6 +1050,8 @@ const OrderIQDashboard = () => {
       console.log('Local Time:', now.toLocaleString());
       console.log('UTC Time:', now.toISOString());
       console.log('Sending Local Time as ISO:', localTime);
+      console.log('Date Range being sent:', apiDateRange);
+      console.log('Has Date Range:', !!apiDateRange);
       console.log('Data:', JSON.stringify(orderData, null, 2));
       console.log('============================================');
 
@@ -994,10 +1064,17 @@ const OrderIQDashboard = () => {
       setEmailOrder(false);
       setError(null);
       
-      // Refresh recent orders and analytics after successful submission
+      // Refresh all data after successful order submission
       if (selectedCompanyId && selectedLocationId) {
-        fetchRecentOrders(selectedCompanyId, selectedLocationId, selectedDateRange);
-        fetchAnalytics(selectedCompanyId, selectedLocationId, selectedDateRange);
+        console.log('🔄 Refreshing all data after order submission with date range:', {
+          companyId: selectedCompanyId,
+          locationId: selectedLocationId,
+          dateRange: apiDateRange,
+          hasDateRange: !!apiDateRange
+        });
+        fetchAvailableItems(selectedCompanyId, selectedLocationId, apiDateRange);
+        fetchRecentOrders(selectedCompanyId, selectedLocationId, apiDateRange);
+        fetchAnalytics(selectedCompanyId, selectedLocationId, apiDateRange);
       }
       
     } catch (err) {
@@ -1013,6 +1090,7 @@ const OrderIQDashboard = () => {
       }
       
       setError(errorMessage);
+      showNotification(errorMessage, 'error');
       
     } finally {
       setLoading(false);
@@ -1063,33 +1141,11 @@ const OrderIQDashboard = () => {
           </Box>
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {selectedDateRange && (
-              <Chip
-                label={`${selectedDateRange.startDate?.toLocaleDateString()} - ${selectedDateRange.endDate?.toLocaleDateString()}`}
-                color="primary"
-                size="small"
-                onDelete={() => {
-                  setSelectedDateRange(null);
-                  // Clear date range but don't auto-fetch data
-                }}
-                sx={{ fontSize: '0.75rem' }}
-              />
-            )}
-            <DateRangeSelectorButton onDateRangeSelect={handleDateRangeSelect} />
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleApplyFilters}
-              disabled={!selectedCompanyId || !selectedLocationId || loading || loadingOrders}
-              startIcon={(loading || loadingOrders) ? <CircularProgress size={16} /> : <FilterListIcon />}
-              sx={{ 
-                minWidth: 140,
-                height: 44,
-                fontWeight: 600
-              }}
-            >
-              {(loading || loadingOrders) ? 'Loading...' : 'Apply Filters'}
-            </Button>
+            <DateRangeSelectorButton 
+              onDateRangeSelect={handleDateRangeSelect}
+              selectedRange={dateRangeDisplayString}
+              onClear={handleDateRangeClear}
+            />
           </Box>
         </Box>
 
@@ -1173,79 +1229,30 @@ const OrderIQDashboard = () => {
                 </FormControl>
               </Grid>
 
-              {/* Apply Filters Button */}
+              {/* Status Display */}
               <Grid item xs={12}>
-                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-start', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <Button
-                    variant="contained"
-                    onClick={handleApplyFilters}
-                    disabled={!selectedCompanyId || !selectedLocationId || loading || loadingOrders}
-                    startIcon={(loading || loadingOrders) ? <CircularProgress size={20} /> : <FilterListIcon />}
-                    sx={{ minWidth: 220 }}
-                  >
-                    {(loading || loadingOrders) ? 'Loading Data...' : 'Apply Filters & Load Data'}
-                  </Button>
-                  
-                  {(selectedCompanyId || selectedLocationId || selectedDateRange) && (
-                    <Button
-                      variant="outlined"
-                      onClick={() => {
-                        setSelectedCompanyId(null);
-                        setSelectedLocationId(null);
-                        setFilters({});
-                        setAvailableItems([]);
-                        setRecentOrders([]);
-                        setSelectedDateRange(null);
-                        setAnalyticsData(null);
-                        
-                        // Clear Redux state
-                        dispatch(setSelectedCompanies([]));
-                        dispatch(setSelectedLocations([]));
-                      }}
-                    >
-                      Clear All Filters
-                    </Button>
-                  )}
-
-                  {/* Show selected filters info */}
-                  {selectedCompanyId && (
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                      <Chip 
-                        label={`Company: ${companies.find(c => c.id.toString() === selectedCompanyId)?.name}`}
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                      />
-                      {selectedLocationId && (
-                        <Chip 
-                          label={`Location: ${availableLocationsForCompany.find(l => l.location_id.toString() === selectedLocationId)?.location_name}`}
-                          size="small"
-                          color="secondary"
-                          variant="outlined"
-                        />
-                      )}
-                      {selectedDateRange && (
-                        <Chip 
-                          label={`Date: ${selectedDateRange.startDate?.toLocaleDateString()} - ${selectedDateRange.endDate?.toLocaleDateString()}`}
-                          size="small"
-                          color="info"
-                          variant="outlined"
-                        />
-                      )}
-                    </Box>
-                  )}
-                </Box>
-
                 {(!selectedCompanyId || !selectedLocationId) && (
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    Please select both a company and location, then click "Apply Filters" to load available items and recent orders.
+                    Please select both a company and location to automatically load available items and recent orders.
                   </Typography>
                 )}
 
-                {/* Show ready to apply status */}
-                {selectedCompanyId && selectedLocationId && availableItems.length === 0 && recentOrders.length === 0 && !loading && !loadingOrders && (
+                {/* Show loading status */}
+                {selectedCompanyId && selectedLocationId && (loading || loadingOrders) && (
                   <Typography variant="body2" color="primary.main" sx={{ mt: 1, fontWeight: 500 }}>
-                    ✅ Ready to load data{selectedDateRange ? ' with date filter' : ''}. Click "Apply Filters & Load Data" to fetch items and recent orders.
+                    🔄 Loading data for {companies.find(c => c.id.toString() === selectedCompanyId)?.name}...
+                  </Typography>
+                )}
+
+                {/* Show data loaded status */}
+                {selectedCompanyId && selectedLocationId && !loading && !loadingOrders && availableItems.length > 0 && (
+                  <Typography variant="body2" color="success.main" sx={{ mt: 1, fontWeight: 500 }}>
+                    ✅ Data loaded for {companies.find(c => c.id.toString() === selectedCompanyId)?.name}
+                    {hasDateRange && (
+                      <span style={{ color: '#666', fontWeight: 400 }}>
+                        {' '}with date filter: {dateRangeDisplayString}
+                      </span>
+                    )}
                   </Typography>
                 )}
 
@@ -1272,14 +1279,16 @@ const OrderIQDashboard = () => {
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                   Store Analytics
                 </Typography>
-                {selectedDateRange && (
-                  <Chip 
-                    label="Filtered by date range" 
-                    size="small" 
-                    variant="outlined" 
-                    color="primary"
-                  />
-                )}
+                <Box sx={{ minWidth: 140 }}>
+                  {hasDateRange && (
+                    <Chip 
+                      label="Filtered by date range" 
+                      size="small" 
+                      variant="outlined" 
+                      color="primary"
+                    />
+                  )}
+                </Box>
               </Box>
               
               <Grid container spacing={2}>
@@ -1337,14 +1346,16 @@ const OrderIQDashboard = () => {
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                   🏆 Top Items
                 </Typography>
-                {selectedDateRange && (
-                  <Chip 
-                    label="Date filtered" 
-                    size="small" 
-                    variant="outlined" 
-                    color="primary"
-                  />
-                )}
+                <Box sx={{ minWidth: 100 }}>
+                  {hasDateRange && (
+                    <Chip 
+                      label="Date filtered" 
+                      size="small" 
+                      variant="outlined" 
+                      color="primary"
+                    />
+                  )}
+                </Box>
               </Box>
               
               <List>
@@ -1393,22 +1404,24 @@ const OrderIQDashboard = () => {
                 {loadingOrders && (
                   <CircularProgress size={20} />
                 )}
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 200 }}>
                   {selectedCompanyId && selectedLocationId 
                     ? recentOrders.length === 0 && !loadingOrders
-                      ? 'Click "Apply Filters & Load Data" above to load recent orders.'
+                      ? 'No orders found for the selected filters.'
                       : `Recent orders for ${companies.find(c => c.id.toString() === selectedCompanyId)?.name} - ${availableLocationsForCompany.find(l => l.location_id.toString() === selectedLocationId)?.location_name}`
                     : 'Select company and location to view recent orders'
                   }
                 </Typography>
-                {selectedDateRange && (
-                  <Chip 
-                    label="Date filtered" 
-                    size="small" 
-                    variant="outlined" 
-                    color="primary"
-                  />
-                )}
+                <Box sx={{ minWidth: 100 }}>
+                  {hasDateRange && (
+                    <Chip 
+                      label="Date filtered" 
+                      size="small" 
+                      variant="outlined" 
+                      color="primary"
+                    />
+                  )}
+                </Box>
               </Box>
 
               {loadingOrders ? (
@@ -1423,8 +1436,8 @@ const OrderIQDashboard = () => {
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {selectedCompanyId && selectedLocationId 
-                      ? 'No orders have been placed yet for this location, or data hasn\'t been loaded yet. Try clicking "Apply Filters & Load Data" above.'
-                      : 'Please select a company and location, then click "Apply Filters & Load Data" to view recent orders.'
+                      ? 'No orders have been placed yet for this location with the current filters.'
+                      : 'Please select a company and location to view recent orders.'
                     }
                   </Typography>
                 </Box>
@@ -1521,7 +1534,7 @@ const OrderIQDashboard = () => {
                 {availableItems.length > 0 
                   ? `${availableItems.length} items available. Enter desired quantity and click "Add" to add items to your cart.`
                   : selectedCompanyId && selectedLocationId
-                    ? 'Click "Apply Filters & Load Data" above to view available items.'
+                    ? loading ? 'Loading available items...' : 'No items available for the selected company and location.'
                     : 'Select company and location from filters above to view available items.'
                 }
               </Typography>
@@ -1556,8 +1569,8 @@ const OrderIQDashboard = () => {
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {selectedCompanyId && selectedLocationId 
-                      ? 'Click "Apply Filters & Load Data" above to load available items.'
-                      : 'Please select a company and location from the filters above, then click "Apply Filters" to load available items.'
+                      ? 'No items available for the selected company and location.'
+                      : 'Please select a company and location from the filters above to load available items.'
                     }
                   </Typography>
                 </Box>
@@ -1848,9 +1861,10 @@ const OrderIQDashboard = () => {
                             variant="contained" 
                             fullWidth 
                             size="medium"
+                            type="button"
                             startIcon={loading ? <CircularProgress size={16} /> : <ReceiptIcon />}
                             sx={{ fontWeight: 600, py: 1 }}
-                            onClick={handleSubmitOrderUpdate}
+                            onClick={(e) => handleSubmitOrderUpdate(e)}
                             disabled={loading || currentOrder.length === 0}
                             color="secondary"
                           >
@@ -1862,18 +1876,19 @@ const OrderIQDashboard = () => {
                           variant="contained" 
                           fullWidth 
                           size="medium"
+                          type="button"
                           startIcon={loading ? <CircularProgress size={16} /> : <ReceiptIcon />}
                           sx={{ fontWeight: 600, py: 1 }}
-                          onClick={handleSubmitOrder}
+                          onClick={(e) => handleSubmitOrder(e)}
                           disabled={loading || !selectedCompanyId || !selectedLocationId || currentOrder.length === 0}
                         >
                           {loading ? 'Submitting...' : 'Submit Order'}
                         </Button>
                       )}
 
-                      {selectedDateRange && (
+                      {hasDateRange && (
                         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
-                          Order period: {selectedDateRange.startDate?.toLocaleDateString()} - {selectedDateRange.endDate?.toLocaleDateString()}
+                          Order period: {dateRangeDisplayString}
                         </Typography>
                       )}
                     </Box>

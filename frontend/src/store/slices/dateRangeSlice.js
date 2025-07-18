@@ -14,6 +14,9 @@ const initialState = {
   // NEW: Add StoreSummaryProduction date range
   StoreSummaryProductionStart: null,
   StoreSummaryProductionEnd: null,
+  // NEW: Add OrderIQDashboard date range
+  OrderIQDashboardStart: null,
+  OrderIQDashboardEnd: null,
 };
 
 // Helper function to format date as YYYY-MM-DD (date only, no time) in LOCAL timezone
@@ -268,7 +271,7 @@ const dateRangeSlice = createSlice({
       state.SummaryFinancialDashboardEnd = null;
     },
 
-    // NEW: StoreSummaryProduction Date Range Actions
+    // StoreSummaryProduction Date Range Actions
     setStoreSummaryProductionDateRange: (state, action) => {
       const { startDate, endDate } = action.payload;
       console.log('🏪 Redux BEFORE: setStoreSummaryProductionDateRange called with:', { 
@@ -333,6 +336,71 @@ const dateRangeSlice = createSlice({
       state.StoreSummaryProductionEnd = null;
     },
 
+    // NEW: OrderIQDashboard Date Range Actions
+    setOrderIQDashboardDateRange: (state, action) => {
+      const { startDate, endDate } = action.payload;
+      console.log('🛒 Redux BEFORE: setOrderIQDashboardDateRange called with:', { 
+        startDate, 
+        endDate,
+        startType: typeof startDate,
+        endType: typeof endDate 
+      });
+      
+      // Format dates to date-only strings (YYYY-MM-DD)
+      const formattedStartDate = formatDateOnly(startDate);
+      const formattedEndDate = formatDateOnly(endDate);
+      
+      console.log('🛒 Redux AFTER formatting:', {
+        formattedStartDate,
+        formattedEndDate,
+        formattedStartType: typeof formattedStartDate,
+        formattedEndType: typeof formattedEndDate
+      });
+      
+      if (formattedStartDate && formattedEndDate) {
+        state.OrderIQDashboardStart = formattedStartDate;
+        state.OrderIQDashboardEnd = formattedEndDate;
+        
+        console.log('✅ Redux: OrderIQ Dashboard date range stored successfully:', {
+          storedStart: state.OrderIQDashboardStart,
+          storedEnd: state.OrderIQDashboardEnd,
+          stateAfterUpdate: {
+            OrderIQDashboardStart: state.OrderIQDashboardStart,
+            OrderIQDashboardEnd: state.OrderIQDashboardEnd
+          }
+        });
+      } else {
+        console.error('❌ Redux: Invalid dates provided for OrderIQ Dashboard, not storing:', { 
+          originalStart: startDate, 
+          originalEnd: endDate,
+          formattedStart: formattedStartDate,
+          formattedEnd: formattedEndDate
+        });
+      }
+    },
+    
+    setOrderIQDashboardStartDate: (state, action) => {
+      const formattedDate = formatDateOnly(action.payload);
+      if (formattedDate) {
+        state.OrderIQDashboardStart = formattedDate;
+        console.log('✅ Redux: OrderIQ Dashboard start date set:', formattedDate);
+      }
+    },
+    
+    setOrderIQDashboardEndDate: (state, action) => {
+      const formattedDate = formatDateOnly(action.payload);
+      if (formattedDate) {
+        state.OrderIQDashboardEnd = formattedDate;
+        console.log('✅ Redux: OrderIQ Dashboard end date set:', formattedDate);
+      }
+    },
+    
+    clearOrderIQDashboardDateRange: (state) => {
+      console.log('🧹 Redux: Clearing OrderIQ Dashboard date range');
+      state.OrderIQDashboardStart = null;
+      state.OrderIQDashboardEnd = null;
+    },
+
     // Clear all date ranges
     clearAllDateRanges: (state) => {
       state.AnalyticsDashboardStart = null;
@@ -345,6 +413,8 @@ const dateRangeSlice = createSlice({
       state.SummaryFinancialDashboardEnd = null;
       state.StoreSummaryProductionStart = null;
       state.StoreSummaryProductionEnd = null;
+      state.OrderIQDashboardStart = null;
+      state.OrderIQDashboardEnd = null;
     },
   },
 });
@@ -375,11 +445,17 @@ export const {
   setSummaryFinancialDashboardEndDate,
   clearSummaryFinancialDashboardDateRange,
   
-  // NEW: StoreSummaryProduction actions
+  // StoreSummaryProduction actions
   setStoreSummaryProductionDateRange,
   setStoreSummaryProductionStartDate,
   setStoreSummaryProductionEndDate,
   clearStoreSummaryProductionDateRange,
+  
+  // NEW: OrderIQDashboard actions
+  setOrderIQDashboardDateRange,
+  setOrderIQDashboardStartDate,
+  setOrderIQDashboardEndDate,
+  clearOrderIQDashboardDateRange,
   
   // Clear all
   clearAllDateRanges,
@@ -542,7 +618,7 @@ export const selectHasSummaryFinancialDashboardDateRange = (state) => {
   return hasRange;
 };
 
-// NEW: StoreSummaryProduction Selectors with safe fallbacks
+// StoreSummaryProduction Selectors with safe fallbacks
 export const selectStoreSummaryProductionStartDate = (state) => {
   const value = state.dateRange?.StoreSummaryProductionStart;
   console.log('🔍 selectStoreSummaryProductionStartDate:', { value, type: typeof value });
@@ -589,6 +665,53 @@ export const selectHasStoreSummaryProductionDateRange = (state) => {
   return hasRange;
 };
 
+// NEW: OrderIQDashboard Selectors with safe fallbacks
+export const selectOrderIQDashboardStartDate = (state) => {
+  const value = state.dateRange?.OrderIQDashboardStart;
+  console.log('🔍 selectOrderIQDashboardStartDate:', { value, type: typeof value });
+  return value;
+};
+
+export const selectOrderIQDashboardEndDate = (state) => {
+  const value = state.dateRange?.OrderIQDashboardEnd;
+  console.log('🔍 selectOrderIQDashboardEndDate:', { value, type: typeof value });
+  return value;
+};
+
+export const selectOrderIQDashboardDateRange = (state) => {
+  const startDate = state.dateRange?.OrderIQDashboardStart;
+  const endDate = state.dateRange?.OrderIQDashboardEnd;
+  
+  console.log('🔍 selectOrderIQDashboardDateRange raw state:', {
+    rawState: state.dateRange,
+    startDate,
+    endDate,
+    startType: typeof startDate,
+    endType: typeof endDate
+  });
+  
+  return {
+    startDate: startDate,
+    endDate: endDate,
+  };
+};
+
+export const selectHasOrderIQDashboardDateRange = (state) => {
+  const startDate = state.dateRange?.OrderIQDashboardStart;
+  const endDate = state.dateRange?.OrderIQDashboardEnd;
+  const hasRange = startDate !== null && endDate !== null;
+  
+  console.log('🔍 selectHasOrderIQDashboardDateRange:', {
+    startDate,
+    endDate,
+    hasRange,
+    startIsNull: startDate === null,
+    endIsNull: endDate === null
+  });
+  
+  return hasRange;
+};
+
 // Combined selectors for convenience
 export const selectAllDateRanges = (state) => ({
   analyticsDashboard: {
@@ -611,6 +734,10 @@ export const selectAllDateRanges = (state) => ({
     startDate: state.dateRange?.StoreSummaryProductionStart || null,
     endDate: state.dateRange?.StoreSummaryProductionEnd || null,
   },
+  orderIQDashboard: {
+    startDate: state.dateRange?.OrderIQDashboardStart || null,
+    endDate: state.dateRange?.OrderIQDashboardEnd || null,
+  },
 });
 
 export const selectHasAnyDateRange = (state) => 
@@ -618,7 +745,8 @@ export const selectHasAnyDateRange = (state) =>
   selectHasMasterfileDateRange(state) ||
   selectHasReportsDateRange(state) ||
   selectHasSummaryFinancialDashboardDateRange(state) ||
-  selectHasStoreSummaryProductionDateRange(state);
+  selectHasStoreSummaryProductionDateRange(state) ||
+  selectHasOrderIQDashboardDateRange(state);
 
 // Export reducer
 export default dateRangeSlice.reducer;

@@ -57,8 +57,8 @@ import LocationOnIcon from "@mui/icons-material/LocationOn";
 
 // Responsive drawer widths - more aggressive scaling
 const getDrawerWidth = (theme, isMobile, isTablet, isSmallScreen) => {
-  if (isSmallScreen) return 200; // Much narrower for very small screens
-  if (isMobile) return 240; // Narrower for mobile
+  if (isSmallScreen) return 280; // Wider for mobile to accommodate content
+  if (isMobile) return 300; // Wider for mobile
   if (isTablet) return 220; // Smaller for tablets
   return 260; // Default for desktop
 };
@@ -236,12 +236,12 @@ const CustomSidebar = ({ onSignOut }) => {
     },
   ];
 
-  // Responsive font sizes - more aggressive scaling
+  // Responsive font sizes - optimized for mobile
   const getFontSizes = () => ({
-    appName: isSmallScreen ? "0.9rem" : isMobile ? "1rem" : isTablet ? "1.1rem" : "1.25rem",
-    mainNav: isSmallScreen ? "0.75rem" : isMobile ? "0.8rem" : isTablet ? "0.9rem" : "1rem",
-    subNav: isSmallScreen ? "0.7rem" : isMobile ? "0.75rem" : isTablet ? "0.8rem" : "0.875rem",
-    dropdown: isSmallScreen ? "0.7rem" : isMobile ? "0.75rem" : "0.875rem",
+    appName: isMobile ? "1.1rem" : (isSmallScreen ? "0.9rem" : isTablet ? "1.1rem" : "1.25rem"),
+    mainNav: isMobile ? "0.9rem" : (isSmallScreen ? "0.75rem" : isTablet ? "0.9rem" : "1rem"),
+    subNav: isMobile ? "0.85rem" : (isSmallScreen ? "0.7rem" : isTablet ? "0.8rem" : "0.875rem"),
+    dropdown: isMobile ? "0.9rem" : (isSmallScreen ? "0.7rem" : "0.875rem"),
   });
 
   const fontSizes = getFontSizes();
@@ -296,6 +296,9 @@ const CustomSidebar = ({ onSignOut }) => {
   useEffect(() => {
     if (isMobile) {
       setOpen(false);
+      // Auto-open dropdowns on mobile for better UX
+      setInsightiqOpen(true);
+      setOrderiqOpen(true);
     } else {
       setOpen(true);
     }
@@ -344,8 +347,8 @@ const CustomSidebar = ({ onSignOut }) => {
   const renderNavItems = (items, isSubItem = false) =>
     items.map((item) => {
       const isSelected = location.pathname === item.path;
-      const displayTitle = getDisplayTitle(item);
-      const showFullTitleInTooltip = displayTitle !== item.title;
+      const displayTitle = isMobile ? item.title : getDisplayTitle(item); // Always show full title on mobile
+      const showFullTitleInTooltip = !isMobile && (displayTitle !== item.title);
       
       return (
         <ListItem key={item.path} disablePadding>
@@ -354,6 +357,7 @@ const CustomSidebar = ({ onSignOut }) => {
             placement="right" 
             arrow
             enterDelay={500}
+            disableHoverListener={isMobile} // Disable tooltips on mobile
           >
             <ListItemButton
               component={Link}
@@ -361,12 +365,12 @@ const CustomSidebar = ({ onSignOut }) => {
               onClick={handleItemClick}
               selected={isSelected}
               sx={{
-                minHeight: isSmallScreen ? 40 : 48,
-                justifyContent: open ? "initial" : "center",
-                px: isSmallScreen ? 1 : 2,
+                minHeight: isMobile ? 48 : (isSmallScreen ? 40 : 48), // Larger touch targets on mobile
+                justifyContent: (open || isMobile) ? "initial" : "center",
+                px: isMobile ? 2 : (isSmallScreen ? 1 : 2),
                 mx: 0.5,
                 mb: 0.5,
-                ml: isSubItem ? (isSmallScreen ? 1 : 1.5) : 0.5,
+                ml: isSubItem ? (isMobile ? 2 : (isSmallScreen ? 1 : 1.5)) : 0.5,
                 borderRadius: "8px",
                 position: "relative",
                 overflow: "hidden",
@@ -413,13 +417,13 @@ const CustomSidebar = ({ onSignOut }) => {
               <ListItemIcon
                 sx={{
                   minWidth: 0,
-                  mr: open ? (isSmallScreen ? 1 : 1.5) : "auto",
+                  mr: (open || isMobile) ? (isMobile ? 1.5 : (isSmallScreen ? 1 : 1.5)) : "auto",
                   justifyContent: "center",
                   color: isSelected ? "#ffffff" : "#e0e0e0",
                   transition: "color 0.3s ease",
-                  fontSize: isSmallScreen ? "1.1rem" : "1.3rem",
+                  fontSize: isMobile ? "1.4rem" : (isSmallScreen ? "1.1rem" : "1.3rem"),
                   "& .MuiSvgIcon-root": {
-                    fontSize: isSmallScreen ? "1.1rem" : "1.3rem",
+                    fontSize: isMobile ? "1.4rem" : (isSmallScreen ? "1.1rem" : "1.3rem"),
                   }
                 }}
               >
@@ -441,12 +445,12 @@ const CustomSidebar = ({ onSignOut }) => {
                 }
                 sx={{
                   transition: "opacity 0.3s ease",
-                  opacity: open ? 1 : 0,
+                  opacity: (open || isMobile) ? 1 : 0,
                   margin: 0,
                   "& .MuiTypography-root": {
                     fontWeight: isSelected ? 700 : 400,
                     color: isSelected ? "#ffffff" : "#f0f0f0",
-                    fontSize: isSubItem ? fontSizes.subNav : fontSizes.mainNav,
+                    fontSize: isMobile ? fontSizes.mainNav : (isSubItem ? fontSizes.subNav : fontSizes.mainNav),
                     lineHeight: 1.2,
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -461,10 +465,10 @@ const CustomSidebar = ({ onSignOut }) => {
     });
 
   const renderDropdownButton = (title, shortTitle, compactTitle, isOpen, isSelected, onToggle, icon) => {
-    const displayTitle = isSmallScreen || (drawerWidth < 250) ? 
+    const displayTitle = isMobile ? title : (isSmallScreen || (drawerWidth < 250) ? 
       (compactTitle || shortTitle || title) : 
-      (isMobile || isTablet ? (shortTitle || title) : title);
-    const showFullTitleInTooltip = displayTitle !== title;
+      (isMobile || isTablet ? (shortTitle || title) : title));
+    const showFullTitleInTooltip = !isMobile && (displayTitle !== title);
     
     return (
       <ListItem disablePadding>
@@ -473,13 +477,14 @@ const CustomSidebar = ({ onSignOut }) => {
           placement="right" 
           arrow
           enterDelay={500}
+          disableHoverListener={isMobile} // Disable tooltips on mobile
         >
           <ListItemButton
             onClick={onToggle}
             sx={{
-              minHeight: isSmallScreen ? 40 : 48,
-              justifyContent: open ? "initial" : "center",
-              px: isSmallScreen ? 1 : 2,
+              minHeight: isMobile ? 48 : (isSmallScreen ? 40 : 48), // Larger touch targets on mobile
+              justifyContent: (open || isMobile) ? "initial" : "center",
+              px: isMobile ? 2 : (isSmallScreen ? 1 : 2),
               mx: 0.5,
               mb: 0.5,
               borderRadius: "8px",
@@ -524,13 +529,13 @@ const CustomSidebar = ({ onSignOut }) => {
             <ListItemIcon
               sx={{
                 minWidth: 0,
-                mr: open ? (isSmallScreen ? 1 : 1.5) : "auto",
+                mr: (open || isMobile) ? (isMobile ? 1.5 : (isSmallScreen ? 1 : 1.5)) : "auto",
                 justifyContent: "center",
                 color: isSelected ? "#ffffff" : "#e0e0e0",
                 transition: "color 0.3s ease",
-                fontSize: isSmallScreen ? "1.1rem" : "1.3rem",
+                fontSize: isMobile ? "1.4rem" : (isSmallScreen ? "1.1rem" : "1.3rem"),
                 "& .MuiSvgIcon-root": {
-                  fontSize: isSmallScreen ? "1.1rem" : "1.3rem",
+                  fontSize: isMobile ? "1.4rem" : (isSmallScreen ? "1.1rem" : "1.3rem"),
                 }
               }}
             >
@@ -554,7 +559,7 @@ const CustomSidebar = ({ onSignOut }) => {
               }
               sx={{
                 transition: "opacity 0.3s ease",
-                opacity: open ? 1 : 0,
+                opacity: (open || isMobile) ? 1 : 0,
                 margin: 0,
                 flex: 1,
                 "& .MuiTypography-root": {
@@ -568,17 +573,17 @@ const CustomSidebar = ({ onSignOut }) => {
                 },
               }}
             />
-            {open && (
-              <Box sx={{ ml: isSmallScreen ? 0.5 : 1, flexShrink: 0 }}>
+            {(open || isMobile) && (
+              <Box sx={{ ml: isMobile ? 1 : (isSmallScreen ? 0.5 : 1), flexShrink: 0 }}>
                 {isOpen ? (
                   <ExpandLess sx={{ 
                     color: isSelected ? "#ffffff" : "#e0e0e0",
-                    fontSize: isSmallScreen ? "1.1rem" : "1.3rem"
+                    fontSize: isMobile ? "1.4rem" : (isSmallScreen ? "1.1rem" : "1.3rem")
                   }} />
                 ) : (
                   <ExpandMore sx={{ 
                     color: isSelected ? "#ffffff" : "#e0e0e0",
-                    fontSize: isSmallScreen ? "1.1rem" : "1.3rem"
+                    fontSize: isMobile ? "1.4rem" : (isSmallScreen ? "1.1rem" : "1.3rem")
                   }} />
                 )}
               </Box>
@@ -594,7 +599,7 @@ const CustomSidebar = ({ onSignOut }) => {
     if (!open) return null;
 
     return (
-      <Box sx={{ px: isSmallScreen ? 1 : 1.5, pb: 1.5 }}>
+      <Box sx={{ px: isSmallScreen ? 1 : 1.5, py: 1.5 }}> {/* Added py for consistent padding */}
         {/* Company Dropdown */}
         <FormControl 
           fullWidth 
@@ -602,7 +607,7 @@ const CustomSidebar = ({ onSignOut }) => {
           sx={{ 
             mb: 1,
             '& .MuiOutlinedInput-root': {
-              backgroundColor: alpha('#ffffff', 0.1),
+              backgroundColor: alpha('#ffffff', 0.15), // Slightly more opaque
               borderRadius: '6px',
               fontSize: fontSizes.dropdown,
               '& fieldset': {
@@ -690,7 +695,7 @@ const CustomSidebar = ({ onSignOut }) => {
           disabled={!selectedCompany || availableLocations.length === 0}
           sx={{ 
             '& .MuiOutlinedInput-root': {
-              backgroundColor: alpha('#ffffff', 0.1),
+              backgroundColor: alpha('#ffffff', 0.15), // Slightly more opaque
               borderRadius: '6px',
               '& fieldset': {
                 borderColor: alpha('#ffffff', 0.3),
@@ -785,10 +790,11 @@ const CustomSidebar = ({ onSignOut }) => {
         sx={{
           borderBottom: `1px solid ${alpha("#ffffff", 0.2)}`,
           boxShadow: `0 1px 3px ${alpha("#000000", 0.08)}`,
-          backgroundColor: "transparent",
-          position: "sticky",
-          top: 0,
-          zIndex: 1,
+          backgroundColor: isMobile ? "#050b1b" : "rgba(5, 11, 27, 0.95)", // Solid bg for mobile
+          backdropFilter: isMobile ? "none" : "blur(10px)", // No blur on mobile
+          position: isMobile ? "relative" : "sticky", // Relative for mobile
+          top: isMobile ? 0 : 0,
+          zIndex: isMobile ? "auto" : 10,
           minHeight: isSmallScreen ? 48 : 56,
           mx: 0.5,
           mt: 0.5,
@@ -797,7 +803,7 @@ const CustomSidebar = ({ onSignOut }) => {
         <ListItemButton
           sx={{
             minHeight: isSmallScreen ? 40 : 48,
-            justifyContent: open ? "initial" : "center",
+            justifyContent: (open || isMobile) ? "initial" : "center",
             px: isSmallScreen ? 1 : 2,
             borderRadius: "8px",
             cursor: "default",
@@ -809,7 +815,7 @@ const CustomSidebar = ({ onSignOut }) => {
           <ListItemIcon
             sx={{
               minWidth: 0,
-              mr: open ? (isSmallScreen ? 1 : 1.5) : "auto",
+              mr: (open || isMobile) ? (isSmallScreen ? 1 : 1.5) : "auto",
               justifyContent: "center",
               color: "#ffffff",
             }}
@@ -831,7 +837,7 @@ const CustomSidebar = ({ onSignOut }) => {
             }
             sx={{
               transition: "opacity 0.3s ease",
-              opacity: open ? 1 : 0,
+              opacity: (open || isMobile) ? 1 : 0,
               margin: 0,
               "& .MuiTypography-root": {
                 fontWeight: "bold",
@@ -848,10 +854,29 @@ const CustomSidebar = ({ onSignOut }) => {
       </Box>
 
       {/* Company and Location Dropdowns */}
-      {renderCompanyLocationDropdowns()}
+      <Box
+        sx={{
+          backgroundColor: isMobile ? "#050b1b" : "rgba(5, 11, 27, 0.95)", // Solid bg for mobile
+          backdropFilter: isMobile ? "none" : "blur(10px)", // No blur on mobile  
+          position: isMobile ? "relative" : "sticky", // Relative for mobile
+          top: isMobile ? 0 : (isSmallScreen ? 48 : 56),
+          zIndex: isMobile ? "auto" : 9,
+          borderBottom: `1px solid ${alpha("#ffffff", 0.1)}`,
+        }}
+      >
+        {renderCompanyLocationDropdowns()}
+      </Box>
 
       {/* Navigation Items */}
-      <List sx={{ p: 1, mt: 1, flexGrow: 1 }}>
+      <List sx={{ 
+        p: 1, 
+        mt: 1, 
+        flexGrow: 1,
+        position: "relative",
+        zIndex: 1,
+        overflowY: isMobile ? "visible" : "auto", // No scroll restriction on mobile
+        maxHeight: isMobile ? "none" : "calc(100vh - 200px)", // Height limit for desktop only
+      }}>
         {/* INSIGHTIQ Dropdown */}
         {renderDropdownButton(
           "INSIGHTiQ",
@@ -864,7 +889,7 @@ const CustomSidebar = ({ onSignOut }) => {
         )}
 
         {/* INSIGHTIQ Sub-items */}
-        <Collapse in={insightiqOpen && open} timeout="auto" unmountOnExit>
+        <Collapse in={insightiqOpen && (open || isMobile)} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
             {renderNavItems(insightiqItems, true)}
           </List>
@@ -882,7 +907,7 @@ const CustomSidebar = ({ onSignOut }) => {
         )}
 
         {/* OrderIQ Sub-items */}
-        <Collapse in={orderiqOpen && open} timeout="auto" unmountOnExit>
+        <Collapse in={orderiqOpen && (open || isMobile)} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
             {renderNavItems(orderiqItems, true)}
           </List>
@@ -902,9 +927,9 @@ const CustomSidebar = ({ onSignOut }) => {
             <ListItemButton
               onClick={onSignOut}
               sx={{
-                minHeight: isSmallScreen ? 44 : 48,
-                justifyContent: open ? "initial" : "center",
-                px: isSmallScreen ? 1.5 : 2.5,
+                minHeight: isMobile ? 48 : (isSmallScreen ? 44 : 48), // Larger touch targets on mobile
+                justifyContent: (open || isMobile) ? "initial" : "center",
+                px: isMobile ? 2 : (isSmallScreen ? 1.5 : 2.5),
                 mx: 0,
                 mb: 0.5,
                 borderRadius: "10px",
@@ -917,15 +942,20 @@ const CustomSidebar = ({ onSignOut }) => {
                 },
               }}
             >
-              <Tooltip title={open ? "" : "Sign Out"} placement="right" arrow>
+              <Tooltip 
+                title={(open || isMobile) ? "" : "Sign Out"} 
+                placement="right" 
+                arrow
+                disableHoverListener={isMobile} // Disable tooltips on mobile
+              >
                 <ListItemIcon
                   sx={{
                     minWidth: 0,
-                    mr: open ? (isSmallScreen ? 1.5 : 2) : "auto",
+                    mr: (open || isMobile) ? (isMobile ? 1.5 : (isSmallScreen ? 1.5 : 2)) : "auto",
                     justifyContent: "center",
                     color: "#e0e0e0",
                     transition: "color 0.3s ease",
-                    fontSize: isSmallScreen ? "1.2rem" : "1.5rem",
+                    fontSize: isMobile ? "1.4rem" : (isSmallScreen ? "1.2rem" : "1.5rem"),
                   }}
                 >
                   <LogoutIcon />
@@ -935,7 +965,7 @@ const CustomSidebar = ({ onSignOut }) => {
                 primary="Sign Out"
                 sx={{
                   transition: "opacity 0.3s ease",
-                  opacity: open ? 1 : 0,
+                  opacity: (open || isMobile) ? 1 : 0,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -962,19 +992,22 @@ const CustomSidebar = ({ onSignOut }) => {
           onClick={handleDrawerToggle}
           sx={{
             position: "fixed",
-            top: 10,
-            left: 10,
+            top: 16,
+            left: 16,
             zIndex: theme.zIndex.drawer + 2,
-            bgcolor: "background.paper",
-            boxShadow: `0 2px 5px ${alpha("#000", 0.15)}`,
-            width: isSmallScreen ? 40 : 48,
-            height: isSmallScreen ? 40 : 48,
+            bgcolor: "#050b1b",
+            color: "#ffffff",
+            border: `2px solid ${alpha("#ffffff", 0.2)}`,
+            boxShadow: `0 4px 12px ${alpha("#000", 0.3)}`,
+            width: 48,
+            height: 48,
             "&:hover": {
-              bgcolor: alpha(theme.palette.background.default, 0.9),
+              bgcolor: "#0f1729",
+              borderColor: alpha("#ffffff", 0.4),
             },
           }}
         >
-          <MenuIcon fontSize={isSmallScreen ? "small" : "medium"} />
+          <MenuIcon fontSize="medium" />
         </IconButton>
       )}
 
@@ -983,9 +1016,11 @@ const CustomSidebar = ({ onSignOut }) => {
           variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
-          ModalProps={{ keepMounted: true }}
+          ModalProps={{ 
+            keepMounted: true,
+            style: { zIndex: theme.zIndex.drawer }
+          }}
           sx={{
-            display: { xs: "block", md: "none" },
             "& .MuiDrawer-paper": {
               width: drawerWidth,
               backgroundImage: gradientBackground,
@@ -993,6 +1028,7 @@ const CustomSidebar = ({ onSignOut }) => {
               borderRight: "none",
               display: "flex",
               flexDirection: "column",
+              maxWidth: "85vw", // Don't take up entire screen
             },
           }}
         >
