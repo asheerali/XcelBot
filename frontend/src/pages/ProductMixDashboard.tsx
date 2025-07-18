@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Box,
   Typography,
@@ -53,6 +53,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import BusinessIcon from "@mui/icons-material/Business"; // Company icon
+import AutorenewIcon from "@mui/icons-material/Autorenew";
 
 // Updated imports for the dashboard components
 import MenuAnalysisDashboard from "../components/SalesDashboard";
@@ -71,20 +72,35 @@ import {
   excelSlice,
 } from "../store/excelSlice";
 
+// UPDATED: Import masterFileSlice Redux
+import { useSelector, useDispatch } from "react-redux";
+import {
+  setSelectedCompanies, 
+  setSelectedLocations,
+  selectSelectedCompanies,
+  selectSelectedLocations 
+} from "../store/slices/masterFileSlice";
+
 // Extract actions from the slice
 const { setLoading, setError } = excelSlice.actions;
 
 import { API_URL_Local } from "../constants"; // Import API base URL
 
-// API URLs
+// API URLs - UPDATED to use company-locations endpoint
 const PRODUCT_MIX_FILTER_API_URL = API_URL_Local + "/api/pmix/filter";
-const COMPANIES_API_URL = API_URL_Local + "/companies"; // NEW: Companies API endpoint
+const COMPANY_LOCATIONS_API_URL = API_URL_Local + "/company-locations/all"; // UPDATED: Company-Locations API endpoint
 
-// Company interface
+// UPDATED: Company interface to match company-locations API response
 interface Company {
-  id: string;
-  name: string;
-  [key: string]: any; // Allow for additional company properties
+  company_id: number;
+  company_name: string;
+  locations: Location[];
+}
+
+// UPDATED: Location interface to match company-locations API response
+interface Location {
+  location_id: number;
+  location_name: string;
 }
 
 // =====================
@@ -1071,6 +1087,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
 export default function ProductMixDashboard() {
   const theme = useTheme();
   const dispatch = useAppDispatch();
+  const reduxDispatch = useDispatch(); // UPDATED: Add Redux dispatch for masterFileSlice
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isTablet = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -1084,6 +1101,14 @@ export default function ProductMixDashboard() {
     error,
   } = useAppSelector((state) => state.excel);
 
+  // UPDATED: Get current selections from Redux (masterFileSlice)
+  const selectedCompanies = useSelector(selectSelectedCompanies);
+  const selectedLocations = useSelector(selectSelectedLocations);
+  
+  // UPDATED: Convert to single values for dropdowns (using new API structure)
+  const selectedCompany = selectedCompanies.length > 0 ? selectedCompanies[0] : '';
+  const selectedLocation = selectedLocations.length > 0 ? selectedLocations[0] : '';
+
   // Find current data for the selected location
   const currentProductMixData = productMixFiles.find(
     (f) => f.location === currentProductMixLocation
@@ -1094,17 +1119,51 @@ export default function ProductMixDashboard() {
     (f) => f.location === currentProductMixLocation
   );
 
-  // NEW: Company-related state
+  // UPDATED: Company-related state for new API structure
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
   const [companiesLoading, setCompaniesLoading] = useState(false);
   const [companiesError, setCompaniesError] = useState<string>("");
+
+  // UPDATED: Get available locations for selected company
+  const availableLocations = React.useMemo(() => {
+    if (!selectedCompany) return [];
+    const company = companies.find(c => c.company_id.toString() === selectedCompany);
+    return company ? company.locations : [];
+  }, [companies, selectedCompany]);
 
   // State variables
   const [tabValue, setTabValue] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [filterError, setFilterError] = useState<string>("");
   const [dataUpdated, setDataUpdated] = useState<boolean>(false);
+
+  // UPDATED: Auto-filtering state
+  const [isAutoFiltering, setIsAutoFiltering] = useState(false);
+  
+  // Refs to track previous values and prevent unnecessary re-renders
+  const previousFiltersRef = useRef<{
+    company: string;
+    locations: string[];
+    startDate: string;
+    endDate: string;
+    categories: string[];
+    servers: string[];
+    menuItems: string[];
+  }>({
+    company: '',
+    locations: [],
+    startDate: '',
+    endDate: '',
+    categories: [],
+    servers: [],
+    menuItems: []
+  });
+  
+  // Timeout ref for debouncing
+  const timeoutRef = useRef<NodeJS.Timeout>();
+  
+  // Track if component has been initialized to avoid initial auto-filter
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // UPDATED: No default date range - empty state
   const [localStartDate, setLocalStartDate] = useState<string>("");
@@ -1136,41 +1195,41 @@ export default function ProductMixDashboard() {
     ?.map((item) => item["Menu Item"])
     .filter(Boolean) || ["No menu items available"];
 
-  // UPDATED: Filter states using multiselect arrays - No defaults, but initially select all available locations
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  // UPDATED: Filter states using multiselect arrays - No defaults, but use Redux for locations
+  const [localSelectedLocations, setLocalSelectedLocations] = useState<string[]>([]);
   const [selectedServers, setSelectedServers] = useState<string[]>([]);
   const [selectedMenuItems, setSelectedMenuItems] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [hasInitializedLocations, setHasInitializedLocations] = useState(false);
 
-  // NEW: Fetch companies on component mount
+  // UPDATED: Fetch company-locations data on component mount
   useEffect(() => {
-    const fetchCompanies = async () => {
+    const fetchCompanyLocations = async () => {
       setCompaniesLoading(true);
       setCompaniesError("");
       
       try {
-        console.log('🏢 Fetching companies from:', COMPANIES_API_URL);
-        const response = await axios.get(COMPANIES_API_URL);
+        console.log('🏢 ProductMix: Fetching company-locations from:', COMPANY_LOCATIONS_API_URL);
+        const response = await axios.get(COMPANY_LOCATIONS_API_URL);
         
-        console.log('📥 Companies response:', response.data);
+        console.log('📥 ProductMix: Company-locations response:', response.data);
         setCompanies(response.data || []);
         
-        // Optionally auto-select the first company if there's only one
-        if (response.data && response.data.length === 1) {
-          setSelectedCompanyId(response.data[0].id);
-          console.log('🎯 Auto-selected single company:', response.data[0]);
+        // Auto-select the first company if there's only one and none is selected
+        if (response.data && response.data.length === 1 && selectedCompanies.length === 0) {
+          reduxDispatch(setSelectedCompanies([response.data[0].company_id.toString()]));
+          console.log('🎯 ProductMix: Auto-selected single company:', response.data[0]);
         }
         
       } catch (error) {
-        console.error('❌ Error fetching companies:', error);
+        console.error('❌ ProductMix: Error fetching company-locations:', error);
         
-        let errorMessage = "Error loading companies";
+        let errorMessage = "Error loading companies and locations";
         if (axios.isAxiosError(error)) {
           if (error.response) {
             errorMessage = `Server error: ${error.response.status}`;
           } else if (error.request) {
-            errorMessage = 'Cannot connect to companies API. Please check server status.';
+            errorMessage = 'Cannot connect to company-locations API. Please check server status.';
           }
         }
         
@@ -1180,43 +1239,123 @@ export default function ProductMixDashboard() {
       }
     };
 
-    fetchCompanies();
-  }, []);
+    fetchCompanyLocations();
+  }, [selectedCompanies.length, reduxDispatch]);
 
-  // Initially select all available locations (not a default, just initial state)
+  // UPDATED: Auto-select first location when company changes and has only one location
   useEffect(() => {
-    if (
-      !hasInitializedLocations && 
-      productMixLocations.length > 0 && 
-      !productMixLocations.includes("No locations available") &&
-      selectedLocations.length === 0
-    ) {
-      // Initially select ALL available locations
-      setSelectedLocations([...productMixLocations]);
-      setHasInitializedLocations(true);
-      console.log('📍 Initially selecting all available locations:', productMixLocations);
+    if (selectedCompany && availableLocations.length === 1 && selectedLocations.length === 0) {
+      reduxDispatch(setSelectedLocations([availableLocations[0].location_id.toString()]));
+      console.log('🎯 ProductMix: Auto-selected single location:', availableLocations[0]);
     }
-  }, [productMixLocations, selectedLocations.length, hasInitializedLocations]);
+  }, [selectedCompany, availableLocations, selectedLocations.length, reduxDispatch]);
 
   // Clear dataUpdated state when filters change
   useEffect(() => {
     setDataUpdated(false);
-  }, [selectedCompanyId, selectedLocations, localStartDate, localEndDate, selectedServers, selectedCategories, selectedMenuItems]);
+  }, [selectedCompany, selectedLocations, localStartDate, localEndDate, selectedServers, selectedCategories, selectedMenuItems]);
 
-  // NEW: Handle company selection
+  // Check if filters have minimum requirements to trigger auto-filter
+  const hasMinimumFilters = useCallback((company: string, locations: string[]) => {
+    return company && locations.length > 0; // Company and at least one location required
+  }, []);
+
+  // Check if any filter has actually changed
+  const hasFiltersChanged = useCallback((
+    currentCompany: string, 
+    currentLocations: string[], 
+    currentStartDate: string, 
+    currentEndDate: string, 
+    currentCategories: string[],
+    currentServers: string[],
+    currentMenuItems: string[]
+  ) => {
+    const prev = previousFiltersRef.current;
+    
+    const companyChanged = currentCompany !== prev.company;
+    const locationsChanged = JSON.stringify(currentLocations.sort()) !== JSON.stringify(prev.locations.sort());
+    const startDateChanged = currentStartDate !== prev.startDate;
+    const endDateChanged = currentEndDate !== prev.endDate;
+    const categoriesChanged = JSON.stringify(currentCategories.sort()) !== JSON.stringify(prev.categories.sort());
+    const serversChanged = JSON.stringify(currentServers.sort()) !== JSON.stringify(prev.servers.sort());
+    const menuItemsChanged = JSON.stringify(currentMenuItems.sort()) !== JSON.stringify(prev.menuItems.sort());
+    
+    console.log('🔍 ProductMix: Checking for changes:', {
+      companyChanged,
+      locationsChanged,
+      startDateChanged,
+      endDateChanged,
+      categoriesChanged,
+      serversChanged,
+      menuItemsChanged,
+      current: { currentCompany, currentLocations, currentStartDate, currentEndDate, currentCategories, currentServers, currentMenuItems },
+      previous: prev
+    });
+    
+    return companyChanged || locationsChanged || startDateChanged || endDateChanged || categoriesChanged || serversChanged || menuItemsChanged;
+  }, []);
+
+  // UPDATED: Handle company selection change (updated for new API structure)
   const handleCompanyChange = (event: SelectChangeEvent) => {
     const companyId = event.target.value;
-    setSelectedCompanyId(companyId);
+    console.log('🏢 ProductMix: Company selection changed to:', companyId);
+    
+    // Update Redux state with array format
+    reduxDispatch(setSelectedCompanies([companyId]));
+    
+    // Clear locations when company changes (as per requirements)
+    reduxDispatch(setSelectedLocations([]));
+    
     setDataUpdated(false);
-    console.log('🏢 Company selected:', companyId);
+    console.log('🏢 ProductMix: Cleared locations due to company change');
   };
 
-  // Get selected company name for display
-  const selectedCompanyName = companies.find(c => c.id === selectedCompanyId)?.name || 'No Company Selected';
+  // Get selected company and location names for display (updated for new API structure)
+  const selectedCompanyName = companies.find(c => c.company_id.toString() === selectedCompany)?.company_name || 
+                               (selectedCompany ? `Company ID: ${selectedCompany}` : 'No Company Selected');
+  
+  const selectedLocationName = availableLocations.find(l => l.location_id.toString() === selectedLocation)?.location_name || 
+                                (selectedLocation ? `Location ID: ${selectedLocation}` : 'No Location Selected');
 
-  // Handlers for filter changes
+  // UPDATED: Determine which locations to use and convert for display
+  const displayLocations = React.useMemo(() => {
+    if (availableLocations.length > 0) {
+      return availableLocations.map(loc => loc.location_name);
+    }
+    return locations || [];
+  }, [availableLocations, locations]);
+
+  // UPDATED: Convert selected location IDs to names for display
+  const displaySelectedLocations = React.useMemo(() => {
+    if (availableLocations.length > 0) {
+      return selectedLocations.map(id => {
+        const location = availableLocations.find(loc => loc.location_id.toString() === id);
+        return location ? location.location_name : id;
+      });
+    }
+    return localSelectedLocations;
+  }, [selectedLocations, availableLocations, localSelectedLocations]);
+
+  // UPDATED: Handle location change with Redux integration
   const handleLocationChange = (newValue: string[]) => {
-    setSelectedLocations(newValue);
+    console.log('📍 ProductMix: Location selection changed to:', newValue);
+    
+    if (availableLocations.length > 0) {
+      // Convert names to IDs for Redux
+      const locationIds = newValue.map(name => {
+        const location = availableLocations.find(loc => loc.location_name === name);
+        return location ? location.location_id.toString() : name;
+      });
+      console.log('📍 ProductMix: Converting location names to IDs for Redux:', {
+        names: newValue,
+        ids: locationIds
+      });
+      reduxDispatch(setSelectedLocations(locationIds));
+    } else {
+      // Use local state fallback
+      setLocalSelectedLocations(newValue);
+    }
+    
     // Update Redux state
     if (newValue.length > 0) {
       dispatch(selectProductMixLocation(newValue[0]));
@@ -1287,147 +1426,158 @@ export default function ProductMixDashboard() {
     setTabValue(newValue);
   };
 
-  // UPDATED: Clear all filters - no default values, resets initialization and company selection
-  const handleClearAllFilters = () => {
-    setSelectedCompanyId(""); // NEW: Clear company selection
-    setSelectedLocations([]);
-    setLocalStartDate("");
-    setLocalEndDate("");
-    setSelectedServers([]);
-    setSelectedCategories([]);
-    setSelectedMenuItems([]);
-    setDataUpdated(false);
-    setFilterError("");
-    setHasInitializedLocations(false); // Reset initialization flag
-    
-    // Reset Redux filters
-    dispatch(updateProductMixFilters({
-      location: "",
-      startDate: "",
-      endDate: "",
-      server: "",
-      category: "",
-      selectedCategories: [],
-      dateRangeType: "",
-      company_id: undefined, // Clear company_id filter
-    }));
-  };
+  // UPDATED: Auto-filter function (converted from handleApplyFilters)
+  const triggerAutoFilter = useCallback(async () => {
+    const currentCompany = selectedCompany;
+    const effectiveSelectedLocations = availableLocations.length > 0 ? displaySelectedLocations : localSelectedLocations;
+    const currentStartDate = localStartDate;
+    const currentEndDate = localEndDate;
+    const currentCategories = selectedCategories;
+    const currentServers = selectedServers;
+    const currentMenuItems = selectedMenuItems;
 
-  // UPDATED: Handle Apply Filters with validation - Now uses selected company ID
-  const handleApplyFilters = async () => {
-    // Validate required filters
-    if (!selectedCompanyId) {
-      setFilterError("Please select a company first");
-      return;
-    }
-    
-    if (selectedLocations.length === 0) {
-      setFilterError("Please select at least one location");
+    console.log('🎯 ProductMix: Checking auto-filter trigger:', {
+      company: currentCompany,
+      locations: effectiveSelectedLocations,
+      startDate: currentStartDate,
+      endDate: currentEndDate,
+      categories: currentCategories,
+      servers: currentServers,
+      menuItems: currentMenuItems,
+      isInitialized
+    });
+
+    // Don't trigger on initial load
+    if (!isInitialized) {
+      console.log('⏳ ProductMix: Skipping auto-filter - component not initialized');
       return;
     }
 
-    setIsLoading(true);
+    // Check if minimum requirements are met
+    if (!hasMinimumFilters(currentCompany, effectiveSelectedLocations)) {
+      console.warn('⚠️ ProductMix: Minimum filter requirements not met');
+      return;
+    }
+
+    // Check if filters actually changed
+    if (!hasFiltersChanged(currentCompany, effectiveSelectedLocations, currentStartDate, currentEndDate, currentCategories, currentServers, currentMenuItems)) {
+      console.log('⏭️ ProductMix: No filter changes detected - skipping auto-filter');
+      return;
+    }
+
+    setIsAutoFiltering(true);
     setFilterError("");
     setDataUpdated(false);
 
     try {
-      console.log("🔄 Starting Product Mix filter process with company...");
+      console.log("🔄 Starting Product Mix auto-filter process...");
 
       // Format dates correctly for API (convert MM/dd/yyyy to yyyy-MM-dd)
       let formattedStartDate: string | null = null;
       let formattedEndDate: string | null = null;
       
-      if (localStartDate) {
-        const dateParts = localStartDate.split('/');
+      if (currentStartDate) {
+        const dateParts = currentStartDate.split('/');
         if (dateParts.length === 3) {
           formattedStartDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
         }
       }
       
-      if (localEndDate) {
-        const dateParts = localEndDate.split('/');
+      if (currentEndDate) {
+        const dateParts = currentEndDate.split('/');
         if (dateParts.length === 3) {
           formattedEndDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
         }
       }
 
-      // UPDATED: Prepare the request payload with selected company ID
+      // UPDATED: Prepare the request payload with Redux company and location data
       const payload = {
         fileName: currentProductMixFile?.fileName || "",
-        locations: selectedLocations, // Send as array
-        location: selectedLocations.length === 1 ? selectedLocations[0] : null, // Keep single location for backward compatibility
+        locations: effectiveSelectedLocations, // Send as array
+        location: effectiveSelectedLocations.length === 1 ? effectiveSelectedLocations[0] : null, // Keep single location for backward compatibility
         startDate: formattedStartDate,
         endDate: formattedEndDate,
-        servers: selectedServers,
-        categories: selectedCategories,
-        menuItems: selectedMenuItems,
+        servers: currentServers,
+        categories: currentCategories,
+        menuItems: currentMenuItems,
         dashboard: "Product Mix",
-        company_id: selectedCompanyId, // UPDATED: Use selected company ID instead of file-based company ID
+        company_id: currentCompany, // UPDATED: Use Redux selected company ID
       };
 
-      console.log("🚀 Sending Product Mix filter request with selected company:", payload);
+      console.log("🚀 Sending Product Mix auto-filter request with Redux state:", payload);
 
       // Make API call to Product Mix filter endpoint
       const response = await axios.post(PRODUCT_MIX_FILTER_API_URL, payload);
 
-      console.log("📥 Received Product Mix filter response:", response.data);
+      console.log("📥 Received Product Mix auto-filter response:", response.data);
 
       if (response.data) {
         // ENHANCED: Apply formatting to the response data
         const formattedResponseData = enhanceDataWithFormatting(response.data);
         
         // Extract categories from the filtered data
-        const extractedCategories = formattedResponseData.categories || selectedCategories;
+        const extractedCategories = formattedResponseData.categories || currentCategories;
 
-        // Create enhanced data with filter metadata and selected company_id
+        // Create enhanced data with filter metadata and Redux company_id
         const enhancedData = {
           ...formattedResponseData,
           categories: extractedCategories,
-          company_id: selectedCompanyId, // Use selected company ID
+          company_id: currentCompany, // Use Redux selected company ID
           filterApplied: true,
           filterTimestamp: new Date().toISOString(),
           appliedFilters: {
-            company_id: selectedCompanyId, // Store selected company ID
+            company_id: currentCompany, // Store Redux selected company ID
             company_name: selectedCompanyName, // Store company name for display
-            locations: selectedLocations, // Array of all selected locations
-            location: selectedLocations.length === 1 ? selectedLocations[0] : `${selectedLocations.length} locations`, // Display string
-            startDate: localStartDate,
-            endDate: localEndDate,
-            servers: selectedServers,
-            categories: selectedCategories,
-            menuItems: selectedMenuItems,
+            locations: effectiveSelectedLocations, // Array of all selected locations
+            location: effectiveSelectedLocations.length === 1 ? effectiveSelectedLocations[0] : `${effectiveSelectedLocations.length} locations`, // Display string
+            startDate: currentStartDate,
+            endDate: currentEndDate,
+            servers: currentServers,
+            categories: currentCategories,
+            menuItems: currentMenuItems,
           }
         };
 
-        console.log("📊 Enhanced data with filters, formatting, and selected company:", enhancedData);
+        console.log("📊 Enhanced data with auto-filters, formatting, and Redux company:", enhancedData);
 
-        // IMPORTANT: Update Product Mix data for ALL selected locations with selected company_id
-        selectedLocations.forEach(location => {
+        // IMPORTANT: Update Product Mix data for ALL selected locations with Redux company_id
+        effectiveSelectedLocations.forEach(location => {
           dispatch(addProductMixData({
             location: location,
             data: enhancedData,
             fileName: currentProductMixFile?.fileName || "Unknown",
             fileContent: currentProductMixFile?.fileContent || "",
-            company_id: selectedCompanyId, // Use selected company ID
+            company_id: currentCompany, // Use Redux selected company ID
           }));
         });
 
-        // Update Redux filters with all selected locations and selected company_id
+        // Update Redux filters with all selected locations and Redux company_id
         dispatch(updateProductMixFilters({
-          company_id: selectedCompanyId, // Store selected company ID
-          locations: selectedLocations, // Store array
-          location: selectedLocations.length === 1 ? selectedLocations[0] : selectedLocations.join(","), // Join for display
-          startDate: localStartDate,
-          endDate: localEndDate,
-          servers: selectedServers.join(","),
-          categories: selectedCategories.join(","),
-          menuItems: selectedMenuItems.join(","),
-          selectedCategories: selectedCategories,
-          dateRangeType: (localStartDate && localEndDate) ? "Custom Date Range" : "",
+          company_id: currentCompany, // Store Redux selected company ID
+          locations: effectiveSelectedLocations, // Store array
+          location: effectiveSelectedLocations.length === 1 ? effectiveSelectedLocations[0] : effectiveSelectedLocations.join(","), // Join for display
+          startDate: currentStartDate,
+          endDate: currentEndDate,
+          servers: currentServers.join(","),
+          categories: currentCategories.join(","),
+          menuItems: currentMenuItems.join(","),
+          selectedCategories: currentCategories,
+          dateRangeType: (currentStartDate && currentEndDate) ? "Custom Date Range" : "",
         }));
 
         setDataUpdated(true);
-        console.log("✅ Product Mix filters applied successfully for company:", selectedCompanyName, "locations:", selectedLocations);
+        console.log("✅ Product Mix auto-filters applied successfully for company:", selectedCompanyName, "locations:", effectiveSelectedLocations);
+
+        // Update previous filters reference
+        previousFiltersRef.current = {
+          company: currentCompany,
+          locations: [...effectiveSelectedLocations],
+          startDate: currentStartDate,
+          endDate: currentEndDate,
+          categories: [...currentCategories],
+          servers: [...currentServers],
+          menuItems: [...currentMenuItems]
+        };
 
         // Show success message
         setFilterError("");
@@ -1437,9 +1587,9 @@ export default function ProductMixDashboard() {
       }
 
     } catch (error) {
-      console.error("❌ Product Mix filter error:", error);
+      console.error("❌ Product Mix auto-filter error:", error);
       
-      let errorMessage = "Error applying Product Mix filters";
+      let errorMessage = "Error applying Product Mix auto-filters";
       if (axios.isAxiosError(error)) {
         if (error.response) {
           const detail = error.response.data?.detail;
@@ -1456,7 +1606,7 @@ export default function ProductMixDashboard() {
           errorMessage = 'Cannot connect to server. Please check your connection and server status.';
         }
       } else if (error instanceof Error) {
-        errorMessage = `Product Mix filter error: ${error.message}`;
+        errorMessage = `Product Mix auto-filter error: ${error.message}`;
       }
       
       setFilterError(errorMessage);
@@ -1465,9 +1615,56 @@ export default function ProductMixDashboard() {
       // Clear loading state
       dispatch(setLoading(false));
     } finally {
-      setIsLoading(false);
+      setIsAutoFiltering(false);
     }
-  };
+  }, [
+    selectedCompany,
+    availableLocations.length,
+    displaySelectedLocations,
+    localSelectedLocations,
+    localStartDate,
+    localEndDate,
+    selectedCategories,
+    selectedServers,
+    selectedMenuItems,
+    isInitialized,
+    hasMinimumFilters,
+    hasFiltersChanged,
+    currentProductMixFile?.fileName,
+    currentProductMixFile?.fileContent,
+    selectedCompanyName,
+    dispatch
+  ]);
+
+  // Debounced auto-filter function
+  const debouncedAutoFilter = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    timeoutRef.current = setTimeout(() => {
+      triggerAutoFilter();
+    }, 500); // 500ms debounce for responsiveness
+  }, [triggerAutoFilter]);
+
+  // Single useEffect to monitor all filter changes
+  useEffect(() => {
+    // Mark as initialized after first render
+    if (!isInitialized) {
+      setIsInitialized(true);
+      return;
+    }
+
+    console.log('🔄 ProductMix: Filter change detected, triggering debounced auto-filter');
+    debouncedAutoFilter();
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [selectedCompany, displaySelectedLocations, localSelectedLocations, localStartDate, localEndDate, selectedCategories, selectedServers, selectedMenuItems, debouncedAutoFilter, isInitialized]);
 
   // Calculate grid sizing based on mobile/tablet status
   const getGridSizes = () => {
@@ -1577,7 +1774,7 @@ export default function ProductMixDashboard() {
         </div>
       </Box>
 
-      {/* NEW: Company Selection Section */}
+      {/* UPDATED: Company Selection Section with new API structure */}
       <Card elevation={3} sx={{ 
         mb: 3, 
         borderRadius: 2, 
@@ -1589,36 +1786,26 @@ export default function ProductMixDashboard() {
           <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
             <BusinessIcon color="primary" />
             <Typography variant="h6" sx={{ fontWeight: 600, color: '#1976d2' }}>
-              Select Company
+              Company Selection
             </Typography>
             {companiesLoading && <CircularProgress size={20} />}
           </Box>
           
+          {/* Error display */}
           {companiesError && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {companiesError}
             </Alert>
           )}
           
+          {/* Company Selection Only */}
           <FormControl fullWidth size="small" disabled={companiesLoading}>
-            <InputLabel id="company-select-label">
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <BusinessIcon fontSize="small" />
-           
-              </Box>
-            </InputLabel>
+            <InputLabel>Company</InputLabel>
             <Select
-              labelId="company-select-label"
-              value={selectedCompanyId}
+              value={selectedCompany}
+              label="Company"
               onChange={handleCompanyChange}
               displayEmpty
-              sx={{ 
-                '& .MuiSelect-select': {
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1
-                }
-              }}
             >
               <MenuItem value="">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
@@ -1627,17 +1814,18 @@ export default function ProductMixDashboard() {
                 </Box>
               </MenuItem>
               {companies.map((company) => (
-                <MenuItem key={company.id} value={company.id}>
+                <MenuItem key={company.company_id} value={company.company_id.toString()}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <BusinessIcon fontSize="small" color="primary" />
-                    {company.name}
+                    {company.company_name}
                   </Box>
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
           
-          {selectedCompanyId && (
+          {/* Company Selection Summary */}
+          {selectedCompany && (
             <Box sx={{ mt: 2 }}>
               <Chip
                 icon={<BusinessIcon />}
@@ -1648,18 +1836,36 @@ export default function ProductMixDashboard() {
               />
             </Box>
           )}
+          
+          {/* Location count info */}
+          {selectedCompany && availableLocations.length > 0 && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                <strong>{selectedCompanyName}</strong> has {availableLocations.length} location{availableLocations.length > 1 ? 's' : ''} available.
+                Location selection is handled in the filters section below.
+              </Typography>
+            </Alert>
+          )}
+          
+          {/* Note about location selection */}
+          <Alert severity="success" sx={{ mt: 2 }}>
+            <Typography variant="body2">
+              <strong>Note:</strong> Location selection is managed in the Filters section below. 
+              Redux State - Company: [{selectedCompanies.join(', ')}]
+            </Typography>
+          </Alert>
         </CardContent>
       </Card>
 
       {/* Company Selection Alert */}
-      {selectedCompanyId && (
+      {selectedCompany && (
         <Alert 
           severity="info" 
           sx={{ mb: 3, width: "100%" }}
           icon={<BusinessIcon />}
         >
           <Typography variant="body2">
-            <strong>Selected Company:</strong> {selectedCompanyName} (ID: {selectedCompanyId})
+            <strong>Selected Company:</strong> {selectedCompanyName} (ID: {selectedCompany})
           </Typography>
         </Alert>
       )}
@@ -1695,8 +1901,8 @@ export default function ProductMixDashboard() {
         >
           <Typography variant="body2">
             <strong>✅ Filters Applied Successfully!</strong> 
-            {selectedCompanyId && (
-              <span> | <strong>Company:</strong> {selectedCompanyName} (ID: {selectedCompanyId})</span>
+            {selectedCompany && (
+              <span> | <strong>Company:</strong> {selectedCompanyName} (ID: {selectedCompany})</span>
             )}
           </Typography>
         </Alert>
@@ -1725,7 +1931,7 @@ export default function ProductMixDashboard() {
               </Typography>
             
               {/* Company ID chip */}
-              {selectedCompanyId && (
+              {selectedCompany && (
                 <Chip 
                   label={`🏢 ${selectedCompanyName}`} 
                   size="small" 
@@ -1735,20 +1941,66 @@ export default function ProductMixDashboard() {
                   sx={{ ml: 1 }}
                 />
               )}
+
+              {/* Auto-filtering indicator */}
+              {isAutoFiltering && (
+                <Chip 
+                  icon={<CircularProgress size={16} />}
+                  label="Auto-Filtering..."
+                  size="small"
+                  color="secondary"
+                  variant="outlined"
+                />
+              )}
+              
+              <Chip 
+                icon={<AutorenewIcon />}
+                label="Auto-Update"
+                size="small"
+                color="success"
+                variant="outlined"
+                sx={{ ml: 'auto' }}
+              />
             </Box>
           </Box>
 
+          {/* Company Selection Alert */}
+          {!selectedCompany && (
+            <Alert severity="warning" sx={{ mb: 3 }}>
+              <Typography variant="body2">
+                Please select a company above to see available locations for filtering.
+              </Typography>
+            </Alert>
+          )}
+
+          {/* No locations available alert */}
+          {selectedCompany && displayLocations.length === 0 && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              <Typography variant="body2">
+                No locations available for the selected company.
+              </Typography>
+            </Alert>
+          )}
+
+          {/* Auto-Filter Info */}
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <Typography variant="body2">
+              <strong>Auto-Filter Mode:</strong> Data will update automatically when you change any filter. 
+              Company and location selection are required, other filters are optional.
+            </Typography>
+          </Alert>
+
           <Grid container spacing={2} sx={{ width: "100%" }}>
-            {/* Location filter */}
+            {/* Location filter - UPDATED to use Redux state */}
             <Grid item {...gridSizes}>
               <MultiSelect
                 id="location-select"
                 label="Location"
-                options={locations}
-                value={selectedLocations}
+                options={displayLocations}
+                value={displaySelectedLocations}
                 onChange={handleLocationChange}
                 icon={<PlaceIcon />}
-                placeholder="All locations initially selected"
+                placeholder={selectedCompany ? "Select locations" : "Select company first"}
               />
             </Grid>
 
@@ -1828,46 +2080,55 @@ export default function ProductMixDashboard() {
             </Grid>
           </Grid>
 
-          {/* Active filters display */}
-          {(selectedCompanyId ||
-            selectedLocations.length > 0 ||
+          {/* Active filters display with auto-filter status */}
+          {(selectedCompany ||
+            displaySelectedLocations.length > 0 ||
             (localStartDate && localEndDate) ||
             selectedServers.length > 0 ||
             selectedMenuItems.length > 0 ||
             selectedCategories.length > 0) && (
             <Box sx={{ mt: 2, width: "100%" }}>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 1 }}
-              >
-              Active Filters:
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                >
+                Active Filters:
+                </Typography>
+                {isAutoFiltering && (
+                  <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <CircularProgress size={16} />
+                    <Typography variant="caption" color="primary">
+                      Updating...
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                 {/* Company filter chip */}
-                {selectedCompanyId && (
+                {selectedCompany && (
                   <Chip
                     label={`Company: ${selectedCompanyName}`}
                     color="primary"
                     variant="filled"
                     size="small"
                     icon={<BusinessIcon />}
-                    onDelete={() => setSelectedCompanyId("")}
+                    onDelete={() => reduxDispatch(setSelectedCompanies([]))}
                   />
                 )}
 
-                {selectedLocations.length > 0 && (
+                {displaySelectedLocations.length > 0 && (
                   <Chip
                     label={
-                      selectedLocations.length === 1
-                        ? `Location: ${selectedLocations[0]}`
-                        : `Locations: ${selectedLocations.length} selected`
+                      displaySelectedLocations.length === 1
+                        ? `Location: ${displaySelectedLocations[0]}`
+                        : `Locations: ${displaySelectedLocations.length} selected`
                     }
                     color="primary"
                     variant="outlined"
                     size="small"
                     icon={<PlaceIcon />}
-                    onDelete={() => setSelectedLocations([])}
+                    onDelete={() => handleLocationChange([])}
                   />
                 )}
 
@@ -1932,71 +2193,8 @@ export default function ProductMixDashboard() {
               </Box>
             </Box>
           )}
-          
-          {/* UPDATED: Apply Filters Button with company validation */}
-          <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-start", gap: 2, width: "100%" }}>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleApplyFilters}
-              disabled={
-                isLoading || 
-                loading || 
-                !selectedCompanyId ||
-                selectedLocations.length === 0 ||
-                companiesLoading
-              }
-              startIcon={
-                isLoading || loading ? (
-                  <CircularProgress size={16} />
-                ) : (
-                  <RefreshIcon />
-                )
-              }
-              sx={{
-                borderRadius: 2,
-                px: 3,
-                py: 1,
-                textTransform: "uppercase",
-                fontWeight: 600,
-              }}
-            >
-              {isLoading || loading ? "Loading..." : "APPLY FILTERS & FORMAT"}
-            </Button>
-
-            {/* Clear All Filters Button - Show if any filters are applied */}
-            {(selectedCompanyId ||
-              selectedLocations.length > 0 || 
-              selectedServers.length > 0 || 
-              selectedCategories.length > 0 || 
-              selectedMenuItems.length > 0 ||
-              localStartDate ||
-              localEndDate) && (
-              <Button
-                variant="outlined"
-                color="secondary"
-                onClick={handleClearAllFilters}
-                disabled={isLoading || loading}
-                startIcon={<CloseIcon />}
-                sx={{ 
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                  }
-                }}
-              >
-                CLEAR ALL FILTERS
-              </Button>
-            )}
-          </Box>
-
-          {/* UPDATED: Validation message for required fields */}
-          {(!selectedCompanyId || selectedLocations.length === 0) && (
-            <Alert severity="warning" sx={{ mt: 2, width: "100%" }}>
-              <Typography variant="body2">
-                <strong>Required:</strong> Please select a company and at least one location to apply filters and formatting.
-              </Typography>
-            </Alert>
-          )}
+    
+         
         </CardContent>
       </Card>
 
@@ -2046,10 +2244,10 @@ export default function ProductMixDashboard() {
                 width: "100%",  // Add explicit width
                 boxSizing: "border-box"  // Ensure padding doesn't affect width
               }}>
-                {isLoading ? (
+                {isAutoFiltering ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                     <CircularProgress size={40} />
-                    <Typography sx={{ ml: 2 }}>Updating dashboard data with enhanced formatting and table11 support...</Typography>
+                    <Typography sx={{ ml: 2 }}>Auto-filtering data with enhanced formatting and table11 support...</Typography>
                   </Box>
                 ) : (
                   <Box sx={{ width: "100%" }}>  {/* Add explicit width */}
@@ -2098,10 +2296,10 @@ export default function ProductMixDashboard() {
                 width: "100%",  // Add explicit width
                 boxSizing: "border-box"
               }}>
-                {isLoading ? (
+                {isAutoFiltering ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                     <CircularProgress size={40} />
-                    <Typography sx={{ ml: 2 }}>Updating dashboard data with enhanced formatting and table11 support...</Typography>
+                    <Typography sx={{ ml: 2 }}>Auto-filtering data with enhanced formatting and table11 support...</Typography>
                   </Box>
                 ) : (
                   <MenuAnalysisDashboardtwo
