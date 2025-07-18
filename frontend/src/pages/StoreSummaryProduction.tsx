@@ -424,28 +424,42 @@ const StoreSummaryProduction = () => {
     const companies = selectedCompanies || [];
     const locations = selectedLocations || [];
     
-    const shouldFetchData = companies.length > 0 && locations.length > 0;
+    const shouldFetchOrders = companies.length > 0 && locations.length > 0;
+    const shouldFetchConsolidated = companies.length > 0; // Only needs company
     
-    if (shouldFetchData) {
+    if (shouldFetchOrders || shouldFetchConsolidated) {
       console.log('🔄 Auto-fetching data due to filter/date range change:', {
         companies: companies,
         locations: locations,
         dateRange: selectedDateRange,
-        hasDateRange: !!selectedDateRange
+        hasDateRange: !!selectedDateRange,
+        willFetchOrders: shouldFetchOrders,
+        willFetchConsolidated: shouldFetchConsolidated
       });
       
       const fetchData = async () => {
         try {
           setLocalError(null);
           const companyId = companies[0];
-          const locationId = locations[0];
+          
+          const fetchPromises = [];
+          
+          // Always fetch consolidated data if we have a company
+          if (shouldFetchConsolidated) {
+            fetchPromises.push(fetchConsolidatedData(companyId));
+          }
+          
+          // Only fetch orders if we have both company and location
+          if (shouldFetchOrders) {
+            const locationId = locations[0];
+            fetchPromises.push(fetchOrdersData(companyId, locationId));
+          } else {
+            // Clear orders data if no location selected
+            setOrdersData([]);
+            setOrdersTotal(0);
+          }
 
-          // Fetch both orders and consolidated data
-          await Promise.all([
-            fetchOrdersData(companyId, locationId),
-            fetchConsolidatedData(companyId)
-          ]);
-
+          await Promise.all(fetchPromises);
           setDataLoaded(true);
         } catch (err) {
           console.error('❌ Error auto-fetching data:', err);
@@ -461,6 +475,15 @@ const StoreSummaryProduction = () => {
         companiesCount: companies.length,
         locationsCount: locations.length
       });
+      
+      // Clear all data if no company selected
+      if (companies.length === 0) {
+        setOrdersData([]);
+        setConsolidatedData([]);
+        setConsolidatedColumns([]);
+        setOrdersTotal(0);
+        setDataLoaded(false);
+      }
     }
   }, [selectedCompanies, selectedLocations, selectedDateRange]); // Watch for changes in any of these
 
@@ -1381,12 +1404,12 @@ const generateConsolidatedReport = () => {
     return null;
   };
 
-  // Show empty state when no data
-  const showEmptyState = !loading && 
-    (!ordersData || ordersData.length === 0) && 
-    selectedCompanies && selectedCompanies.length > 0 && 
-    selectedLocations && selectedLocations.length > 0 && 
-    dataLoaded;
+  // Show empty state when no data - REMOVED since we handle this inline now
+  // const showEmptyState = !loading && 
+  //   (!ordersData || ordersData.length === 0) && 
+  //   selectedCompanies && selectedCompanies.length > 0 && 
+  //   selectedLocations && selectedLocations.length > 0 && 
+  //   dataLoaded;
   console.log('ordersData:', ordersData);
   // Combined error from Redux and local state
   const displayError = error || localError;
@@ -1626,23 +1649,29 @@ const generateConsolidatedReport = () => {
         </Box>
       )}
 
-      {/* Empty State */}
-      {showEmptyState && (
+      {/* Empty State - Updated conditions */}
+      {!loading && (
+        (selectedCompanies && selectedCompanies.length === 0) || 
+        (selectedCompanies && selectedCompanies.length > 0 && selectedLocations && selectedLocations.length > 0 && (!ordersData || ordersData.length === 0) && (!consolidatedData || consolidatedData.length === 0) && dataLoaded)
+      ) && (
         <Card sx={{ mb: 3, borderRadius: 2 }}>
           <CardContent sx={{ textAlign: 'center', py: 6 }}>
             <DescriptionIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
             <Typography variant="h6" sx={{ mb: 1 }}>
-              No Data Available
+              {selectedCompanies && selectedCompanies.length === 0 ? 'Select a Company' : 'No Data Available'}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Please select a company and location to automatically load data.
+              {selectedCompanies && selectedCompanies.length === 0 
+                ? 'Please select a company to view production requirements and order data.'
+                : 'No data found for the selected filters. Try adjusting your date range or filters.'
+              }
             </Typography>
           </CardContent>
         </Card>
       )}
 
-      {/* All Orders/Invoices by Location */}
-      {!loading && ordersData.length > 0 && (
+      {/* All Orders/Invoices by Location - Only show when both company and location selected */}
+      {!loading && ordersData && ordersData.length > 0 && selectedCompanies && selectedCompanies.length > 0 && selectedLocations && selectedLocations.length > 0 && (
         <Card sx={{ mb: 3, borderRadius: 2 }}>
           <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -1760,8 +1789,8 @@ const generateConsolidatedReport = () => {
         </Card>
       )}
 
-      {/* Consolidated Production Requirements */}
-      {!loading && consolidatedData.length > 0 && (
+      {/* Consolidated Production Requirements - Show even without location */}
+      {!loading && consolidatedData && consolidatedData.length > 0 && selectedCompanies && selectedCompanies.length > 0 && (
         <Card sx={{ borderRadius: 2 }}>
           <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
