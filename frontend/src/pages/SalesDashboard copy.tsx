@@ -1,4 +1,4 @@
-// Updated SalesDashboard.tsx with complete Redux state management for company/location selection
+// Updated SalesDashboard.tsx with company selection dropdown
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -47,7 +47,7 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
-import BusinessIcon from '@mui/icons-material/Business';
+import BusinessIcon from '@mui/icons-material/Business'; // NEW: Company icon
 
 // Components
 import FinancialTablesComponent from '../components/FinancialTablesComponent';
@@ -61,38 +61,22 @@ import {
   setTableData,
   setLoading,
   setError,
-  selectCompanyId
+  selectCompanyId // NEW: Import company ID selector
 } from '../store/excelSlice';
-
-// Redux imports for company/location management
-import { useSelector, useDispatch } from "react-redux";
-import { 
-  setSelectedCompanies, 
-  setSelectedLocations, 
-  selectSelectedCompanies, 
-  selectSelectedLocations 
-} from "../store/slices/masterFileSlice";
-
 import { API_URL_Local } from '../constants';
 
-// Company interface with nested locations
+// Company interface
 interface Company {
-  company_id: number;
-  company_name: string;
-  locations: Location[];
-}
-
-// Location interface
-interface Location {
-  location_id: number;
-  location_name: string;
+  id: string;
+  name: string;
+  [key: string]: any; // Allow for additional company properties
 }
 
 // API URLs
 const SALES_WIDE_FILTER_API_URL = `${API_URL_Local}/api/companywide/filter`;
-const COMPANY_LOCATIONS_API_URL = `${API_URL_Local}/company-locations/all`;
+const COMPANIES_API_URL = `${API_URL_Local}/companies`; // NEW: Companies API endpoint
 
-// Company info display component
+// NEW: Company info display component
 const CompanyInfoChip = styled(Chip)(({ theme }) => ({
   backgroundColor: alpha(theme.palette.primary.main, 0.1),
   border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
@@ -507,7 +491,7 @@ const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
   );
 };
 
-// Enhanced Date Range Selector Component
+// Enhanced Date Range Selector Component - Fixed Modal with Button Trigger
 interface DateRangeSelectorComponentProps {
   onDateRangeSelect: (dateRange: any) => void;
 }
@@ -534,11 +518,16 @@ const DateRangeSelectorComponent: React.FC<DateRangeSelectorComponentProps> = ({
 
   const handleSetDateRange = () => {
     if (tempRange) {
+      // Format the display text  
       const startDate = tempRange.startDate.toLocaleDateString();
       const endDate = tempRange.endDate.toLocaleDateString();
       setSelectedRange(`${startDate} - ${endDate}`);
+      
+      // Pass the range to parent
       onDateRangeSelect(tempRange);
     }
+    
+    // Close the modal
     handleClose();
   };
 
@@ -555,6 +544,7 @@ const DateRangeSelectorComponent: React.FC<DateRangeSelectorComponentProps> = ({
 
   return (
     <>
+      {/* Date Range Selector Button */}
       <Box sx={{ position: 'relative', width: '100%' }}>
         <Typography 
           variant="body2" 
@@ -624,6 +614,7 @@ const DateRangeSelectorComponent: React.FC<DateRangeSelectorComponentProps> = ({
         </Box>
       </Box>
 
+      {/* Fixed Modal Dialog - Made even bigger with buttons at bottom right */}
       <Dialog
         open={open}
         onClose={handleClose}
@@ -636,6 +627,16 @@ const DateRangeSelectorComponent: React.FC<DateRangeSelectorComponentProps> = ({
             height: '700px',
             maxWidth: '95vw',
             maxHeight: '95vh'
+          }
+        }}
+        sx={{
+          '& .MuiDialog-container': {
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 2
+          },
+          '& .MuiBackdrop-root': {
+            backgroundColor: 'rgba(0, 0, 0, 0.3)',
           }
         }}
       >
@@ -651,6 +652,7 @@ const DateRangeSelectorComponent: React.FC<DateRangeSelectorComponentProps> = ({
             Select Date Range
           </Typography>
           
+          {/* Container for DateRangeSelector with more space */}
           <Box sx={{ 
             flexGrow: 1,
             display: 'flex',
@@ -658,13 +660,20 @@ const DateRangeSelectorComponent: React.FC<DateRangeSelectorComponentProps> = ({
             alignItems: 'flex-start',
             minHeight: '500px',
             mb: 3,
-            overflow: 'auto'
+            overflow: 'auto',
+            pl: 0, // Remove any left padding
+            ml: 0  // Remove any left margin
           }}>
-            <Box sx={{ width: '100%' }}>
+            <Box sx={{ 
+              width: '100%',
+              pl: 0, // Ensure DateRangeSelector starts from the left
+              ml: 0
+            }}>
               <DateRangeSelector onSelect={handleTempDateRangeSelect} />
             </Box>
           </Box>
           
+          {/* Action Buttons - Moved to bottom right */}
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'flex-end', 
@@ -682,7 +691,11 @@ const DateRangeSelectorComponent: React.FC<DateRangeSelectorComponentProps> = ({
                 minWidth: '100px',
                 textTransform: 'uppercase',
                 py: 1.5,
-                px: 3
+                px: 3,
+                '&:hover': {
+                  borderColor: '#999',
+                  backgroundColor: '#f5f5f5',
+                }
               }}
             >
               CANCEL
@@ -697,6 +710,9 @@ const DateRangeSelectorComponent: React.FC<DateRangeSelectorComponentProps> = ({
                 textTransform: 'uppercase',
                 py: 1.5,
                 px: 3,
+                '&:hover': {
+                  backgroundColor: '#1565c0',
+                },
                 '&:disabled': {
                   backgroundColor: '#ccc'
                 }
@@ -711,7 +727,7 @@ const DateRangeSelectorComponent: React.FC<DateRangeSelectorComponentProps> = ({
   );
 };
 
-// Chart Base Component
+// Chart Base Component with improved layout to prevent text cutoff
 interface BaseChartProps {
   title: string;
   children: React.ReactNode;
@@ -743,7 +759,7 @@ const BaseChart: React.FC<BaseChartProps> = ({ title, children, height = 450 }) 
   );
 };
 
-// Custom Tooltip Component for Recharts
+// UPDATED: Custom Tooltip Component for Recharts - Better handling for multiple bars
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
@@ -779,6 +795,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
               }}
             />
             {entry.name || entry.dataKey}: {
+              // Format based on value type
               typeof entry.value === 'number' 
                 ? entry.value % 1 !== 0 
                   ? entry.value.toFixed(2) + (entry.dataKey.includes('vs.') ? '%' : '')
@@ -793,15 +810,12 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-// Main Component with Redux state management
+// Main Component
 export default function SalesDashboard() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
-  
-  // Use both dispatch hooks
-  const dispatch = useAppDispatch(); // For existing excel slice
-  const reduxDispatch = useDispatch(); // For master file slice
+  const dispatch = useAppDispatch();
 
   // Get data from Redux store
   const {
@@ -813,25 +827,14 @@ export default function SalesDashboard() {
     error
   } = useAppSelector((state) => state.excel);
 
-  // Get company_id from Redux (from uploaded files)
+  // NEW: Get company_id from Redux (might come from uploaded files)
   const currentCompanyId = useAppSelector(selectCompanyId);
   
-  // Redux state for company/location selection
-  const selectedCompanies = useSelector(selectSelectedCompanies);
-  const selectedLocations = useSelector(selectSelectedLocations);
-
-  // Convert to single values for dropdown compatibility
-  const selectedCompany = selectedCompanies.length > 0 ? selectedCompanies[0] : '';
-  const selectedLocation = selectedLocations.length > 0 ? selectedLocations[0] : '';
-
-  // Company and location data state
+  // NEW: Company-related state
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
   const [companiesLoading, setCompaniesLoading] = useState(false);
   const [companiesError, setCompaniesError] = useState<string>("");
-
-  // Get current company's locations
-  const currentCompanyData = companies.find(c => c.company_id.toString() === selectedCompany);
-  const availableLocations = currentCompanyData?.locations || [];
 
   // Find current data for the selected location
   const currentSalesWideData = salesWideFiles.find(f => f.location === currentSalesWideLocation)?.data;
@@ -842,7 +845,8 @@ export default function SalesDashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [filterError, setFilterError] = useState<string>('');
   
-  // Filter states - Only date range (company/location use Redux)
+  // Filter states
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([currentSalesWideLocation || '']);
   const [selectedDateRange, setSelectedDateRange] = useState<any>(null);
   
   // Current table data from local state that gets updated from API calls
@@ -856,29 +860,32 @@ export default function SalesDashboard() {
     table7: []
   });
 
-  // Fetch companies with locations on component mount
+  // Extract data arrays from backend response or use defaults
+  const locations = currentSalesWideData?.locations || salesWideLocations || ['Midtown East', 'Downtown West', 'Uptown North', 'Southside'];
+
+  // NEW: Fetch companies on component mount
   useEffect(() => {
-    const fetchCompaniesWithLocations = async () => {
+    const fetchCompanies = async () => {
       setCompaniesLoading(true);
       setCompaniesError("");
       
       try {
-        console.log('🏢 SalesDashboard: Fetching companies with locations from:', COMPANY_LOCATIONS_API_URL);
-        const response = await axios.get(COMPANY_LOCATIONS_API_URL);
+        console.log('🏢 SalesDashboard: Fetching companies from:', COMPANIES_API_URL);
+        const response = await axios.get(COMPANIES_API_URL);
         
-        console.log('📥 SalesDashboard: Companies with locations response:', response.data);
+        console.log('📥 SalesDashboard: Companies response:', response.data);
         setCompanies(response.data || []);
         
-        // Auto-select the first company if there's only one and none selected
-        if (response.data && response.data.length === 1 && selectedCompanies.length === 0) {
-          reduxDispatch(setSelectedCompanies([response.data[0].company_id.toString()]));
+        // Optionally auto-select the first company if there's only one
+        if (response.data && response.data.length === 1) {
+          setSelectedCompanyId(response.data[0].id);
           console.log('🎯 SalesDashboard: Auto-selected single company:', response.data[0]);
         }
         
       } catch (error) {
-        console.error('❌ SalesDashboard: Error fetching companies with locations:', error);
+        console.error('❌ SalesDashboard: Error fetching companies:', error);
         
-        let errorMessage = "Error loading companies and locations";
+        let errorMessage = "Error loading companies";
         if (axios.isAxiosError(error)) {
           if (error.response) {
             errorMessage = `Server error: ${error.response.status}`;
@@ -893,52 +900,30 @@ export default function SalesDashboard() {
       }
     };
 
-    fetchCompaniesWithLocations();
-  }, [selectedCompanies.length, reduxDispatch]);
+    fetchCompanies();
+  }, []);
 
-  // Sync selectedCompany with Redux currentCompanyId if it exists
+  // NEW: Sync selectedCompanyId with Redux currentCompanyId if it exists (from uploaded files)
   useEffect(() => {
-    if (currentCompanyId && selectedCompanies.length === 0) {
+    if (currentCompanyId && !selectedCompanyId) {
       console.log('🏢 SalesDashboard: Syncing company ID from Redux files:', currentCompanyId);
-      reduxDispatch(setSelectedCompanies([currentCompanyId]));
+      setSelectedCompanyId(currentCompanyId);
     }
-  }, [currentCompanyId, selectedCompanies.length, reduxDispatch]);
+  }, [currentCompanyId, selectedCompanyId]);
 
-  // Redux-based change handlers
+  // NEW: Handle company selection
   const handleCompanyChange = (event: SelectChangeEvent) => {
     const companyId = event.target.value;
+    setSelectedCompanyId(companyId);
     console.log('🏢 SalesDashboard: Company selected:', companyId);
-    
-    // Update Redux state - always clear locations when company changes
-    reduxDispatch(setSelectedCompanies([companyId]));
-    reduxDispatch(setSelectedLocations([])); // Clear locations when company changes
   };
 
-  const handleLocationFilterChange = (newLocationNames: string[]) => {
-    // Convert location names back to location IDs and update Redux
-    if (newLocationNames.length === 1 && selectedCompany) {
-      const selectedLocationData = availableLocations.find(loc => loc.location_name === newLocationNames[0]);
-      if (selectedLocationData) {
-        reduxDispatch(setSelectedLocations([selectedLocationData.location_id.toString()]));
-      }
-    } else {
-      reduxDispatch(setSelectedLocations([]));
-    }
-  };
+  // Get selected company name for display
+  const selectedCompanyName = companies.find(c => c.id === selectedCompanyId)?.name || 
+                               (selectedCompanyId ? `Company ID: ${selectedCompanyId}` : 'No Company Selected');
 
-  const handleDateRangeSelect = (dateRange: any) => {
-    setSelectedDateRange(dateRange);
-  };
-
-  // Get selected company and location names for display
-  const selectedCompanyName = companies.find(c => c.company_id.toString() === selectedCompany)?.company_name || 
-                               (selectedCompany ? `Company ID: ${selectedCompany}` : 'No Company Selected');
-  
-  const selectedLocationName = availableLocations.find(l => l.location_id.toString() === selectedLocation)?.location_name || 
-                               (selectedLocation ? `Location ID: ${selectedLocation}` : 'No Location Selected');
-
-  // Get active company ID (prioritize Redux selectedCompany, fallback to currentCompanyId)
-  const activeCompanyId = selectedCompany || currentCompanyId;
+  // Get active company ID (prioritize selectedCompanyId, fallback to Redux currentCompanyId)
+  const activeCompanyId = selectedCompanyId || currentCompanyId;
 
   // Initialize local state with current data
   useEffect(() => {
@@ -955,45 +940,56 @@ export default function SalesDashboard() {
     }
   }, [currentSalesWideData]);
 
-  // Apply filters with backend API call
+  // Initialize selected locations
+  useEffect(() => {
+    if (locations.length > 0 && selectedLocations.length === 0) {
+      setSelectedLocations([locations[0]]);
+    }
+  }, [locations, selectedLocations]);
+
+  // UPDATED: Apply filters with backend API call including company_id
   const handleApplyFilters = async () => {
     setIsLoading(true);
     setFilterError('');
     
     try {
-      // Find the current sales wide file data
+      // Find the current sales wide file data - check all selected locations
       let currentFile = null;
       
-      // Try to find file by Redux selected location name first
-      if (selectedLocation && selectedLocationName) {
-        currentFile = salesWideFiles.find(f => f.location === selectedLocationName);
+      // If multiple locations selected, find the first file that matches any of them
+      for (const location of selectedLocations) {
+        currentFile = salesWideFiles.find(f => f.location === location);
+        if (currentFile) break;
       }
       
-      // Fallback to current location
+      // If no file found in selected locations, try current location
       if (!currentFile) {
         currentFile = salesWideFiles.find(f => f.location === currentSalesWideLocation);
       }
       
       if (!currentFile) {
-        throw new Error('No Sales Wide data found for selected location');
+        throw new Error('No Sales Wide data found for selected location(s)');
       }
 
-      // Prepare the request payload with Redux state
+      // UPDATED: Prepare the request payload with multiple locations AND active company_id
       const payload = {
         fileName: currentFile.fileName,
         fileContent: currentFile.fileContent,
-        locations: selectedLocation ? [selectedLocationName] : [],
-        location: selectedLocation ? selectedLocationName : null,
+        // Send all selected locations, not just the first one
+        locations: selectedLocations.length > 0 ? selectedLocations : [currentFile.location],
+        // Keep single location for backward compatibility
+        location: selectedLocations.length > 0 ? selectedLocations[0] : currentFile.location,
         startDate: selectedDateRange?.startDateStr || null,
         endDate: selectedDateRange?.endDateStr || null,
         dashboard: 'Sales Wide',
-        company_id: activeCompanyId,
-        location_id: selectedLocation || null
+        company_id: activeCompanyId // NEW: Include active company_id
       };
 
-      console.log('🚀 Sending Sales Wide filter request with Redux state:', payload);
+      console.log('🚀 Sending Sales Wide filter request with company_id:', payload);
 
+      // Make API call to sales wide filter endpoint
       const response = await axios.post(SALES_WIDE_FILTER_API_URL, payload);
+
       console.log('📥 Received Sales Wide filter response:', response.data);
 
       if (response.data) {
@@ -1008,23 +1004,22 @@ export default function SalesDashboard() {
           table7: response.data.table7 || []
         });
 
-        // Update Redux state
+        // Also update Redux state if needed
         dispatch(setTableData(response.data));
 
-        // Update Redux filters
+        // Update Redux filters with company_id
         dispatch(updateSalesWideFilters({ 
-          location: selectedLocation ? selectedLocationName : '',
+          location: selectedLocations.join(','), // Store all locations as comma-separated string
           dateRange: selectedDateRange ? `${selectedDateRange.startDateStr} - ${selectedDateRange.endDateStr}` : '',
-          company_id: activeCompanyId,
-          location_id: selectedLocation
+          company_id: activeCompanyId // NEW: Include company_id in filters
         }));
 
-        // Update current location if changed
-        if (selectedLocation && selectedLocationName !== currentSalesWideLocation) {
-          dispatch(selectSalesWideLocation(selectedLocationName));
+        // Update current location if changed (use first selected location)
+        if (selectedLocations.length > 0 && selectedLocations[0] !== currentSalesWideLocation) {
+          dispatch(selectSalesWideLocation(selectedLocations[0]));
         }
 
-        console.log('✅ Sales Wide filters applied successfully');
+        console.log('✅ Sales Wide filters applied successfully with company_id:', activeCompanyId);
       }
 
     } catch (err: any) {
@@ -1051,12 +1046,21 @@ export default function SalesDashboard() {
     }
   };
 
+  // Handlers for filter changes
+  const handleLocationChange = (newLocations: string[]) => {
+    setSelectedLocations(newLocations);
+  };
+
+  const handleDateRangeSelect = (dateRange: any) => {
+    setSelectedDateRange(dateRange);
+  };
+
   // Process backend data for charts
   const processTableDataForCharts = (tableData: any[], keys: string[]) => {
     if (!tableData || tableData.length === 0) return [];
     
     return tableData
-      .filter(row => row.Store !== 'Grand Total')
+      .filter(row => row.Store !== 'Grand Total') // Exclude grand total from charts
       .map(row => {
         const processedRow: any = { store: row.Store };
         keys.forEach(key => {
@@ -1112,24 +1116,31 @@ export default function SalesDashboard() {
     ['Tw Fc %', 'Lw Fc %']
   );
 
-  // Create properly formatted financial tables data
+  // UPDATED: Create properly formatted financial tables data for FinancialTablesComponent
   const financialTablesData = React.useMemo(() => {
-    return {
-      table1: currentTableData.table1 || [],
-      table2: currentTableData.table2 || [],
-      table3: currentTableData.table3 || [],
-      table4: currentTableData.table4 || [],
-      table5: currentTableData.table5 || [],
-      table6: currentTableData.table6 || [],
-      table7: currentTableData.table7 || []
+    console.log('🔄 Creating financial tables data from currentTableData:', currentTableData);
+    console.log('salesData:-----', salesData);
+    // Return the data in the exact format expected by FinancialTablesComponent
+    const formattedData = {
+      table1: currentTableData.table1 || [], // Sales Performance
+      table2: currentTableData.table2 || [], // Order Volume  
+      table3: currentTableData.table3 || [], // Average Ticket
+      table4: currentTableData.table4 || [], // Cost of Goods Sold
+      table5: currentTableData.table5 || [], // Regular Pay (Labor)
+      table6: currentTableData.table6 || [], // Labor Hours
+      table7: currentTableData.table7 || []  // Sales per Man Hour
     };
+    
+    console.log('✅ Formatted financial tables data:', formattedData);
+    return formattedData;
   }, [currentTableData]);
 
-  // Handle tab changes
+  // Handle main tab change
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
+  // Handle chart tab change
   const handleChartTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setChartTab(newValue);
   };
@@ -1143,7 +1154,7 @@ export default function SalesDashboard() {
     })}`;
   };
 
-  // Function to create charts
+  // UPDATED: Function to create charts - Fixed to show both bars for Sales/Orders/Avg Ticket
   const createNivoBarChart = (
     data: any[], 
     keys: string[], 
@@ -1153,6 +1164,8 @@ export default function SalesDashboard() {
     enableLabels: boolean = false,
     customLabelFormat?: (d: any) => string
   ) => {
+    console.log('🎯 createNivoBarChart called with:', chartType);
+    
     if (!data || data.length === 0) {
       return (
         <Box sx={{ 
@@ -1167,6 +1180,7 @@ export default function SalesDashboard() {
       );
     }
 
+    // FIXED: For Sales/Orders/Avg Ticket, show both bars using Recharts
     const isSingleBarChart = chartType === 'salesPercentage' || chartType === 'ordersPercentage' || chartType === 'avgTicket';
     
     if (isSingleBarChart) {
@@ -1191,15 +1205,16 @@ export default function SalesDashboard() {
             <RechartsTooltip content={<CustomTooltip />} />
             <Legend wrapperStyle={{ paddingTop: '20px', fontSize: '14px', fontWeight: 'bold' }} />
             
+            {/* FIXED: Show both bars instead of just one */}
             <Bar
-              dataKey={keys[0]}
+              dataKey={keys[0]} // "Tw vs. Lw"
               fill={colors[0] || '#4285f4'}
               name="Tw vs. Lw"
               radius={[2, 2, 0, 0]}
               maxBarSize={60}
             />
             <Bar
-              dataKey={keys[1]}
+              dataKey={keys[1]} // "Tw vs. Ly"
               fill={colors[1] || '#ea4335'}
               name="Tw vs. Ly"
               radius={[2, 2, 0, 0]}
@@ -1210,15 +1225,17 @@ export default function SalesDashboard() {
       );
     }
 
+    // Labor $ Spent, Labor %, Labor Hrs, SPMH, COGS $, COGS %: Use Nivo with STACKED bars
     const isStackedChart = chartType === 'laborCost' || chartType === 'laborPercentage' || 
                           chartType === 'laborHrs' || chartType === 'spmh' || 
                           chartType === 'cogs' || chartType === 'cogsPercentage';
     
     if (isStackedChart) {
-      return createNivoChart(data, keys, colors, chartType, labelFormat, true);
+      return createNivoChart(data, keys, colors, chartType, labelFormat, true); // true = stacked
     }
 
-    return createNivoChart(data, keys, colors, chartType, labelFormat, false);
+    // Any remaining charts: Use Nivo with GROUPED bars (fallback)
+    return createNivoChart(data, keys, colors, chartType, labelFormat, false); // false = grouped
   };
 
   return (
@@ -1232,70 +1249,60 @@ export default function SalesDashboard() {
           justifyContent: 'center',
           width: '100%'
         }}>
-          <h1 
-            style={{ 
-              fontWeight: 800,
-              background: 'linear-gradient(135deg, #1976d2 0%, #9c27b0 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontSize: 'clamp(1.75rem, 5vw, 3rem)',
-              marginBottom: '8px',
-              letterSpacing: '-0.02em',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '16px',
-              margin: '0',
-              textAlign: 'center'
-            }}
-          >
-            <span style={{ 
-              color: '#1976d2',
-              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
-              fontSize: 'inherit',
-              display: 'inline-flex',
-              alignItems: 'center'
-            }}>
-              <svg 
-                width="1em" 
-                height="1em" 
-                viewBox="0 0 100 100" 
-                fill="currentColor"
-                style={{ fontSize: 'inherit' }}
-              >
-                <rect x="10" y="10" width="35" height="35" rx="4" fill="#5A8DEE"/>
-                <rect x="55" y="10" width="35" height="35" rx="4" fill="#4285F4"/>
-                <rect x="10" y="55" width="35" height="35" rx="4" fill="#1976D2"/>
-                <rect x="55" y="55" width="35" height="35" rx="4" fill="#3F51B5"/>
-              </svg>
-            </span>
+            <h1 
+              style={{ 
+                fontWeight: 800,
+                background: 'linear-gradient(135deg, #1976d2 0%, #9c27b0 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontSize: 'clamp(1.75rem, 5vw, 3rem)',
+                marginBottom: '8px',
+                letterSpacing: '-0.02em',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '16px',
+                margin: '0',
+                textAlign: 'center'
+              }}
+            >
+              <span style={{ 
+                color: '#1976d2',
+                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+                fontSize: 'inherit',
+                display: 'inline-flex',
+                alignItems: 'center'
+              }}>
+                <svg 
+                  width="1em" 
+                  height="1em" 
+                  viewBox="0 0 100 100" 
+                  fill="currentColor"
+                  style={{ fontSize: 'inherit' }}
+                >
+                  {/* 4-square logo matching your design */}
+                  <rect x="10" y="10" width="35" height="35" rx="4" fill="#5A8DEE"/>
+                  <rect x="55" y="10" width="35" height="35" rx="4" fill="#4285F4"/>
+                  <rect x="10" y="55" width="35" height="35" rx="4" fill="#1976D2"/>
+                  <rect x="55" y="55" width="35" height="35" rx="4" fill="#3F51B5"/>
+                </svg>
+              </span>
             Companywide Sales Dashboard 
-            {(activeCompanyId || selectedLocation) && (
-              <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
-                {activeCompanyId && (
-                  <CompanyInfoChip
-                    icon={<BusinessIcon />}
-                    label={selectedCompanyName}
-                    size="small"
-                    sx={{ fontSize: '0.75rem' }}
-                  />
-                )}
-                {selectedLocation && (
-                  <CompanyInfoChip
-                    icon={<PlaceIcon />}
-                    label={selectedLocationName}
-                    size="small"
-                    sx={{ fontSize: '0.75rem' }}
-                  />
-                )}
-              </Box>
+            {/* Show company context in header */}
+            {activeCompanyId && (
+              <CompanyInfoChip
+                icon={<BusinessIcon />}
+                label={selectedCompanyName}
+                size="small"
+                sx={{ ml: 2, fontSize: '0.75rem' }}
+              />
             )}
-          </h1>
-        </div>
+            </h1>
+          </div>
       </Box>
 
-      {/* Company Selection Section - Single Card at Top */}
+      {/* NEW: Company Selection Section */}
       {companies.length > 0 && (
         <Card elevation={3} sx={{ 
           mb: 3, 
@@ -1319,12 +1326,14 @@ export default function SalesDashboard() {
             )}
             
             <FormControl fullWidth size="small" disabled={companiesLoading}>
-              <InputLabel id="company-select-label">Company</InputLabel>
+              <InputLabel id="company-select-label">
+              
+              </InputLabel>
               <Select
                 labelId="company-select-label"
-                value={selectedCompany}
-                label="Company"
+                value={selectedCompanyId}
                 onChange={handleCompanyChange}
+                displayEmpty
                 sx={{ 
                   '& .MuiSelect-select': {
                     display: 'flex',
@@ -1340,17 +1349,17 @@ export default function SalesDashboard() {
                   </Box>
                 </MenuItem>
                 {companies.map((company) => (
-                  <MenuItem key={company.company_id} value={company.company_id.toString()}>
+                  <MenuItem key={company.id} value={company.id}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <BusinessIcon fontSize="small" color="primary" />
-                      {company.company_name}
+                      {company.name}
                     </Box>
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
             
-            {selectedCompany && (
+            {selectedCompanyId && (
               <Box sx={{ mt: 2 }}>
                 <Chip
                   icon={<BusinessIcon />}
@@ -1362,11 +1371,12 @@ export default function SalesDashboard() {
               </Box>
             )}
             
-            {currentCompanyId && currentCompanyId !== selectedCompany && (
+            {/* Note about existing data */}
+            {currentCompanyId && currentCompanyId !== selectedCompanyId && (
               <Alert severity="info" sx={{ mt: 2 }}>
                 <Typography variant="body2">
                   <strong>Note:</strong> Your uploaded files are associated with Company ID: {currentCompanyId}. 
-                  Current selection will be used for new operations.
+                  Select a different company above to override this for new operations.
                 </Typography>
               </Alert>
             )}
@@ -1407,33 +1417,28 @@ export default function SalesDashboard() {
         </Alert>
       )}
 
-      {/* Sales Data Filters Section - Integrated with Company-Location API */}
+      {/* Filters Section */}
       <Card elevation={3} sx={{ mb: 3, borderRadius: 2, overflow: 'hidden' }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
             <FilterListIcon color="primary" />
             <Typography variant="h6" sx={{ fontWeight: 500 }}>
-              Sales Data Filters
+              Filters
             </Typography>
           </Box>
 
           <Grid container spacing={3}>
-            {/* Location filter - Uses company-location API data */}
+            {/* Location filter - Using MultiSelectFilter to match design */}
             <Grid item xs={12} sm={6}>
               <MultiSelectFilter
                 id="location-filter"
                 label="Location"
-                value={selectedLocation ? [selectedLocationName] : []}
-                options={selectedCompany ? availableLocations.map(loc => loc.location_name) : []}
-                onChange={handleLocationFilterChange}
-                placeholder={!selectedCompany ? "Select Company First" : "Select Location..."}
+                value={selectedLocations}
+                options={locations}
+                onChange={handleLocationChange}
+                placeholder="Multiple Loc..."
                 icon={<PlaceIcon />}
               />
-              {!selectedCompany && (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontSize: '0.75rem' }}>
-                  Please select a company first to see available locations
-                </Typography>
-              )}
             </Grid>
 
             {/* Date Range filter */}
@@ -1447,7 +1452,7 @@ export default function SalesDashboard() {
           {/* Active filters and Apply button */}
           <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {/* Active filter chips */}
-            {(activeCompanyId || selectedLocation || selectedDateRange) && (
+            {(activeCompanyId || selectedLocations.length > 0 || selectedDateRange) && (
               <>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                   Active Filters:
@@ -1464,49 +1469,57 @@ export default function SalesDashboard() {
                         borderRadius: '20px',
                         height: '32px',
                         fontSize: '0.875rem',
-                        fontWeight: 600
+                        fontWeight: 600,
+                        '& .MuiChip-icon': {
+                          color: '#1976d2',
+                        }
                       }}
                       icon={<BusinessIcon />}
                     />
                   )}
 
-                  {/* Single Location filter chip from Redux */}
-                  {selectedLocation && (
+                  {selectedLocations.length > 0 && (
                     <Chip 
-                      label={`Location: ${selectedLocationName}`}
-                      onDelete={() => reduxDispatch(setSelectedLocations([]))}
+                      label={selectedLocations.length === 1 
+                        ? `Location: ${selectedLocations[0]}` 
+                        : `Location: Multiple Locations`
+                      }
+                      onDelete={() => setSelectedLocations([])}
                       sx={{
-                        backgroundColor: '#f3e5f5',
-                        color: '#7b1fa2',
-                        border: '1px solid #ce93d8',
+                        backgroundColor: '#e8f5e8',
+                        color: '#2e7d32',
+                        border: '1px solid #a5d6a7',
                         borderRadius: '20px',
                         height: '32px',
                         fontSize: '0.875rem',
-                        fontWeight: 600,
+                        '& .MuiChip-icon': {
+                          color: '#2e7d32',
+                        },
                         '& .MuiChip-deleteIcon': {
-                          color: '#7b1fa2',
+                          color: '#2e7d32',
                           fontSize: '18px'
                         }
                       }}
-                      icon={<PlaceIcon />}
                       deleteIcon={<CloseIcon />}
                     />
                   )}
                   
-                  {/* Date range chip */}
                   {selectedDateRange && (
                     <Chip
                       label={`Date Range: ${selectedDateRange.startDate.toLocaleDateString()} - ${selectedDateRange.endDate.toLocaleDateString()}`}
                       onDelete={() => setSelectedDateRange(null)}
                       sx={{
-                        backgroundColor: '#fff3e0',
-                        color: '#f57c00',
-                        border: '1px solid #ffcc02',
+                        backgroundColor: '#e8d5f2',
+                        color: '#7b1fa2',
+                        border: '1px solid #ce93d8',
                         borderRadius: '20px',
                         height: '32px',
                         fontSize: '0.875rem',
+                        '& .MuiChip-icon': {
+                          color: '#7b1fa2',
+                        },
                         '& .MuiChip-deleteIcon': {
-                          color: '#f57c00',
+                          color: '#7b1fa2',
                           fontSize: '18px'
                         }
                       }}
@@ -1517,12 +1530,12 @@ export default function SalesDashboard() {
               </>
             )}
 
-            {/* Apply Filters Button */}
+            {/* Apply Filters Button - positioned at bottom left */}
             <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
               <Button
                 variant="contained"
                 onClick={handleApplyFilters}
-                disabled={isLoading || loading || !selectedCompany}
+                disabled={isLoading || loading}
                 startIcon={
                   (isLoading || loading) ? (
                     <CircularProgress size={16} color="inherit" />
@@ -1549,20 +1562,15 @@ export default function SalesDashboard() {
               >
                 {(isLoading || loading) ? 'Loading...' : 'APPLY FILTERS'}
               </Button>
-              {!selectedCompany && (
-                <Typography variant="body2" color="text.secondary" sx={{ ml: 2, alignSelf: 'center', fontSize: '0.75rem' }}>
-                  Select a company to enable filtering
-                </Typography>
-              )}
             </Box>
           </Box>
         </CardContent>
       </Card>
 
-      {/* Only render dashboard content if data is available */}
+      {/* Only render dashboard content if data is available (even without company selection initially) */}
       {currentSalesWideData && (
         <>
-          {/* Tabs */}
+          {/* Tabs - Styled to match Image 2 */}
           <Card sx={{ borderRadius: 2, mb: 3, overflow: 'hidden' }} elevation={3}>
             <Tabs 
               value={tabValue} 
@@ -1589,52 +1597,35 @@ export default function SalesDashboard() {
               <Tab label="Graphs" />
             </Tabs>
   
-            {/* Financial Dashboard Tab */}
+            {/* Financial Dashboard Tab - UPDATED to pass real backend data */}
             <TabPanel value={tabValue} index={0}>
               <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
-                {/* Show company/location context in tables */}
-                {(activeCompanyId || selectedLocation) && (
-                  <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 1 }}>
-                    {activeCompanyId && (
-                      <CompanyInfoChip
-                        icon={<BusinessIcon />}
-                        label={`Data for: ${selectedCompanyName}`}
-                        variant="outlined"
-                      />
-                    )}
-                    {selectedLocation && (
-                      <CompanyInfoChip
-                        icon={<PlaceIcon />}
-                        label={`Location: ${selectedLocationName}`}
-                        variant="outlined"
-                      />
-                    )}
+                {/* Show company context in tables */}
+                {activeCompanyId && (
+                  <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+                    <CompanyInfoChip
+                      icon={<BusinessIcon />}
+                      label={`Data for: ${selectedCompanyName}`}
+                      variant="outlined"
+                    />
                   </Box>
                 )}
+                {/* UPDATED: Pass the formatted backend data to FinancialTablesComponent */}
                 <FinancialTablesComponent financialTables={financialTablesData} />
               </Box>
             </TabPanel>
   
-            {/* Charts Tab */}
+            {/* Day of Week Analysis Tab */}
             <TabPanel value={tabValue} index={1}>
               <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
-                {/* Show company/location context in graphs */}
-                {(activeCompanyId || selectedLocation) && (
-                  <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 1 }}>
-                    {activeCompanyId && (
-                      <CompanyInfoChip
-                        icon={<BusinessIcon />}
-                        label={`Charts for: ${selectedCompanyName}`}
-                        variant="outlined"
-                      />
-                    )}
-                    {selectedLocation && (
-                      <CompanyInfoChip
-                        icon={<PlaceIcon />}
-                        label={`Location: ${selectedLocationName}`}
-                        variant="outlined"
-                      />
-                    )}
+                {/* Show company context in graphs */}
+                {activeCompanyId && (
+                  <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+                    <CompanyInfoChip
+                      icon={<BusinessIcon />}
+                      label={`Charts for: ${selectedCompanyName}`}
+                      variant="outlined"
+                    />
                   </Box>
                 )}
                 
@@ -1670,6 +1661,7 @@ export default function SalesDashboard() {
                 {/* All Charts Panel */}
                 <TabPanel value={chartTab} index={0}>
                   <Grid container spacing={3}>
+                    {/* Sales Chart - Full width */}
                     <Grid item xs={12}>
                       <BaseChart title="Sales">
                         {createNivoBarChart(
@@ -1683,6 +1675,7 @@ export default function SalesDashboard() {
                       </BaseChart>
                     </Grid>
                     
+                    {/* Orders Chart - Full width */}
                     <Grid item xs={12}>
                       <BaseChart title="Orders">
                         {createNivoBarChart(
@@ -1696,6 +1689,7 @@ export default function SalesDashboard() {
                       </BaseChart>
                     </Grid>
                     
+                    {/* Average Ticket Chart - Full width */}
                     <Grid item xs={12}>
                       <BaseChart title="Avg Ticket">
                         {createNivoBarChart(
@@ -1709,6 +1703,7 @@ export default function SalesDashboard() {
                       </BaseChart>
                     </Grid>
                     
+                    {/* Labor Hours Chart - Full width */}
                     <Grid item xs={12}>
                       <BaseChart title="Labor Hrs">
                         {createNivoBarChart(
@@ -1723,6 +1718,7 @@ export default function SalesDashboard() {
                       </BaseChart>
                     </Grid>
                     
+                    {/* SPMH Chart - Full width */}
                     <Grid item xs={12}>
                       <BaseChart title="SPMH">
                         {createNivoBarChart(
@@ -1737,6 +1733,7 @@ export default function SalesDashboard() {
                       </BaseChart>
                     </Grid>
                     
+                    {/* Labor Cost Chart - Full width */}
                     <Grid item xs={12}>
                       <BaseChart title="Labor $ Spent">
                         {createNivoBarChart(
@@ -1751,6 +1748,7 @@ export default function SalesDashboard() {
                       </BaseChart>
                     </Grid>
                     
+                    {/* Labor Percentage Chart - Full width */}
                     <Grid item xs={12}>
                       <BaseChart title="Labor %">
                         {createNivoBarChart(
@@ -1765,6 +1763,7 @@ export default function SalesDashboard() {
                       </BaseChart>
                     </Grid>
                     
+                    {/* COGS Chart - Full width */}
                     <Grid item xs={12}>
                       <BaseChart title="COGS $">
                         {createNivoBarChart(
@@ -1779,6 +1778,7 @@ export default function SalesDashboard() {
                       </BaseChart>
                     </Grid>
                     
+                    {/* COGS Percentage Chart - Full width */}
                     <Grid item xs={12}>
                       <BaseChart title="COGS %">
                         {createNivoBarChart(
@@ -1795,7 +1795,7 @@ export default function SalesDashboard() {
                   </Grid>
                 </TabPanel>
                 
-                {/* Individual Chart Panels */}
+               {/* Sales Panel */}
                 <TabPanel value={chartTab} index={1}>
                   <Grid container spacing={2}>
                     <Grid item xs={12}>
@@ -1813,6 +1813,7 @@ export default function SalesDashboard() {
                   </Grid>
                 </TabPanel>
                 
+                {/* Orders Panel */}
                 <TabPanel value={chartTab} index={2}>
                   <Grid container spacing={2}>
                     <Grid item xs={12}>
@@ -1830,6 +1831,7 @@ export default function SalesDashboard() {
                   </Grid>
                 </TabPanel>
                 
+                {/* Avg Ticket Panel */}
                 <TabPanel value={chartTab} index={3}>
                   <Grid container spacing={2}>
                     <Grid item xs={12}>
@@ -1847,6 +1849,7 @@ export default function SalesDashboard() {
                   </Grid>
                 </TabPanel>
                 
+                {/* Labor Panel */}
                 <TabPanel value={chartTab} index={4}>
                   <Grid container spacing={3}>
                     <Grid item xs={12}>
@@ -1901,12 +1904,13 @@ export default function SalesDashboard() {
                           formatPercentage,
                           true,
                           d => `${d.value.toFixed(2)}%`
-                        )}
+                          )}
                       </BaseChart>
                     </Grid>
                   </Grid>
                 </TabPanel>
                 
+                {/* COGS Panel */}
                 <TabPanel value={chartTab} index={5}>
                   <Grid container spacing={3}>
                     <Grid item xs={12}>

@@ -73,12 +73,10 @@ for the store summary dashboard
 /api/storeorders/allordersinvoices/{company_id}/{location_id}
 /api/storeorders/consolidatedproduction/{company_id}
 
+
 for the financila summary dashboard
 /api/storeorders/financialsummary/{company_id}/{location_id}
 /api/storeorders/companysummary/{company_id}
-
-
-
 
 
 for the mails schedule logic:
@@ -94,7 +92,6 @@ to get the list of emails with in the companyid for the user suggestions
 
 to update the emails by mail id
 mail/updatemail/{mail_id}
-
 
 
 ai suggestions
