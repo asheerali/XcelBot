@@ -408,11 +408,11 @@ export function ExcelImport() {
       activeCompanyId
     });
 
-    // Check if we have any files loaded
-    if (!files || files.length === 0) {
-      setLocalError('No files uploaded. Please upload Excel files first.');
-      return;
-    }
+    // // Check if we have any files loaded
+    // if (!files || files.length === 0) {
+    //   setLocalError('No files uploaded. Please upload Excel files first.');
+    //   return;
+    // }
 
     // Handle multiple locations - find files for all selected locations
     const filesForLocations = selectedFilterLocations.map(location => {
@@ -943,7 +943,7 @@ export function ExcelImport() {
         {/* Status Card */}
         <CleanCard sx={{ p: 3, mb: 4 }}>
           <Grid container spacing={2}>
-            {files.length === 0 ? (
+            {files.length === -1 ? (
               <Grid item xs={12}>
                 <Paper sx={{ textAlign: 'center', py: 6, p: 3 }}>
                   <CloudUploadIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
