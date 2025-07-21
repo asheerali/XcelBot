@@ -34,6 +34,8 @@ class OrderItemsRequest(BaseModel):
     order_date: Optional[str] = None  # Date in ISO format, e.g., "2023-10-01T12:00:00Z"
     startDateStr: Optional[str] = None  # Date in string format, e.g., "2023-10-01"
     endDateStr: Optional[str] = None  # Date in string format, e.g., "2023-10-01"
+    start_date: Optional[str] = None  # Date in ISO format, e.g., "2023-10-01T12:00:00Z"
+    end_date: Optional[str] = None  # Date in ISO format, e.g., "2023-10-01T12:00:00Z"
 
     # Add other fields as neede
 
