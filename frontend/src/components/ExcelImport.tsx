@@ -338,11 +338,19 @@ export function ExcelImport() {
       activeCompanyId
     });
 
+<<<<<<< HEAD
     // Check if we have required data
     if (!activeCompanyId) {
       setLocalError('Please select a company first.');
       return;
     }
+=======
+    // // Check if we have any files loaded
+    // if (!files || files.length === 0) {
+    //   setLocalError('No files uploaded. Please upload Excel files first.');
+    //   return;
+    // }
+>>>>>>> b8a9388e653343bb1483f5a7bd461978689a6283
 
     if (selectedFilterLocations.length === 0) {
       setLocalError('Please select at least one location.');
@@ -606,6 +614,7 @@ export function ExcelImport() {
           </CardContent>
         </CleanCard>
 
+<<<<<<< HEAD
         {/* ALWAYS SHOW FILTERS AND DASHBOARD - No file dependency */}
         <Grid container spacing={2}>
           {/* Filter Section - Always visible */}
@@ -633,6 +642,86 @@ export function ExcelImport() {
                 reduxDispatch(setSelectedLocations(locationIds));
               }}
             />
+=======
+        {/* Status Card */}
+        <CleanCard sx={{ p: 3, mb: 4 }}>
+          <Grid container spacing={2}>
+            {files.length === -1 ? (
+              <Grid item xs={12}>
+                <Paper sx={{ textAlign: 'center', py: 6, p: 3 }}>
+                  <CloudUploadIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
+                  <Typography variant="h5" color="text.secondary" gutterBottom fontWeight={600}>
+                    Ready to Analyze Your Data
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" paragraph>
+                    Upload your Excel files to get started with powerful sales insights
+                  </Typography>
+                  {/* Show company and location selection status */}
+                  {(selectedCompany || selectedLocation) && (
+                    <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 1 }}>
+                      {selectedCompany && (
+                        <CompanyInfoChip
+                          icon={<BusinessIcon />}
+                          label={`Company: ${selectedCompanyName}`}
+                          size="small"
+                        />
+                      )}
+                      {selectedLocation && (
+                        <CompanyInfoChip
+                          icon={<BusinessIcon />}
+                          label={`Location: ${selectedLocationName}`}
+                          size="small"
+                        />
+                      )}
+                    </Box>
+                  )}
+                  <Button 
+                    variant="contained" 
+                    size="large"
+                    onClick={() => window.location.href = '/upload-excel'}
+                    startIcon={<CloudUploadIcon />}
+                    sx={{ 
+                      mt: 2,
+                      borderRadius: 2,
+                      px: 4,
+                      py: 1.5,
+                    }}
+                  >
+                    Upload Files
+                  </Button>
+                </Paper>
+              </Grid>
+            ) : (
+              <>
+                {/* Filter Section */}
+                <Grid item xs={12} sx={{ mt: 2 }}>
+                  <FilterSection 
+                    dateRangeType={dateRangeType}
+                    availableDateRanges={availableDateRanges}
+                    onDateRangeChange={handleDateRangeChange}
+                    customDateRange={customDateRange}
+                    startDate={startDate}
+                    endDate={endDate}
+                    onStartDateChange={handleStartDateChange}
+                    onEndDateChange={handleEndDateChange}
+                    locations={salesLocations} // Legacy fallback
+                    selectedLocation={selectedLocation}
+                    onLocationChange={() => {}} // Legacy fallback
+                    onApplyFilters={handleApplyFilters}
+                    onApplyFiltersWithDates={handleApplyFiltersWithDates}
+                    // NEW: Redux integration props
+                    availableLocationObjects={availableLocations}
+                    selectedCompanyId={selectedCompany}
+                    reduxSelectedLocations={selectedLocations}
+                    onReduxLocationChange={(locationIds: string[]) => {
+                      console.log('📍 ExcelImport: Received location change from FilterSection:', locationIds);
+                      reduxDispatch(setSelectedLocations(locationIds));
+                    }}
+                  />
+                </Grid>
+              </>
+            )}
+>>>>>>> b8a9388e653343bb1483f5a7bd461978689a6283
           </Grid>
         </Grid>
         

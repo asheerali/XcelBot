@@ -29,7 +29,13 @@ class OrderItemsRequest(BaseModel):
     location_id: Optional[int] = None
     items: Optional[List[Dict[str, Any]]] = None
     email_order: Optional[bool] = None
+    startDate: Optional[str] = None  # Date in ISO format, e.g., "2023-10-01T12:00:00Z"
+    endDate: Optional[str] = None  # Date in ISO format, e.g., "2023-10-01T12:00:00Z"
     order_date: Optional[str] = None  # Date in ISO format, e.g., "2023-10-01T12:00:00Z"
+    startDateStr: Optional[str] = None  # Date in string format, e.g., "2023-10-01"
+    endDateStr: Optional[str] = None  # Date in string format, e.g., "2023-10-01"
+    start_date: Optional[str] = None  # Date in ISO format, e.g., "2023-10-01T12:00:00Z"
+    end_date: Optional[str] = None  # Date in ISO format, e.g., "2023-10-01T12:00:00Z"
 
     # Add other fields as neede
 
@@ -1041,11 +1047,12 @@ def get_analytics_dashboard(
 def get_analytics_dashboard(
     company_id: int, 
     location_id: int, 
-    start_date: str = Query(None),
-    end_date: str = Query(None),
+    startDate: str = Query(None),
+    endDate: str = Query(None),
     db: Session = Depends(get_db)
 ):
     """Get total sales, total orders, average order value, and daily analytics tables"""
+    print(f"Fetching all orders and invoices for company {company_id} and location {location_id} with date range {startDate} to {endDate}")
     try:
         # storeorders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
         storeorders = storeorders_crud.get_recent_storeorders_by_company_and_location(db, company_id, location_id, limit="all")
@@ -1054,11 +1061,11 @@ def get_analytics_dashboard(
         if not isinstance(storeorders, list):
             storeorders = [storeorders] if storeorders else []
 
-        # Apply date filtering if start_date and end_date are provided
-        if start_date and end_date:
+        # Apply date filtering if startDate and endDate are provided
+        if startDate and endDate:
             try:
-                start = datetime.strptime(start_date, "%Y-%m-%d").date()
-                end = datetime.strptime(end_date, "%Y-%m-%d").date()
+                start = datetime.strptime(startDate, "%Y-%m-%d").date()
+                end = datetime.strptime(endDate, "%Y-%m-%d").date()
                 print("Filtering store orders between dates:", start, end)
                 storeorders = [
                     order for order in storeorders
@@ -1123,8 +1130,8 @@ def get_analytics_dashboard(
 
 @router.get("/consolidatedproduction/{company_id}")
 def get_consolidated_production(company_id: int, 
-                                start_date: str = Query(None),
-                                end_date: str = Query(None),
+                                startDate: str = Query(None),
+                                endDate: str = Query(None),
                                 db: Session = Depends(get_db)):
     try:
         storeorders = storeorders_crud.get_storeorders_by_company(db, company_id)
@@ -1133,12 +1140,11 @@ def get_consolidated_production(company_id: int,
         if not storeorders:
             return {"message": "No store orders found for this company", "data": []}
 
-
-        # Apply date filtering if start_date and end_date are provided
-        if start_date and end_date:
+        # Apply date filtering if startDate and endDate are provided
+        if startDate and endDate:
             try:
-                start = datetime.strptime(start_date, "%Y-%m-%d").date()
-                end = datetime.strptime(end_date, "%Y-%m-%d").date()
+                start = datetime.strptime(startDate, "%Y-%m-%d").date()
+                end = datetime.strptime(endDate, "%Y-%m-%d").date()
                 print("Filtering store orders between dates:", start, end)
                 storeorders = [
                     order for order in storeorders
