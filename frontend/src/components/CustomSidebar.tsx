@@ -116,6 +116,9 @@ const CustomSidebar = ({ onSignOut }) => {
   const [availableLocations, setAvailableLocations] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // NEW: State to track if we've already auto-initialized
+  const [hasInitialized, setHasInitialized] = useState(false);
+
   // Get single selected values for dropdowns
   const selectedCompany = selectedCompanies.length > 0 ? selectedCompanies[0] : '';
   const selectedLocation = selectedLocations.length > 0 ? selectedLocations[0] : '';
@@ -282,15 +285,55 @@ const CustomSidebar = ({ onSignOut }) => {
     fetchCompaniesAndLocations();
   }, []);
 
+  // NEW: Auto-initialize first company and location if Redux is empty
+  useEffect(() => {
+    if (
+      !hasInitialized && 
+      companies.length > 0 && 
+      selectedCompanies.length === 0 && 
+      selectedLocations.length === 0
+    ) {
+      // Select first company
+      const firstCompany = companies[0];
+      const firstCompanyId = firstCompany.company_id.toString();
+      
+      // Select first location of the first company
+      const firstLocation = firstCompany.locations[0];
+      const firstLocationId = firstLocation ? firstLocation.location_id.toString() : '';
+      
+      console.log('Auto-initializing with first company and location:', {
+        companyId: firstCompanyId,
+        companyName: firstCompany.company_name,
+        locationId: firstLocationId,
+        locationName: firstLocation?.location_name
+      });
+      
+      // Dispatch to Redux
+      dispatch(setSelectedCompanies([firstCompanyId]));
+      if (firstLocationId) {
+        dispatch(setSelectedLocations([firstLocationId]));
+      }
+      
+      setHasInitialized(true);
+    }
+  }, [companies, selectedCompanies, selectedLocations, hasInitialized, dispatch]);
+
   // Update available locations when selected company changes
   useEffect(() => {
     if (selectedCompany && companies.length > 0) {
       const selectedCompanyData = companies.find(company => company.company_id.toString() === selectedCompany.toString());
       setAvailableLocations(selectedCompanyData ? selectedCompanyData.locations : []);
+      
+      // NEW: Auto-select first location if no location is selected and we have locations
+      if (selectedLocations.length === 0 && selectedCompanyData && selectedCompanyData.locations.length > 0) {
+        const firstLocationId = selectedCompanyData.locations[0].location_id.toString();
+        console.log('Auto-selecting first location for company:', firstLocationId);
+        dispatch(setSelectedLocations([firstLocationId]));
+      }
     } else {
       setAvailableLocations([]);
     }
-  }, [selectedCompany, companies]);
+  }, [selectedCompany, companies, selectedLocations, dispatch]);
 
   // Auto-close sidebar on small screens when open
   useEffect(() => {
@@ -308,7 +351,7 @@ const CustomSidebar = ({ onSignOut }) => {
   const handleCompanyChange = (event) => {
     const companyId = event.target.value;
     dispatch(setSelectedCompanies([companyId]));
-    dispatch(setSelectedLocations([]));
+    dispatch(setSelectedLocations([])); // Clear location selection when company changes
   };
 
   // Handle location selection
@@ -599,7 +642,7 @@ const CustomSidebar = ({ onSignOut }) => {
     if (!open) return null;
 
     return (
-      <Box sx={{ px: isSmallScreen ? 1 : 1.5, py: 1.5 }}> {/* Added py for consistent padding */}
+      <Box sx={{ px: isSmallScreen ? 1 : 1.5, py: 1.5 }}> 
         {/* Company Dropdown */}
         <FormControl 
           fullWidth 
@@ -607,7 +650,7 @@ const CustomSidebar = ({ onSignOut }) => {
           sx={{ 
             mb: 1,
             '& .MuiOutlinedInput-root': {
-              backgroundColor: alpha('#ffffff', 0.15), // Slightly more opaque
+              backgroundColor: alpha('#ffffff', 0.15),
               borderRadius: '6px',
               fontSize: fontSizes.dropdown,
               '& fieldset': {
@@ -695,7 +738,7 @@ const CustomSidebar = ({ onSignOut }) => {
           disabled={!selectedCompany || availableLocations.length === 0}
           sx={{ 
             '& .MuiOutlinedInput-root': {
-              backgroundColor: alpha('#ffffff', 0.15), // Slightly more opaque
+              backgroundColor: alpha('#ffffff', 0.15),
               borderRadius: '6px',
               '& fieldset': {
                 borderColor: alpha('#ffffff', 0.3),
@@ -790,9 +833,9 @@ const CustomSidebar = ({ onSignOut }) => {
         sx={{
           borderBottom: `1px solid ${alpha("#ffffff", 0.2)}`,
           boxShadow: `0 1px 3px ${alpha("#000000", 0.08)}`,
-          backgroundColor: isMobile ? "#050b1b" : "rgba(5, 11, 27, 0.95)", // Solid bg for mobile
-          backdropFilter: isMobile ? "none" : "blur(10px)", // No blur on mobile
-          position: isMobile ? "relative" : "sticky", // Relative for mobile
+          backgroundColor: isMobile ? "#050b1b" : "rgba(5, 11, 27, 0.95)",
+          backdropFilter: isMobile ? "none" : "blur(10px)",
+          position: isMobile ? "relative" : "sticky",
           top: isMobile ? 0 : 0,
           zIndex: isMobile ? "auto" : 10,
           minHeight: isSmallScreen ? 48 : 56,
@@ -856,9 +899,9 @@ const CustomSidebar = ({ onSignOut }) => {
       {/* Company and Location Dropdowns */}
       <Box
         sx={{
-          backgroundColor: isMobile ? "#050b1b" : "rgba(5, 11, 27, 0.95)", // Solid bg for mobile
-          backdropFilter: isMobile ? "none" : "blur(10px)", // No blur on mobile  
-          position: isMobile ? "relative" : "sticky", // Relative for mobile
+          backgroundColor: isMobile ? "#050b1b" : "rgba(5, 11, 27, 0.95)",
+          backdropFilter: isMobile ? "none" : "blur(10px)",
+          position: isMobile ? "relative" : "sticky",
           top: isMobile ? 0 : (isSmallScreen ? 48 : 56),
           zIndex: isMobile ? "auto" : 9,
           borderBottom: `1px solid ${alpha("#ffffff", 0.1)}`,
@@ -874,8 +917,8 @@ const CustomSidebar = ({ onSignOut }) => {
         flexGrow: 1,
         position: "relative",
         zIndex: 1,
-        overflowY: isMobile ? "visible" : "auto", // No scroll restriction on mobile
-        maxHeight: isMobile ? "none" : "calc(100vh - 200px)", // Height limit for desktop only
+        overflowY: isMobile ? "visible" : "auto",
+        maxHeight: isMobile ? "none" : "calc(100vh - 200px)",
       }}>
         {/* INSIGHTIQ Dropdown */}
         {renderDropdownButton(
@@ -927,7 +970,7 @@ const CustomSidebar = ({ onSignOut }) => {
             <ListItemButton
               onClick={onSignOut}
               sx={{
-                minHeight: isMobile ? 48 : (isSmallScreen ? 44 : 48), // Larger touch targets on mobile
+                minHeight: isMobile ? 48 : (isSmallScreen ? 44 : 48),
                 justifyContent: (open || isMobile) ? "initial" : "center",
                 px: isMobile ? 2 : (isSmallScreen ? 1.5 : 2.5),
                 mx: 0,
@@ -946,7 +989,7 @@ const CustomSidebar = ({ onSignOut }) => {
                 title={(open || isMobile) ? "" : "Sign Out"} 
                 placement="right" 
                 arrow
-                disableHoverListener={isMobile} // Disable tooltips on mobile
+                disableHoverListener={isMobile}
               >
                 <ListItemIcon
                   sx={{
@@ -1028,7 +1071,7 @@ const CustomSidebar = ({ onSignOut }) => {
               borderRight: "none",
               display: "flex",
               flexDirection: "column",
-              maxWidth: "85vw", // Don't take up entire screen
+              maxWidth: "85vw",
             },
           }}
         >
