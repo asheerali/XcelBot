@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import axios from 'axios';
+import apiClient from '../api/axiosConfig'; // Use configured axios with auth for filter API
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -162,9 +163,9 @@ const ModernLoader = () => (
   </Box>
 );
 
-// API URLs - REMOVED upload endpoint, only using filter endpoint
-const FILTER_API_URL = API_URL_Local + '/api/salessplit/filter';
-const COMPANY_LOCATIONS_API_URL = API_URL_Local + '/company-locations/all';
+// API endpoints
+const COMPANY_LOCATIONS_API_URL = API_URL_Local + '/company-locations/all'; // Public endpoint - no auth
+// Filter API uses apiClient with auth
 
 // Main Component
 export function ExcelImport() {
@@ -223,7 +224,7 @@ export function ExcelImport() {
       
       try {
         console.log('🏢 Fetching company-locations from:', COMPANY_LOCATIONS_API_URL);
-        const response = await axios.get(COMPANY_LOCATIONS_API_URL);
+        const response = await axios.get(COMPANY_LOCATIONS_API_URL); // Use regular axios without auth
         
         console.log('📥 Company-locations response:', response.data);
         setCompanies(response.data || []);
@@ -397,8 +398,8 @@ export function ExcelImport() {
       
       console.log('📤 Sending filter request:', filterData);
       
-      // Call filter API
-      axios.post(FILTER_API_URL, filterData)
+      // Call filter API with authentication
+      apiClient.post('/api/salessplit/filter', filterData)
         .then(response => {
           console.log('📥 Received filter response:', response.data);
           
@@ -429,17 +430,20 @@ export function ExcelImport() {
           setHasValidData(false);
           
           let errorMessage = 'Error filtering data';
-          if (axios.isAxiosError(err)) {
-            if (err.response) {
+          if (err.response) {
+            if (err.response.status === 401) {
+              errorMessage = 'Authentication failed. Please log in again.';
+              // Auth interceptor will handle redirect to login
+            } else {
               const detail = err.response.data?.detail;
               errorMessage = `Server error: ${detail || err.response.status}`;
               
               if (err.response.status === 404) {
                 errorMessage = 'API endpoint not found. Is the server running?';
               }
-            } else if (err.request) {
-              errorMessage = 'No response from server. Please check if the backend is running.';
             }
+          } else if (err.request) {
+            errorMessage = 'No response from server. Please check if the backend is running.';
           }
           
           setLocalError(errorMessage);
