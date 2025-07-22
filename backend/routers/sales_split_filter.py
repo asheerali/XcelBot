@@ -51,7 +51,7 @@ async def filter_excel_data(
             location_filter = "All"
         else:
             location_filter = request.locations if request.locations else 'All'
-        
+
         # FIXED: Convert dates to pandas datetime objects immediately
         start_date_original = request.startDate if request.startDate else None
         end_date_original = request.endDate if request.endDate else None
@@ -63,12 +63,12 @@ async def filter_excel_data(
         if start_date_original:
             start_date_pd = pd.to_datetime(start_date_original)
             print(f"Converted start_date to pandas datetime: {start_date_pd}")
-        
+
         if end_date_original:
             end_date_pd = pd.to_datetime(end_date_original)
             print(f"Converted end_date to pandas datetime: {end_date_pd}")
-        
-        
+
+
         if end_date_original:
             print("i am here in the sales split filter checking the start_date_original and end_date_original", start_date_original, end_date_original)
             print("i am here in the sales split filter checking", f"Start date pd: {start_date_pd}, End date pd: {end_date_pd}")

@@ -392,48 +392,213 @@ def bulk_create_storeorders(storeorders: list[storeorders_schema.StoreOrdersCrea
     """Bulk create multiple store orders records"""
     return storeorders_crud.bulk_create_storeorders(db, storeorders)
     
+
+# @router.post("/orderitems")
+# def create_new_order_items(request: OrderItemsRequest,
+#                            background_tasks: BackgroundTasks,
+#                            db: Session = Depends(get_db),
+#                            current_user: User = Depends(get_current_active_user),
+#                            ):
+#     """Create new store orders entry every time"""
+#     print("Received request to create new order:", request.model_dump())
+#     print("dates", request.start_date, request.end_date)
+#     try:
+#         # Prepare the items_ordered data
+#         items_ordered_data = {
+#             "total_items": len(request.items),
+#             "items": request.items,
+#         }
+        
+#         # Always create new store orders entry
+#         create_obj = storeorders_schema.StoreOrdersCreate(
+#             company_id=request.company_id,
+#             location_id=request.location_id,
+#             # created_at=datetime.utcnow(),  # Set current time as created_at
+#             created_at=request.order_date if request.order_date else datetime.utcnow.isoformat(),
+#             items_ordered=items_ordered_data
+#         )
+#         print(f"Creating new store items ordered with data: {items_ordered_data}")
+        
+        
+#         new_order = storeorders_crud.create_storeorders(db, create_obj)
+        
+#         if request.email_order:
+#             company_id = request.company_id
+#             current_user_id = current_user.id   
+#             # print("Email order is enabled. Company ID:", company_id, "Current User ID:", current_user_id)
+            
+#             # Get user details from user ID
+#             user_details = get_user(db, current_user_id)
+            
+#             if user_details and user_details.email:
+#                 # Send order confirmation email in background
+#                 background_tasks.add_task(
+#                     send_order_confirmation_email,
+#                     user_details.email,
+#                     user_details.first_name,
+#                     new_order.id,
+#                     items_ordered_data,
+#                     new_order.created_at,
+#                     False
+#                 )
+#                 print(f"Order confirmation email queued for {user_details.email}")
+#             else:
+#                 print("Warning: Could not find user email for order confirmation")
+            
+        
+
+#         return {
+#             "message": "New store orders created successfully",
+#             "store_orders_id": new_order.id,
+#             "received_data": request.model_dump(),
+#             "items_ordered": items_ordered_data,
+#             "created_at": new_order.created_at.isoformat()
+#         }
+        
+#     except Exception as e:
+#         print(f"Error creating new order: {str(e)}")
+#         import traceback
+#         print(traceback.format_exc())
+#         raise HTTPException(status_code=500, detail=f"Error creating order: {str(e)}")    
     
+
+# @router.post("/orderitems")
+# def create_new_order_items(
+#     request: OrderItemsRequest,
+#     background_tasks: BackgroundTasks,
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(get_current_active_user),
+# ):
+#     """Create new store orders entry every time"""
+#     print("Received request to create new order:", request.model_dump())
+#     print("dates", request.start_date, request.end_date)
+
+#     try:
+#         # Parse order_date
+#         # order_date = pd.to_datetime(request.order_date) if request.order_date else datetime.utcnow()
+#         order_date = pd.to_datetime(request.order_date).replace(tzinfo=None) if request.order_date else datetime.utcnow()
+
+#         created_at = order_date  # Default value
+
+#         if request.start_date:
+#             # Get date from start_date and time from order_date
+#             start_date_only = pd.to_datetime(request.start_date).date()
+#             order_time = order_date.time()
+
+#             start_date_with_time = datetime.combine(start_date_only, order_time)
+#             print("Computed start_date_with_time:", start_date_with_time)
+
+#             if order_date < start_date_with_time:
+#                 raise HTTPException(
+#                     status_code=400,
+#                     detail=f"Order date {order_date.isoformat()} is before allowed start date {start_date_with_time.isoformat()}"
+#                 )
+#             else:
+#                 created_at = start_date_with_time  # Use adjusted timestamp
+
+#         # Prepare items_ordered
+#         items_ordered_data = {
+#             "total_items": len(request.items),
+#             "items": request.items,
+#         }
+
+#         # Create object using `created_at`
+#         create_obj = storeorders_schema.StoreOrdersCreate(
+#             company_id=request.company_id,
+#             location_id=request.location_id,
+#             created_at=created_at.isoformat(),
+#             items_ordered=items_ordered_data
+#         )
+
+#         print(f"Creating new store items ordered with data: {items_ordered_data}")
+#         new_order = storeorders_crud.create_storeorders(db, create_obj)
+
+#         # Background email sending
+#         if request.email_order:
+#             user_details = get_user(db, current_user.id)
+#             if user_details and user_details.email:
+#                 background_tasks.add_task(
+#                     send_order_confirmation_email,
+#                     user_details.email,
+#                     user_details.first_name,
+#                     new_order.id,
+#                     items_ordered_data,
+#                     new_order.created_at,
+#                     False
+#                 )
+#                 print(f"Order confirmation email queued for {user_details.email}")
+#             else:
+#                 print("Warning: Could not find user email for order confirmation")
+
+#         return {
+#             "message": "New store orders created successfully",
+#             "store_orders_id": new_order.id,
+#             "received_data": request.model_dump(),
+#             "items_ordered": items_ordered_data,
+#             "created_at": new_order.created_at.isoformat()
+#         }
+
+#     except Exception as e:
+#         print(f"Error creating new order: {str(e)}")
+#         import traceback
+#         print(traceback.format_exc())
+#         raise HTTPException(status_code=500, detail=f"Error creating order: {str(e)}")
+
+
 @router.post("/orderitems")
-def create_new_order_items(request: OrderItemsRequest,
-                           background_tasks: BackgroundTasks,
-                           db: Session = Depends(get_db),
-                           current_user: User = Depends(get_current_active_user),
-                           ):
+def create_new_order_items(
+    request: OrderItemsRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     """Create new store orders entry every time"""
     print("Received request to create new order:", request.model_dump())
-    
+    print("dates", request.start_date, request.end_date)
+
     try:
-        
+        # Default created_at is the order_date or current time
+        order_date = pd.to_datetime(request.order_date).replace(tzinfo=None) if request.order_date else datetime.utcnow()
+        created_at = order_date  # default
+
+        if request.start_date:
+            # Convert start_date to date and combine with order time
+            start_date_only = pd.to_datetime(request.start_date).date()
+            order_time = order_date.time()
+            start_date_with_time = datetime.combine(start_date_only, order_time)
+
+            print("Computed start_date_with_time:", start_date_with_time)
+            print("Order date:", order_date)
+
+            if order_date > start_date_with_time:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Order date {order_date.isoformat()} is before allowed start date {start_date_with_time.isoformat()}"
+                )
+            else:
+                created_at = start_date_with_time
+
         # Prepare the items_ordered data
         items_ordered_data = {
             "total_items": len(request.items),
             "items": request.items,
         }
 
-        
-        # Always create new store orders entry
+        # Create store order entry
         create_obj = storeorders_schema.StoreOrdersCreate(
             company_id=request.company_id,
             location_id=request.location_id,
-            # created_at=datetime.utcnow(),  # Set current time as created_at
-            created_at=request.order_date if request.order_date else datetime.utcnow.isoformat(),
+            created_at=created_at.isoformat(),
             items_ordered=items_ordered_data
         )
+
         print(f"Creating new store items ordered with data: {items_ordered_data}")
-        
-        
         new_order = storeorders_crud.create_storeorders(db, create_obj)
-        
+
+        # Optional: Send order confirmation email
         if request.email_order:
-            company_id = request.company_id
-            current_user_id = current_user.id   
-            # print("Email order is enabled. Company ID:", company_id, "Current User ID:", current_user_id)
-            
-            # Get user details from user ID
-            user_details = get_user(db, current_user_id)
-            
+            user_details = get_user(db, current_user.id)
             if user_details and user_details.email:
-                # Send order confirmation email in background
                 background_tasks.add_task(
                     send_order_confirmation_email,
                     user_details.email,
@@ -446,8 +611,6 @@ def create_new_order_items(request: OrderItemsRequest,
                 print(f"Order confirmation email queued for {user_details.email}")
             else:
                 print("Warning: Could not find user email for order confirmation")
-            
-        
 
         return {
             "message": "New store orders created successfully",
@@ -456,13 +619,16 @@ def create_new_order_items(request: OrderItemsRequest,
             "items_ordered": items_ordered_data,
             "created_at": new_order.created_at.isoformat()
         }
-        
+
+    except HTTPException as http_exc:
+        raise http_exc  # re-raise expected errors
+
     except Exception as e:
         print(f"Error creating new order: {str(e)}")
         import traceback
         print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error creating order: {str(e)}")    
-    
+        raise HTTPException(status_code=500, detail=f"Error creating order: {str(e)}")
+
 
 
 # Updated router endpoint
