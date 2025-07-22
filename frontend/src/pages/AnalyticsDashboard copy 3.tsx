@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Container,
@@ -22,52 +22,63 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
-  CircularProgress
-} from '@mui/material';
-import { styled } from '@mui/material/styles';
+  CircularProgress,
+} from "@mui/material";
+import { styled } from "@mui/material/styles";
 
 // Material-UI Icons
-import FilterListIcon from '@mui/icons-material/FilterList';
-import CloseIcon from '@mui/icons-material/Close';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import ClearIcon from '@mui/icons-material/Clear';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import AnalyticsComponenet from '../components/AnalyticsComponenet';
-import DateRangeSelector from '../components/DateRangeSelector';
+import FilterListIcon from "@mui/icons-material/FilterList";
+import CloseIcon from "@mui/icons-material/Close";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import ClearIcon from "@mui/icons-material/Clear";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import AnalyticsComponenet from "../components/AnalyticsComponenet";
+import DateRangeSelector from "../components/DateRangeSelector";
 
 // Import API base URL from constants
 import { API_URL_Local } from "../constants";
+import apiClient from "../api/axiosConfig"; // Add this line
 
 // Import Redux hooks and actions
-import { useAppDispatch, useAppSelector } from '../typedHooks';
-import { 
+import { useAppDispatch, useAppSelector } from "../typedHooks";
+import {
   selectSelectedCompanies,
   selectSelectedLocations,
   setSelectedCompanies,
-  setSelectedLocations
-} from '../store/slices/masterFileSlice';
+  setSelectedLocations,
+} from "../store/slices/masterFileSlice";
 
 // Import Date Range Redux actions and selectors
 import {
   setAnalyticsDashboardDateRange,
   clearAnalyticsDashboardDateRange,
   selectAnalyticsDashboardDateRange,
-  selectAnalyticsDashboardHasDateRange
-} from '../store/slices/dateRangeSlice';
+  selectAnalyticsDashboardHasDateRange,
+} from "../store/slices/dateRangeSlice";
 
 // DateRangeSelector Button Component
-const DateRangeSelectorButton = ({ onDateRangeSelect, currentDateRange, onClearDateRange }) => {
+const DateRangeSelectorButton = ({
+  onDateRangeSelect,
+  currentDateRange,
+  onClearDateRange,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [tempRange, setTempRange] = useState(null);
 
   // Generate display text from current Redux date range
   const getDisplayText = () => {
-    if (currentDateRange && currentDateRange.startDate && currentDateRange.endDate) {
-      const startDate = new Date(currentDateRange.startDate).toLocaleDateString();
+    if (
+      currentDateRange &&
+      currentDateRange.startDate &&
+      currentDateRange.endDate
+    ) {
+      const startDate = new Date(
+        currentDateRange.startDate
+      ).toLocaleDateString();
       const endDate = new Date(currentDateRange.endDate).toLocaleDateString();
       return `${startDate} - ${endDate}`;
     }
-    return 'Select Date Range';
+    return "Select Date Range";
   };
 
   const selectedRange = getDisplayText();
@@ -99,27 +110,29 @@ const DateRangeSelectorButton = ({ onDateRangeSelect, currentDateRange, onClearD
       <Button
         variant="outlined"
         startIcon={<CalendarTodayIcon />}
-        endIcon={selectedRange !== 'Select Date Range' && (
-          <IconButton 
-            size="small" 
-            onClick={handleClear}
-            style={{ padding: '2px', marginLeft: '4px' }}
-          >
-            <ClearIcon style={{ fontSize: '16px' }} />
-          </IconButton>
-        )}
+        endIcon={
+          selectedRange !== "Select Date Range" && (
+            <IconButton
+              size="small"
+              onClick={handleClear}
+              style={{ padding: "2px", marginLeft: "4px" }}
+            >
+              <ClearIcon style={{ fontSize: "16px" }} />
+            </IconButton>
+          )
+        }
         onClick={handleOpen}
         sx={{
-          textTransform: 'none',
+          textTransform: "none",
           borderRadius: 1,
           px: 2,
           py: 1,
-          borderColor: '#d1d5db',
-          color: '#6b7280',
-          '&:hover': {
-            borderColor: '#9ca3af',
-            backgroundColor: 'transparent'
-          }
+          borderColor: "#d1d5db",
+          color: "#6b7280",
+          "&:hover": {
+            borderColor: "#9ca3af",
+            backgroundColor: "transparent",
+          },
         }}
       >
         {selectedRange}
@@ -131,54 +144,59 @@ const DateRangeSelectorButton = ({ onDateRangeSelect, currentDateRange, onClearD
         maxWidth="lg"
         fullWidth
         PaperProps={{
-          sx: { borderRadius: 2 }
+          sx: { borderRadius: 2 },
         }}
       >
-        <DialogTitle sx={{ 
-          borderBottom: '1px solid #e5e7eb',
-          pb: 2,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1.5
-        }}>
+        <DialogTitle
+          sx={{
+            borderBottom: "1px solid #e5e7eb",
+            pb: 2,
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+          }}
+        >
           <CalendarTodayIcon color="primary" />
           Select Date Range
         </DialogTitle>
-        
+
         <DialogContent sx={{ p: 0 }}>
-          <DateRangeSelector 
+          <DateRangeSelector
             initialState={[
               {
                 startDate: new Date(),
                 endDate: new Date(),
-                key: 'selection'
-              }
+                key: "selection",
+              },
             ]}
-            onSelect={handleDateRangeSelect} 
+            onSelect={handleDateRangeSelect}
           />
         </DialogContent>
-        
-        <DialogActions sx={{ 
-          p: 3,
-          borderTop: '1px solid #e5e7eb',
-          justifyContent: 'space-between'
-        }}>
+
+        <DialogActions
+          sx={{
+            p: 3,
+            borderTop: "1px solid #e5e7eb",
+            justifyContent: "space-between",
+          }}
+        >
           <Typography variant="body2" color="text.secondary">
-            {tempRange && `${tempRange.startDate?.toLocaleDateString()} - ${tempRange.endDate?.toLocaleDateString()}`}
+            {tempRange &&
+              `${tempRange.startDate?.toLocaleDateString()} - ${tempRange.endDate?.toLocaleDateString()}`}
           </Typography>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button 
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button
               onClick={handleClose}
               variant="outlined"
-              sx={{ textTransform: 'none' }}
+              sx={{ textTransform: "none" }}
             >
               Cancel
             </Button>
-            <Button 
-              onClick={handleApply} 
-              variant="contained" 
+            <Button
+              onClick={handleApply}
+              variant="contained"
               disabled={!tempRange}
-              sx={{ textTransform: 'none' }}
+              sx={{ textTransform: "none" }}
             >
               Apply Range
             </Button>
@@ -192,14 +210,16 @@ const DateRangeSelectorButton = ({ onDateRangeSelect, currentDateRange, onClearD
 // Styled components matching your Material-UI theme structure
 const StyledCard = styled(Card)(({ theme }) => ({
   borderRadius: 16,
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
   border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  background: `linear-gradient(145deg, ${theme.palette.background.paper} 0%, ${alpha(theme.palette.background.paper, 0.8)} 100%)`,
+  background: `linear-gradient(145deg, ${
+    theme.palette.background.paper
+  } 0%, ${alpha(theme.palette.background.paper, 0.8)} 100%)`,
   boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.08)}`,
-  '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: `0 16px 48px ${alpha(theme.palette.common.black, 0.12)}`
-  }
+  "&:hover": {
+    transform: "translateY(-2px)",
+    boxShadow: `0 16px 48px ${alpha(theme.palette.common.black, 0.12)}`,
+  },
 }));
 
 const ContentCard = styled(Card)(({ theme }) => ({
@@ -208,38 +228,38 @@ const ContentCard = styled(Card)(({ theme }) => ({
   minHeight: 500,
   background: theme.palette.background.paper,
   boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.08)}`,
-  overflow: 'visible' // Changed from 'hidden' to 'visible'
+  overflow: "visible", // Changed from 'hidden' to 'visible'
 }));
 
 const ActiveFilterChip = styled(Chip)(({ theme }) => ({
   background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
   color: theme.palette.primary.contrastText,
   fontWeight: 500,
-  '& .MuiChip-deleteIcon': {
+  "& .MuiChip-deleteIcon": {
     color: theme.palette.primary.contrastText,
-    '&:hover': {
-      color: alpha(theme.palette.primary.contrastText, 0.8)
-    }
-  }
+    "&:hover": {
+      color: alpha(theme.palette.primary.contrastText, 0.8),
+    },
+  },
 }));
 
 const AnalyticsDashboard = () => {
   const theme = useTheme();
   const dispatch = useAppDispatch();
-  
+
   // Get Redux state
   const reduxSelectedCompanies = useAppSelector(selectSelectedCompanies);
   const reduxSelectedLocations = useAppSelector(selectSelectedLocations);
-  
+
   // Get Analytics Dashboard date range from Redux
   const reduxDateRange = useAppSelector(selectAnalyticsDashboardDateRange);
   const hasDateRange = useAppSelector(selectAnalyticsDashboardHasDateRange);
-  
+
   // State for API data
   const [companyLocationData, setCompanyLocationData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Filter states (for UI selections, not applied yet)
   const [selectedCompanies, setSelectedCompaniesLocal] = useState([]);
   const [selectedLocations, setSelectedLocationsLocal] = useState([]);
@@ -248,7 +268,7 @@ const AnalyticsDashboard = () => {
   const [appliedFilters, setAppliedFilters] = useState({
     companies: [],
     locations: [],
-    dateRange: null
+    dateRange: null,
   });
 
   // Fetch company-location data from API
@@ -256,26 +276,52 @@ const AnalyticsDashboard = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      // Use the correct endpoint for company-locations
-      const response = await fetch(`${API_URL_Local}/company-locations/all`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          // Add any authentication headers if needed
-          // 'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
+
+      // // Use the correct endpoint for company-locations
+      // const response = await fetch(`${API_URL_Local}/company-locations/all`, {
+      //   method: 'GET',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     // Add any authentication headers if needed
+      //     // 'Authorization': `Bearer ${token}`,
+      //   },
+      // });
+
+      // if (!response.ok) {
+      //   throw new Error(`HTTP error! status: ${response.status}`);
+      // }
+
+      // const data = await response.json();
+
+      // Use apiClient with authentication
+      const response = await apiClient.get("/company-locations/all");
+      const data = response.data;
+
       setCompanyLocationData(data);
+
+      // } catch (err) {
+      //   console.error("Error fetching company-location data:", err);
+      //   setError(err.message);
+      // } finally {
     } catch (err) {
-      console.error('Error fetching company-location data:', err);
-      setError(err.message);
+      console.error("Error fetching company-location data:", err);
+
+      let errorMessage = "Failed to fetch company-location data";
+      if (err.response) {
+        if (err.response.status === 401) {
+          errorMessage = "Authentication failed. Please log in again.";
+          // Auth interceptor will handle redirect to login
+        } else {
+          errorMessage = `Server error: ${err.response.status}`;
+        }
+      } else if (err.request) {
+        errorMessage =
+          "Cannot connect to server. Please check if the backend is running.";
+      } else {
+        errorMessage = err.message || "Failed to fetch company-location data";
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -289,34 +335,48 @@ const AnalyticsDashboard = () => {
   // Initialize local state from Redux when component mounts or Redux state changes
   useEffect(() => {
     if (reduxSelectedCompanies.length > 0) {
-      console.log('Setting initial companies from Redux:', reduxSelectedCompanies);
-      setSelectedCompaniesLocal(reduxSelectedCompanies.map(id => parseInt(id)));
+      console.log(
+        "Setting initial companies from Redux:",
+        reduxSelectedCompanies
+      );
+      setSelectedCompaniesLocal(
+        reduxSelectedCompanies.map((id) => parseInt(id))
+      );
     }
   }, [reduxSelectedCompanies]);
 
   useEffect(() => {
     if (reduxSelectedLocations.length > 0) {
-      console.log('Setting initial locations from Redux:', reduxSelectedLocations);
-      setSelectedLocationsLocal(reduxSelectedLocations.map(id => parseInt(id)));
+      console.log(
+        "Setting initial locations from Redux:",
+        reduxSelectedLocations
+      );
+      setSelectedLocationsLocal(
+        reduxSelectedLocations.map((id) => parseInt(id))
+      );
     }
   }, [reduxSelectedLocations]);
 
   // Auto-apply filters when component loads with Redux data (initial load only)
   useEffect(() => {
-    if (reduxSelectedCompanies.length > 0 && reduxSelectedLocations.length > 0 && companyLocationData.length > 0) {
-      console.log('Auto-applying filters from Redux state on initial load');
+    if (
+      reduxSelectedCompanies.length > 0 &&
+      reduxSelectedLocations.length > 0 &&
+      companyLocationData.length > 0
+    ) {
+      console.log("Auto-applying filters from Redux state on initial load");
       setAppliedFilters({
-        companies: reduxSelectedCompanies.map(id => parseInt(id)),
-        locations: reduxSelectedLocations.map(id => parseInt(id)),
-        dateRange: hasDateRange ? reduxDateRange : null
+        companies: reduxSelectedCompanies.map((id) => parseInt(id)),
+        locations: reduxSelectedLocations.map((id) => parseInt(id)),
+        dateRange: hasDateRange ? reduxDateRange : null,
       });
     }
   }, [companyLocationData]);
 
   // Get available companies
-  const availableCompanies = companyLocationData.map(item => ({
+  const availableCompanies = companyLocationData.map((item) => ({
     id: item.company_id,
-    name: item.company_name
+    name: item.company_name,
   }));
 
   // Get available locations based on selected companies
@@ -327,17 +387,19 @@ const AnalyticsDashboard = () => {
     } else {
       // Show only locations for selected companies
       const locations = companyLocationData
-        .filter(company => selectedCompanies.includes(company.company_id))
+        .filter((company) => selectedCompanies.includes(company.company_id))
         .reduce((acc, company) => {
-          return acc.concat(company.locations.map(location => ({
-            id: location.location_id,
-            name: location.location_name,
-            companyId: company.company_id,
-            companyName: company.company_name
-          })));
+          return acc.concat(
+            company.locations.map((location) => ({
+              id: location.location_id,
+              name: location.location_name,
+              companyId: company.company_id,
+              companyName: company.company_name,
+            }))
+          );
         }, []);
-      
-      console.log('Available locations:', locations);
+
+      console.log("Available locations:", locations);
       return locations;
     }
   };
@@ -348,10 +410,10 @@ const AnalyticsDashboard = () => {
   const clearAllFilters = () => {
     setSelectedCompaniesLocal([]);
     setSelectedLocationsLocal([]);
-    
+
     // Clear Redux date range for Analytics Dashboard
     dispatch(clearAnalyticsDashboardDateRange());
-    
+
     // Update Redux company and location selections
     dispatch(setSelectedCompanies([]));
     dispatch(setSelectedLocations([]));
@@ -360,46 +422,56 @@ const AnalyticsDashboard = () => {
   // Handle company selection
   const handleCompanyChange = (event) => {
     const value = event.target.value;
-    const newSelectedCompanies = typeof value === 'string' ? value.split(',') : value;
-    
+    const newSelectedCompanies =
+      typeof value === "string" ? value.split(",") : value;
+
     setSelectedCompaniesLocal(newSelectedCompanies);
-    
+
     // Clear locations that don't belong to selected companies
     if (newSelectedCompanies.length > 0) {
       const validLocationIds = companyLocationData
-        .filter(company => newSelectedCompanies.includes(company.company_id))
+        .filter((company) => newSelectedCompanies.includes(company.company_id))
         .reduce((acc, company) => {
-          return acc.concat(company.locations.map(location => location.location_id));
+          return acc.concat(
+            company.locations.map((location) => location.location_id)
+          );
         }, []);
-      
-      setSelectedLocationsLocal(prev => prev.filter(locationId => validLocationIds.includes(locationId)));
+
+      setSelectedLocationsLocal((prev) =>
+        prev.filter((locationId) => validLocationIds.includes(locationId))
+      );
     }
   };
 
   // Handle location selection - now with auto-apply
   const handleLocationChange = (event) => {
     const value = event.target.value;
-    console.log('Location selection event:', { value, type: typeof value });
-    
-    const newSelectedLocations = typeof value === 'string' ? value.split(',') : value;
-    console.log('New selected locations:', newSelectedLocations);
-    
+    console.log("Location selection event:", { value, type: typeof value });
+
+    const newSelectedLocations =
+      typeof value === "string" ? value.split(",") : value;
+    console.log("New selected locations:", newSelectedLocations);
+
     setSelectedLocationsLocal(newSelectedLocations);
 
     // Auto-apply when locations are selected
     if (newSelectedLocations.length > 0) {
       setTimeout(() => {
-        console.log('Auto-applying filters due to location change');
-        
+        console.log("Auto-applying filters due to location change");
+
         // Update Redux
-        dispatch(setSelectedCompanies(selectedCompanies.map(id => id.toString())));
-        dispatch(setSelectedLocations(newSelectedLocations.map(id => id.toString())));
-        
+        dispatch(
+          setSelectedCompanies(selectedCompanies.map((id) => id.toString()))
+        );
+        dispatch(
+          setSelectedLocations(newSelectedLocations.map((id) => id.toString()))
+        );
+
         // Apply filters
         setAppliedFilters({
           companies: selectedCompanies,
           locations: newSelectedLocations,
-          dateRange: hasDateRange ? reduxDateRange : null
+          dateRange: hasDateRange ? reduxDateRange : null,
         });
       }, 0);
     }
@@ -411,42 +483,46 @@ const AnalyticsDashboard = () => {
       // Convert dates to ISO strings for Redux storage
       const dateRange = {
         startDate: range.startDate.toISOString(),
-        endDate: range.endDate.toISOString()
+        endDate: range.endDate.toISOString(),
       };
-      
-      console.log('Selected date range for Analytics Dashboard:', dateRange);
-      
+
+      console.log("Selected date range for Analytics Dashboard:", dateRange);
+
       // Dispatch to Redux store for Analytics Dashboard
       dispatch(setAnalyticsDashboardDateRange(dateRange));
 
       // Auto-apply when date range is set
       setTimeout(() => {
-        console.log('Auto-applying filters due to date range change');
-        
+        console.log("Auto-applying filters due to date range change");
+
         // Update Redux
-        dispatch(setSelectedCompanies(selectedCompanies.map(id => id.toString())));
-        dispatch(setSelectedLocations(selectedLocations.map(id => id.toString())));
-        
+        dispatch(
+          setSelectedCompanies(selectedCompanies.map((id) => id.toString()))
+        );
+        dispatch(
+          setSelectedLocations(selectedLocations.map((id) => id.toString()))
+        );
+
         // Apply filters
         setAppliedFilters({
           companies: selectedCompanies,
           locations: selectedLocations,
-          dateRange: dateRange
+          dateRange: dateRange,
         });
       }, 0);
     } else {
       // Clear date range if null
-      console.log('Clearing date range for Analytics Dashboard');
+      console.log("Clearing date range for Analytics Dashboard");
       dispatch(clearAnalyticsDashboardDateRange());
 
       // Auto-apply when date range is cleared
       if (selectedLocations.length > 0) {
         setTimeout(() => {
-          console.log('Auto-applying filters due to date range clear');
+          console.log("Auto-applying filters due to date range clear");
           setAppliedFilters({
             companies: selectedCompanies,
             locations: selectedLocations,
-            dateRange: null
+            dateRange: null,
           });
         }, 0);
       }
@@ -460,28 +536,32 @@ const AnalyticsDashboard = () => {
 
   // Get company name by ID
   const getCompanyNameById = (companyId) => {
-    const company = companyLocationData.find(c => c.company_id === companyId);
-    return company ? company.company_name : '';
+    const company = companyLocationData.find((c) => c.company_id === companyId);
+    return company ? company.company_name : "";
   };
 
   // Get location name by ID
   const getLocationNameById = (locationId) => {
     for (const company of companyLocationData) {
-      const location = company.locations.find(l => l.location_id === locationId);
+      const location = company.locations.find(
+        (l) => l.location_id === locationId
+      );
       if (location) return location.location_name;
     }
-    return '';
+    return "";
   };
 
   if (loading) {
     return (
-      <Box sx={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        background: 'linear-gradient(180deg, #fafafa 0%, #ffffff 100%)'
-      }}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "linear-gradient(180deg, #fafafa 0%, #ffffff 100%)",
+        }}
+      >
         <CircularProgress size={50} />
       </Box>
     );
@@ -489,13 +569,15 @@ const AnalyticsDashboard = () => {
 
   if (error) {
     return (
-      <Box sx={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        background: 'linear-gradient(180deg, #fafafa 0%, #ffffff 100%)'
-      }}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "linear-gradient(180deg, #fafafa 0%, #ffffff 100%)",
+        }}
+      >
         <Typography color="error" variant="h6">
           Error loading data: {error}
         </Typography>
@@ -504,51 +586,68 @@ const AnalyticsDashboard = () => {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', background: 'linear-gradient(180deg, #fafafa 0%, #ffffff 100%)' }}>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        background: "linear-gradient(180deg, #fafafa 0%, #ffffff 100%)",
+      }}
+    >
       {/* Top Controls */}
       <Container maxWidth="xl" sx={{ pt: 3, pb: 1 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
           <Button
             variant="outlined"
             startIcon={<RefreshIcon />}
             onClick={handleRefresh}
             disabled={loading}
             sx={{
-              textTransform: 'none',
+              textTransform: "none",
               borderRadius: 1,
               px: 2,
               py: 1,
-              borderColor: '#d1d5db',
-              color: '#6b7280',
-              '&:hover': {
-                borderColor: '#9ca3af',
-                backgroundColor: 'transparent'
-              }
+              borderColor: "#d1d5db",
+              color: "#6b7280",
+              "&:hover": {
+                borderColor: "#9ca3af",
+                backgroundColor: "transparent",
+              },
             }}
           >
             Refresh
           </Button>
-          <DateRangeSelectorButton 
+          <DateRangeSelectorButton
             onDateRangeSelect={handleDateRangeSelect}
             currentDateRange={reduxDateRange}
-            onClearDateRange={() => dispatch(clearAnalyticsDashboardDateRange())}
+            onClearDateRange={() =>
+              dispatch(clearAnalyticsDashboardDateRange())
+            }
           />
         </Box>
       </Container>
 
       {/* Filters Section */}
       <Container maxWidth="xl">
-        <StyledCard sx={{ p: 4, overflow: 'visible' }}>
+        <StyledCard sx={{ p: 4, overflow: "visible" }}>
           {/* Filter Header */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 4 }}>
             <FilterListIcon sx={{ color: theme.palette.primary.main }} />
-            <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 600, color: theme.palette.text.primary }}
+            >
               Filters
             </Typography>
           </Box>
 
           {/* Filter Controls */}
-          <Grid container spacing={3} sx={{ mb: 4, overflow: 'visible' }}>
+          <Grid container spacing={3} sx={{ mb: 4, overflow: "visible" }}>
             {/* Company Filter */}
             <Grid item xs={12} lg={6}>
               <FormControl fullWidth>
@@ -559,72 +658,96 @@ const AnalyticsDashboard = () => {
                   value={selectedCompanies}
                   onChange={handleCompanyChange}
                   input={<OutlinedInput label="Companies" />}
-                  renderValue={(selected) => 
-                    selected.length === 0 
-                      ? 'All companies initially selected'
+                  renderValue={(selected) =>
+                    selected.length === 0
+                      ? "All companies initially selected"
                       : `${selected.length} company(s) selected`
                   }
                   MenuProps={{
                     PaperProps: {
                       style: {
                         maxHeight: 300,
-                        backgroundColor: '#ffffff',
-                        border: '2px solid #1976d2',
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                        backgroundColor: "#ffffff",
+                        border: "2px solid #1976d2",
+                        boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
                       },
                     },
                     anchorOrigin: {
-                      vertical: 'bottom',
-                      horizontal: 'left',
+                      vertical: "bottom",
+                      horizontal: "left",
                     },
                     transformOrigin: {
-                      vertical: 'top',
-                      horizontal: 'left',
+                      vertical: "top",
+                      horizontal: "left",
                     },
                   }}
                   sx={{
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 2,
-                      '&:hover fieldset': {
-                        borderColor: selectedCompanies.length === 0 ? '#d1d5db' : theme.palette.primary.main
+                      "&:hover fieldset": {
+                        borderColor:
+                          selectedCompanies.length === 0
+                            ? "#d1d5db"
+                            : theme.palette.primary.main,
                       },
-                      '&.Mui-disabled': {
-                        backgroundColor: '#f9fafb'
-                      }
-                    }
+                      "&.Mui-disabled": {
+                        backgroundColor: "#f9fafb",
+                      },
+                    },
                   }}
                 >
                   <MenuItem
                     value=""
                     onClick={() => {
-                      if (selectedCompanies.length === availableCompanies.length) {
+                      if (
+                        selectedCompanies.length === availableCompanies.length
+                      ) {
                         setSelectedCompaniesLocal([]);
                         setSelectedLocationsLocal([]);
                       } else {
-                        setSelectedCompaniesLocal(availableCompanies.map(c => c.id));
+                        setSelectedCompaniesLocal(
+                          availableCompanies.map((c) => c.id)
+                        );
                       }
                     }}
-                    sx={{ 
-                      backgroundColor: '#ffffff',
-                      '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.04) }
+                    sx={{
+                      backgroundColor: "#ffffff",
+                      "&:hover": {
+                        backgroundColor: alpha(
+                          theme.palette.primary.main,
+                          0.04
+                        ),
+                      },
                     }}
                   >
                     <Checkbox
-                      checked={selectedCompanies.length === availableCompanies.length}
-                      indeterminate={selectedCompanies.length > 0 && selectedCompanies.length < availableCompanies.length}
+                      checked={
+                        selectedCompanies.length === availableCompanies.length
+                      }
+                      indeterminate={
+                        selectedCompanies.length > 0 &&
+                        selectedCompanies.length < availableCompanies.length
+                      }
                     />
                     <ListItemText primary="Select All" />
                   </MenuItem>
                   {availableCompanies.map((company) => (
-                    <MenuItem 
-                      key={company.id} 
+                    <MenuItem
+                      key={company.id}
                       value={company.id}
-                      sx={{ 
-                        backgroundColor: '#ffffff',
-                        '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.04) }
+                      sx={{
+                        backgroundColor: "#ffffff",
+                        "&:hover": {
+                          backgroundColor: alpha(
+                            theme.palette.primary.main,
+                            0.04
+                          ),
+                        },
                       }}
                     >
-                      <Checkbox checked={selectedCompanies.indexOf(company.id) > -1} />
+                      <Checkbox
+                        checked={selectedCompanies.indexOf(company.id) > -1}
+                      />
                       <ListItemText primary={company.name} />
                     </MenuItem>
                   ))}
@@ -643,129 +766,182 @@ const AnalyticsDashboard = () => {
                   onChange={handleLocationChange}
                   input={<OutlinedInput label="Locations" />}
                   disabled={selectedCompanies.length === 0}
-                  renderValue={(selected) => 
+                  renderValue={(selected) =>
                     selectedCompanies.length === 0
-                      ? 'Please select a company first'
-                      : selected.length === 0 
-                      ? 'Select locations'
+                      ? "Please select a company first"
+                      : selected.length === 0
+                      ? "Select locations"
                       : `${selected.length} location(s) selected`
                   }
                   MenuProps={{
                     PaperProps: {
                       style: {
                         maxHeight: 300,
-                        backgroundColor: '#ffffff',
-                        border: '2px solid #1976d2',
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                        backgroundColor: "#ffffff",
+                        border: "2px solid #1976d2",
+                        boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
                       },
                     },
                     anchorOrigin: {
-                      vertical: 'bottom',
-                      horizontal: 'left',
+                      vertical: "bottom",
+                      horizontal: "left",
                     },
                     transformOrigin: {
-                      vertical: 'top',
-                      horizontal: 'left',
+                      vertical: "top",
+                      horizontal: "left",
                     },
                   }}
                   sx={{
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 2,
-                      '&:hover fieldset': {
-                        borderColor: theme.palette.primary.main
-                      }
-                    }
+                      "&:hover fieldset": {
+                        borderColor: theme.palette.primary.main,
+                      },
+                    },
                   }}
                 >
-                  {selectedCompanies.length > 0 && availableLocations.length > 0 && (
-                    <>
-                      <MenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (selectedLocations.length === availableLocations.length) {
-                            setSelectedLocationsLocal([]);
-                          } else {
-                            setSelectedLocationsLocal(availableLocations.map(l => l.id));
-                          }
-                        }}
-                        sx={{ 
-                          backgroundColor: '#ffffff',
-                          '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.04) }
-                        }}
-                      >
-                        <Checkbox
-                          checked={availableLocations.length > 0 && selectedLocations.length === availableLocations.length}
-                          indeterminate={selectedLocations.length > 0 && selectedLocations.length < availableLocations.length}
-                        />
-                        <ListItemText primary="Select All" />
-                      </MenuItem>
-                      {availableLocations.map((location) => (
-                        <MenuItem 
-                          key={location.id} 
-                          value={location.id}
+                  {selectedCompanies.length > 0 &&
+                    availableLocations.length > 0 && (
+                      <>
+                        <MenuItem
                           onClick={(e) => {
                             e.stopPropagation();
-                            const currentIndex = selectedLocations.indexOf(location.id);
-                            const newSelectedLocations = [...selectedLocations];
-                            
-                            if (currentIndex === -1) {
-                              newSelectedLocations.push(location.id);
+                            if (
+                              selectedLocations.length ===
+                              availableLocations.length
+                            ) {
+                              setSelectedLocationsLocal([]);
                             } else {
-                              newSelectedLocations.splice(currentIndex, 1);
+                              setSelectedLocationsLocal(
+                                availableLocations.map((l) => l.id)
+                              );
                             }
-                            
-                            console.log('Individual location clicked:', location.id, 'New selection:', newSelectedLocations);
-                            setSelectedLocationsLocal(newSelectedLocations);
                           }}
-                          sx={{ 
-                            backgroundColor: '#ffffff',
-                            '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.04) }
+                          sx={{
+                            backgroundColor: "#ffffff",
+                            "&:hover": {
+                              backgroundColor: alpha(
+                                theme.palette.primary.main,
+                                0.04
+                              ),
+                            },
                           }}
                         >
-                          <Checkbox checked={selectedLocations.includes(location.id)} />
-                          <ListItemText 
-                            primary={location.name}
-                            secondary={location.companyName}
+                          <Checkbox
+                            checked={
+                              availableLocations.length > 0 &&
+                              selectedLocations.length ===
+                                availableLocations.length
+                            }
+                            indeterminate={
+                              selectedLocations.length > 0 &&
+                              selectedLocations.length <
+                                availableLocations.length
+                            }
                           />
+                          <ListItemText primary="Select All" />
                         </MenuItem>
-                      ))}
-                    </>
-                  )}
+                        {availableLocations.map((location) => (
+                          <MenuItem
+                            key={location.id}
+                            value={location.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const currentIndex = selectedLocations.indexOf(
+                                location.id
+                              );
+                              const newSelectedLocations = [
+                                ...selectedLocations,
+                              ];
+
+                              if (currentIndex === -1) {
+                                newSelectedLocations.push(location.id);
+                              } else {
+                                newSelectedLocations.splice(currentIndex, 1);
+                              }
+
+                              console.log(
+                                "Individual location clicked:",
+                                location.id,
+                                "New selection:",
+                                newSelectedLocations
+                              );
+                              setSelectedLocationsLocal(newSelectedLocations);
+                            }}
+                            sx={{
+                              backgroundColor: "#ffffff",
+                              "&:hover": {
+                                backgroundColor: alpha(
+                                  theme.palette.primary.main,
+                                  0.04
+                                ),
+                              },
+                            }}
+                          >
+                            <Checkbox
+                              checked={selectedLocations.includes(location.id)}
+                            />
+                            <ListItemText
+                              primary={location.name}
+                              secondary={location.companyName}
+                            />
+                          </MenuItem>
+                        ))}
+                      </>
+                    )}
                   {selectedCompanies.length === 0 && (
                     <MenuItem disabled>
                       <ListItemText primary="Please select a company first" />
                     </MenuItem>
                   )}
-                  {selectedCompanies.length > 0 && availableLocations.length === 0 && (
-                    <MenuItem disabled>
-                      <ListItemText primary="No locations available for selected company" />
-                    </MenuItem>
-                  )}
+                  {selectedCompanies.length > 0 &&
+                    availableLocations.length === 0 && (
+                      <MenuItem disabled>
+                        <ListItemText primary="No locations available for selected company" />
+                      </MenuItem>
+                    )}
                 </Select>
               </FormControl>
             </Grid>
           </Grid>
 
           {/* Active Filters */}
-          {(selectedCompanies.length > 0 || selectedLocations.length > 0 || hasDateRange) && (
+          {(selectedCompanies.length > 0 ||
+            selectedLocations.length > 0 ||
+            hasDateRange) && (
             <Box sx={{ mb: 4 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 2, color: theme.palette.text.primary }}>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  fontWeight: 600,
+                  mb: 2,
+                  color: theme.palette.text.primary,
+                }}
+              >
                 Active Filters:
               </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                 {selectedCompanies.map((companyId) => (
                   <ActiveFilterChip
                     key={companyId}
                     label={`Company: ${getCompanyNameById(companyId)}`}
                     onDelete={() => {
-                      const newCompanies = selectedCompanies.filter(id => id !== companyId);
+                      const newCompanies = selectedCompanies.filter(
+                        (id) => id !== companyId
+                      );
                       setSelectedCompaniesLocal(newCompanies);
-                      
+
                       // Remove locations that belong to this company
-                      const companyLocations = companyLocationData
-                        .find(c => c.company_id === companyId)?.locations || [];
-                      const locationIdsToRemove = companyLocations.map(l => l.location_id);
-                      setSelectedLocationsLocal(prev => prev.filter(id => !locationIdsToRemove.includes(id)));
+                      const companyLocations =
+                        companyLocationData.find(
+                          (c) => c.company_id === companyId
+                        )?.locations || [];
+                      const locationIdsToRemove = companyLocations.map(
+                        (l) => l.location_id
+                      );
+                      setSelectedLocationsLocal((prev) =>
+                        prev.filter((id) => !locationIdsToRemove.includes(id))
+                      );
                     }}
                     deleteIcon={<CloseIcon />}
                   />
@@ -774,22 +950,34 @@ const AnalyticsDashboard = () => {
                   <ActiveFilterChip
                     key={locationId}
                     label={`Location: ${getLocationNameById(locationId)}`}
-                    onDelete={() => setSelectedLocationsLocal(prev => prev.filter(id => id !== locationId))}
+                    onDelete={() =>
+                      setSelectedLocationsLocal((prev) =>
+                        prev.filter((id) => id !== locationId)
+                      )
+                    }
                     deleteIcon={<CloseIcon />}
                   />
                 ))}
                 {hasDateRange && (
                   <ActiveFilterChip
-                    label={`Date Range: ${new Date(reduxDateRange.startDate).toLocaleDateString()} - ${new Date(reduxDateRange.endDate).toLocaleDateString()}`}
-                    onDelete={() => dispatch(clearAnalyticsDashboardDateRange())}
+                    label={`Date Range: ${new Date(
+                      reduxDateRange.startDate
+                    ).toLocaleDateString()} - ${new Date(
+                      reduxDateRange.endDate
+                    ).toLocaleDateString()}`}
+                    onDelete={() =>
+                      dispatch(clearAnalyticsDashboardDateRange())
+                    }
                     deleteIcon={<CloseIcon />}
                   />
                 )}
-                {(selectedCompanies.length > 0 || selectedLocations.length > 0 || hasDateRange) && (
+                {(selectedCompanies.length > 0 ||
+                  selectedLocations.length > 0 ||
+                  hasDateRange) && (
                   <Button
                     size="small"
                     onClick={clearAllFilters}
-                    sx={{ ml: 1, textTransform: 'none' }}
+                    sx={{ ml: 1, textTransform: "none" }}
                   >
                     Clear All
                   </Button>
@@ -806,9 +994,7 @@ const AnalyticsDashboard = () => {
       {/* Analytics Content */}
       <Container maxWidth="xl">
         <ContentCard>
-          <AnalyticsComponenet 
-            appliedFilters={appliedFilters}
-          />
+          <AnalyticsComponenet appliedFilters={appliedFilters} />
         </ContentCard>
       </Container>
     </Box>

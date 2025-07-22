@@ -103,7 +103,7 @@ import apiClient from "../api/axiosConfig";
 
 // API URLs
 const API_URL = API_URL_Local + "/api/excel/upload";
-const COMPANY_LOCATIONS_API_URL = API_URL_Local + "/company-locations/all";
+// const COMPANY_LOCATIONS_API_URL = API_URL_Local + "/company-locations/all";
 
 // UPDATED: Company interface based on new API structure
 interface Company {
@@ -503,14 +503,15 @@ const ExcelUploadPage: React.FC = () => {
   // UPDATED: Redux state management for company selection
   const dispatch = useDispatch();
   const appDispatch = useAppDispatch();
-  
+
   // Get current selections from Redux
   const selectedCompanies = useSelector(selectSelectedCompanies);
   const selectedLocations = useSelector(selectSelectedLocations);
-  
+
   // Convert to single values for dropdowns
-  const selectedCompanyId = selectedCompanies.length > 0 ? selectedCompanies[0] : '';
-  
+  const selectedCompanyId =
+    selectedCompanies.length > 0 ? selectedCompanies[0] : "";
+
   // UPDATED: Company state management for API fetching
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
@@ -528,14 +529,16 @@ const ExcelUploadPage: React.FC = () => {
   // UPDATED: Sync local selectedCompany with Redux state
   useEffect(() => {
     if (selectedCompanyId && companies.length > 0) {
-      const company = companies.find(c => c.company_id.toString() === selectedCompanyId);
+      const company = companies.find(
+        (c) => c.company_id.toString() === selectedCompanyId
+      );
       if (company && company !== selectedCompany) {
         setSelectedCompany(company);
-        console.log('🔄 Synced selectedCompany from Redux:', company);
+        console.log("🔄 Synced selectedCompany from Redux:", company);
       }
     } else if (!selectedCompanyId && selectedCompany) {
       setSelectedCompany(null);
-      console.log('🔄 Cleared selectedCompany from Redux');
+      console.log("🔄 Cleared selectedCompany from Redux");
     }
   }, [selectedCompanyId, companies, selectedCompany]);
 
@@ -545,12 +548,15 @@ const ExcelUploadPage: React.FC = () => {
       setCompaniesLoading(true);
       setCompaniesError(null);
 
-      console.log("🏢 Fetching companies and locations from:", COMPANY_LOCATIONS_API_URL);
+      // console.log("🏢 Fetching companies and locations from:", COMPANY_LOCATIONS_API_URL);
       const response = await apiClient.get("/company-locations/all");
 
       if (response.data && Array.isArray(response.data)) {
         setCompanies(response.data);
-        console.log("✅ Companies with locations fetched successfully:", response.data);
+        console.log(
+          "✅ Companies with locations fetched successfully:",
+          response.data
+        );
       } else {
         throw new Error("Invalid response format");
       }
@@ -641,19 +647,21 @@ const ExcelUploadPage: React.FC = () => {
   // UPDATED: Company selection handler with Redux integration
   const handleCompanyChange = (event: any, newValue: Company | null) => {
     console.log("🏢 Company selection changed:", newValue);
-    
+
     // Update local state
     setSelectedCompany(newValue);
-    
+
     // Update Redux state
     if (newValue) {
       dispatch(setSelectedCompanies([newValue.company_id.toString()]));
       dispatch(setSelectedLocations([])); // Clear locations when company changes
-      console.log('📦 Updated Redux: selectedCompanies =', [newValue.company_id.toString()]);
+      console.log("📦 Updated Redux: selectedCompanies =", [
+        newValue.company_id.toString(),
+      ]);
     } else {
       dispatch(setSelectedCompanies([]));
       dispatch(setSelectedLocations([]));
-      console.log('📦 Cleared Redux: selectedCompanies and selectedLocations');
+      console.log("📦 Cleared Redux: selectedCompanies and selectedLocations");
     }
   };
 
@@ -1422,7 +1430,8 @@ const ExcelUploadPage: React.FC = () => {
                 >
                   <BusinessIcon color="primary" />
                   <Typography variant="body1" fontWeight={500}>
-                    Uploading for: {selectedCompany.company_name} (ID: {selectedCompany.company_id})
+                    Uploading for: {selectedCompany.company_name} (ID:{" "}
+                    {selectedCompany.company_id})
                   </Typography>
                 </Box>
               )}

@@ -17,10 +17,24 @@ def create_company_location(data: CompanyLocationCreate, db: Session = Depends(g
 def get_all_company_locations(db: Session = Depends(get_db)):
     return cl_crud.get_company_locations(db)
 
+
+
+# @router.get("/all", response_model=list[CompanyWithLocations])
+# def get_companies_with_locations(db: Session = Depends(get_db)
+#                                  ):
+#     """Get all companies with their associated locations in nested format"""
+#     return cl_crud.get_companies_with_locations(db)
+
+from models.users import User
+from dependencies.auth import get_current_active_user
+
 @router.get("/all", response_model=list[CompanyWithLocations])
-def get_companies_with_locations(db: Session = Depends(get_db)):
-    """Get all companies with their associated locations in nested format"""
-    return cl_crud.get_companies_with_locations(db)
+def get_companies_with_locations(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    return cl_crud.get_companies_with_locations(db, current_user)
+
 
 @router.get("/{record_id}", response_model=CompanyLocation)
 def get_company_location(record_id: int, db: Session = Depends(get_db)):

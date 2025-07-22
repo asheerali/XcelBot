@@ -26,11 +26,11 @@ import {
 } from "@mui/material";
 import { Link, useLocation } from "react-router-dom";
 import { API_URL_Local } from "../constants";
-import { 
-  setSelectedCompanies, 
+import {
+  setSelectedCompanies,
   setSelectedLocations,
   selectSelectedCompanies,
-  selectSelectedLocations 
+  selectSelectedLocations,
 } from "../store/slices/masterFileSlice";
 import NewspaperIcon from "@mui/icons-material/Newspaper";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -58,6 +58,7 @@ import SelectAllIcon from "@mui/icons-material/SelectAll";
 import ClearAllIcon from "@mui/icons-material/ClearAll";
 import BusinessIcon from "@mui/icons-material/Business";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
+import apiClient from "../api/axiosConfig"; // Add this line
 
 // Responsive drawer widths - more aggressive scaling
 const getDrawerWidth = (theme, isMobile, isTablet, isSmallScreen) => {
@@ -100,21 +101,21 @@ const CustomSidebar = ({ onSignOut }) => {
   const theme = useTheme();
   const location = useLocation();
   const dispatch = useDispatch();
-  
+
   // Responsive breakpoints
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const isTablet = useMediaQuery(theme.breakpoints.between("md", "lg"));
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
-  
+
   const [open, setOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [insightiqOpen, setInsightiqOpen] = useState(false);
   const [orderiqOpen, setOrderiqOpen] = useState(false);
-  
+
   // Redux state for selected companies and locations
   const selectedCompanies = useSelector(selectSelectedCompanies);
   const selectedLocations = useSelector(selectSelectedLocations);
-  
+
   // Local state for companies data and API loading
   const [companies, setCompanies] = useState([]);
   const [availableLocations, setAvailableLocations] = useState([]);
@@ -126,7 +127,8 @@ const CustomSidebar = ({ onSignOut }) => {
 
   // Get selected values for dropdowns (now supports multiple)
   const selectedCompany = selectedCompanies.length > 0 ? selectedCompanies : [];
-  const selectedLocation = selectedLocations.length > 0 ? selectedLocations : [];
+  const selectedLocation =
+    selectedLocations.length > 0 ? selectedLocations : [];
 
   // Responsive drawer width
   const drawerWidth = getDrawerWidth(theme, isMobile, isTablet, isSmallScreen);
@@ -136,40 +138,40 @@ const CustomSidebar = ({ onSignOut }) => {
 
   // INSIGHTIQ dropdown items with multiple title options for different screen sizes
   const insightiqItems = [
-    { 
-      title: "Upload Excel", 
+    {
+      title: "Upload Excel",
       shortTitle: "Upload",
       compactTitle: "Upload",
-      path: "/upload-excel", 
-      icon: <UploadFileIcon /> 
+      path: "/upload-excel",
+      icon: <UploadFileIcon />,
     },
-    { 
-      title: "Sales Split", 
+    {
+      title: "Sales Split",
       shortTitle: "Sales",
       compactTitle: "Sales",
-      path: "/manage-reports", 
-      icon: <PieChartIcon /> 
+      path: "/manage-reports",
+      icon: <PieChartIcon />,
     },
-    { 
-      title: "Product Mix", 
+    {
+      title: "Product Mix",
       shortTitle: "Products",
       compactTitle: "Products",
-      path: "/Productmix", 
-      icon: <RestaurantIcon /> 
+      path: "/Productmix",
+      icon: <RestaurantIcon />,
     },
-    { 
-      title: "Financials", 
+    {
+      title: "Financials",
       shortTitle: "Finance",
       compactTitle: "Finance",
-      path: "/Financials", 
-      icon: <AttachMoneyIcon /> 
+      path: "/Financials",
+      icon: <AttachMoneyIcon />,
     },
-    { 
-      title: "Companywide Sales", 
+    {
+      title: "Companywide Sales",
       shortTitle: "Company Sales",
       compactTitle: "Sales",
-      path: "/Saleswide", 
-      icon: <ShowChartIcon /> 
+      path: "/Saleswide",
+      icon: <ShowChartIcon />,
     },
   ];
 
@@ -182,12 +184,12 @@ const CustomSidebar = ({ onSignOut }) => {
       path: "/AnalyticsDashboard",
       icon: <PieChartIcon />,
     },
-    { 
-      title: "Master File", 
+    {
+      title: "Master File",
       shortTitle: "Master",
       compactTitle: "Master",
-      path: "/MasterFile", 
-      icon: <InventoryIcon /> 
+      path: "/MasterFile",
+      icon: <InventoryIcon />,
     },
     {
       title: "Store Orders",
@@ -210,7 +212,7 @@ const CustomSidebar = ({ onSignOut }) => {
       path: "/SummaryFinancialDashboard",
       icon: <TrendingUpIcon />,
     },
-     {
+    {
       title: "Reports",
       shortTitle: "Reports",
       compactTitle: "Reports",
@@ -221,19 +223,19 @@ const CustomSidebar = ({ onSignOut }) => {
 
   // Other navigation items with multiple title options
   const navItems = [
-    { 
-      title: "Payments", 
+    {
+      title: "Payments",
       shortTitle: "Payments",
       compactTitle: "Pay",
-      path: "/Payments", 
-      icon: <PaymentIcon /> 
+      path: "/Payments",
+      icon: <PaymentIcon />,
     },
-    { 
-      title: "Help Center", 
+    {
+      title: "Help Center",
       shortTitle: "Help",
       compactTitle: "Help",
-      path: "/HelpCenter", 
-      icon: <HelpIcon /> 
+      path: "/HelpCenter",
+      icon: <HelpIcon />,
     },
     {
       title: "Company",
@@ -246,10 +248,28 @@ const CustomSidebar = ({ onSignOut }) => {
 
   // Responsive font sizes - optimized for mobile
   const getFontSizes = () => ({
-    appName: isMobile ? "1.1rem" : (isSmallScreen ? "0.9rem" : isTablet ? "1.1rem" : "1.25rem"),
-    mainNav: isMobile ? "0.9rem" : (isSmallScreen ? "0.75rem" : isTablet ? "0.9rem" : "1rem"),
-    subNav: isMobile ? "0.85rem" : (isSmallScreen ? "0.7rem" : isTablet ? "0.8rem" : "0.875rem"),
-    dropdown: isMobile ? "0.9rem" : (isSmallScreen ? "0.7rem" : "0.875rem"),
+    appName: isMobile
+      ? "1.1rem"
+      : isSmallScreen
+      ? "0.9rem"
+      : isTablet
+      ? "1.1rem"
+      : "1.25rem",
+    mainNav: isMobile
+      ? "0.9rem"
+      : isSmallScreen
+      ? "0.75rem"
+      : isTablet
+      ? "0.9rem"
+      : "1rem",
+    subNav: isMobile
+      ? "0.85rem"
+      : isSmallScreen
+      ? "0.7rem"
+      : isTablet
+      ? "0.8rem"
+      : "0.875rem",
+    dropdown: isMobile ? "0.9rem" : isSmallScreen ? "0.7rem" : "0.875rem",
   });
 
   const fontSizes = getFontSizes();
@@ -257,7 +277,7 @@ const CustomSidebar = ({ onSignOut }) => {
   // Function to get display title based on screen size and drawer width
   const getDisplayTitle = (item) => {
     // For very small screens or narrow drawer widths, use compact title
-    if (isSmallScreen || (drawerWidth < 250)) {
+    if (isSmallScreen || drawerWidth < 250) {
       return item.compactTitle || item.shortTitle || item.title;
     }
     // For mobile/tablet, use short title
@@ -273,15 +293,36 @@ const CustomSidebar = ({ onSignOut }) => {
     const fetchCompaniesAndLocations = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`${API_URL_Local}/company-locations/all`);
-        if (response.ok) {
-          const data = await response.json();
-          setCompanies(data);
-        } else {
-          console.error('Failed to fetch companies and locations');
-        }
+        // const response = await fetch(`${API_URL_Local}/company-locations/all`);
+        // if (response.ok) {
+        //   const data = await response.json();
+        //   setCompanies(data);
+        // } else {
+        //   console.error('Failed to fetch companies and locations');
+        // }
+        const response = await apiClient.get("/company-locations/all");
+        setCompanies(response.data || []);
+        // } catch (error) {
+        //   console.error("Error fetching companies and locations:", error);
+        // } finally {
       } catch (error) {
-        console.error('Error fetching companies and locations:', error);
+        console.error("Error fetching companies and locations:", error);
+
+        let errorMessage = "Error loading companies and locations";
+        if (error.response) {
+          if (error.response.status === 401) {
+            errorMessage = "Authentication failed. Please log in again.";
+            // Auth interceptor will handle redirect to login
+          } else {
+            errorMessage = `Server error: ${error.response.status}`;
+          }
+        } else if (error.request) {
+          errorMessage =
+            "Cannot connect to company-locations API. Please check server status.";
+        }
+
+        // Set your error state here if you have one
+        // setCompaniesError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -293,63 +334,82 @@ const CustomSidebar = ({ onSignOut }) => {
   // NEW: Auto-initialize first company and location if Redux is empty (ONLY on first load)
   useEffect(() => {
     if (
-      !hasInitialized && 
+      !hasInitialized &&
       !userHasInteracted && // Only auto-select if user hasn't interacted yet
-      companies.length > 0 && 
-      selectedCompanies.length === 0 && 
+      companies.length > 0 &&
+      selectedCompanies.length === 0 &&
       selectedLocations.length === 0
     ) {
       // Select first company
       const firstCompany = companies[0];
       const firstCompanyId = firstCompany.company_id.toString();
-      
+
       // Select first location of the first company
       const firstLocation = firstCompany.locations[0];
-      const firstLocationId = firstLocation ? firstLocation.location_id.toString() : '';
-      
-      console.log('Auto-initializing with first company and location:', {
+      const firstLocationId = firstLocation
+        ? firstLocation.location_id.toString()
+        : "";
+
+      console.log("Auto-initializing with first company and location:", {
         companyId: firstCompanyId,
         companyName: firstCompany.company_name,
         locationId: firstLocationId,
-        locationName: firstLocation?.location_name
+        locationName: firstLocation?.location_name,
       });
-      
+
       // Dispatch to Redux
       dispatch(setSelectedCompanies([firstCompanyId]));
       if (firstLocationId) {
         dispatch(setSelectedLocations([firstLocationId]));
       }
-      
+
       setHasInitialized(true);
     }
-  }, [companies, selectedCompanies, selectedLocations, hasInitialized, userHasInteracted, dispatch]);
+  }, [
+    companies,
+    selectedCompanies,
+    selectedLocations,
+    hasInitialized,
+    userHasInteracted,
+    dispatch,
+  ]);
 
   // Memoize expensive computations
   const availableLocationsMemo = useMemo(() => {
     if (selectedCompanies.length === 0 || companies.length === 0) return [];
-    
+
     const allLocationsFromSelectedCompanies = [];
-    selectedCompanies.forEach(companyId => {
-      const companyData = companies.find(company => company.company_id.toString() === companyId.toString());
+    selectedCompanies.forEach((companyId) => {
+      const companyData = companies.find(
+        (company) => company.company_id.toString() === companyId.toString()
+      );
       if (companyData && companyData.locations) {
         allLocationsFromSelectedCompanies.push(...companyData.locations);
       }
     });
-    
+
     // Remove duplicates based on location_id
-    return allLocationsFromSelectedCompanies.filter((location, index, self) =>
-      index === self.findIndex(l => l.location_id === location.location_id)
+    return allLocationsFromSelectedCompanies.filter(
+      (location, index, self) =>
+        index === self.findIndex((l) => l.location_id === location.location_id)
     );
   }, [selectedCompanies, companies]);
 
   // Update available locations when computed locations change
   useEffect(() => {
     setAvailableLocations(availableLocationsMemo);
-    
+
     // Only auto-select first location if user hasn't interacted and no locations are selected
-    if (!userHasInteracted && selectedLocations.length === 0 && availableLocationsMemo.length > 0) {
+    if (
+      !userHasInteracted &&
+      selectedLocations.length === 0 &&
+      availableLocationsMemo.length > 0
+    ) {
       const firstLocationId = availableLocationsMemo[0].location_id.toString();
-      console.log('Auto-selecting first location for selected companies:', firstLocationId);
+      console.log(
+        "Auto-selecting first location for selected companies:",
+        firstLocationId
+      );
       dispatch(setSelectedLocations([firstLocationId]));
     }
   }, [availableLocationsMemo, selectedLocations, userHasInteracted, dispatch]);
@@ -369,9 +429,11 @@ const CustomSidebar = ({ onSignOut }) => {
   // Handle bulk company actions
   const handleSelectAllCompanies = useCallback(() => {
     setUserHasInteracted(true);
-    const allCompanyIds = companies.map(company => company.company_id.toString());
-    console.log('Selecting all companies:', allCompanyIds);
-    
+    const allCompanyIds = companies.map((company) =>
+      company.company_id.toString()
+    );
+    console.log("Selecting all companies:", allCompanyIds);
+
     setTimeout(() => {
       dispatch(setSelectedCompanies(allCompanyIds));
       dispatch(setSelectedLocations([])); // Clear locations when companies change
@@ -380,8 +442,8 @@ const CustomSidebar = ({ onSignOut }) => {
 
   const handleClearAllCompanies = useCallback(() => {
     setUserHasInteracted(true);
-    console.log('Clearing all companies');
-    
+    console.log("Clearing all companies");
+
     setTimeout(() => {
       dispatch(setSelectedCompanies([]));
       dispatch(setSelectedLocations([]));
@@ -391,9 +453,11 @@ const CustomSidebar = ({ onSignOut }) => {
   // Handle bulk location actions
   const handleSelectAllLocations = useCallback(() => {
     setUserHasInteracted(true);
-    const allLocationIds = availableLocations.map(location => location.location_id.toString());
-    console.log('Selecting all locations:', allLocationIds);
-    
+    const allLocationIds = availableLocations.map((location) =>
+      location.location_id.toString()
+    );
+    console.log("Selecting all locations:", allLocationIds);
+
     setTimeout(() => {
       dispatch(setSelectedLocations(allLocationIds));
     }, 0);
@@ -401,43 +465,55 @@ const CustomSidebar = ({ onSignOut }) => {
 
   const handleClearAllLocations = useCallback(() => {
     setUserHasInteracted(true);
-    console.log('Clearing all locations');
-    
+    console.log("Clearing all locations");
+
     setTimeout(() => {
       dispatch(setSelectedLocations([]));
     }, 0);
   }, [dispatch]);
   // Handle company selection (multiple) with debouncing
-  const handleCompanyChange = useCallback((event) => {
-    const value = typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value;
-    
-    // Mark that user has interacted
-    setUserHasInteracted(true);
-    
-    console.log('Company selection changed:', value);
-    
-    // Use setTimeout to debounce Redux updates
-    setTimeout(() => {
-      dispatch(setSelectedCompanies(value));
-      // Clear location selection when companies change to avoid invalid combinations
-      dispatch(setSelectedLocations([]));
-    }, 0);
-  }, [dispatch]);
+  const handleCompanyChange = useCallback(
+    (event) => {
+      const value =
+        typeof event.target.value === "string"
+          ? event.target.value.split(",")
+          : event.target.value;
+
+      // Mark that user has interacted
+      setUserHasInteracted(true);
+
+      console.log("Company selection changed:", value);
+
+      // Use setTimeout to debounce Redux updates
+      setTimeout(() => {
+        dispatch(setSelectedCompanies(value));
+        // Clear location selection when companies change to avoid invalid combinations
+        dispatch(setSelectedLocations([]));
+      }, 0);
+    },
+    [dispatch]
+  );
 
   // Handle location selection (multiple) with debouncing
-  const handleLocationChange = useCallback((event) => {
-    const value = typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value;
-    
-    // Mark that user has interacted
-    setUserHasInteracted(true);
-    
-    console.log('Location selection changed:', value);
-    
-    // Use setTimeout to debounce Redux updates
-    setTimeout(() => {
-      dispatch(setSelectedLocations(value));
-    }, 0);
-  }, [dispatch]);
+  const handleLocationChange = useCallback(
+    (event) => {
+      const value =
+        typeof event.target.value === "string"
+          ? event.target.value.split(",")
+          : event.target.value;
+
+      // Mark that user has interacted
+      setUserHasInteracted(true);
+
+      console.log("Location selection changed:", value);
+
+      // Use setTimeout to debounce Redux updates
+      setTimeout(() => {
+        dispatch(setSelectedLocations(value));
+      }, 0);
+    },
+    [dispatch]
+  );
 
   // Check if any INSIGHTIQ item is currently selected
   const isInsightiqSelected = insightiqItems.some(
@@ -470,13 +546,13 @@ const CustomSidebar = ({ onSignOut }) => {
     items.map((item) => {
       const isSelected = location.pathname === item.path;
       const displayTitle = isMobile ? item.title : getDisplayTitle(item); // Always show full title on mobile
-      const showFullTitleInTooltip = !isMobile && (displayTitle !== item.title);
-      
+      const showFullTitleInTooltip = !isMobile && displayTitle !== item.title;
+
       return (
         <ListItem key={item.path} disablePadding>
-          <Tooltip 
-            title={showFullTitleInTooltip ? item.title : ""} 
-            placement="right" 
+          <Tooltip
+            title={showFullTitleInTooltip ? item.title : ""}
+            placement="right"
             arrow
             enterDelay={500}
             disableHoverListener={isMobile} // Disable tooltips on mobile
@@ -487,12 +563,12 @@ const CustomSidebar = ({ onSignOut }) => {
               onClick={handleItemClick}
               selected={isSelected}
               sx={{
-                minHeight: isMobile ? 48 : (isSmallScreen ? 40 : 48), // Larger touch targets on mobile
-                justifyContent: (open || isMobile) ? "initial" : "center",
-                px: isMobile ? 2 : (isSmallScreen ? 1 : 2),
+                minHeight: isMobile ? 48 : isSmallScreen ? 40 : 48, // Larger touch targets on mobile
+                justifyContent: open || isMobile ? "initial" : "center",
+                px: isMobile ? 2 : isSmallScreen ? 1 : 2,
                 mx: 0.5,
                 mb: 0.5,
-                ml: isSubItem ? (isMobile ? 2 : (isSmallScreen ? 1 : 1.5)) : 0.5,
+                ml: isSubItem ? (isMobile ? 2 : isSmallScreen ? 1 : 1.5) : 0.5,
                 borderRadius: "8px",
                 position: "relative",
                 overflow: "hidden",
@@ -539,14 +615,29 @@ const CustomSidebar = ({ onSignOut }) => {
               <ListItemIcon
                 sx={{
                   minWidth: 0,
-                  mr: (open || isMobile) ? (isMobile ? 1.5 : (isSmallScreen ? 1 : 1.5)) : "auto",
+                  mr:
+                    open || isMobile
+                      ? isMobile
+                        ? 1.5
+                        : isSmallScreen
+                        ? 1
+                        : 1.5
+                      : "auto",
                   justifyContent: "center",
                   color: isSelected ? "#ffffff" : "#e0e0e0",
                   transition: "color 0.3s ease",
-                  fontSize: isMobile ? "1.4rem" : (isSmallScreen ? "1.1rem" : "1.3rem"),
+                  fontSize: isMobile
+                    ? "1.4rem"
+                    : isSmallScreen
+                    ? "1.1rem"
+                    : "1.3rem",
                   "& .MuiSvgIcon-root": {
-                    fontSize: isMobile ? "1.4rem" : (isSmallScreen ? "1.1rem" : "1.3rem"),
-                  }
+                    fontSize: isMobile
+                      ? "1.4rem"
+                      : isSmallScreen
+                      ? "1.1rem"
+                      : "1.3rem",
+                  },
                 }}
               >
                 {item.icon}
@@ -567,12 +658,16 @@ const CustomSidebar = ({ onSignOut }) => {
                 }
                 sx={{
                   transition: "opacity 0.3s ease",
-                  opacity: (open || isMobile) ? 1 : 0,
+                  opacity: open || isMobile ? 1 : 0,
                   margin: 0,
                   "& .MuiTypography-root": {
                     fontWeight: isSelected ? 700 : 400,
                     color: isSelected ? "#ffffff" : "#f0f0f0",
-                    fontSize: isMobile ? fontSizes.mainNav : (isSubItem ? fontSizes.subNav : fontSizes.mainNav),
+                    fontSize: isMobile
+                      ? fontSizes.mainNav
+                      : isSubItem
+                      ? fontSizes.subNav
+                      : fontSizes.mainNav,
                     lineHeight: 1.2,
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -586,17 +681,29 @@ const CustomSidebar = ({ onSignOut }) => {
       );
     });
 
-  const renderDropdownButton = (title, shortTitle, compactTitle, isOpen, isSelected, onToggle, icon) => {
-    const displayTitle = isMobile ? title : (isSmallScreen || (drawerWidth < 250) ? 
-      (compactTitle || shortTitle || title) : 
-      (isMobile || isTablet ? (shortTitle || title) : title));
-    const showFullTitleInTooltip = !isMobile && (displayTitle !== title);
-    
+  const renderDropdownButton = (
+    title,
+    shortTitle,
+    compactTitle,
+    isOpen,
+    isSelected,
+    onToggle,
+    icon
+  ) => {
+    const displayTitle = isMobile
+      ? title
+      : isSmallScreen || drawerWidth < 250
+      ? compactTitle || shortTitle || title
+      : isMobile || isTablet
+      ? shortTitle || title
+      : title;
+    const showFullTitleInTooltip = !isMobile && displayTitle !== title;
+
     return (
       <ListItem disablePadding>
-        <Tooltip 
-          title={showFullTitleInTooltip ? title : ""} 
-          placement="right" 
+        <Tooltip
+          title={showFullTitleInTooltip ? title : ""}
+          placement="right"
           arrow
           enterDelay={500}
           disableHoverListener={isMobile} // Disable tooltips on mobile
@@ -604,9 +711,9 @@ const CustomSidebar = ({ onSignOut }) => {
           <ListItemButton
             onClick={onToggle}
             sx={{
-              minHeight: isMobile ? 48 : (isSmallScreen ? 40 : 48), // Larger touch targets on mobile
-              justifyContent: (open || isMobile) ? "initial" : "center",
-              px: isMobile ? 2 : (isSmallScreen ? 1 : 2),
+              minHeight: isMobile ? 48 : isSmallScreen ? 40 : 48, // Larger touch targets on mobile
+              justifyContent: open || isMobile ? "initial" : "center",
+              px: isMobile ? 2 : isSmallScreen ? 1 : 2,
               mx: 0.5,
               mb: 0.5,
               borderRadius: "8px",
@@ -635,7 +742,9 @@ const CustomSidebar = ({ onSignOut }) => {
                   backgroundColor: alpha("#ffffff", 0.5),
                 },
               },
-              backgroundColor: isSelected ? alpha("#ffffff", 0.12) : "transparent",
+              backgroundColor: isSelected
+                ? alpha("#ffffff", 0.12)
+                : "transparent",
               "& .MuiListItemIcon-root": {
                 color: isSelected ? "#ffffff" : "#e0e0e0",
               },
@@ -651,14 +760,29 @@ const CustomSidebar = ({ onSignOut }) => {
             <ListItemIcon
               sx={{
                 minWidth: 0,
-                mr: (open || isMobile) ? (isMobile ? 1.5 : (isSmallScreen ? 1 : 1.5)) : "auto",
+                mr:
+                  open || isMobile
+                    ? isMobile
+                      ? 1.5
+                      : isSmallScreen
+                      ? 1
+                      : 1.5
+                    : "auto",
                 justifyContent: "center",
                 color: isSelected ? "#ffffff" : "#e0e0e0",
                 transition: "color 0.3s ease",
-                fontSize: isMobile ? "1.4rem" : (isSmallScreen ? "1.1rem" : "1.3rem"),
+                fontSize: isMobile
+                  ? "1.4rem"
+                  : isSmallScreen
+                  ? "1.1rem"
+                  : "1.3rem",
                 "& .MuiSvgIcon-root": {
-                  fontSize: isMobile ? "1.4rem" : (isSmallScreen ? "1.1rem" : "1.3rem"),
-                }
+                  fontSize: isMobile
+                    ? "1.4rem"
+                    : isSmallScreen
+                    ? "1.1rem"
+                    : "1.3rem",
+                },
               }}
             >
               {icon}
@@ -681,7 +805,7 @@ const CustomSidebar = ({ onSignOut }) => {
               }
               sx={{
                 transition: "opacity 0.3s ease",
-                opacity: (open || isMobile) ? 1 : 0,
+                opacity: open || isMobile ? 1 : 0,
                 margin: 0,
                 flex: 1,
                 "& .MuiTypography-root": {
@@ -696,17 +820,34 @@ const CustomSidebar = ({ onSignOut }) => {
               }}
             />
             {(open || isMobile) && (
-              <Box sx={{ ml: isMobile ? 1 : (isSmallScreen ? 0.5 : 1), flexShrink: 0 }}>
+              <Box
+                sx={{
+                  ml: isMobile ? 1 : isSmallScreen ? 0.5 : 1,
+                  flexShrink: 0,
+                }}
+              >
                 {isOpen ? (
-                  <ExpandLess sx={{ 
-                    color: isSelected ? "#ffffff" : "#e0e0e0",
-                    fontSize: isMobile ? "1.4rem" : (isSmallScreen ? "1.1rem" : "1.3rem")
-                  }} />
+                  <ExpandLess
+                    sx={{
+                      color: isSelected ? "#ffffff" : "#e0e0e0",
+                      fontSize: isMobile
+                        ? "1.4rem"
+                        : isSmallScreen
+                        ? "1.1rem"
+                        : "1.3rem",
+                    }}
+                  />
                 ) : (
-                  <ExpandMore sx={{ 
-                    color: isSelected ? "#ffffff" : "#e0e0e0",
-                    fontSize: isMobile ? "1.4rem" : (isSmallScreen ? "1.1rem" : "1.3rem")
-                  }} />
+                  <ExpandMore
+                    sx={{
+                      color: isSelected ? "#ffffff" : "#e0e0e0",
+                      fontSize: isMobile
+                        ? "1.4rem"
+                        : isSmallScreen
+                        ? "1.1rem"
+                        : "1.3rem",
+                    }}
+                  />
                 )}
               </Box>
             )}
@@ -721,42 +862,42 @@ const CustomSidebar = ({ onSignOut }) => {
     if (!open) return null;
 
     return (
-      <Box sx={{ px: isSmallScreen ? 1 : 1.5, py: 1.5 }}> 
+      <Box sx={{ px: isSmallScreen ? 1 : 1.5, py: 1.5 }}>
         {/* Company Dropdown */}
         <Box sx={{ mb: 1 }}>
-          <FormControl 
-            fullWidth 
-            size="small" 
-            sx={{ 
+          <FormControl
+            fullWidth
+            size="small"
+            sx={{
               mb: 0.5,
-              '& .MuiOutlinedInput-root': {
-                backgroundColor: alpha('#ffffff', 0.15),
-                borderRadius: '6px',
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: alpha("#ffffff", 0.15),
+                borderRadius: "6px",
                 fontSize: fontSizes.dropdown,
-                '& fieldset': {
-                  borderColor: alpha('#ffffff', 0.3),
+                "& fieldset": {
+                  borderColor: alpha("#ffffff", 0.3),
                 },
-                '&:hover fieldset': {
-                  borderColor: alpha('#ffffff', 0.5),
+                "&:hover fieldset": {
+                  borderColor: alpha("#ffffff", 0.5),
                 },
-                '&.Mui-focused fieldset': {
-                  borderColor: '#ffffff',
+                "&.Mui-focused fieldset": {
+                  borderColor: "#ffffff",
                 },
-                '& .MuiSelect-select': {
-                  color: '#ffffff',
+                "& .MuiSelect-select": {
+                  color: "#ffffff",
                   fontSize: fontSizes.dropdown,
-                  padding: isSmallScreen ? '6px 10px' : '8px 12px',
+                  padding: isSmallScreen ? "6px 10px" : "8px 12px",
                 },
-                '& .MuiSelect-icon': {
-                  color: '#ffffff',
-                  fontSize: isSmallScreen ? '1.1rem' : '1.3rem',
+                "& .MuiSelect-icon": {
+                  color: "#ffffff",
+                  fontSize: isSmallScreen ? "1.1rem" : "1.3rem",
                 },
               },
-              '& .MuiInputLabel-root': {
-                color: alpha('#ffffff', 0.7),
+              "& .MuiInputLabel-root": {
+                color: alpha("#ffffff", 0.7),
                 fontSize: fontSizes.dropdown,
-                '&.Mui-focused': {
-                  color: '#ffffff',
+                "&.Mui-focused": {
+                  color: "#ffffff",
                 },
               },
             }}
@@ -772,30 +913,34 @@ const CustomSidebar = ({ onSignOut }) => {
               renderValue={(selected) => {
                 if (selected.length === 0) {
                   return (
-                    <Box sx={{ color: alpha('#ffffff', 0.5), fontStyle: 'italic' }}>
+                    <Box
+                      sx={{ color: alpha("#ffffff", 0.5), fontStyle: "italic" }}
+                    >
                       Select companies...
                     </Box>
                   );
                 }
                 return (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                     {selected.map((companyId) => {
-                      const company = companies.find(c => c.company_id.toString() === companyId.toString());
+                      const company = companies.find(
+                        (c) => c.company_id.toString() === companyId.toString()
+                      );
                       return (
                         <Chip
                           key={companyId}
                           label={company ? company.company_name : companyId}
                           size="small"
                           sx={{
-                            backgroundColor: alpha('#667eea', 0.2),
-                            color: '#ffffff',
-                            fontSize: isSmallScreen ? '0.7rem' : '0.75rem',
-                            maxWidth: '80px',
-                            '& .MuiChip-label': {
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              paddingX: '6px',
+                            backgroundColor: alpha("#667eea", 0.2),
+                            color: "#ffffff",
+                            fontSize: isSmallScreen ? "0.7rem" : "0.75rem",
+                            maxWidth: "80px",
+                            "& .MuiChip-label": {
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              paddingX: "6px",
                             },
                           }}
                         />
@@ -805,27 +950,29 @@ const CustomSidebar = ({ onSignOut }) => {
                 );
               }}
               startAdornment={
-                <BusinessIcon sx={{ 
-                  color: alpha('#ffffff', 0.7), 
-                  mr: 0.5, 
-                  fontSize: isSmallScreen ? '0.8rem' : '0.9rem' 
-                }} />
+                <BusinessIcon
+                  sx={{
+                    color: alpha("#ffffff", 0.7),
+                    mr: 0.5,
+                    fontSize: isSmallScreen ? "0.8rem" : "0.9rem",
+                  }}
+                />
               }
               MenuProps={{
                 PaperProps: {
                   sx: {
-                    bgcolor: '#1a1a1a',
-                    color: '#ffffff',
-                    '& .MuiMenuItem-root': {
+                    bgcolor: "#1a1a1a",
+                    color: "#ffffff",
+                    "& .MuiMenuItem-root": {
                       fontSize: fontSizes.dropdown,
-                      padding: isSmallScreen ? '6px 10px' : '8px 12px',
-                      '&:hover': {
-                        backgroundColor: alpha('#ffffff', 0.1),
+                      padding: isSmallScreen ? "6px 10px" : "8px 12px",
+                      "&:hover": {
+                        backgroundColor: alpha("#ffffff", 0.1),
                       },
-                      '&.Mui-selected': {
-                        backgroundColor: alpha('#667eea', 0.3),
-                        '&:hover': {
-                          backgroundColor: alpha('#667eea', 0.4),
+                      "&.Mui-selected": {
+                        backgroundColor: alpha("#667eea", 0.3),
+                        "&:hover": {
+                          backgroundColor: alpha("#667eea", 0.4),
                         },
                       },
                     },
@@ -834,49 +981,57 @@ const CustomSidebar = ({ onSignOut }) => {
               }}
             >
               {companies.map((company) => (
-                <MenuItem 
-                  key={company.company_id} 
+                <MenuItem
+                  key={company.company_id}
                   value={company.company_id.toString()}
                   sx={{
-                    '&.Mui-selected': {
-                      backgroundColor: alpha('#667eea', 0.3),
+                    "&.Mui-selected": {
+                      backgroundColor: alpha("#667eea", 0.3),
                     },
                   }}
                 >
-                  <Box sx={{ 
-                    overflow: 'hidden', 
-                    textOverflow: 'ellipsis', 
-                    whiteSpace: 'nowrap',
-                    maxWidth: '100%' 
-                  }}>
+                  <Box
+                    sx={{
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      maxWidth: "100%",
+                    }}
+                  >
                     {company.company_name}
                   </Box>
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
-          
+
           {/* Company Action Buttons */}
           <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }}>
             <Button
               size="small"
               variant="outlined"
-              startIcon={<SelectAllIcon sx={{ fontSize: '0.8rem !important' }} />}
+              startIcon={
+                <SelectAllIcon sx={{ fontSize: "0.8rem !important" }} />
+              }
               onClick={handleSelectAllCompanies}
-              disabled={loading || companies.length === 0 || selectedCompanies.length === companies.length}
+              disabled={
+                loading ||
+                companies.length === 0 ||
+                selectedCompanies.length === companies.length
+              }
               sx={{
-                fontSize: isSmallScreen ? '0.65rem' : '0.7rem',
-                padding: isSmallScreen ? '2px 6px' : '3px 8px',
-                minWidth: 'auto',
-                borderColor: alpha('#ffffff', 0.3),
-                color: alpha('#ffffff', 0.8),
-                '&:hover': {
-                  borderColor: alpha('#ffffff', 0.5),
-                  backgroundColor: alpha('#ffffff', 0.05),
+                fontSize: isSmallScreen ? "0.65rem" : "0.7rem",
+                padding: isSmallScreen ? "2px 6px" : "3px 8px",
+                minWidth: "auto",
+                borderColor: alpha("#ffffff", 0.3),
+                color: alpha("#ffffff", 0.8),
+                "&:hover": {
+                  borderColor: alpha("#ffffff", 0.5),
+                  backgroundColor: alpha("#ffffff", 0.05),
                 },
-                '&.Mui-disabled': {
-                  borderColor: alpha('#ffffff', 0.1),
-                  color: alpha('#ffffff', 0.3),
+                "&.Mui-disabled": {
+                  borderColor: alpha("#ffffff", 0.1),
+                  color: alpha("#ffffff", 0.3),
                 },
               }}
             >
@@ -885,22 +1040,24 @@ const CustomSidebar = ({ onSignOut }) => {
             <Button
               size="small"
               variant="outlined"
-              startIcon={<ClearAllIcon sx={{ fontSize: '0.8rem !important' }} />}
+              startIcon={
+                <ClearAllIcon sx={{ fontSize: "0.8rem !important" }} />
+              }
               onClick={handleClearAllCompanies}
               disabled={loading || selectedCompanies.length === 0}
               sx={{
-                fontSize: isSmallScreen ? '0.65rem' : '0.7rem',
-                padding: isSmallScreen ? '2px 6px' : '3px 8px',
-                minWidth: 'auto',
-                borderColor: alpha('#ff6b6b', 0.3),
-                color: alpha('#ff6b6b', 0.8),
-                '&:hover': {
-                  borderColor: alpha('#ff6b6b', 0.5),
-                  backgroundColor: alpha('#ff6b6b', 0.05),
+                fontSize: isSmallScreen ? "0.65rem" : "0.7rem",
+                padding: isSmallScreen ? "2px 6px" : "3px 8px",
+                minWidth: "auto",
+                borderColor: alpha("#ff6b6b", 0.3),
+                color: alpha("#ff6b6b", 0.8),
+                "&:hover": {
+                  borderColor: alpha("#ff6b6b", 0.5),
+                  backgroundColor: alpha("#ff6b6b", 0.05),
                 },
-                '&.Mui-disabled': {
-                  borderColor: alpha('#ffffff', 0.1),
-                  color: alpha('#ffffff', 0.3),
+                "&.Mui-disabled": {
+                  borderColor: alpha("#ffffff", 0.1),
+                  color: alpha("#ffffff", 0.3),
                 },
               }}
             >
@@ -911,45 +1068,47 @@ const CustomSidebar = ({ onSignOut }) => {
 
         {/* Location Dropdown */}
         <Box>
-          <FormControl 
-            fullWidth 
+          <FormControl
+            fullWidth
             size="small"
-            disabled={selectedCompanies.length === 0 || availableLocations.length === 0}
-            sx={{ 
+            disabled={
+              selectedCompanies.length === 0 || availableLocations.length === 0
+            }
+            sx={{
               mb: 0.5,
-              '& .MuiOutlinedInput-root': {
-                backgroundColor: alpha('#ffffff', 0.15),
-                borderRadius: '6px',
-                '& fieldset': {
-                  borderColor: alpha('#ffffff', 0.3),
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: alpha("#ffffff", 0.15),
+                borderRadius: "6px",
+                "& fieldset": {
+                  borderColor: alpha("#ffffff", 0.3),
                 },
-                '&:hover fieldset': {
-                  borderColor: alpha('#ffffff', 0.5),
+                "&:hover fieldset": {
+                  borderColor: alpha("#ffffff", 0.5),
                 },
-                '&.Mui-focused fieldset': {
-                  borderColor: '#ffffff',
+                "&.Mui-focused fieldset": {
+                  borderColor: "#ffffff",
                 },
-                '&.Mui-disabled fieldset': {
-                  borderColor: alpha('#ffffff', 0.2),
+                "&.Mui-disabled fieldset": {
+                  borderColor: alpha("#ffffff", 0.2),
                 },
-                '& .MuiSelect-select': {
-                  color: '#ffffff',
+                "& .MuiSelect-select": {
+                  color: "#ffffff",
                   fontSize: fontSizes.dropdown,
-                  padding: isSmallScreen ? '6px 10px' : '8px 12px',
+                  padding: isSmallScreen ? "6px 10px" : "8px 12px",
                 },
-                '& .MuiSelect-icon': {
-                  color: '#ffffff',
-                  fontSize: isSmallScreen ? '1.1rem' : '1.3rem',
+                "& .MuiSelect-icon": {
+                  color: "#ffffff",
+                  fontSize: isSmallScreen ? "1.1rem" : "1.3rem",
                 },
               },
-              '& .MuiInputLabel-root': {
-                color: alpha('#ffffff', 0.7),
+              "& .MuiInputLabel-root": {
+                color: alpha("#ffffff", 0.7),
                 fontSize: fontSizes.dropdown,
-                '&.Mui-focused': {
-                  color: '#ffffff',
+                "&.Mui-focused": {
+                  color: "#ffffff",
                 },
-                '&.Mui-disabled': {
-                  color: alpha('#ffffff', 0.4),
+                "&.Mui-disabled": {
+                  color: alpha("#ffffff", 0.4),
                 },
               },
             }}
@@ -964,30 +1123,35 @@ const CustomSidebar = ({ onSignOut }) => {
               renderValue={(selected) => {
                 if (selected.length === 0) {
                   return (
-                    <Box sx={{ color: alpha('#ffffff', 0.5), fontStyle: 'italic' }}>
+                    <Box
+                      sx={{ color: alpha("#ffffff", 0.5), fontStyle: "italic" }}
+                    >
                       Select locations...
                     </Box>
                   );
                 }
                 return (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                     {selected.map((locationId) => {
-                      const location = availableLocations.find(l => l.location_id.toString() === locationId.toString());
+                      const location = availableLocations.find(
+                        (l) =>
+                          l.location_id.toString() === locationId.toString()
+                      );
                       return (
                         <Chip
                           key={locationId}
                           label={location ? location.location_name : locationId}
                           size="small"
                           sx={{
-                            backgroundColor: alpha('#667eea', 0.2),
-                            color: '#ffffff',
-                            fontSize: isSmallScreen ? '0.7rem' : '0.75rem',
-                            maxWidth: '80px',
-                            '& .MuiChip-label': {
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              paddingX: '6px',
+                            backgroundColor: alpha("#667eea", 0.2),
+                            color: "#ffffff",
+                            fontSize: isSmallScreen ? "0.7rem" : "0.75rem",
+                            maxWidth: "80px",
+                            "& .MuiChip-label": {
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              paddingX: "6px",
                             },
                           }}
                         />
@@ -997,27 +1161,29 @@ const CustomSidebar = ({ onSignOut }) => {
                 );
               }}
               startAdornment={
-                <LocationOnIcon sx={{ 
-                  color: alpha('#ffffff', 0.7), 
-                  mr: 0.5, 
-                  fontSize: isSmallScreen ? '0.8rem' : '0.9rem' 
-                }} />
+                <LocationOnIcon
+                  sx={{
+                    color: alpha("#ffffff", 0.7),
+                    mr: 0.5,
+                    fontSize: isSmallScreen ? "0.8rem" : "0.9rem",
+                  }}
+                />
               }
               MenuProps={{
                 PaperProps: {
                   sx: {
-                    bgcolor: '#1a1a1a',
-                    color: '#ffffff',
-                    '& .MuiMenuItem-root': {
+                    bgcolor: "#1a1a1a",
+                    color: "#ffffff",
+                    "& .MuiMenuItem-root": {
                       fontSize: fontSizes.dropdown,
-                      padding: isSmallScreen ? '6px 10px' : '8px 12px',
-                      '&:hover': {
-                        backgroundColor: alpha('#ffffff', 0.1),
+                      padding: isSmallScreen ? "6px 10px" : "8px 12px",
+                      "&:hover": {
+                        backgroundColor: alpha("#ffffff", 0.1),
                       },
-                      '&.Mui-selected': {
-                        backgroundColor: alpha('#667eea', 0.3),
-                        '&:hover': {
-                          backgroundColor: alpha('#667eea', 0.4),
+                      "&.Mui-selected": {
+                        backgroundColor: alpha("#667eea", 0.3),
+                        "&:hover": {
+                          backgroundColor: alpha("#667eea", 0.4),
                         },
                       },
                     },
@@ -1026,49 +1192,57 @@ const CustomSidebar = ({ onSignOut }) => {
               }}
             >
               {availableLocations.map((location) => (
-                <MenuItem 
-                  key={location.location_id} 
+                <MenuItem
+                  key={location.location_id}
                   value={location.location_id.toString()}
                   sx={{
-                    '&.Mui-selected': {
-                      backgroundColor: alpha('#667eea', 0.3),
+                    "&.Mui-selected": {
+                      backgroundColor: alpha("#667eea", 0.3),
                     },
                   }}
                 >
-                  <Box sx={{ 
-                    overflow: 'hidden', 
-                    textOverflow: 'ellipsis', 
-                    whiteSpace: 'nowrap',
-                    maxWidth: '100%' 
-                  }}>
+                  <Box
+                    sx={{
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      maxWidth: "100%",
+                    }}
+                  >
                     {location.location_name}
                   </Box>
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
-          
+
           {/* Location Action Buttons */}
           <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }}>
             <Button
               size="small"
               variant="outlined"
-              startIcon={<SelectAllIcon sx={{ fontSize: '0.8rem !important' }} />}
+              startIcon={
+                <SelectAllIcon sx={{ fontSize: "0.8rem !important" }} />
+              }
               onClick={handleSelectAllLocations}
-              disabled={selectedCompanies.length === 0 || availableLocations.length === 0 || selectedLocation.length === availableLocations.length}
+              disabled={
+                selectedCompanies.length === 0 ||
+                availableLocations.length === 0 ||
+                selectedLocation.length === availableLocations.length
+              }
               sx={{
-                fontSize: isSmallScreen ? '0.65rem' : '0.7rem',
-                padding: isSmallScreen ? '2px 6px' : '3px 8px',
-                minWidth: 'auto',
-                borderColor: alpha('#ffffff', 0.3),
-                color: alpha('#ffffff', 0.8),
-                '&:hover': {
-                  borderColor: alpha('#ffffff', 0.5),
-                  backgroundColor: alpha('#ffffff', 0.05),
+                fontSize: isSmallScreen ? "0.65rem" : "0.7rem",
+                padding: isSmallScreen ? "2px 6px" : "3px 8px",
+                minWidth: "auto",
+                borderColor: alpha("#ffffff", 0.3),
+                color: alpha("#ffffff", 0.8),
+                "&:hover": {
+                  borderColor: alpha("#ffffff", 0.5),
+                  backgroundColor: alpha("#ffffff", 0.05),
                 },
-                '&.Mui-disabled': {
-                  borderColor: alpha('#ffffff', 0.1),
-                  color: alpha('#ffffff', 0.3),
+                "&.Mui-disabled": {
+                  borderColor: alpha("#ffffff", 0.1),
+                  color: alpha("#ffffff", 0.3),
                 },
               }}
             >
@@ -1077,22 +1251,24 @@ const CustomSidebar = ({ onSignOut }) => {
             <Button
               size="small"
               variant="outlined"
-              startIcon={<ClearAllIcon sx={{ fontSize: '0.8rem !important' }} />}
+              startIcon={
+                <ClearAllIcon sx={{ fontSize: "0.8rem !important" }} />
+              }
               onClick={handleClearAllLocations}
               disabled={selectedLocation.length === 0}
               sx={{
-                fontSize: isSmallScreen ? '0.65rem' : '0.7rem',
-                padding: isSmallScreen ? '2px 6px' : '3px 8px',
-                minWidth: 'auto',
-                borderColor: alpha('#ff6b6b', 0.3),
-                color: alpha('#ff6b6b', 0.8),
-                '&:hover': {
-                  borderColor: alpha('#ff6b6b', 0.5),
-                  backgroundColor: alpha('#ff6b6b', 0.05),
+                fontSize: isSmallScreen ? "0.65rem" : "0.7rem",
+                padding: isSmallScreen ? "2px 6px" : "3px 8px",
+                minWidth: "auto",
+                borderColor: alpha("#ff6b6b", 0.3),
+                color: alpha("#ff6b6b", 0.8),
+                "&:hover": {
+                  borderColor: alpha("#ff6b6b", 0.5),
+                  backgroundColor: alpha("#ff6b6b", 0.05),
                 },
-                '&.Mui-disabled': {
-                  borderColor: alpha('#ffffff', 0.1),
-                  color: alpha('#ffffff', 0.3),
+                "&.Mui-disabled": {
+                  borderColor: alpha("#ffffff", 0.1),
+                  color: alpha("#ffffff", 0.3),
                 },
               }}
             >
@@ -1124,7 +1300,7 @@ const CustomSidebar = ({ onSignOut }) => {
         <ListItemButton
           sx={{
             minHeight: isSmallScreen ? 40 : 48,
-            justifyContent: (open || isMobile) ? "initial" : "center",
+            justifyContent: open || isMobile ? "initial" : "center",
             px: isSmallScreen ? 1 : 2,
             borderRadius: "8px",
             cursor: "default",
@@ -1136,7 +1312,7 @@ const CustomSidebar = ({ onSignOut }) => {
           <ListItemIcon
             sx={{
               minWidth: 0,
-              mr: (open || isMobile) ? (isSmallScreen ? 1 : 1.5) : "auto",
+              mr: open || isMobile ? (isSmallScreen ? 1 : 1.5) : "auto",
               justifyContent: "center",
               color: "#ffffff",
             }}
@@ -1158,7 +1334,7 @@ const CustomSidebar = ({ onSignOut }) => {
             }
             sx={{
               transition: "opacity 0.3s ease",
-              opacity: (open || isMobile) ? 1 : 0,
+              opacity: open || isMobile ? 1 : 0,
               margin: 0,
               "& .MuiTypography-root": {
                 fontWeight: "bold",
@@ -1180,7 +1356,7 @@ const CustomSidebar = ({ onSignOut }) => {
           backgroundColor: isMobile ? "#050b1b" : "rgba(5, 11, 27, 0.95)",
           backdropFilter: isMobile ? "none" : "blur(10px)",
           position: isMobile ? "relative" : "sticky",
-          top: isMobile ? 0 : (isSmallScreen ? 48 : 56),
+          top: isMobile ? 0 : isSmallScreen ? 48 : 56,
           zIndex: isMobile ? "auto" : 9,
           borderBottom: `1px solid ${alpha("#ffffff", 0.1)}`,
         }}
@@ -1189,15 +1365,17 @@ const CustomSidebar = ({ onSignOut }) => {
       </Box>
 
       {/* Navigation Items */}
-      <List sx={{ 
-        p: 1, 
-        mt: 1, 
-        flexGrow: 1,
-        position: "relative",
-        zIndex: 1,
-        overflowY: isMobile ? "visible" : "auto",
-        maxHeight: isMobile ? "none" : "calc(100vh - 200px)",
-      }}>
+      <List
+        sx={{
+          p: 1,
+          mt: 1,
+          flexGrow: 1,
+          position: "relative",
+          zIndex: 1,
+          overflowY: isMobile ? "visible" : "auto",
+          maxHeight: isMobile ? "none" : "calc(100vh - 200px)",
+        }}
+      >
         {/* INSIGHTIQ Dropdown */}
         {renderDropdownButton(
           "INSIGHTiQ",
@@ -1210,7 +1388,11 @@ const CustomSidebar = ({ onSignOut }) => {
         )}
 
         {/* INSIGHTIQ Sub-items */}
-        <Collapse in={insightiqOpen && (open || isMobile)} timeout="auto" unmountOnExit>
+        <Collapse
+          in={insightiqOpen && (open || isMobile)}
+          timeout="auto"
+          unmountOnExit
+        >
           <List component="div" disablePadding>
             {renderNavItems(insightiqItems, true)}
           </List>
@@ -1228,7 +1410,11 @@ const CustomSidebar = ({ onSignOut }) => {
         )}
 
         {/* OrderIQ Sub-items */}
-        <Collapse in={orderiqOpen && (open || isMobile)} timeout="auto" unmountOnExit>
+        <Collapse
+          in={orderiqOpen && (open || isMobile)}
+          timeout="auto"
+          unmountOnExit
+        >
           <List component="div" disablePadding>
             {renderNavItems(orderiqItems, true)}
           </List>
@@ -1248,9 +1434,9 @@ const CustomSidebar = ({ onSignOut }) => {
             <ListItemButton
               onClick={onSignOut}
               sx={{
-                minHeight: isMobile ? 48 : (isSmallScreen ? 44 : 48),
-                justifyContent: (open || isMobile) ? "initial" : "center",
-                px: isMobile ? 2 : (isSmallScreen ? 1.5 : 2.5),
+                minHeight: isMobile ? 48 : isSmallScreen ? 44 : 48,
+                justifyContent: open || isMobile ? "initial" : "center",
+                px: isMobile ? 2 : isSmallScreen ? 1.5 : 2.5,
                 mx: 0,
                 mb: 0.5,
                 borderRadius: "10px",
@@ -1263,20 +1449,31 @@ const CustomSidebar = ({ onSignOut }) => {
                 },
               }}
             >
-              <Tooltip 
-                title={(open || isMobile) ? "" : "Sign Out"} 
-                placement="right" 
+              <Tooltip
+                title={open || isMobile ? "" : "Sign Out"}
+                placement="right"
                 arrow
                 disableHoverListener={isMobile}
               >
                 <ListItemIcon
                   sx={{
                     minWidth: 0,
-                    mr: (open || isMobile) ? (isMobile ? 1.5 : (isSmallScreen ? 1.5 : 2)) : "auto",
+                    mr:
+                      open || isMobile
+                        ? isMobile
+                          ? 1.5
+                          : isSmallScreen
+                          ? 1.5
+                          : 2
+                        : "auto",
                     justifyContent: "center",
                     color: "#e0e0e0",
                     transition: "color 0.3s ease",
-                    fontSize: isMobile ? "1.4rem" : (isSmallScreen ? "1.2rem" : "1.5rem"),
+                    fontSize: isMobile
+                      ? "1.4rem"
+                      : isSmallScreen
+                      ? "1.2rem"
+                      : "1.5rem",
                   }}
                 >
                   <LogoutIcon />
@@ -1286,7 +1483,7 @@ const CustomSidebar = ({ onSignOut }) => {
                 primary="Sign Out"
                 sx={{
                   transition: "opacity 0.3s ease",
-                  opacity: (open || isMobile) ? 1 : 0,
+                  opacity: open || isMobile ? 1 : 0,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -1337,9 +1534,9 @@ const CustomSidebar = ({ onSignOut }) => {
           variant="temporary"
           open={mobileOpen}
           onClose={handleDrawerToggle}
-          ModalProps={{ 
+          ModalProps={{
             keepMounted: true,
-            style: { zIndex: theme.zIndex.drawer }
+            style: { zIndex: theme.zIndex.drawer },
           }}
           sx={{
             "& .MuiDrawer-paper": {

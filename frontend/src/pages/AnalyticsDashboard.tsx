@@ -37,6 +37,7 @@ import DateRangeSelector from "../components/DateRangeSelector";
 
 // Import API base URL from constants
 import { API_URL_Local } from "../constants";
+import apiClient from "../api/axiosConfig"; // Add this line
 
 // Import Redux hooks and actions (for companies, locations, and date range)
 import { useAppDispatch, useAppSelector } from "../typedHooks";
@@ -67,11 +68,11 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
 
   // Debug: Monitor Redux state changes
   useEffect(() => {
-    console.log('🔍 Redux state changed:', {
+    console.log("🔍 Redux state changed:", {
       hasDateRange,
       reduxDateRange,
       startDate: reduxDateRange?.startDate,
-      endDate: reduxDateRange?.endDate
+      endDate: reduxDateRange?.endDate,
     });
   }, [hasDateRange, reduxDateRange]);
 
@@ -81,116 +82,137 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
       try {
         const startDate = new Date(reduxDateRange.startDate);
         const endDate = new Date(reduxDateRange.endDate);
-        
+
         // Validate dates before formatting - check for valid dates and not epoch
-        if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && 
-            startDate.getFullYear() > 1970 && endDate.getFullYear() > 1970) {
+        if (
+          !isNaN(startDate.getTime()) &&
+          !isNaN(endDate.getTime()) &&
+          startDate.getFullYear() > 1970 &&
+          endDate.getFullYear() > 1970
+        ) {
           const displayText = `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
-          console.log('📅 Display text generated:', displayText);
+          console.log("📅 Display text generated:", displayText);
           return displayText;
         } else {
-          console.warn('📅 Invalid dates in Redux for display:', { startDate, endDate });
+          console.warn("📅 Invalid dates in Redux for display:", {
+            startDate,
+            endDate,
+          });
         }
       } catch (error) {
-        console.error('Error formatting dates from Redux:', error, reduxDateRange);
+        console.error(
+          "Error formatting dates from Redux:",
+          error,
+          reduxDateRange
+        );
       }
     }
-    console.log('📅 No valid date range for display, showing default');
+    console.log("📅 No valid date range for display, showing default");
     return "Select Date Range";
   };
 
   const handleOpen = () => setIsOpen(true);
-  
+
   const handleClose = () => {
     setIsOpen(false);
     setTempRange(null);
   };
 
   const handleDateRangeSelect = (range) => {
-    console.log('📅 DateRangeSelectorButton: handleDateRangeSelect called with:', range);
-    console.log('📅 Range structure:', {
+    console.log(
+      "📅 DateRangeSelectorButton: handleDateRangeSelect called with:",
+      range
+    );
+    console.log("📅 Range structure:", {
       hasStartDate: !!range?.startDate,
       hasEndDate: !!range?.endDate,
       hasStartDateStr: !!range?.startDateStr,
       hasEndDateStr: !!range?.endDateStr,
       startDateType: typeof range?.startDate,
-      endDateType: typeof range?.endDate
+      endDateType: typeof range?.endDate,
     });
-    
+
     // FIXED: Handle the exact format from your DateRangeSelector component
     if (range && range.startDate && range.endDate) {
       const selectedRange = {
         startDate: range.startDate, // Already Date objects from your component
-        endDate: range.endDate
+        endDate: range.endDate,
       };
-      
-      console.log('📅 Valid range detected:', {
+
+      console.log("📅 Valid range detected:", {
         startDate: selectedRange.startDate,
         endDate: selectedRange.endDate,
         startDateISO: selectedRange.startDate.toISOString(),
         endDateISO: selectedRange.endDate.toISOString(),
         startDateLocal: selectedRange.startDate.toLocaleDateString(),
-        endDateLocal: selectedRange.endDate.toLocaleDateString()
+        endDateLocal: selectedRange.endDate.toLocaleDateString(),
       });
-      
+
       setTempRange(selectedRange);
     } else {
-      console.warn('📅 Invalid range format:', range);
+      console.warn("📅 Invalid range format:", range);
       setTempRange(null);
     }
   };
 
   const handleApply = () => {
-    console.log('📅 Apply button clicked. TempRange:', tempRange);
-    
+    console.log("📅 Apply button clicked. TempRange:", tempRange);
+
     if (tempRange?.startDate && tempRange?.endDate) {
       // Dates are already Date objects from DateRangeSelector
       const startDate = tempRange.startDate;
       const endDate = tempRange.endDate;
-      
+
       // Validate dates before storing
       if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
         // FIXED: Store as Date objects, let Redux slice handle the formatting
-        console.log('📅 DateRangeSelectorButton: Storing date range in Redux:', {
-          startDate: startDate,
-          endDate: endDate,
-          localStartDate: startDate.toLocaleDateString(),
-          localEndDate: endDate.toLocaleDateString()
-        });
-        
+        console.log(
+          "📅 DateRangeSelectorButton: Storing date range in Redux:",
+          {
+            startDate: startDate,
+            endDate: endDate,
+            localStartDate: startDate.toLocaleDateString(),
+            localEndDate: endDate.toLocaleDateString(),
+          }
+        );
+
         // Store Date objects - Redux slice will format them as YYYY-MM-DD
-        dispatch(setAnalyticsDashboardDateRange({
-          startDate: startDate,
-          endDate: endDate
-        }));
-        
+        dispatch(
+          setAnalyticsDashboardDateRange({
+            startDate: startDate,
+            endDate: endDate,
+          })
+        );
+
         // Also call parent callback with Date objects for immediate use
         onDateRangeSelect({
           startDate: startDate,
-          endDate: endDate
+          endDate: endDate,
         });
-        
-        console.log('✅ Date range applied successfully to Redux');
-        
+
+        console.log("✅ Date range applied successfully to Redux");
+
         // Verify Redux state immediately after dispatch
         setTimeout(() => {
-          console.log('🔍 Checking Redux state after dispatch...');
+          console.log("🔍 Checking Redux state after dispatch...");
         }, 100);
-        
       } else {
-        console.error('📅 Invalid dates, cannot apply:', { startDate, endDate });
+        console.error("📅 Invalid dates, cannot apply:", {
+          startDate,
+          endDate,
+        });
       }
     } else {
-      console.error('📅 No temp range to apply. TempRange:', tempRange);
+      console.error("📅 No temp range to apply. TempRange:", tempRange);
     }
-    
+
     setIsOpen(false);
     setTempRange(null);
   };
 
   const handleClear = (event) => {
     event.stopPropagation();
-    console.log('📅 DateRangeSelectorButton: Clearing date range from Redux');
+    console.log("📅 DateRangeSelectorButton: Clearing date range from Redux");
     dispatch(clearAnalyticsDashboardDateRange());
     onDateRangeSelect(null);
   };
@@ -201,31 +223,42 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
       try {
         const startDate = new Date(reduxDateRange.startDate);
         const endDate = new Date(reduxDateRange.endDate);
-        
+
         // Validate dates and ensure they're not epoch dates
-        if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && 
-            startDate.getFullYear() > 1970 && endDate.getFullYear() > 1970) {
-          return [{
-            startDate: startDate,
-            endDate: endDate,
-            key: "selection",
-          }];
+        if (
+          !isNaN(startDate.getTime()) &&
+          !isNaN(endDate.getTime()) &&
+          startDate.getFullYear() > 1970 &&
+          endDate.getFullYear() > 1970
+        ) {
+          return [
+            {
+              startDate: startDate,
+              endDate: endDate,
+              key: "selection",
+            },
+          ];
         }
       } catch (error) {
-        console.error('Error parsing Redux dates for DateRangeSelector:', error);
+        console.error(
+          "Error parsing Redux dates for DateRangeSelector:",
+          error
+        );
       }
     }
-    
+
     // Default to last 7 days if no valid Redux state
     const today = new Date();
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(today.getDate() - 7);
-    
-    return [{
-      startDate: sevenDaysAgo,
-      endDate: today,
-      key: "selection",
-    }];
+
+    return [
+      {
+        startDate: sevenDaysAgo,
+        endDate: today,
+        key: "selection",
+      },
+    ];
   };
 
   return (
@@ -288,17 +321,24 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
             initialState={getInitialDateRangeState()}
             onSelect={handleDateRangeSelect}
           />
-          
+
           {/* Debug Information */}
-          {process.env.NODE_ENV === 'development' && (
-            <Box sx={{ p: 2, backgroundColor: '#f5f5f5', borderTop: '1px solid #ddd' }}>
+          {process.env.NODE_ENV === "development" && (
+            <Box
+              sx={{
+                p: 2,
+                backgroundColor: "#f5f5f5",
+                borderTop: "1px solid #ddd",
+              }}
+            >
               <Typography variant="caption" color="text.secondary">
                 Debug Info:
               </Typography>
-              <pre style={{ fontSize: '10px', margin: '4px 0' }}>
-                Redux State: {JSON.stringify({ hasDateRange, reduxDateRange }, null, 2)}
+              <pre style={{ fontSize: "10px", margin: "4px 0" }}>
+                Redux State:{" "}
+                {JSON.stringify({ hasDateRange, reduxDateRange }, null, 2)}
               </pre>
-              <pre style={{ fontSize: '10px', margin: '4px 0' }}>
+              <pre style={{ fontSize: "10px", margin: "4px 0" }}>
                 Temp Range: {JSON.stringify(tempRange, null, 2)}
               </pre>
             </Box>
@@ -313,34 +353,38 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
           }}
         >
           <Typography variant="body2" color="text.secondary">
-            {tempRange ? (
-              `Selected: ${tempRange.startDate?.toLocaleDateString()} - ${tempRange.endDate?.toLocaleDateString()}`
-            ) : hasDateRange && reduxDateRange?.startDate && reduxDateRange?.endDate ? (
-              `Current: ${new Date(reduxDateRange.startDate).toLocaleDateString()} - ${new Date(reduxDateRange.endDate).toLocaleDateString()}`
-            ) : (
-              "No date range selected"
-            )}
+            {tempRange
+              ? `Selected: ${tempRange.startDate?.toLocaleDateString()} - ${tempRange.endDate?.toLocaleDateString()}`
+              : hasDateRange &&
+                reduxDateRange?.startDate &&
+                reduxDateRange?.endDate
+              ? `Current: ${new Date(
+                  reduxDateRange.startDate
+                ).toLocaleDateString()} - ${new Date(
+                  reduxDateRange.endDate
+                ).toLocaleDateString()}`
+              : "No date range selected"}
           </Typography>
           <Box sx={{ display: "flex", gap: 1 }}>
             {/* Debug Test Button - Development Only */}
-            {process.env.NODE_ENV === 'development' && (
+            {process.env.NODE_ENV === "development" && (
               <Button
                 onClick={() => {
                   const testRange = {
                     startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-                    endDate: new Date()
+                    endDate: new Date(),
                   };
-                  console.log('🧪 Testing with manual date range:', testRange);
+                  console.log("🧪 Testing with manual date range:", testRange);
                   setTempRange(testRange);
                 }}
                 variant="text"
                 size="small"
-                sx={{ textTransform: "none", fontSize: '12px' }}
+                sx={{ textTransform: "none", fontSize: "12px" }}
               >
                 Test Range
               </Button>
             )}
-            
+
             <Button
               onClick={handleClose}
               variant="outlined"
@@ -351,7 +395,9 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
             <Button
               onClick={handleApply}
               variant="contained"
-              disabled={!tempRange || !tempRange.startDate || !tempRange.endDate}
+              disabled={
+                !tempRange || !tempRange.startDate || !tempRange.endDate
+              }
               sx={{ textTransform: "none" }}
             >
               Apply Range
@@ -410,26 +456,26 @@ const AnalyticsDashboard = () => {
   const hasDateRange = useAppSelector(selectHasAnalyticsDashboardDateRange);
 
   // Add a debug selector to inspect the full Redux state
-  const fullReduxState = useAppSelector(state => state);
+  const fullReduxState = useAppSelector((state) => state);
 
   // Debug: Monitor Redux state changes in main component
   useEffect(() => {
-    console.log('🔍 === REDUX STATE MONITOR ===');
-    console.log('🔍 reduxSelectedCompanies:', reduxSelectedCompanies);
-    console.log('🔍 reduxSelectedLocations:', reduxSelectedLocations);
-    console.log('🔍 hasDateRange:', hasDateRange);
-    console.log('🔍 reduxDateRange:', reduxDateRange);
-    console.log('🔍 === END REDUX MONITOR ===');
+    console.log("🔍 === REDUX STATE MONITOR ===");
+    console.log("🔍 reduxSelectedCompanies:", reduxSelectedCompanies);
+    console.log("🔍 reduxSelectedLocations:", reduxSelectedLocations);
+    console.log("🔍 hasDateRange:", hasDateRange);
+    console.log("🔍 reduxDateRange:", reduxDateRange);
+    console.log("🔍 === END REDUX MONITOR ===");
   }, [hasDateRange, reduxDateRange?.startDate, reduxDateRange?.endDate]);
 
   // Debug: Log Redux state changes in main component
   useEffect(() => {
-    console.log('🏠 Main Component - Redux Date Range State:', {
+    console.log("🏠 Main Component - Redux Date Range State:", {
       hasDateRange,
       reduxDateRange,
       startDate: reduxDateRange?.startDate,
       endDate: reduxDateRange?.endDate,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   }, [hasDateRange, reduxDateRange?.startDate, reduxDateRange?.endDate]);
 
@@ -453,126 +499,188 @@ const AnalyticsDashboard = () => {
   });
 
   // FIXED: Enhanced analytics data fetching with support for multiple companies and locations
-  const fetchAnalyticsData = async (companyIds, locationIds, dateRange = null) => {
+  const fetchAnalyticsData = async (
+    companyIds,
+    locationIds,
+    dateRange = null
+  ) => {
     try {
       setAnalyticsLoading(true);
       setAnalyticsError(null);
 
-      console.log('🔍 Fetching analytics data for:', { 
-        companyIds, 
-        locationIds, 
+      console.log("🔍 Fetching analytics data for:", {
+        companyIds,
+        locationIds,
         dateRange,
-        hasDateRange 
+        hasDateRange,
       });
 
       // Validate inputs
-      if (!companyIds || !locationIds || companyIds.length === 0 || locationIds.length === 0) {
-        throw new Error('Company IDs and Location IDs are required');
+      if (
+        !companyIds ||
+        !locationIds ||
+        companyIds.length === 0 ||
+        locationIds.length === 0
+      ) {
+        throw new Error("Company IDs and Location IDs are required");
       }
 
       // Convert arrays to comma-separated strings
-      const companyIdsStr = Array.isArray(companyIds) ? companyIds.join(',') : companyIds;
-      const locationIdsStr = Array.isArray(locationIds) ? locationIds.join(',') : locationIds;
+      const companyIdsStr = Array.isArray(companyIds)
+        ? companyIds.join(",")
+        : companyIds;
+      const locationIdsStr = Array.isArray(locationIds)
+        ? locationIds.join(",")
+        : locationIds;
 
       // Build the API URL with multiple IDs
       let apiUrl = `${API_URL_Local}/api/storeorders/analyticsdashboard/${companyIdsStr}/${locationIdsStr}`;
-      
+
       // FIXED: Improved date range parameter handling
       const params = new URLSearchParams();
-      
+
       if (dateRange?.startDate && dateRange?.endDate) {
         // Handle both Date objects and ISO strings
         let startDateObj, endDateObj;
-        
+
         if (dateRange.startDate instanceof Date) {
           startDateObj = dateRange.startDate;
         } else {
           startDateObj = new Date(dateRange.startDate);
         }
-        
+
         if (dateRange.endDate instanceof Date) {
           endDateObj = dateRange.endDate;
         } else {
           endDateObj = new Date(dateRange.endDate);
         }
-        
+
         // Validate dates before formatting
-        if (!isNaN(startDateObj.getTime()) && !isNaN(endDateObj.getTime()) && 
-            startDateObj.getFullYear() > 1970 && endDateObj.getFullYear() > 1970) {
+        if (
+          !isNaN(startDateObj.getTime()) &&
+          !isNaN(endDateObj.getTime()) &&
+          startDateObj.getFullYear() > 1970 &&
+          endDateObj.getFullYear() > 1970
+        ) {
           // Format dates correctly for backend (yyyy-MM-dd)
-          const startDate = startDateObj.toISOString().split('T')[0];
-          const endDate = endDateObj.toISOString().split('T')[0];
-          
-          params.append('start_date', startDate);
-          params.append('end_date', endDate);
-          
-          console.log('📅 FIXED: Date range parameters being sent to backend:', {
-            original: dateRange,
-            formatted: { start_date: startDate, end_date: endDate }
-          });
+          const startDate = startDateObj.toISOString().split("T")[0];
+          const endDate = endDateObj.toISOString().split("T")[0];
+
+          params.append("start_date", startDate);
+          params.append("end_date", endDate);
+
+          console.log(
+            "📅 FIXED: Date range parameters being sent to backend:",
+            {
+              original: dateRange,
+              formatted: { start_date: startDate, end_date: endDate },
+            }
+          );
         } else {
-          console.warn('⚠️ Invalid dates provided, skipping date range');
+          console.warn("⚠️ Invalid dates provided, skipping date range");
         }
       } else {
-        console.log('📅 No date range provided - fetching all data');
+        console.log("📅 No date range provided - fetching all data");
       }
-      
+
       if (params.toString()) {
         apiUrl += `?${params.toString()}`;
       }
 
-      console.log('🌐 Backend API Request:', {
+      console.log("🌐 Backend API Request:", {
         url: apiUrl,
         company_ids: companyIdsStr,
         location_ids: locationIdsStr,
         company_count: Array.isArray(companyIds) ? companyIds.length : 1,
         location_count: Array.isArray(locationIds) ? locationIds.length : 1,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
 
-      const response = await fetch(apiUrl, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      // const response = await fetch(apiUrl, {
+      //   method: "GET",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      // });
 
-      console.log('🔄 Backend Response Status:', {
+      // console.log('🔄 Backend Response Status:', {
+      //   status: response.status,
+      //   statusText: response.statusText,
+      //   ok: response.ok
+      // });
+
+      // if (!response.ok) {
+      //   throw new Error(`HTTP error! status: ${response.status}`);
+      // }
+
+      // const result = await response.json();
+
+      // Extract just the path and query parameters from the full URL
+      const urlParts = apiUrl.split("/api/");
+      const apiPath = "/api/" + urlParts[1]; // This will be something like '/api/storeorders/analyticsdashboard/1,2/3,4?start_date=2024-01-01&end_date=2024-01-31'
+
+      const response = await apiClient.get(apiPath);
+
+      console.log("🔄 Backend Response Status:", {
         status: response.status,
         statusText: response.statusText,
-        ok: response.ok
+        ok: response.status >= 200 && response.status < 300,
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      const result = response.data;
 
-      const result = await response.json();
-      
-      console.log('📊 Backend Data Received:', {
+      console.log("📊 Backend Data Received:", {
         success: true,
         dataReceived: !!result.data,
         totalSales: result.data?.total_sales,
         totalOrders: result.data?.total_orders,
         recordCount: result.data?.daily_orders?.length || 0,
         companiesProcessed: Array.isArray(companyIds) ? companyIds.length : 1,
-        locationsProcessed: Array.isArray(locationIds) ? locationIds.length : 1
+        locationsProcessed: Array.isArray(locationIds) ? locationIds.length : 1,
       });
 
       if (result.data) {
         setAnalyticsData(result.data);
       } else {
-        throw new Error('No data received from analytics API');
+        throw new Error("No data received from analytics API");
       }
 
+      // } catch (err) {
+      //   console.error("❌ Error fetching analytics data:", {
+      //     error: err.message,
+      //     companyIds,
+      //     locationIds,
+      //     dateRange,
+      //   });
+      //   setAnalyticsError(err.message);
+      //   setAnalyticsData(null);
+      // } finally {
     } catch (err) {
       console.error("❌ Error fetching analytics data:", {
-        error: err.message,
+        error: err,
         companyIds,
         locationIds,
-        dateRange
+        dateRange,
       });
-      setAnalyticsError(err.message);
+
+      let errorMessage = "Failed to fetch analytics data";
+      if (err.response) {
+        if (err.response.status === 401) {
+          errorMessage = "Authentication failed. Please log in again.";
+          // Auth interceptor will handle redirect to login
+        } else {
+          errorMessage = `Server error: ${err.response.status} - ${
+            err.response.data?.detail || err.response.statusText
+          }`;
+        }
+      } else if (err.request) {
+        errorMessage =
+          "Cannot connect to analytics server. Please check if the backend is running.";
+      } else {
+        errorMessage = err.message || "Failed to fetch analytics data";
+      }
+
+      setAnalyticsError(errorMessage);
       setAnalyticsData(null);
     } finally {
       setAnalyticsLoading(false);
@@ -582,25 +690,28 @@ const AnalyticsDashboard = () => {
   // FIXED: Auto-apply filters when Redux state changes - Updated to use all selected IDs
   useEffect(() => {
     // Only apply filters if we have both companies and locations selected
-    if (reduxSelectedCompanies.length > 0 && reduxSelectedLocations.length > 0) {
-      console.log('🔄 Auto-applying filters due to Redux state change:', {
+    if (
+      reduxSelectedCompanies.length > 0 &&
+      reduxSelectedLocations.length > 0
+    ) {
+      console.log("🔄 Auto-applying filters due to Redux state change:", {
         companies: reduxSelectedCompanies,
         locations: reduxSelectedLocations,
         dateRange: reduxDateRange,
-        hasDateRange
+        hasDateRange,
       });
 
       // Apply the filters using Redux values directly
       setAppliedFilters({
-        companies: reduxSelectedCompanies.map(id => parseInt(id)),
-        locations: reduxSelectedLocations.map(id => parseInt(id)),
-        dateRange: reduxDateRange
+        companies: reduxSelectedCompanies.map((id) => parseInt(id)),
+        locations: reduxSelectedLocations.map((id) => parseInt(id)),
+        dateRange: reduxDateRange,
       });
 
       // FIXED: Fetch analytics data for ALL selected companies and locations
-      const companyIds = reduxSelectedCompanies.map(id => parseInt(id));
-      const locationIds = reduxSelectedLocations.map(id => parseInt(id));
-      
+      const companyIds = reduxSelectedCompanies.map((id) => parseInt(id));
+      const locationIds = reduxSelectedLocations.map((id) => parseInt(id));
+
       if (companyIds.length > 0 && locationIds.length > 0) {
         // FIXED: Use Redux date range state properly
         const dateRangeToPass = hasDateRange ? reduxDateRange : null;
@@ -608,11 +719,11 @@ const AnalyticsDashboard = () => {
       }
     }
   }, [
-    reduxSelectedCompanies.join(','), 
-    reduxSelectedLocations.join(','), 
-    hasDateRange, 
-    reduxDateRange?.startDate, 
-    reduxDateRange?.endDate
+    reduxSelectedCompanies.join(","),
+    reduxSelectedLocations.join(","),
+    hasDateRange,
+    reduxDateRange?.startDate,
+    reduxDateRange?.endDate,
   ]);
 
   // Fetch company-location data from API
@@ -621,22 +732,47 @@ const AnalyticsDashboard = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${API_URL_Local}/company-locations/all`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      // const response = await fetch(`${API_URL_Local}/company-locations/all`, {
+      //   method: "GET",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      // });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      // if (!response.ok) {
+      //   throw new Error(`HTTP error! status: ${response.status}`);
+      // }
 
-      const data = await response.json();
+      // const data = await response.json();
+
+      const response = await apiClient.get("/company-locations/all");
+      const data = response.data;
+
       setCompanyLocationData(data);
+
+      // } catch (err) {
+      //   console.error("Error fetching company-location data:", err);
+      //   setError(err.message);
+      // } finally {
     } catch (err) {
       console.error("Error fetching company-location data:", err);
-      setError(err.message);
+
+      let errorMessage = "Failed to fetch company-location data";
+      if (err.response) {
+        if (err.response.status === 401) {
+          errorMessage = "Authentication failed. Please log in again.";
+          // Auth interceptor will handle redirect to login
+        } else {
+          errorMessage = `Server error: ${err.response.status}`;
+        }
+      } else if (err.request) {
+        errorMessage =
+          "Cannot connect to server. Please check if the backend is running.";
+      } else {
+        errorMessage = err.message || "Failed to fetch company-location data";
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -649,14 +785,20 @@ const AnalyticsDashboard = () => {
 
   // FIXED: Initialize local state from Redux when component mounts or Redux changes
   useEffect(() => {
-    console.log('🔄 Syncing local companies state with Redux:', reduxSelectedCompanies);
-    setSelectedCompaniesLocal(reduxSelectedCompanies.map(id => parseInt(id)));
-  }, [reduxSelectedCompanies.join(',')]);
+    console.log(
+      "🔄 Syncing local companies state with Redux:",
+      reduxSelectedCompanies
+    );
+    setSelectedCompaniesLocal(reduxSelectedCompanies.map((id) => parseInt(id)));
+  }, [reduxSelectedCompanies.join(",")]);
 
   useEffect(() => {
-    console.log('🔄 Syncing local locations state with Redux:', reduxSelectedLocations);
-    setSelectedLocationsLocal(reduxSelectedLocations.map(id => parseInt(id)));
-  }, [reduxSelectedLocations.join(',')]);
+    console.log(
+      "🔄 Syncing local locations state with Redux:",
+      reduxSelectedLocations
+    );
+    setSelectedLocationsLocal(reduxSelectedLocations.map((id) => parseInt(id)));
+  }, [reduxSelectedLocations.join(",")]);
 
   // Auto-apply filters when component loads with Redux data - Updated to use all selected IDs
   useEffect(() => {
@@ -665,7 +807,9 @@ const AnalyticsDashboard = () => {
       reduxSelectedLocations.length > 0 &&
       companyLocationData.length > 0
     ) {
-      console.log("🚀 Auto-applying filters from initial Redux state on component load");
+      console.log(
+        "🚀 Auto-applying filters from initial Redux state on component load"
+      );
       setAppliedFilters({
         companies: reduxSelectedCompanies.map((id) => parseInt(id)),
         locations: reduxSelectedLocations.map((id) => parseInt(id)),
@@ -673,9 +817,9 @@ const AnalyticsDashboard = () => {
       });
 
       // FIXED: Fetch analytics data for ALL selected companies and locations
-      const companyIds = reduxSelectedCompanies.map(id => parseInt(id));
-      const locationIds = reduxSelectedLocations.map(id => parseInt(id));
-      
+      const companyIds = reduxSelectedCompanies.map((id) => parseInt(id));
+      const locationIds = reduxSelectedLocations.map((id) => parseInt(id));
+
       if (companyIds.length > 0 && locationIds.length > 0) {
         const dateRangeToPass = hasDateRange ? reduxDateRange : null;
         fetchAnalyticsData(companyIds, locationIds, dateRangeToPass);
@@ -727,12 +871,15 @@ const AnalyticsDashboard = () => {
   // Handle company selection with immediate Redux update
   const handleCompanyChange = (event) => {
     const value = event.target.value;
-    const newSelectedCompanies = typeof value === "string" ? value.split(",") : value;
+    const newSelectedCompanies =
+      typeof value === "string" ? value.split(",") : value;
 
     setSelectedCompaniesLocal(newSelectedCompanies);
 
     // Update Redux immediately
-    dispatch(setSelectedCompanies(newSelectedCompanies.map(id => id.toString())));
+    dispatch(
+      setSelectedCompanies(newSelectedCompanies.map((id) => id.toString()))
+    );
 
     // Clear locations that don't belong to selected companies
     if (newSelectedCompanies.length > 0) {
@@ -744,11 +891,15 @@ const AnalyticsDashboard = () => {
           );
         }, []);
 
-      const newValidLocations = selectedLocations.filter((locationId) => validLocationIds.includes(locationId));
+      const newValidLocations = selectedLocations.filter((locationId) =>
+        validLocationIds.includes(locationId)
+      );
       setSelectedLocationsLocal(newValidLocations);
-      
+
       // Update Redux for locations too
-      dispatch(setSelectedLocations(newValidLocations.map(id => id.toString())));
+      dispatch(
+        setSelectedLocations(newValidLocations.map((id) => id.toString()))
+      );
     } else {
       // If no companies selected, clear locations
       setSelectedLocationsLocal([]);
@@ -759,41 +910,47 @@ const AnalyticsDashboard = () => {
   // Handle location selection with immediate Redux update
   const handleLocationChange = (event) => {
     const value = event.target.value;
-    const newSelectedLocations = typeof value === "string" ? value.split(",") : value;
-    
+    const newSelectedLocations =
+      typeof value === "string" ? value.split(",") : value;
+
     setSelectedLocationsLocal(newSelectedLocations);
-    
+
     // Update Redux immediately
-    dispatch(setSelectedLocations(newSelectedLocations.map(id => id.toString())));
+    dispatch(
+      setSelectedLocations(newSelectedLocations.map((id) => id.toString()))
+    );
   };
 
   // FIXED: Handle date range selection (stores in Redux for persistence)
   const handleDateRangeSelect = (range) => {
-    console.log('📅 Main handleDateRangeSelect called with:', range);
-    
+    console.log("📅 Main handleDateRangeSelect called with:", range);
+
     if (range?.startDate && range?.endDate) {
       // This is called from DateRangeSelectorButton which already handles Redux updates
       // Just log for debugging - Redux state is already updated by the button component
-      console.log('📅 Date range selection handled by DateRangeSelectorButton');
+      console.log("📅 Date range selection handled by DateRangeSelectorButton");
     } else if (range === null) {
       // Handle clearing date range
-      console.log('📅 Date range cleared');
+      console.log("📅 Date range cleared");
       dispatch(clearAnalyticsDashboardDateRange());
     }
   };
 
   // Handle refresh - Updated to use all selected IDs
   const handleRefresh = () => {
-    console.log('🔄 Refreshing data...');
+    console.log("🔄 Refreshing data...");
     fetchCompanyLocationData();
-    
+
     // Also refresh analytics data if we have selections
-    if (reduxSelectedCompanies.length > 0 && reduxSelectedLocations.length > 0) {
-      const companyIds = reduxSelectedCompanies.map(id => parseInt(id));
-      const locationIds = reduxSelectedLocations.map(id => parseInt(id));
-      console.log('🔄 Refreshing analytics data with current selections:', {
+    if (
+      reduxSelectedCompanies.length > 0 &&
+      reduxSelectedLocations.length > 0
+    ) {
+      const companyIds = reduxSelectedCompanies.map((id) => parseInt(id));
+      const locationIds = reduxSelectedLocations.map((id) => parseInt(id));
+      console.log("🔄 Refreshing analytics data with current selections:", {
         companyIds,
-        locationIds
+        locationIds,
       });
       const dateRangeToPass = hasDateRange ? reduxDateRange : null;
       fetchAnalyticsData(companyIds, locationIds, dateRangeToPass);
@@ -829,7 +986,9 @@ const AnalyticsDashboard = () => {
         }}
       >
         <CircularProgress size={50} />
-        <Typography sx={{ ml: 2 }}>Loading companies and locations...</Typography>
+        <Typography sx={{ ml: 2 }}>
+          Loading companies and locations...
+        </Typography>
       </Box>
     );
   }
@@ -889,7 +1048,7 @@ const AnalyticsDashboard = () => {
           >
             Refresh
           </Button>
-          
+
           <DateRangeSelectorButton onDateRangeSelect={handleDateRangeSelect} />
         </Box>
       </Container>
@@ -966,9 +1125,15 @@ const AnalyticsDashboard = () => {
                         dispatch(setSelectedCompanies([]));
                         dispatch(setSelectedLocations([]));
                       } else {
-                        const allCompanyIds = availableCompanies.map((c) => c.id);
+                        const allCompanyIds = availableCompanies.map(
+                          (c) => c.id
+                        );
                         setSelectedCompaniesLocal(allCompanyIds);
-                        dispatch(setSelectedCompanies(allCompanyIds.map(id => id.toString())));
+                        dispatch(
+                          setSelectedCompanies(
+                            allCompanyIds.map((id) => id.toString())
+                          )
+                        );
                       }
                     }}
                   >
@@ -1053,9 +1218,15 @@ const AnalyticsDashboard = () => {
                               setSelectedLocationsLocal([]);
                               dispatch(setSelectedLocations([]));
                             } else {
-                              const allLocationIds = availableLocations.map((l) => l.id);
+                              const allLocationIds = availableLocations.map(
+                                (l) => l.id
+                              );
                               setSelectedLocationsLocal(allLocationIds);
-                              dispatch(setSelectedLocations(allLocationIds.map(id => id.toString())));
+                              dispatch(
+                                setSelectedLocations(
+                                  allLocationIds.map((id) => id.toString())
+                                )
+                              );
                             }
                           }}
                           sx={{
@@ -1102,7 +1273,13 @@ const AnalyticsDashboard = () => {
                               }
 
                               setSelectedLocationsLocal(newSelectedLocations);
-                              dispatch(setSelectedLocations(newSelectedLocations.map(id => id.toString())));
+                              dispatch(
+                                setSelectedLocations(
+                                  newSelectedLocations.map((id) =>
+                                    id.toString()
+                                  )
+                                )
+                              );
                             }}
                             sx={{
                               backgroundColor: "#ffffff",
@@ -1142,7 +1319,9 @@ const AnalyticsDashboard = () => {
           </Grid>
 
           {/* Active Filters Display */}
-          {(selectedCompanies.length > 0 || selectedLocations.length > 0 || hasDateRange) && (
+          {(selectedCompanies.length > 0 ||
+            selectedLocations.length > 0 ||
+            hasDateRange) && (
             <Box sx={{ mb: 4 }}>
               <Typography
                 variant="subtitle2"
@@ -1154,7 +1333,14 @@ const AnalyticsDashboard = () => {
               >
                 Active Filters:
               </Typography>
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, alignItems: "center" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 1,
+                  alignItems: "center",
+                }}
+              >
                 {/* Company Filter Chips */}
                 {selectedCompanies.map((companyId) => (
                   <ActiveFilterChip
@@ -1165,7 +1351,11 @@ const AnalyticsDashboard = () => {
                         (id) => id !== companyId
                       );
                       setSelectedCompaniesLocal(newCompanies);
-                      dispatch(setSelectedCompanies(newCompanies.map(id => id.toString())));
+                      dispatch(
+                        setSelectedCompanies(
+                          newCompanies.map((id) => id.toString())
+                        )
+                      );
 
                       // Remove locations that belong to this company
                       const companyLocations =
@@ -1175,88 +1365,111 @@ const AnalyticsDashboard = () => {
                       const locationIdsToRemove = companyLocations.map(
                         (l) => l.location_id
                       );
-                      const newLocations = selectedLocations.filter((id) => !locationIdsToRemove.includes(id));
+                      const newLocations = selectedLocations.filter(
+                        (id) => !locationIdsToRemove.includes(id)
+                      );
                       setSelectedLocationsLocal(newLocations);
-                      dispatch(setSelectedLocations(newLocations.map(id => id.toString())));
+                      dispatch(
+                        setSelectedLocations(
+                          newLocations.map((id) => id.toString())
+                        )
+                      );
                     }}
                     deleteIcon={<CloseIcon />}
-                    sx={{ 
+                    sx={{
                       background: `linear-gradient(135deg, #1976d2 0%, #1565c0 100%)`,
                       maxWidth: 250, // Increased from 200
                       minWidth: 120,
-                      '& .MuiChip-label': {
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        fontSize: '0.875rem' // Slightly larger text
-                      }
+                      "& .MuiChip-label": {
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        fontSize: "0.875rem", // Slightly larger text
+                      },
                     }}
                   />
                 ))}
-                
+
                 {/* Location Filter Chips */}
                 {selectedLocations.map((locationId) => (
                   <ActiveFilterChip
                     key={`location-${locationId}`}
                     label={`Location: ${getLocationNameById(locationId)}`}
                     onDelete={() => {
-                      const newLocations = selectedLocations.filter((id) => id !== locationId);
+                      const newLocations = selectedLocations.filter(
+                        (id) => id !== locationId
+                      );
                       setSelectedLocationsLocal(newLocations);
-                      dispatch(setSelectedLocations(newLocations.map(id => id.toString())));
+                      dispatch(
+                        setSelectedLocations(
+                          newLocations.map((id) => id.toString())
+                        )
+                      );
                     }}
                     deleteIcon={<CloseIcon />}
-                    sx={{ 
+                    sx={{
                       background: `linear-gradient(135deg, #388e3c 0%, #2e7d32 100%)`,
                       maxWidth: 250, // Increased from 200
                       minWidth: 120,
-                      '& .MuiChip-label': {
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        fontSize: '0.875rem' // Slightly larger text
-                      }
+                      "& .MuiChip-label": {
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        fontSize: "0.875rem", // Slightly larger text
+                      },
                     }}
                   />
                 ))}
-                
+
                 {/* Date Range Filter Chip */}
-                {hasDateRange && reduxDateRange?.startDate && reduxDateRange?.endDate && (
-                  <ActiveFilterChip
-                    key="date-range"
-                    label={`Date Range: ${(() => {
-                      try {
-                        const startDate = new Date(reduxDateRange.startDate);
-                        const endDate = new Date(reduxDateRange.endDate);
-                        
-                        if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && 
-                            startDate.getFullYear() > 1970 && endDate.getFullYear() > 1970) {
-                          return `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
+                {hasDateRange &&
+                  reduxDateRange?.startDate &&
+                  reduxDateRange?.endDate && (
+                    <ActiveFilterChip
+                      key="date-range"
+                      label={`Date Range: ${(() => {
+                        try {
+                          const startDate = new Date(reduxDateRange.startDate);
+                          const endDate = new Date(reduxDateRange.endDate);
+
+                          if (
+                            !isNaN(startDate.getTime()) &&
+                            !isNaN(endDate.getTime()) &&
+                            startDate.getFullYear() > 1970 &&
+                            endDate.getFullYear() > 1970
+                          ) {
+                            return `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
+                          }
+                          return "Invalid Date Range";
+                        } catch (error) {
+                          console.error(
+                            "Error formatting date range for chip:",
+                            error
+                          );
+                          return "Invalid Date Range";
                         }
-                        return 'Invalid Date Range';
-                      } catch (error) {
-                        console.error('Error formatting date range for chip:', error);
-                        return 'Invalid Date Range';
-                      }
-                    })()}`}
-                    onDelete={() => {
-                      console.log('🗑️ Clearing date range from active filter chip');
-                      dispatch(clearAnalyticsDashboardDateRange());
-                    }}
-                    deleteIcon={<CloseIcon />}
-                    sx={{ 
-                      background: `linear-gradient(135deg, #f57c00 0%, #ef6c00 100%)`,
-                      maxWidth: 300, // Increased from 250 for longer date ranges
-                      minWidth: 180,
-                      '& .MuiChip-label': {
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        fontSize: '0.875rem' // Slightly larger text
-                      }
-                    }}
-                  />
-                )}
-                
+                      })()}`}
+                      onDelete={() => {
+                        console.log(
+                          "🗑️ Clearing date range from active filter chip"
+                        );
+                        dispatch(clearAnalyticsDashboardDateRange());
+                      }}
+                      deleteIcon={<CloseIcon />}
+                      sx={{
+                        background: `linear-gradient(135deg, #f57c00 0%, #ef6c00 100%)`,
+                        maxWidth: 300, // Increased from 250 for longer date ranges
+                        minWidth: 180,
+                        "& .MuiChip-label": {
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          fontSize: "0.875rem", // Slightly larger text
+                        },
+                      }}
+                    />
+                  )}
+
                 {/* Clear All Button */}
                 {(selectedCompanies.length > 0 ||
                   selectedLocations.length > 0 ||
@@ -1265,15 +1478,15 @@ const AnalyticsDashboard = () => {
                     size="small"
                     onClick={clearAllFilters}
                     variant="outlined"
-                    sx={{ 
-                      ml: 1, 
+                    sx={{
+                      ml: 1,
                       textTransform: "none",
                       borderColor: theme.palette.error.main,
                       color: theme.palette.error.main,
-                      '&:hover': {
+                      "&:hover": {
                         borderColor: theme.palette.error.dark,
-                        backgroundColor: alpha(theme.palette.error.main, 0.04)
-                      }
+                        backgroundColor: alpha(theme.palette.error.main, 0.04),
+                      },
                     }}
                   >
                     Clear All Filters
@@ -1289,43 +1502,70 @@ const AnalyticsDashboard = () => {
       <Container maxWidth="xl">
         <ContentCard>
           {analyticsLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                py: 8,
+              }}
+            >
               <CircularProgress size={40} />
               <Typography sx={{ ml: 2 }}>Loading analytics data...</Typography>
             </Box>
           ) : analyticsError ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8, flexDirection: 'column' }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                py: 8,
+                flexDirection: "column",
+              }}
+            >
               <Typography color="error" variant="h6" gutterBottom>
                 Error loading analytics data
               </Typography>
               <Typography color="error" variant="body2">
                 {analyticsError}
               </Typography>
-              {reduxSelectedCompanies.length > 0 && reduxSelectedLocations.length > 0 && (
-                <Button 
-                  variant="outlined" 
-                  onClick={() => {
-                    const companyIds = reduxSelectedCompanies.map(id => parseInt(id));
-                    const locationIds = reduxSelectedLocations.map(id => parseInt(id));
-                    fetchAnalyticsData(
-                      companyIds, 
-                      locationIds, 
-                      hasDateRange ? reduxDateRange : null
-                    );
-                  }}
-                  sx={{ mt: 2 }}
-                >
-                  Retry
-                </Button>
-              )}
+              {reduxSelectedCompanies.length > 0 &&
+                reduxSelectedLocations.length > 0 && (
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      const companyIds = reduxSelectedCompanies.map((id) =>
+                        parseInt(id)
+                      );
+                      const locationIds = reduxSelectedLocations.map((id) =>
+                        parseInt(id)
+                      );
+                      fetchAnalyticsData(
+                        companyIds,
+                        locationIds,
+                        hasDateRange ? reduxDateRange : null
+                      );
+                    }}
+                    sx={{ mt: 2 }}
+                  >
+                    Retry
+                  </Button>
+                )}
             </Box>
           ) : !analyticsData ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                py: 8,
+              }}
+            >
               <Typography variant="body1" color="text.secondary">
-                {reduxSelectedCompanies.length === 0 || reduxSelectedLocations.length === 0 
+                {reduxSelectedCompanies.length === 0 ||
+                reduxSelectedLocations.length === 0
                   ? "Please select a company and location to view analytics data"
-                  : "No analytics data available"
-                }
+                  : "No analytics data available"}
               </Typography>
             </Box>
           ) : (
@@ -1333,34 +1573,55 @@ const AnalyticsDashboard = () => {
               {/* Analytics Data Display */}
               <Box sx={{ p: 3 }}>
                 {/* Header with company and location info - Updated for multiple selections */}
-                <Box sx={{ mb: 4, borderBottom: '1px solid #e0e0e0', pb: 2 }}>
+                <Box sx={{ mb: 4, borderBottom: "1px solid #e0e0e0", pb: 2 }}>
                   <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
                     Analytics Dashboard
                   </Typography>
                   <Typography variant="subtitle1" color="text.secondary">
                     {/* FIXED: Display information for multiple companies and locations */}
-                    {reduxSelectedCompanies.length === 1 && reduxSelectedLocations.length === 1 ? (
-                      // Single company and location - try to get names from analytics data or fallback to IDs
-                      `${analyticsData.company_name || getCompanyNameById(parseInt(reduxSelectedCompanies[0]))} - ${analyticsData.location_name || getLocationNameById(parseInt(reduxSelectedLocations[0]))}`
-                    ) : (
-                      // Multiple companies or locations
-                      `${reduxSelectedCompanies.length} Company(s) & ${reduxSelectedLocations.length} Location(s) Selected`
-                    )}
+                    {reduxSelectedCompanies.length === 1 &&
+                    reduxSelectedLocations.length === 1
+                      ? // Single company and location - try to get names from analytics data or fallback to IDs
+                        `${
+                          analyticsData.company_name ||
+                          getCompanyNameById(
+                            parseInt(reduxSelectedCompanies[0])
+                          )
+                        } - ${
+                          analyticsData.location_name ||
+                          getLocationNameById(
+                            parseInt(reduxSelectedLocations[0])
+                          )
+                        }`
+                      : // Multiple companies or locations
+                        `${reduxSelectedCompanies.length} Company(s) & ${reduxSelectedLocations.length} Location(s) Selected`}
                     {hasDateRange && (
                       <span style={{ marginLeft: 16 }}>
-                        ({new Date(reduxDateRange.startDate).toLocaleDateString()} - {new Date(reduxDateRange.endDate).toLocaleDateString()})
+                        (
+                        {new Date(
+                          reduxDateRange.startDate
+                        ).toLocaleDateString()}{" "}
+                        -{" "}
+                        {new Date(reduxDateRange.endDate).toLocaleDateString()})
                       </span>
                     )}
                   </Typography>
-                  
+
                   {/* Show detailed breakdown for multiple selections */}
-                  {(reduxSelectedCompanies.length > 1 || reduxSelectedLocations.length > 1) && (
+                  {(reduxSelectedCompanies.length > 1 ||
+                    reduxSelectedLocations.length > 1) && (
                     <Box sx={{ mt: 2 }}>
                       <Typography variant="body2" color="text.secondary">
-                        <strong>Companies:</strong> {reduxSelectedCompanies.map(id => getCompanyNameById(parseInt(id))).join(', ')}
+                        <strong>Companies:</strong>{" "}
+                        {reduxSelectedCompanies
+                          .map((id) => getCompanyNameById(parseInt(id)))
+                          .join(", ")}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        <strong>Locations:</strong> {reduxSelectedLocations.map(id => getLocationNameById(parseInt(id))).join(', ')}
+                        <strong>Locations:</strong>{" "}
+                        {reduxSelectedLocations
+                          .map((id) => getLocationNameById(parseInt(id)))
+                          .join(", ")}
                       </Typography>
                     </Box>
                   )}
@@ -1369,8 +1630,12 @@ const AnalyticsDashboard = () => {
                 {/* Key Metrics Cards */}
                 <Grid container spacing={3} sx={{ mb: 4 }}>
                   <Grid item xs={12} sm={6} md={3}>
-                    <Card sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>
+                    <Card sx={{ p: 2, textAlign: "center" }}>
+                      <Typography
+                        variant="h4"
+                        color="primary"
+                        sx={{ fontWeight: "bold" }}
+                      >
                         ${parseFloat(analyticsData.total_sales || 0).toFixed(2)}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
@@ -1379,8 +1644,12 @@ const AnalyticsDashboard = () => {
                     </Card>
                   </Grid>
                   <Grid item xs={12} sm={6} md={3}>
-                    <Card sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>
+                    <Card sx={{ p: 2, textAlign: "center" }}>
+                      <Typography
+                        variant="h4"
+                        color="primary"
+                        sx={{ fontWeight: "bold" }}
+                      >
                         {analyticsData.total_orders || 0}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
@@ -1389,9 +1658,16 @@ const AnalyticsDashboard = () => {
                     </Card>
                   </Grid>
                   <Grid item xs={12} sm={6} md={3}>
-                    <Card sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>
-                        ${parseFloat(analyticsData.avg_order_value || 0).toFixed(2)}
+                    <Card sx={{ p: 2, textAlign: "center" }}>
+                      <Typography
+                        variant="h4"
+                        color="primary"
+                        sx={{ fontWeight: "bold" }}
+                      >
+                        $
+                        {parseFloat(analyticsData.avg_order_value || 0).toFixed(
+                          2
+                        )}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         Avg Order Value
@@ -1399,8 +1675,12 @@ const AnalyticsDashboard = () => {
                     </Card>
                   </Grid>
                   <Grid item xs={12} sm={6} md={3}>
-                    <Card sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>
+                    <Card sx={{ p: 2, textAlign: "center" }}>
+                      <Typography
+                        variant="h4"
+                        color="primary"
+                        sx={{ fontWeight: "bold" }}
+                      >
                         {analyticsData.daily_orders?.length || 0}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
@@ -1411,8 +1691,8 @@ const AnalyticsDashboard = () => {
                 </Grid>
 
                 {/* Pass analytics data to AnalyticsComponent */}
-                <AnalyticsComponenet 
-                  appliedFilters={appliedFilters} 
+                <AnalyticsComponenet
+                  appliedFilters={appliedFilters}
                   analyticsData={analyticsData}
                 />
               </Box>

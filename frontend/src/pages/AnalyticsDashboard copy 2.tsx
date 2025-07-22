@@ -34,6 +34,7 @@ import ClearIcon from "@mui/icons-material/Clear";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import AnalyticsComponenet from "../components/AnalyticsComponenet";
 import DateRangeSelector from "../components/DateRangeSelector";
+import apiClient from "../api/axiosConfig"; // Add this line
 
 // Import API base URL from constants
 import { API_URL_Local } from "../constants";
@@ -317,25 +318,51 @@ const AnalyticsDashboard = () => {
       setLoading(true);
       setError(null);
 
-      // Use the correct endpoint for company-locations
-      const response = await fetch(`${API_URL_Local}/company-locations/all`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          // Add any authentication headers if needed
-          // 'Authorization': `Bearer ${token}`,
-        },
-      });
+      // // Use the correct endpoint for company-locations
+      // const response = await fetch(`${API_URL_Local}/company-locations/all`, {
+      //   method: "GET",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //     // Add any authentication headers if needed
+      //     // 'Authorization': `Bearer ${token}`,
+      //   },
+      // });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      // if (!response.ok) {
+      //   throw new Error(`HTTP error! status: ${response.status}`);
+      // }
 
-      const data = await response.json();
+      // const data = await response.json();
+
+      // Use apiClient with authentication
+      const response = await apiClient.get("/company-locations/all");
+      const data = response.data;
+
       setCompanyLocationData(data);
+
+      // } catch (err) {
+      //   console.error("Error fetching company-location data:", err);
+      //   setError(err.message);
+      // } finally {
     } catch (err) {
       console.error("Error fetching company-location data:", err);
-      setError(err.message);
+
+      let errorMessage = "Failed to fetch company-location data";
+      if (err.response) {
+        if (err.response.status === 401) {
+          errorMessage = "Authentication failed. Please log in again.";
+          // Auth interceptor will handle redirect to login
+        } else {
+          errorMessage = `Server error: ${err.response.status}`;
+        }
+      } else if (err.request) {
+        errorMessage =
+          "Cannot connect to server. Please check if the backend is running.";
+      } else {
+        errorMessage = err.message || "Failed to fetch company-location data";
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
