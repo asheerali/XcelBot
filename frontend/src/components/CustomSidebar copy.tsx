@@ -116,13 +116,12 @@ const CustomSidebar = ({ onSignOut }) => {
   const [availableLocations, setAvailableLocations] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // NEW: State to track if we've already auto-initialized and user interactions
+  // NEW: State to track if we've already auto-initialized
   const [hasInitialized, setHasInitialized] = useState(false);
-  const [userHasInteracted, setUserHasInteracted] = useState(false);
 
-  // Get selected values for dropdowns (now supports multiple)
-  const selectedCompany = selectedCompanies.length > 0 ? selectedCompanies : [];
-  const selectedLocation = selectedLocations.length > 0 ? selectedLocations : [];
+  // Get single selected values for dropdowns
+  const selectedCompany = selectedCompanies.length > 0 ? selectedCompanies[0] : '';
+  const selectedLocation = selectedLocations.length > 0 ? selectedLocations[0] : '';
 
   // Responsive drawer width
   const drawerWidth = getDrawerWidth(theme, isMobile, isTablet, isSmallScreen);
@@ -286,11 +285,10 @@ const CustomSidebar = ({ onSignOut }) => {
     fetchCompaniesAndLocations();
   }, []);
 
-  // NEW: Auto-initialize first company and location if Redux is empty (ONLY on first load)
+  // NEW: Auto-initialize first company and location if Redux is empty
   useEffect(() => {
     if (
       !hasInitialized && 
-      !userHasInteracted && // Only auto-select if user hasn't interacted yet
       companies.length > 0 && 
       selectedCompanies.length === 0 && 
       selectedLocations.length === 0
@@ -318,37 +316,24 @@ const CustomSidebar = ({ onSignOut }) => {
       
       setHasInitialized(true);
     }
-  }, [companies, selectedCompanies, selectedLocations, hasInitialized, userHasInteracted, dispatch]);
+  }, [companies, selectedCompanies, selectedLocations, hasInitialized, dispatch]);
 
-  // Update available locations when selected companies change
+  // Update available locations when selected company changes
   useEffect(() => {
-    if (selectedCompanies.length > 0 && companies.length > 0) {
-      // Get all locations from all selected companies
-      const allLocationsFromSelectedCompanies = [];
-      selectedCompanies.forEach(companyId => {
-        const companyData = companies.find(company => company.company_id.toString() === companyId.toString());
-        if (companyData && companyData.locations) {
-          allLocationsFromSelectedCompanies.push(...companyData.locations);
-        }
-      });
+    if (selectedCompany && companies.length > 0) {
+      const selectedCompanyData = companies.find(company => company.company_id.toString() === selectedCompany.toString());
+      setAvailableLocations(selectedCompanyData ? selectedCompanyData.locations : []);
       
-      // Remove duplicates based on location_id
-      const uniqueLocations = allLocationsFromSelectedCompanies.filter((location, index, self) =>
-        index === self.findIndex(l => l.location_id === location.location_id)
-      );
-      
-      setAvailableLocations(uniqueLocations);
-      
-      // NEW: Only auto-select first location if user hasn't interacted and no locations are selected
-      if (!userHasInteracted && selectedLocations.length === 0 && uniqueLocations.length > 0) {
-        const firstLocationId = uniqueLocations[0].location_id.toString();
-        console.log('Auto-selecting first location for selected companies:', firstLocationId);
+      // NEW: Auto-select first location if no location is selected and we have locations
+      if (selectedLocations.length === 0 && selectedCompanyData && selectedCompanyData.locations.length > 0) {
+        const firstLocationId = selectedCompanyData.locations[0].location_id.toString();
+        console.log('Auto-selecting first location for company:', firstLocationId);
         dispatch(setSelectedLocations([firstLocationId]));
       }
     } else {
       setAvailableLocations([]);
     }
-  }, [selectedCompanies, companies, selectedLocations, userHasInteracted, dispatch]);
+  }, [selectedCompany, companies, selectedLocations, dispatch]);
 
   // Auto-close sidebar on small screens when open
   useEffect(() => {
@@ -362,26 +347,17 @@ const CustomSidebar = ({ onSignOut }) => {
     }
   }, [isMobile]);
 
-  // Handle company selection (multiple)
+  // Handle company selection
   const handleCompanyChange = (event) => {
-    const value = typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value;
-    
-    // Mark that user has interacted
-    setUserHasInteracted(true);
-    
-    dispatch(setSelectedCompanies(value));
-    // Clear location selection when companies change to avoid invalid combinations
-    dispatch(setSelectedLocations([]));
+    const companyId = event.target.value;
+    dispatch(setSelectedCompanies([companyId]));
+    dispatch(setSelectedLocations([])); // Clear location selection when company changes
   };
 
-  // Handle location selection (multiple)
+  // Handle location selection
   const handleLocationChange = (event) => {
-    const value = typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value;
-    
-    // Mark that user has interacted
-    setUserHasInteracted(true);
-    
-    dispatch(setSelectedLocations(value));
+    const locationId = event.target.value;
+    dispatch(setSelectedLocations([locationId]));
   };
 
   // Check if any INSIGHTIQ item is currently selected
@@ -705,38 +681,12 @@ const CustomSidebar = ({ onSignOut }) => {
             },
           }}
         >
-          <InputLabel>Companies *</InputLabel>
+          <InputLabel>Company *</InputLabel>
           <Select
-            multiple
             value={selectedCompany}
             onChange={handleCompanyChange}
-            label="Companies *"
+            label="Company *"
             disabled={loading}
-            renderValue={(selected) => (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                {selected.map((companyId) => {
-                  const company = companies.find(c => c.company_id.toString() === companyId.toString());
-                  return (
-                    <Box
-                      key={companyId}
-                      sx={{
-                        backgroundColor: alpha('#667eea', 0.2),
-                        color: '#ffffff',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        fontSize: isSmallScreen ? '0.7rem' : '0.75rem',
-                        maxWidth: '80px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {company ? company.company_name : companyId}
-                    </Box>
-                  );
-                })}
-              </Box>
-            )}
             startAdornment={
               <BusinessIcon sx={{ 
                 color: alpha('#ffffff', 0.7), 
@@ -767,15 +717,7 @@ const CustomSidebar = ({ onSignOut }) => {
             }}
           >
             {companies.map((company) => (
-              <MenuItem 
-                key={company.company_id} 
-                value={company.company_id.toString()}
-                sx={{
-                  '&.Mui-selected': {
-                    backgroundColor: alpha('#667eea', 0.3),
-                  },
-                }}
-              >
+              <MenuItem key={company.company_id} value={company.company_id.toString()}>
                 <Box sx={{ 
                   overflow: 'hidden', 
                   textOverflow: 'ellipsis', 
@@ -793,7 +735,7 @@ const CustomSidebar = ({ onSignOut }) => {
         <FormControl 
           fullWidth 
           size="small"
-          disabled={selectedCompanies.length === 0 || availableLocations.length === 0}
+          disabled={!selectedCompany || availableLocations.length === 0}
           sx={{ 
             '& .MuiOutlinedInput-root': {
               backgroundColor: alpha('#ffffff', 0.15),
@@ -832,37 +774,11 @@ const CustomSidebar = ({ onSignOut }) => {
             },
           }}
         >
-          <InputLabel>Locations *</InputLabel>
+          <InputLabel>Location *</InputLabel>
           <Select
-            multiple
             value={selectedLocation}
             onChange={handleLocationChange}
-            label="Locations *"
-            renderValue={(selected) => (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                {selected.map((locationId) => {
-                  const location = availableLocations.find(l => l.location_id.toString() === locationId.toString());
-                  return (
-                    <Box
-                      key={locationId}
-                      sx={{
-                        backgroundColor: alpha('#667eea', 0.2),
-                        color: '#ffffff',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        fontSize: isSmallScreen ? '0.7rem' : '0.75rem',
-                        maxWidth: '80px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {location ? location.location_name : locationId}
-                    </Box>
-                  );
-                })}
-              </Box>
-            )}
+            label="Location *"
             startAdornment={
               <LocationOnIcon sx={{ 
                 color: alpha('#ffffff', 0.7), 
@@ -893,15 +809,7 @@ const CustomSidebar = ({ onSignOut }) => {
             }}
           >
             {availableLocations.map((location) => (
-              <MenuItem 
-                key={location.location_id} 
-                value={location.location_id.toString()}
-                sx={{
-                  '&.Mui-selected': {
-                    backgroundColor: alpha('#667eea', 0.3),
-                  },
-                }}
-              >
+              <MenuItem key={location.location_id} value={location.location_id.toString()}>
                 <Box sx={{ 
                   overflow: 'hidden', 
                   textOverflow: 'ellipsis', 

@@ -77,6 +77,18 @@ import {
   selectSelectedLocations 
 } from "../store/slices/masterFileSlice";
 
+// NEW: Date range Redux integration
+import {
+  setSalesSplitDashboardDateRange,
+  setSalesSplitDashboardStartDate,
+  setSalesSplitDashboardEndDate,
+  clearSalesSplitDashboardDateRange,
+  selectSalesSplitDashboardDateRange,
+  selectSalesSplitDashboardStartDate,
+  selectSalesSplitDashboardEndDate,
+  selectHasSalesSplitDashboardDateRange
+} from '../store/slices/dateRangeSlice';
+
 // Extract actions from the slice
 const { setLoading, setError } = excelSlice.actions;
 
@@ -207,14 +219,27 @@ export function ExcelImport() {
   const [salesSplitTab, setSalesSplitTab] = React.useState<number>(0);
   const [chartKey, setChartKey] = React.useState<number>(0);
   
-  // Date and filter state
-  const [startDate, setStartDate] = React.useState<string>('');
-  const [endDate, setEndDate] = React.useState<string>('');
+  // NEW: Get date range from Redux instead of local state
+  const salesSplitDateRange = useSelector(selectSalesSplitDashboardDateRange);
+  const startDate = salesSplitDateRange.startDate || '';
+  const endDate = salesSplitDateRange.endDate || '';
+  const hasDateRange = useSelector(selectHasSalesSplitDashboardDateRange);
+  
+  // Date and filter state (keeping some local state for UI)
   const [dateRangeType, setDateRangeType] = React.useState<string>('Custom Date Range');
   const [availableDateRanges] = React.useState<string[]>(['Custom Date Range']);
   const [isWaitingForBackendResponse, setIsWaitingForBackendResponse] = React.useState<boolean>(false);
   const [hasValidData, setHasValidData] = React.useState<boolean>(false);
   const [showSuccessNotification, setShowSuccessNotification] = React.useState<boolean>(false);
+
+  console.log('📈 ExcelImport: Redux date range state:', {
+    salesSplitDateRange,
+    startDate,
+    endDate,
+    hasDateRange,
+    startDateType: typeof startDate,
+    endDateType: typeof endDate
+  });
 
   // Fetch company-locations data on component mount
   React.useEffect(() => {
@@ -331,13 +356,24 @@ export function ExcelImport() {
     categories: string[],
     selectedFilterLocations: string[]
   ) => {
-    console.log('🎯 Applying filters:', {
-      startDate: explicitStartDate,
-      endDate: explicitEndDate,
+    console.log('🎯 Applying filters with Redux dates:', {
+      explicitStartDate,
+      explicitEndDate,
+      reduxStartDate: startDate,
+      reduxEndDate: endDate,
       categories,
       selectedFilterLocations,
       activeCompanyId
     });
+
+    // NEW: Store the date range in Redux for persistence
+    if (explicitStartDate && explicitEndDate) {
+      console.log('💾 Storing date range in Redux:', { explicitStartDate, explicitEndDate });
+      dispatch(setSalesSplitDashboardDateRange({
+        startDate: explicitStartDate,
+        endDate: explicitEndDate
+      }));
+    }
 
     // Check if we have required data
     if (!activeCompanyId) {
@@ -409,11 +445,6 @@ export function ExcelImport() {
             setLocalError('');
             setChartKey(prevKey => prevKey + 1);
             
-            // Update local state with the values that were actually sent
-            setStartDate(explicitStartDate);
-            setEndDate(explicitEndDate);
-            setDateRangeType('Custom Date Range');
-            
             // Mark that we have valid data
             setHasValidData(true);
             setIsWaitingForBackendResponse(false);
@@ -479,18 +510,39 @@ export function ExcelImport() {
       return;
     }
 
-    // Use the main filter function with current state
+    // NEW: Use Redux date range if available, fallback to empty strings
+    const currentStartDate = startDate || '';
+    const currentEndDate = endDate || '';
+    
+    console.log('📈 Legacy filter using Redux dates:', {
+      currentStartDate,
+      currentEndDate,
+      location,
+      dateRange
+    });
+
+    // Use the main filter function with current Redux state
     const selectedCategories = salesFilters?.selectedCategories || [];
-    handleApplyFiltersWithDates(startDate, endDate, selectedCategories, [location]);
+    handleApplyFiltersWithDates(currentStartDate, currentEndDate, selectedCategories, [location]);
   };
 
-  // Handle date input changes
+  // NEW: Redux-based date handlers
   const handleStartDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setStartDate(event.target.value);
+    const newStartDate = event.target.value;
+    console.log('📅 Start date changed to:', newStartDate);
+    dispatch(setSalesSplitDashboardStartDate(newStartDate));
   };
 
   const handleEndDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setEndDate(event.target.value);
+    const newEndDate = event.target.value;
+    console.log('📅 End date changed to:', newEndDate);
+    dispatch(setSalesSplitDashboardEndDate(newEndDate));
+  };
+
+  // NEW: Helper function to clear date range
+  const handleClearDateRange = () => {
+    console.log('🧹 Clearing Sales Split Dashboard date range');
+    dispatch(clearSalesSplitDashboardDateRange());
   };
 
   // Helper function to determine if we should show data
@@ -540,6 +592,28 @@ export function ExcelImport() {
                   icon={<BusinessIcon />}
                   label={`Company: ${selectedCompanyName}`}
                   variant="outlined"
+                />
+              </Box>
+            )}
+
+            {/* NEW: Date Range Status Display */}
+            {hasDateRange && (
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                mt: 1,
+                mb: 1 
+              }}>
+                <CompanyInfoChip
+                  icon={<AnalyticsIcon />}
+                  label={`Date Range: ${startDate} to ${endDate}`}
+                  variant="outlined"
+                  sx={{ 
+                    backgroundColor: alpha('#4caf50', 0.1),
+                    borderColor: alpha('#4caf50', 0.2),
+                    '& .MuiChip-icon': { color: '#4caf50' },
+                    '& .MuiChip-label': { color: '#4caf50' }
+                  }}
                 />
               </Box>
             )}
@@ -605,6 +679,19 @@ export function ExcelImport() {
                   variant="outlined"
                   sx={{ fontWeight: 500 }}
                 />
+                {/* NEW: Date Range Management */}
+                {hasDateRange && (
+                  <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Chip
+                      label={`📅 ${startDate} to ${endDate}`}
+                      color="success"
+                      variant="outlined"
+                      size="small"
+                      onDelete={handleClearDateRange}
+                      deleteIcon={<RefreshIcon />}
+                    />
+                  </Box>
+                )}
               </Box>
             )}
           </CardContent>

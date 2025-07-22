@@ -17,6 +17,9 @@ const initialState = {
   // NEW: Add OrderIQDashboard date range
   OrderIQDashboardStart: null,
   OrderIQDashboardEnd: null,
+  // NEW: Add SalesSplitDashboard date range (for ExcelImport component)
+  SalesSplitDashboardStart: null,
+  SalesSplitDashboardEnd: null,
 };
 
 // Helper function to format date as YYYY-MM-DD (date only, no time) in LOCAL timezone
@@ -336,7 +339,7 @@ const dateRangeSlice = createSlice({
       state.StoreSummaryProductionEnd = null;
     },
 
-    // NEW: OrderIQDashboard Date Range Actions
+    // OrderIQDashboard Date Range Actions
     setOrderIQDashboardDateRange: (state, action) => {
       const { startDate, endDate } = action.payload;
       console.log('🛒 Redux BEFORE: setOrderIQDashboardDateRange called with:', { 
@@ -401,6 +404,71 @@ const dateRangeSlice = createSlice({
       state.OrderIQDashboardEnd = null;
     },
 
+    // NEW: Sales Split Dashboard Date Range Actions (for ExcelImport component)
+    setSalesSplitDashboardDateRange: (state, action) => {
+      const { startDate, endDate } = action.payload;
+      console.log('📈 Redux BEFORE: setSalesSplitDashboardDateRange called with:', { 
+        startDate, 
+        endDate,
+        startType: typeof startDate,
+        endType: typeof endDate 
+      });
+      
+      // Format dates to date-only strings (YYYY-MM-DD)
+      const formattedStartDate = formatDateOnly(startDate);
+      const formattedEndDate = formatDateOnly(endDate);
+      
+      console.log('📈 Redux AFTER formatting:', {
+        formattedStartDate,
+        formattedEndDate,
+        formattedStartType: typeof formattedStartDate,
+        formattedEndType: typeof formattedEndDate
+      });
+      
+      if (formattedStartDate && formattedEndDate) {
+        state.SalesSplitDashboardStart = formattedStartDate;
+        state.SalesSplitDashboardEnd = formattedEndDate;
+        
+        console.log('✅ Redux: Sales Split Dashboard date range stored successfully:', {
+          storedStart: state.SalesSplitDashboardStart,
+          storedEnd: state.SalesSplitDashboardEnd,
+          stateAfterUpdate: {
+            SalesSplitDashboardStart: state.SalesSplitDashboardStart,
+            SalesSplitDashboardEnd: state.SalesSplitDashboardEnd
+          }
+        });
+      } else {
+        console.error('❌ Redux: Invalid dates provided for Sales Split Dashboard, not storing:', { 
+          originalStart: startDate, 
+          originalEnd: endDate,
+          formattedStart: formattedStartDate,
+          formattedEnd: formattedEndDate
+        });
+      }
+    },
+    
+    setSalesSplitDashboardStartDate: (state, action) => {
+      const formattedDate = formatDateOnly(action.payload);
+      if (formattedDate) {
+        state.SalesSplitDashboardStart = formattedDate;
+        console.log('✅ Redux: Sales Split Dashboard start date set:', formattedDate);
+      }
+    },
+    
+    setSalesSplitDashboardEndDate: (state, action) => {
+      const formattedDate = formatDateOnly(action.payload);
+      if (formattedDate) {
+        state.SalesSplitDashboardEnd = formattedDate;
+        console.log('✅ Redux: Sales Split Dashboard end date set:', formattedDate);
+      }
+    },
+    
+    clearSalesSplitDashboardDateRange: (state) => {
+      console.log('🧹 Redux: Clearing Sales Split Dashboard date range');
+      state.SalesSplitDashboardStart = null;
+      state.SalesSplitDashboardEnd = null;
+    },
+
     // Clear all date ranges
     clearAllDateRanges: (state) => {
       state.AnalyticsDashboardStart = null;
@@ -415,6 +483,8 @@ const dateRangeSlice = createSlice({
       state.StoreSummaryProductionEnd = null;
       state.OrderIQDashboardStart = null;
       state.OrderIQDashboardEnd = null;
+      state.SalesSplitDashboardStart = null;
+      state.SalesSplitDashboardEnd = null;
     },
   },
 });
@@ -451,11 +521,17 @@ export const {
   setStoreSummaryProductionEndDate,
   clearStoreSummaryProductionDateRange,
   
-  // NEW: OrderIQDashboard actions
+  // OrderIQDashboard actions
   setOrderIQDashboardDateRange,
   setOrderIQDashboardStartDate,
   setOrderIQDashboardEndDate,
   clearOrderIQDashboardDateRange,
+  
+  // NEW: Sales Split Dashboard actions
+  setSalesSplitDashboardDateRange,
+  setSalesSplitDashboardStartDate,
+  setSalesSplitDashboardEndDate,
+  clearSalesSplitDashboardDateRange,
   
   // Clear all
   clearAllDateRanges,
@@ -665,7 +741,7 @@ export const selectHasStoreSummaryProductionDateRange = (state) => {
   return hasRange;
 };
 
-// NEW: OrderIQDashboard Selectors with safe fallbacks
+// OrderIQDashboard Selectors with safe fallbacks
 export const selectOrderIQDashboardStartDate = (state) => {
   const value = state.dateRange?.OrderIQDashboardStart;
   console.log('🔍 selectOrderIQDashboardStartDate:', { value, type: typeof value });
@@ -712,6 +788,53 @@ export const selectHasOrderIQDashboardDateRange = (state) => {
   return hasRange;
 };
 
+// NEW: Sales Split Dashboard Selectors with safe fallbacks
+export const selectSalesSplitDashboardStartDate = (state) => {
+  const value = state.dateRange?.SalesSplitDashboardStart;
+  console.log('🔍 selectSalesSplitDashboardStartDate:', { value, type: typeof value });
+  return value;
+};
+
+export const selectSalesSplitDashboardEndDate = (state) => {
+  const value = state.dateRange?.SalesSplitDashboardEnd;
+  console.log('🔍 selectSalesSplitDashboardEndDate:', { value, type: typeof value });
+  return value;
+};
+
+export const selectSalesSplitDashboardDateRange = (state) => {
+  const startDate = state.dateRange?.SalesSplitDashboardStart;
+  const endDate = state.dateRange?.SalesSplitDashboardEnd;
+  
+  console.log('🔍 selectSalesSplitDashboardDateRange raw state:', {
+    rawState: state.dateRange,
+    startDate,
+    endDate,
+    startType: typeof startDate,
+    endType: typeof endDate
+  });
+  
+  return {
+    startDate: startDate,
+    endDate: endDate,
+  };
+};
+
+export const selectHasSalesSplitDashboardDateRange = (state) => {
+  const startDate = state.dateRange?.SalesSplitDashboardStart;
+  const endDate = state.dateRange?.SalesSplitDashboardEnd;
+  const hasRange = startDate !== null && endDate !== null;
+  
+  console.log('🔍 selectHasSalesSplitDashboardDateRange:', {
+    startDate,
+    endDate,
+    hasRange,
+    startIsNull: startDate === null,
+    endIsNull: endDate === null
+  });
+  
+  return hasRange;
+};
+
 // Combined selectors for convenience
 export const selectAllDateRanges = (state) => ({
   analyticsDashboard: {
@@ -738,6 +861,10 @@ export const selectAllDateRanges = (state) => ({
     startDate: state.dateRange?.OrderIQDashboardStart || null,
     endDate: state.dateRange?.OrderIQDashboardEnd || null,
   },
+  salesSplitDashboard: {
+    startDate: state.dateRange?.SalesSplitDashboardStart || null,
+    endDate: state.dateRange?.SalesSplitDashboardEnd || null,
+  },
 });
 
 export const selectHasAnyDateRange = (state) => 
@@ -746,7 +873,8 @@ export const selectHasAnyDateRange = (state) =>
   selectHasReportsDateRange(state) ||
   selectHasSummaryFinancialDashboardDateRange(state) ||
   selectHasStoreSummaryProductionDateRange(state) ||
-  selectHasOrderIQDashboardDateRange(state);
+  selectHasOrderIQDashboardDateRange(state) ||
+  selectHasSalesSplitDashboardDateRange(state);
 
 // Export reducer
 export default dateRangeSlice.reducer;
