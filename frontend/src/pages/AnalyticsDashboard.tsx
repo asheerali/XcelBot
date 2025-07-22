@@ -412,15 +412,27 @@ const AnalyticsDashboard = () => {
   // Add a debug selector to inspect the full Redux state
   const fullReduxState = useAppSelector(state => state);
 
-  // Debug: Monitor Redux state changes in main component
+  // Debug: Monitor Redux state changes in main component with detailed logging
   useEffect(() => {
     console.log('🔍 === REDUX STATE MONITOR ===');
     console.log('🔍 reduxSelectedCompanies:', reduxSelectedCompanies);
     console.log('🔍 reduxSelectedLocations:', reduxSelectedLocations);
     console.log('🔍 hasDateRange:', hasDateRange);
     console.log('🔍 reduxDateRange:', reduxDateRange);
+    console.log('🔍 localSelectedCompanies:', selectedCompanies);
+    console.log('🔍 localSelectedLocations:', selectedLocations);
+    console.log('🔍 companyLocationDataLoaded:', companyLocationData.length > 0);
     console.log('🔍 === END REDUX MONITOR ===');
-  }, [hasDateRange, reduxDateRange?.startDate, reduxDateRange?.endDate]);
+  }, [
+    reduxSelectedCompanies.join(','),
+    reduxSelectedLocations.join(','),
+    hasDateRange, 
+    reduxDateRange?.startDate, 
+    reduxDateRange?.endDate,
+    selectedCompanies.join(','),
+    selectedLocations.join(','),
+    companyLocationData.length
+  ]);
 
   // Debug: Log Redux state changes in main component
   useEffect(() => {
@@ -579,41 +591,7 @@ const AnalyticsDashboard = () => {
     }
   };
 
-  // FIXED: Auto-apply filters when Redux state changes - Updated to use all selected IDs
-  useEffect(() => {
-    // Only apply filters if we have both companies and locations selected
-    if (reduxSelectedCompanies.length > 0 && reduxSelectedLocations.length > 0) {
-      console.log('🔄 Auto-applying filters due to Redux state change:', {
-        companies: reduxSelectedCompanies,
-        locations: reduxSelectedLocations,
-        dateRange: reduxDateRange,
-        hasDateRange
-      });
-
-      // Apply the filters using Redux values directly
-      setAppliedFilters({
-        companies: reduxSelectedCompanies.map(id => parseInt(id)),
-        locations: reduxSelectedLocations.map(id => parseInt(id)),
-        dateRange: reduxDateRange
-      });
-
-      // FIXED: Fetch analytics data for ALL selected companies and locations
-      const companyIds = reduxSelectedCompanies.map(id => parseInt(id));
-      const locationIds = reduxSelectedLocations.map(id => parseInt(id));
-      
-      if (companyIds.length > 0 && locationIds.length > 0) {
-        // FIXED: Use Redux date range state properly
-        const dateRangeToPass = hasDateRange ? reduxDateRange : null;
-        fetchAnalyticsData(companyIds, locationIds, dateRangeToPass);
-      }
-    }
-  }, [
-    reduxSelectedCompanies.join(','), 
-    reduxSelectedLocations.join(','), 
-    hasDateRange, 
-    reduxDateRange?.startDate, 
-    reduxDateRange?.endDate
-  ]);
+  // REMOVED: Consolidated with comprehensive initialization effect above to prevent conflicts
 
   // Fetch company-location data from API
   const fetchCompanyLocationData = async () => {
@@ -647,41 +625,141 @@ const AnalyticsDashboard = () => {
     fetchCompanyLocationData();
   }, []);
 
-  // FIXED: Initialize local state from Redux when component mounts or Redux changes
+  // FIXED: Handle initial mounting with existing Redux state
+  useEffect(() => {
+    // This runs once on mount to ensure we sync any existing Redux state immediately
+    if (reduxSelectedCompanies.length > 0 || reduxSelectedLocations.length > 0) {
+      console.log('🚀 Component mounted with existing Redux selections:', {
+        companies: reduxSelectedCompanies,
+        locations: reduxSelectedLocations,
+        dateRange: reduxDateRange
+      });
+      
+      // Force immediate sync of local state with Redux
+      setSelectedCompaniesLocal(reduxSelectedCompanies.map(id => parseInt(id)));
+      setSelectedLocationsLocal(reduxSelectedLocations.map(id => parseInt(id)));
+    }
+  }, []); // Run only once on mount
+
+  // FIXED: Initialize local state from Redux immediately and handle multiple values properly
   useEffect(() => {
     console.log('🔄 Syncing local companies state with Redux:', reduxSelectedCompanies);
-    setSelectedCompaniesLocal(reduxSelectedCompanies.map(id => parseInt(id)));
+    const parsedCompanies = reduxSelectedCompanies.map(id => parseInt(id));
+    setSelectedCompaniesLocal(parsedCompanies);
+    
+    // Force immediate sync to ensure UI reflects Redux state
+    if (reduxSelectedCompanies.length > 0) {
+      console.log('✅ Companies synced from Redux:', parsedCompanies);
+    }
   }, [reduxSelectedCompanies.join(',')]);
 
   useEffect(() => {
     console.log('🔄 Syncing local locations state with Redux:', reduxSelectedLocations);
-    setSelectedLocationsLocal(reduxSelectedLocations.map(id => parseInt(id)));
+    const parsedLocations = reduxSelectedLocations.map(id => parseInt(id));
+    setSelectedLocationsLocal(parsedLocations);
+    
+    // Force immediate sync to ensure UI reflects Redux state
+    if (reduxSelectedLocations.length > 0) {
+      console.log('✅ Locations synced from Redux:', parsedLocations);
+    }
   }, [reduxSelectedLocations.join(',')]);
 
-  // Auto-apply filters when component loads with Redux data - Updated to use all selected IDs
+  // FIXED: Comprehensive initialization effect that handles both initial load and Redux changes
   useEffect(() => {
+    console.log('🔄 Initialization Check:', {
+      hasCompanies: reduxSelectedCompanies.length > 0,
+      hasLocations: reduxSelectedLocations.length > 0,
+      hasCompanyData: companyLocationData.length > 0,
+      localCompanies: selectedCompanies,
+      localLocations: selectedLocations
+    });
+
+    // Only proceed if we have all necessary data
     if (
       reduxSelectedCompanies.length > 0 &&
       reduxSelectedLocations.length > 0 &&
       companyLocationData.length > 0
     ) {
-      console.log("🚀 Auto-applying filters from initial Redux state on component load");
-      setAppliedFilters({
-        companies: reduxSelectedCompanies.map((id) => parseInt(id)),
-        locations: reduxSelectedLocations.map((id) => parseInt(id)),
-        dateRange: reduxDateRange,
-      });
-
-      // FIXED: Fetch analytics data for ALL selected companies and locations
+      console.log("🚀 Auto-applying filters from Redux state");
+      
+      // Ensure local state is in sync with Redux
       const companyIds = reduxSelectedCompanies.map(id => parseInt(id));
       const locationIds = reduxSelectedLocations.map(id => parseInt(id));
       
-      if (companyIds.length > 0 && locationIds.length > 0) {
+      // Update local state if it doesn't match Redux
+      if (JSON.stringify(selectedCompanies.sort()) !== JSON.stringify(companyIds.sort())) {
+        console.log('🔧 Forcing local companies sync:', companyIds);
+        setSelectedCompaniesLocal(companyIds);
+      }
+      
+      if (JSON.stringify(selectedLocations.sort()) !== JSON.stringify(locationIds.sort())) {
+        console.log('🔧 Forcing local locations sync:', locationIds);
+        setSelectedLocationsLocal(locationIds);
+      }
+
+      // Apply filters
+      setAppliedFilters({
+        companies: companyIds,
+        locations: locationIds,
+        dateRange: reduxDateRange,
+      });
+
+      // Fetch analytics data
+      const dateRangeToPass = hasDateRange ? reduxDateRange : null;
+      console.log('📊 Fetching analytics with:', { companyIds, locationIds, dateRangeToPass });
+      fetchAnalyticsData(companyIds, locationIds, dateRangeToPass);
+    } else if (reduxSelectedCompanies.length === 0 || reduxSelectedLocations.length === 0) {
+      console.log('🧹 Clearing analytics data - insufficient selections');
+      setAnalyticsData(null);
+      setAppliedFilters({
+        companies: [],
+        locations: [],
+        dateRange: null,
+      });
+    }
+  }, [
+    companyLocationData.length,
+    reduxSelectedCompanies.join(','),
+    reduxSelectedLocations.join(','),
+    hasDateRange,
+    reduxDateRange?.startDate,
+    reduxDateRange?.endDate
+  ]); // React to all relevant changes
+
+  // FIXED: Additional effect for immediate Redux state changes (after component is fully loaded)
+  useEffect(() => {
+    // Only trigger if component data is already loaded (not during initial load)
+    if (companyLocationData.length > 0) {
+      console.log('🔄 Redux state changed after initial load:', {
+        companies: reduxSelectedCompanies,
+        locations: reduxSelectedLocations,
+        hasDateRange,
+        dateRange: reduxDateRange
+      });
+
+      // Apply changes immediately when Redux updates
+      if (reduxSelectedCompanies.length > 0 && reduxSelectedLocations.length > 0) {
+        const companyIds = reduxSelectedCompanies.map(id => parseInt(id));
+        const locationIds = reduxSelectedLocations.map(id => parseInt(id));
+        
+        console.log('⚡ Immediate Redux update - fetching analytics');
+        setAppliedFilters({
+          companies: companyIds,
+          locations: locationIds,
+          dateRange: reduxDateRange,
+        });
+        
         const dateRangeToPass = hasDateRange ? reduxDateRange : null;
         fetchAnalyticsData(companyIds, locationIds, dateRangeToPass);
       }
     }
-  }, [companyLocationData.length]); // Only run when component data loads
+  }, [
+    reduxSelectedCompanies.join(','),
+    reduxSelectedLocations.join(','),
+    hasDateRange,
+    reduxDateRange?.startDate,
+    reduxDateRange?.endDate
+  ]); // Only depend on Redux state changes, not companyLocationData
 
   // Get available companies
   const availableCompanies = companyLocationData.map((item) => ({
