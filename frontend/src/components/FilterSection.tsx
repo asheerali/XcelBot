@@ -1,4 +1,4 @@
-// FilterSection.tsx - Fixed Auto-Filtering with Better Performance
+// FilterSection.tsx - Fixed Auto-Filtering with Better Performance and Multiple Location Support
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
@@ -581,28 +581,44 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     return locations.length > 0; // Only location is required, others are optional but will use defaults
   }, []);
 
-  // Check if any filter has actually changed
+  // ✅ FIXED: Check if any filter has actually changed - CREATE COPIES to avoid mutation error
   const hasFiltersChanged = useCallback((currentLocations: string[], currentStartDate: string, currentEndDate: string, currentCategories: string[]) => {
     const prev = previousFiltersRef.current;
     
-    const locationsChanged = JSON.stringify(currentLocations.sort()) !== JSON.stringify(prev.locations.sort());
+    // ✅ CRITICAL FIX: Create copies of arrays before sorting to avoid read-only property error
+    const currentLocationsCopy = [...currentLocations].sort();
+    const prevLocationsCopy = [...prev.locations].sort();
+    const currentCategoriesCopy = [...currentCategories].sort();
+    const prevCategoriesCopy = [...prev.categories].sort();
+    
+    const locationsChanged = JSON.stringify(currentLocationsCopy) !== JSON.stringify(prevLocationsCopy);
     const startDateChanged = currentStartDate !== prev.startDate;
     const endDateChanged = currentEndDate !== prev.endDate;
-    const categoriesChanged = JSON.stringify(currentCategories.sort()) !== JSON.stringify(prev.categories.sort());
+    const categoriesChanged = JSON.stringify(currentCategoriesCopy) !== JSON.stringify(prevCategoriesCopy);
     
     console.log('🔍 FilterSection: Checking for changes:', {
       locationsChanged,
       startDateChanged,
       endDateChanged,
       categoriesChanged,
-      current: { currentLocations, currentStartDate, currentEndDate, currentCategories },
-      previous: prev
+      current: { 
+        locations: currentLocationsCopy, 
+        startDate: currentStartDate, 
+        endDate: currentEndDate, 
+        categories: currentCategoriesCopy 
+      },
+      previous: {
+        locations: prevLocationsCopy,
+        startDate: prev.startDate,
+        endDate: prev.endDate,
+        categories: prevCategoriesCopy
+      }
     });
     
     return locationsChanged || startDateChanged || endDateChanged || categoriesChanged;
   }, []);
 
-  // UPDATED: Enhanced apply filters with Redux location handling
+  // UPDATED: Enhanced apply filters with Redux location handling - AUTO TRIGGER
   const triggerAutoFilter = useCallback(async () => {
     const currentLocations = selectedLocations;
     const currentStartDate = localStartDate;
@@ -637,7 +653,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       return;
     }
 
-    // Check if filters actually changed
+    // ✅ FIXED: Check if filters actually changed with proper array handling
     if (!hasFiltersChanged(currentLocations, currentStartDate, currentEndDate, currentCategories)) {
       console.log('⏭️ FilterSection: No filter changes detected - skipping auto-filter');
       return;
@@ -646,9 +662,9 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     setIsAutoFiltering(true);
 
     try {
-      // Update Redux state
+      // ✅ FIXED: Update Redux state with copied arrays
       dispatch(updateSalesFilters({ 
-        selectedCategories: currentCategories,
+        selectedCategories: [...currentCategories], // Create copy
         location: currentLocations[0] || '', // Use first selected location for backward compatibility
         dateRangeType: 'Custom Date Range',
         startDate: currentStartDate,
@@ -674,13 +690,13 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           });
         } else {
           // Use location values as-is (legacy mode)
-          locationNamesForApi = currentLocations;
+          locationNamesForApi = [...currentLocations]; // Create copy
         }
         
         await onApplyFiltersWithDates(
           currentStartDate || '', 
           currentEndDate || '', 
-          currentCategories.length > 0 ? currentCategories : [], 
+          [...currentCategories], // Create copy
           locationNamesForApi
         );
       } else {
@@ -715,7 +731,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         }, 100);
       }
 
-      // Update previous filters reference
+      // ✅ FIXED: Update previous filters reference with copies
       previousFiltersRef.current = {
         locations: [...currentLocations],
         startDate: currentStartDate,
@@ -850,14 +866,6 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           </Typography>
         </Alert>
       )}
-
-      {/* Auto-Filter Info */}
-      {/* <Alert severity="info" sx={{ mb: 3 }}>
-        <Typography variant="body2">
-          <strong>Auto-Filter Mode:</strong> Data will update automatically when you change any filter. 
-          Location is required, date range and dining options will use defaults if not specified.
-        </Typography>
-      </Alert> */}
 
       <Grid container spacing={2}>
         {/* Location filter - UPDATED to use Redux state */}
@@ -1000,7 +1008,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       </Box>
 
       {/* Debug Info - Show Redux state in development */}
-      {/* {process.env.NODE_ENV === 'development' && onReduxLocationChange && (
+      {process.env.NODE_ENV === 'development' && onReduxLocationChange && (
         <Alert severity="info" sx={{ mt: 2 }}>
           <Typography variant="body2">
             <strong>Debug - Redux Integration:</strong><br />
@@ -1009,10 +1017,11 @@ const FilterSection: React.FC<FilterSectionProps> = ({
             Display Location Names: [{displaySelectedLocations.join(', ')}]<br />
             Available Locations: [{displayLocations.join(', ')}]<br />
             Auto-Filtering: {isAutoFiltering ? 'Active' : 'Idle'}<br />
-            Initialized: {isInitialized ? 'Yes' : 'No'}
+            Initialized: {isInitialized ? 'Yes' : 'No'}<br />
+            Multiple Locations: {displaySelectedLocations.length > 1 ? 'Yes' : 'No'}
           </Typography>
         </Alert>
-      )} */}
+      )}
 
       {/* Date Range Picker Dialog */}
       <Dialog

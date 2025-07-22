@@ -350,151 +350,178 @@ export function ExcelImport() {
   };
 
   // MAIN FILTER FUNCTION - No file dependency
-  const handleApplyFiltersWithDates = (
-    explicitStartDate: string, 
-    explicitEndDate: string, 
-    categories: string[],
-    selectedFilterLocations: string[]
-  ) => {
-    console.log('🎯 Applying filters with Redux dates:', {
-      explicitStartDate,
-      explicitEndDate,
-      reduxStartDate: startDate,
-      reduxEndDate: endDate,
-      categories,
-      selectedFilterLocations,
-      activeCompanyId
+  // Fixed handleApplyFiltersWithDates function in ExcelImport.tsx
+// MAIN FILTER FUNCTION - Fixed to properly send multiple locations to backend
+const handleApplyFiltersWithDates = (
+  explicitStartDate: string, 
+  explicitEndDate: string, 
+  categories: string[],
+  selectedFilterLocations: string[] // This correctly receives array of location IDs or names
+) => {
+  console.log('🎯 Applying filters with Redux dates:', {
+    explicitStartDate,
+    explicitEndDate,
+    reduxStartDate: startDate,
+    reduxEndDate: endDate,
+    categories,
+    selectedFilterLocations, // ✅ This should be an array
+    activeCompanyId
+  });
+
+  // NEW: Store the date range in Redux for persistence
+  if (explicitStartDate && explicitEndDate) {
+    console.log('💾 Storing date range in Redux:', { explicitStartDate, explicitEndDate });
+    dispatch(setSalesSplitDashboardDateRange({
+      startDate: explicitStartDate,
+      endDate: explicitEndDate
+    }));
+  }
+
+  // Check if we have required data
+  if (!activeCompanyId) {
+    setLocalError('Please select a company first.');
+    return;
+  }
+
+  if (selectedFilterLocations.length === 0) {
+    setLocalError('Please select at least one location.');
+    return;
+  }
+
+  try {
+    console.log('🔄 Starting backend request');
+    setIsWaitingForBackendResponse(true);
+    setHasValidData(false);
+    
+    dispatch(setLoading(true));
+    dispatch(setError(null));
+    setLocalError('');
+    
+    // Format dates correctly for API
+    let formattedStartDate: string | null = null;
+    let formattedEndDate: string | null = null;
+    
+    if (explicitStartDate) {
+      const dateParts = explicitStartDate.split('/');
+      if (dateParts.length === 3) {
+        formattedStartDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
+      }
+    }
+    
+    if (explicitEndDate) {
+      const dateParts = explicitEndDate.split('/');
+      if (dateParts.length === 3) {
+        formattedEndDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
+      }
+    }
+
+    console.log('📅 Formatted dates for API:', {
+      original: { start: explicitStartDate, end: explicitEndDate },
+      formatted: { start: formattedStartDate, end: formattedEndDate }
     });
-
-    // NEW: Store the date range in Redux for persistence
-    if (explicitStartDate && explicitEndDate) {
-      console.log('💾 Storing date range in Redux:', { explicitStartDate, explicitEndDate });
-      dispatch(setSalesSplitDashboardDateRange({
-        startDate: explicitStartDate,
-        endDate: explicitEndDate
-      }));
-    }
-
-    // Check if we have required data
-    if (!activeCompanyId) {
-      setLocalError('Please select a company first.');
-      return;
-    }
-
-    if (selectedFilterLocations.length === 0) {
-      setLocalError('Please select at least one location.');
-      return;
-    }
-
-    try {
-      console.log('🔄 Starting backend request');
-      setIsWaitingForBackendResponse(true);
-      setHasValidData(false);
+    
+    // ✅ FIXED: Prepare filter data with MULTIPLE LOCATIONS SUPPORT
+    const filterData = {
+      // No fileName required for company-location API mode
+      startDate: formattedStartDate,
+      endDate: formattedEndDate,
       
-      dispatch(setLoading(true));
-      dispatch(setError(null));
-      setLocalError('');
+      // ✅ CRITICAL FIX: Send ALL selected locations as array
+      locations: selectedFilterLocations, // This is the key fix - send as array
       
-      // Format dates correctly for API
-      let formattedStartDate: string | null = null;
-      let formattedEndDate: string | null = null;
+      // Keep single location for backward compatibility (first selected location)
+      location: selectedFilterLocations[0] || null,
       
-      if (explicitStartDate) {
-        const dateParts = explicitStartDate.split('/');
-        if (dateParts.length === 3) {
-          formattedStartDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
-        }
-      }
+      dateRangeType: 'Custom Date Range',
+      selectedCategories: categories,
+      categories: categories.join(','),
+      company_id: activeCompanyId,
       
-      if (explicitEndDate) {
-        const dateParts = explicitEndDate.split('/');
-        if (dateParts.length === 3) {
-          formattedEndDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
-        }
-      }
-
-      console.log('📅 Formatted dates for API:', {
-        original: { start: explicitStartDate, end: explicitEndDate },
-        formatted: { start: formattedStartDate, end: formattedEndDate }
-      });
-      
-      // Prepare filter data - NO fileName required
-      const filterData = {
-        // REMOVED: fileName requirement
-        startDate: formattedStartDate,
-        endDate: formattedEndDate,
-        locations: selectedFilterLocations,
-        location: selectedFilterLocations[0] || null,
-        dateRangeType: 'Custom Date Range',
-        selectedCategories: categories,
-        categories: categories.join(','),
-        company_id: activeCompanyId,
-        multipleLocations: selectedFilterLocations.length > 1,
-      };
-      
-      console.log('📤 Sending filter request:', filterData);
-      
-      // Call filter API with authentication
-      apiClient.post('/api/salessplit/filter', filterData)
-        .then(response => {
-          console.log('📥 Received filter response:', response.data);
-          
-          if (response.data) {
-            dispatch(setTableData(response.data));
-            
-            setLocalError('');
-            setChartKey(prevKey => prevKey + 1);
-            
-            // Mark that we have valid data
-            setHasValidData(true);
-            setIsWaitingForBackendResponse(false);
-            
-            console.log('✅ Filter applied successfully');
-          } else {
-            throw new Error('Invalid response data');
-          }
-        })
-        .catch(err => {
-          console.error('❌ Filter error:', err);
-          
-          setIsWaitingForBackendResponse(false);
-          setHasValidData(false);
-          
-          let errorMessage = 'Error filtering data';
-          if (err.response) {
-            if (err.response.status === 401) {
-              errorMessage = 'Authentication failed. Please log in again.';
-              // Auth interceptor will handle redirect to login
-            } else {
-              const detail = err.response.data?.detail;
-              errorMessage = `Server error: ${detail || err.response.status}`;
-              
-              if (err.response.status === 404) {
-                errorMessage = 'API endpoint not found. Is the server running?';
-              }
-            }
-          } else if (err.request) {
-            errorMessage = 'No response from server. Please check if the backend is running.';
-          }
-          
-          setLocalError(errorMessage);
-          dispatch(setError(errorMessage));
-        })
-        .finally(() => {
-          dispatch(setLoading(false));
+      // ✅ NEW: Add metadata for backend to handle multiple locations properly
+      multipleLocations: selectedFilterLocations.length > 1,
+      locationCount: selectedFilterLocations.length,
+    };
+    
+    console.log('📤 Sending filter request with MULTIPLE LOCATIONS:', {
+      ...filterData,
+      locationsArray: selectedFilterLocations,
+      locationsCount: selectedFilterLocations.length
+    });
+    
+    // Call filter API with authentication
+    apiClient.post('/api/salessplit/filter', filterData)
+      .then(response => {
+        console.log('📥 Received filter response for multiple locations:', {
+          status: response.status,
+          dataKeys: Object.keys(response.data || {}),
+          locationsProcessed: selectedFilterLocations
         });
-      
-    } catch (err: any) {
-      console.error('Filter error:', err);
-      setIsWaitingForBackendResponse(false);
-      setHasValidData(false);
-      
-      const errorMessage = 'Error applying filters: ' + (err.message || 'Unknown error');
-      setLocalError(errorMessage);
-      dispatch(setError(errorMessage));
-      dispatch(setLoading(false));
-    }
-  };
+        
+        if (response.data) {
+          dispatch(setTableData(response.data));
+          
+          setLocalError('');
+          setChartKey(prevKey => prevKey + 1);
+          
+          // Mark that we have valid data
+          setHasValidData(true);
+          setIsWaitingForBackendResponse(false);
+          
+          console.log('✅ Filter applied successfully for multiple locations:', selectedFilterLocations);
+        } else {
+          throw new Error('Invalid response data');
+        }
+      })
+      .catch(err => {
+        console.error('❌ Filter error with multiple locations:', {
+          error: err,
+          locations: selectedFilterLocations,
+          requestData: filterData
+        });
+        
+        setIsWaitingForBackendResponse(false);
+        setHasValidData(false);
+        
+        let errorMessage = 'Error filtering data';
+        if (err.response) {
+          if (err.response.status === 401) {
+            errorMessage = 'Authentication failed. Please log in again.';
+            // Auth interceptor will handle redirect to login
+          } else {
+            const detail = err.response.data?.detail;
+            errorMessage = `Server error: ${detail || err.response.status}`;
+            
+            if (err.response.status === 404) {
+              errorMessage = 'API endpoint not found. Is the server running?';
+            }
+            
+            // ✅ NEW: Special handling for multiple location errors
+            if (detail && detail.includes('location')) {
+              errorMessage = `Location error: ${detail}. Locations sent: ${selectedFilterLocations.join(', ')}`;
+            }
+          }
+        } else if (err.request) {
+          errorMessage = 'No response from server. Please check if the backend is running.';
+        }
+        
+        setLocalError(errorMessage);
+        dispatch(setError(errorMessage));
+      })
+      .finally(() => {
+        dispatch(setLoading(false));
+      });
+    
+  } catch (err: any) {
+    console.error('Filter error:', err);
+    setIsWaitingForBackendResponse(false);
+    setHasValidData(false);
+    
+    const errorMessage = 'Error applying filters: ' + (err.message || 'Unknown error');
+    setLocalError(errorMessage);
+    dispatch(setError(errorMessage));
+    dispatch(setLoading(false));
+  }
+};
 
   // Legacy method for backward compatibility
   const handleApplyFilters = (location = selectedLocation, dateRange = dateRangeType) => {
