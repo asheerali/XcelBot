@@ -452,21 +452,30 @@ const AnalyticsDashboard = () => {
     dateRange: null,
   });
 
-  // FIXED: Enhanced analytics data fetching with proper date handling
-  const fetchAnalyticsData = async (companyId, locationId, dateRange = null) => {
+  // FIXED: Enhanced analytics data fetching with support for multiple companies and locations
+  const fetchAnalyticsData = async (companyIds, locationIds, dateRange = null) => {
     try {
       setAnalyticsLoading(true);
       setAnalyticsError(null);
 
       console.log('🔍 Fetching analytics data for:', { 
-        companyId, 
-        locationId, 
+        companyIds, 
+        locationIds, 
         dateRange,
         hasDateRange 
       });
 
-      // Build the API URL
-      let apiUrl = `${API_URL_Local}/api/storeorders/analyticsdashboard/${companyId}/${locationId}`;
+      // Validate inputs
+      if (!companyIds || !locationIds || companyIds.length === 0 || locationIds.length === 0) {
+        throw new Error('Company IDs and Location IDs are required');
+      }
+
+      // Convert arrays to comma-separated strings
+      const companyIdsStr = Array.isArray(companyIds) ? companyIds.join(',') : companyIds;
+      const locationIdsStr = Array.isArray(locationIds) ? locationIds.join(',') : locationIds;
+
+      // Build the API URL with multiple IDs
+      let apiUrl = `${API_URL_Local}/api/storeorders/analyticsdashboard/${companyIdsStr}/${locationIdsStr}`;
       
       // FIXED: Improved date range parameter handling
       const params = new URLSearchParams();
@@ -514,8 +523,10 @@ const AnalyticsDashboard = () => {
 
       console.log('🌐 Backend API Request:', {
         url: apiUrl,
-        company_id: companyId,
-        location_id: locationId,
+        company_ids: companyIdsStr,
+        location_ids: locationIdsStr,
+        company_count: Array.isArray(companyIds) ? companyIds.length : 1,
+        location_count: Array.isArray(locationIds) ? locationIds.length : 1,
         timestamp: new Date().toISOString()
       });
 
@@ -543,7 +554,9 @@ const AnalyticsDashboard = () => {
         dataReceived: !!result.data,
         totalSales: result.data?.total_sales,
         totalOrders: result.data?.total_orders,
-        recordCount: result.data?.daily_orders?.length || 0
+        recordCount: result.data?.daily_orders?.length || 0,
+        companiesProcessed: Array.isArray(companyIds) ? companyIds.length : 1,
+        locationsProcessed: Array.isArray(locationIds) ? locationIds.length : 1
       });
 
       if (result.data) {
@@ -555,8 +568,8 @@ const AnalyticsDashboard = () => {
     } catch (err) {
       console.error("❌ Error fetching analytics data:", {
         error: err.message,
-        companyId,
-        locationId,
+        companyIds,
+        locationIds,
         dateRange
       });
       setAnalyticsError(err.message);
@@ -566,7 +579,7 @@ const AnalyticsDashboard = () => {
     }
   };
 
-  // FIXED: Auto-apply filters when Redux state changes
+  // FIXED: Auto-apply filters when Redux state changes - Updated to use all selected IDs
   useEffect(() => {
     // Only apply filters if we have both companies and locations selected
     if (reduxSelectedCompanies.length > 0 && reduxSelectedLocations.length > 0) {
@@ -584,14 +597,14 @@ const AnalyticsDashboard = () => {
         dateRange: reduxDateRange
       });
 
-      // Fetch analytics data for the first selected company and location
-      const firstCompany = reduxSelectedCompanies[0];
-      const firstLocation = reduxSelectedLocations[0];
+      // FIXED: Fetch analytics data for ALL selected companies and locations
+      const companyIds = reduxSelectedCompanies.map(id => parseInt(id));
+      const locationIds = reduxSelectedLocations.map(id => parseInt(id));
       
-      if (firstCompany && firstLocation) {
+      if (companyIds.length > 0 && locationIds.length > 0) {
         // FIXED: Use Redux date range state properly
         const dateRangeToPass = hasDateRange ? reduxDateRange : null;
-        fetchAnalyticsData(parseInt(firstCompany), parseInt(firstLocation), dateRangeToPass);
+        fetchAnalyticsData(companyIds, locationIds, dateRangeToPass);
       }
     }
   }, [
@@ -645,7 +658,7 @@ const AnalyticsDashboard = () => {
     setSelectedLocationsLocal(reduxSelectedLocations.map(id => parseInt(id)));
   }, [reduxSelectedLocations.join(',')]);
 
-  // Auto-apply filters when component loads with Redux data
+  // Auto-apply filters when component loads with Redux data - Updated to use all selected IDs
   useEffect(() => {
     if (
       reduxSelectedCompanies.length > 0 &&
@@ -659,13 +672,13 @@ const AnalyticsDashboard = () => {
         dateRange: reduxDateRange,
       });
 
-      // Fetch analytics data for the first selected company and location
-      const firstCompany = reduxSelectedCompanies[0];
-      const firstLocation = reduxSelectedLocations[0];
+      // FIXED: Fetch analytics data for ALL selected companies and locations
+      const companyIds = reduxSelectedCompanies.map(id => parseInt(id));
+      const locationIds = reduxSelectedLocations.map(id => parseInt(id));
       
-      if (firstCompany && firstLocation) {
+      if (companyIds.length > 0 && locationIds.length > 0) {
         const dateRangeToPass = hasDateRange ? reduxDateRange : null;
-        fetchAnalyticsData(parseInt(firstCompany), parseInt(firstLocation), dateRangeToPass);
+        fetchAnalyticsData(companyIds, locationIds, dateRangeToPass);
       }
     }
   }, [companyLocationData.length]); // Only run when component data loads
@@ -769,18 +782,21 @@ const AnalyticsDashboard = () => {
     }
   };
 
-  // Handle refresh
+  // Handle refresh - Updated to use all selected IDs
   const handleRefresh = () => {
     console.log('🔄 Refreshing data...');
     fetchCompanyLocationData();
     
     // Also refresh analytics data if we have selections
     if (reduxSelectedCompanies.length > 0 && reduxSelectedLocations.length > 0) {
-      const firstCompany = reduxSelectedCompanies[0];
-      const firstLocation = reduxSelectedLocations[0];
-      console.log('🔄 Refreshing analytics data with current selections');
+      const companyIds = reduxSelectedCompanies.map(id => parseInt(id));
+      const locationIds = reduxSelectedLocations.map(id => parseInt(id));
+      console.log('🔄 Refreshing analytics data with current selections:', {
+        companyIds,
+        locationIds
+      });
       const dateRangeToPass = hasDateRange ? reduxDateRange : null;
-      fetchAnalyticsData(parseInt(firstCompany), parseInt(firstLocation), dateRangeToPass);
+      fetchAnalyticsData(companyIds, locationIds, dateRangeToPass);
     }
   };
 
@@ -873,38 +889,6 @@ const AnalyticsDashboard = () => {
           >
             Refresh
           </Button>
-          
-          {/* Debug Test Button - Development Only */}
-          {/* {process.env.NODE_ENV === 'development' && (
-            <Button
-              variant="outlined"
-              onClick={() => {
-                const testStartDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // 7 days ago
-                const testEndDate = new Date(); // today
-                
-                console.log('🧪 Testing direct Redux dispatch:', {
-                  startDate: testStartDate.toISOString(),
-                  endDate: testEndDate.toISOString()
-                });
-                
-                dispatch(setAnalyticsDashboardDateRange({
-                  startDate: testStartDate.toISOString(),
-                  endDate: testEndDate.toISOString()
-                }));
-              }}
-              sx={{
-                textTransform: "none",
-                borderRadius: 1,
-                px: 2,
-                py: 1,
-                borderColor: "#ff9800",
-                color: "#ff9800",
-                fontSize: '12px'
-              }}
-            >
-              Test Redux
-            </Button>
-          )} */}
           
           <DateRangeSelectorButton onDateRangeSelect={handleDateRangeSelect} />
         </Box>
@@ -1320,11 +1304,15 @@ const AnalyticsDashboard = () => {
               {reduxSelectedCompanies.length > 0 && reduxSelectedLocations.length > 0 && (
                 <Button 
                   variant="outlined" 
-                  onClick={() => fetchAnalyticsData(
-                    parseInt(reduxSelectedCompanies[0]), 
-                    parseInt(reduxSelectedLocations[0]), 
-                    hasDateRange ? reduxDateRange : null
-                  )}
+                  onClick={() => {
+                    const companyIds = reduxSelectedCompanies.map(id => parseInt(id));
+                    const locationIds = reduxSelectedLocations.map(id => parseInt(id));
+                    fetchAnalyticsData(
+                      companyIds, 
+                      locationIds, 
+                      hasDateRange ? reduxDateRange : null
+                    );
+                  }}
                   sx={{ mt: 2 }}
                 >
                   Retry
@@ -1344,19 +1332,38 @@ const AnalyticsDashboard = () => {
             <>
               {/* Analytics Data Display */}
               <Box sx={{ p: 3 }}>
-                {/* Header with company and location info */}
+                {/* Header with company and location info - Updated for multiple selections */}
                 <Box sx={{ mb: 4, borderBottom: '1px solid #e0e0e0', pb: 2 }}>
                   <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
                     Analytics Dashboard
                   </Typography>
                   <Typography variant="subtitle1" color="text.secondary">
-                    {analyticsData.company_name} - {analyticsData.location_name}
+                    {/* FIXED: Display information for multiple companies and locations */}
+                    {reduxSelectedCompanies.length === 1 && reduxSelectedLocations.length === 1 ? (
+                      // Single company and location - try to get names from analytics data or fallback to IDs
+                      `${analyticsData.company_name || getCompanyNameById(parseInt(reduxSelectedCompanies[0]))} - ${analyticsData.location_name || getLocationNameById(parseInt(reduxSelectedLocations[0]))}`
+                    ) : (
+                      // Multiple companies or locations
+                      `${reduxSelectedCompanies.length} Company(s) & ${reduxSelectedLocations.length} Location(s) Selected`
+                    )}
                     {hasDateRange && (
                       <span style={{ marginLeft: 16 }}>
                         ({new Date(reduxDateRange.startDate).toLocaleDateString()} - {new Date(reduxDateRange.endDate).toLocaleDateString()})
                       </span>
                     )}
                   </Typography>
+                  
+                  {/* Show detailed breakdown for multiple selections */}
+                  {(reduxSelectedCompanies.length > 1 || reduxSelectedLocations.length > 1) && (
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>Companies:</strong> {reduxSelectedCompanies.map(id => getCompanyNameById(parseInt(id))).join(', ')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>Locations:</strong> {reduxSelectedLocations.map(id => getLocationNameById(parseInt(id))).join(', ')}
+                      </Typography>
+                    </Box>
+                  )}
                 </Box>
 
                 {/* Key Metrics Cards */}
