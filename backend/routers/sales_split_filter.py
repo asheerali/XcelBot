@@ -17,6 +17,9 @@ from financials_dashboard.financials_processor import process_financials_file
 from sales_split_dashboard.sales_split_prcoessor import process_sales_split_file as process_sales_split_data  # Changed to process_sales_split_data
 from models.sales_pmix import SalesPMix  # Import the SQLAlchemy model
 from database import get_db
+from schemas import users as user_schema
+from dependencies.auth import get_current_user
+
 
 # Directory to save uploaded files
 UPLOAD_DIR = "./uploads"
@@ -31,7 +34,9 @@ router = APIRouter(
 @router.post("/salessplit/filter", response_model=DashboardResponse)
 async def filter_excel_data(
     request: SalesSplitPmixUploadRequest = Body(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: user_schema.User = Depends(get_current_user)
+
 ):
     """
     Endpoint to filter previously processed Excel data by date range and location from database.

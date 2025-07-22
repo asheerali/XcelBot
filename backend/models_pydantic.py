@@ -17,13 +17,14 @@ class ExcelUploadRequest(BaseModel):
     category: Optional[str] = None  # Optional sales category filter
 
 class SalesSplitPmixUploadRequest(BaseModel):
-    fileName: str
-    company_id: Optional[int] = None  # Optional company ID filter
+    fileName: Optional[str] = None
+    # company id int or str  and optional
+    company_id: Optional[Union[int, str]] = None
     dashboard: Optional[str] = None
     dashboardName: Optional[str] = None
     startDate: Optional[str] = None
     endDate: Optional[str] = None
-    location: Optional[Union[str, List[str]]] = None
+    location: Optional[Union[int, List[int] ,str, List[str]]] = None
     locations: Optional[List[str]] = None
     servers: Optional[Union[str, List[str]]] = None
     server: Optional[Union[str, List[str]]] = None
