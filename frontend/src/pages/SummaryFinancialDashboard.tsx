@@ -163,123 +163,131 @@ const SummaryFinancialDashboard = () => {
   ]);
 
   // UPDATED: Fetch financial data function using Redux state with improved date handling
-  const fetchFinancialDataFromRedux = async () => {
-    const companies =
-      selectedCompanies.length > 0
-        ? selectedCompanies
-        : lastAppliedFilters.companies;
-    const locations =
-      selectedLocations.length > 0
-        ? selectedLocations
-        : lastAppliedFilters.locations;
+  // UPDATED: Fetch financial data function using Redux state with improved date handling
+// UPDATED: Fetch financial data function using Redux state with improved date handling
+const fetchFinancialDataFromRedux = async () => {
+  const companies =
+    selectedCompanies.length > 0
+      ? selectedCompanies
+      : lastAppliedFilters.companies;
+  const locations =
+    selectedLocations.length > 0
+      ? selectedLocations
+      : lastAppliedFilters.locations;
 
-    // Only fetch if we have both company and location selected
-    if (companies.length > 0 && locations.length > 0) {
-      try {
-        setFinancialDataLoading(true);
-        const companyId = companies[0]; // Use first selected company
-        const locationId = locations[0]; // Use first selected location
+  // Only fetch if we have both company and location selected
+  if (companies.length > 0 && locations.length > 0) {
+    try {
+      setFinancialDataLoading(true);
+      
+      // FIXED: Handle multiple companies and locations by joining them with commas
+      const companyIds = companies.join(','); // Join multiple company IDs with commas
+      const locationIds = locations.join(','); // Join multiple location IDs with commas
 
-        console.log(
-          "Fetching financial data for company:",
-          companyId,
-          "location:",
-          locationId
-        );
+      console.log(
+        "Fetching financial data for companies:",
+        companyIds,
+        "locations:",
+        locationIds
+      );
 
-        // UPDATED: Build URL with date range parameters - use Redux date range if available, otherwise local state
-        let financialUrl = `${API_URL_Local}/api/storeorders/financialsummary/${companyId}/${locationId}`;
-        let companySummaryUrl = `${API_URL_Local}/api/storeorders/companysummary/${companyId}`;
+      // UPDATED: Build URL with comma-separated IDs for multiple selection support
+      let financialUrl = `${API_URL_Local}/api/storeorders/financialsummary/${companyIds}/${locationIds}`;
+      let companySummaryUrl = `${API_URL_Local}/api/storeorders/companysummary/${companyIds}`;
 
-        // NEW: Determine which date range to use - prioritize Redux, then local state
-        let finalStartDate = "";
-        let finalEndDate = "";
+      // NEW: Determine which date range to use - prioritize Redux, then local state
+      let finalStartDate = "";
+      let finalEndDate = "";
 
-        if (hasReduxDateRange && reduxDateRange.startDate && reduxDateRange.endDate) {
-          // Use Redux date range (already in YYYY-MM-DD format)
-          finalStartDate = reduxDateRange.startDate;
-          finalEndDate = reduxDateRange.endDate;
-          console.log('💰 Using Redux date range for API calls:', { finalStartDate, finalEndDate });
-        } else if (selectedDateRange.startDateStr && selectedDateRange.endDateStr) {
-          // Use local state date range
-          finalStartDate = selectedDateRange.startDateStr;
-          finalEndDate = selectedDateRange.endDateStr;
-          console.log('📅 Using local date range for API calls:', { finalStartDate, finalEndDate });
-        }
-
-        // Add date range parameters if available
-        if (finalStartDate && finalEndDate) {
-          const dateParams = `?start_date=${finalStartDate}&end_date=${finalEndDate}`;
-          financialUrl += dateParams;
-          companySummaryUrl += dateParams;
-          
-          console.log('🚀 API CALLS WITH DATE RANGE:', {
-            message: 'Date range parameters being sent to backend',
-            startDate: finalStartDate,
-            endDate: finalEndDate,
-            dateParams: dateParams,
-            financialApiUrl: financialUrl,
-            companySummaryApiUrl: companySummaryUrl,
-            companyId: companyId,
-            locationId: locationId
-          });
-        } else {
-          console.log('🚀 API CALLS WITHOUT DATE RANGE:', {
-            message: 'No date range selected - calling APIs without date parameters',
-            financialApiUrl: financialUrl,
-            companySummaryApiUrl: companySummaryUrl,
-            companyId: companyId,
-            locationId: locationId
-          });
-        }
-
-        console.log("💰 FINAL API ENDPOINTS:");
-        console.log("📊 Financial URL:", financialUrl);
-        console.log("🏢 Company Summary URL:", companySummaryUrl);
-
-        // Fetch financial summary data
-        const financialResponse = await fetch(financialUrl);
-
-        if (!financialResponse.ok) {
-          throw new Error(`HTTP error! status: ${financialResponse.status}`);
-        }
-
-        const financialData = await financialResponse.json();
-        console.log("Financial API Response:", financialData);
-        setFinancialData(financialData);
-
-        // Fetch company summary data for store breakdown and daily data
-        const companySummaryResponse = await fetch(companySummaryUrl);
-
-        if (!companySummaryResponse.ok) {
-          throw new Error(
-            `HTTP error! status: ${companySummaryResponse.status}`
-          );
-        }
-
-        const companySummaryData = await companySummaryResponse.json();
-        console.log("Company Summary API Response:", companySummaryData);
-        setCompanySummaryData(companySummaryData);
-
-        setError(null);
-      } catch (err) {
-        setError(`Failed to fetch financial data: ${err.message}`);
-        console.error("Error fetching financial data:", err);
-      } finally {
-        setFinancialDataLoading(false);
+      if (hasReduxDateRange && reduxDateRange.startDate && reduxDateRange.endDate) {
+        // Use Redux date range (already in YYYY-MM-DD format)
+        finalStartDate = reduxDateRange.startDate;
+        finalEndDate = reduxDateRange.endDate;
+        console.log('💰 Using Redux date range for API calls:', { finalStartDate, finalEndDate });
+      } else if (selectedDateRange.startDateStr && selectedDateRange.endDateStr) {
+        // Use local state date range
+        finalStartDate = selectedDateRange.startDateStr;
+        finalEndDate = selectedDateRange.endDateStr;
+        console.log('📅 Using local date range for API calls:', { finalStartDate, finalEndDate });
       }
-    } else {
-      // Show message if no filters selected
-      if (companies.length === 0 || locations.length === 0) {
-        setError(
-          "Please select both a company and location to view financial data"
+
+      // Add date range parameters if available
+      if (finalStartDate && finalEndDate) {
+        const dateParams = `?start_date=${finalStartDate}&end_date=${finalEndDate}`;
+        financialUrl += dateParams;
+        companySummaryUrl += dateParams;
+        
+        console.log('🚀 API CALLS WITH DATE RANGE AND MULTIPLE LOCATIONS:', {
+          message: 'Date range parameters being sent to backend with multiple locations',
+          startDate: finalStartDate,
+          endDate: finalEndDate,
+          dateParams: dateParams,
+          financialApiUrl: financialUrl,
+          companySummaryApiUrl: companySummaryUrl,
+          companyIds: companyIds,
+          locationIds: locationIds,
+          numberOfCompanies: companies.length,
+          numberOfLocations: locations.length
+        });
+      } else {
+        console.log('🚀 API CALLS WITHOUT DATE RANGE BUT WITH MULTIPLE LOCATIONS:', {
+          message: 'No date range selected - calling APIs without date parameters but with multiple locations',
+          financialApiUrl: financialUrl,
+          companySummaryApiUrl: companySummaryUrl,
+          companyIds: companyIds,
+          locationIds: locationIds,
+          numberOfCompanies: companies.length,
+          numberOfLocations: locations.length
+        });
+      }
+
+      console.log("💰 FINAL API ENDPOINTS WITH MULTIPLE LOCATIONS:");
+      console.log("📊 Financial URL:", financialUrl);
+      console.log("🏢 Company Summary URL:", companySummaryUrl);
+
+      // Fetch financial summary data
+      const financialResponse = await fetch(financialUrl);
+
+      if (!financialResponse.ok) {
+        throw new Error(`HTTP error! status: ${financialResponse.status}`);
+      }
+
+      const financialData = await financialResponse.json();
+      console.log("Financial API Response:", financialData);
+      setFinancialData(financialData);
+
+      // Fetch company summary data for store breakdown and daily data
+      const companySummaryResponse = await fetch(companySummaryUrl);
+
+      if (!companySummaryResponse.ok) {
+        throw new Error(
+          `HTTP error! status: ${companySummaryResponse.status}`
         );
       }
-      setFinancialData(null);
-      setCompanySummaryData(null);
+
+      const companySummaryData = await companySummaryResponse.json();
+      console.log("Company Summary API Response:", companySummaryData);
+      setCompanySummaryData(companySummaryData);
+
+      setError(null);
+    } catch (err) {
+      setError(`Failed to fetch financial data: ${err.message}`);
+      console.error("Error fetching financial data:", err);
+    } finally {
       setFinancialDataLoading(false);
     }
-  };
+  } else {
+    // Show message if no filters selected
+    if (companies.length === 0 || locations.length === 0) {
+      setError(
+        "Please select both a company and location to view financial data"
+      );
+    }
+    setFinancialData(null);
+    setCompanySummaryData(null);
+    setFinancialDataLoading(false);
+  }
+};
 
   // Legacy function for backward compatibility
   const fetchFinancialData = async () => {
