@@ -303,8 +303,16 @@ def get_masterfile_details(
     masterfile = masterfile_crud.get_masterfile_by_company_and_location(db, company_id, location_id)
     print("i am here in masterfile printing the masterfile", masterfile)
     
+    # if not masterfile:
+    #     return {"message": "Masterfile not found", "data": []}
+    
     if not masterfile:
-        return {"message": "Masterfile not found", "data": []}
+        return {
+            "message": "Masterfile not found",
+            "data": {
+                "dataframe": []
+            }
+        }
     
     # Process and merge data from all files
     merged_data = []

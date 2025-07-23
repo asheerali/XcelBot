@@ -1372,7 +1372,7 @@ def get_analytics_dashboard(
         # Build rows with date and order_sales
         rows = []
         for order in storeorders:
-            print("i am here in the store orders printing the _items_ordered_", order)
+            # print("i am here in the store orders printing the _items_ordered_", order)
             the_date = order.updated_at if order.updated_at else order.created_at
             created_date = the_date
             total_amount = 0.0
