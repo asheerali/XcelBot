@@ -20,6 +20,9 @@ const initialState = {
   // NEW: Add SalesSplitDashboard date range (for ExcelImport component)
   SalesSplitDashboardStart: null,
   SalesSplitDashboardEnd: null,
+  // NEW: Add Financials date range
+  FinancialsStart: null,
+  FinancialsEnd: null,
 };
 
 // Helper function to format date as YYYY-MM-DD (date only, no time) in LOCAL timezone
@@ -469,6 +472,71 @@ const dateRangeSlice = createSlice({
       state.SalesSplitDashboardEnd = null;
     },
 
+    // NEW: Financials Date Range Actions
+    setFinancialsDateRange: (state, action) => {
+      const { startDate, endDate } = action.payload;
+      console.log('💼 Redux BEFORE: setFinancialsDateRange called with:', { 
+        startDate, 
+        endDate,
+        startType: typeof startDate,
+        endType: typeof endDate 
+      });
+      
+      // Format dates to date-only strings (YYYY-MM-DD)
+      const formattedStartDate = formatDateOnly(startDate);
+      const formattedEndDate = formatDateOnly(endDate);
+      
+      console.log('💼 Redux AFTER formatting:', {
+        formattedStartDate,
+        formattedEndDate,
+        formattedStartType: typeof formattedStartDate,
+        formattedEndType: typeof formattedEndDate
+      });
+      
+      if (formattedStartDate && formattedEndDate) {
+        state.FinancialsStart = formattedStartDate;
+        state.FinancialsEnd = formattedEndDate;
+        
+        console.log('✅ Redux: Financials date range stored successfully:', {
+          storedStart: state.FinancialsStart,
+          storedEnd: state.FinancialsEnd,
+          stateAfterUpdate: {
+            FinancialsStart: state.FinancialsStart,
+            FinancialsEnd: state.FinancialsEnd
+          }
+        });
+      } else {
+        console.error('❌ Redux: Invalid dates provided for Financials, not storing:', { 
+          originalStart: startDate, 
+          originalEnd: endDate,
+          formattedStart: formattedStartDate,
+          formattedEnd: formattedEndDate
+        });
+      }
+    },
+    
+    setFinancialsStartDate: (state, action) => {
+      const formattedDate = formatDateOnly(action.payload);
+      if (formattedDate) {
+        state.FinancialsStart = formattedDate;
+        console.log('✅ Redux: Financials start date set:', formattedDate);
+      }
+    },
+    
+    setFinancialsEndDate: (state, action) => {
+      const formattedDate = formatDateOnly(action.payload);
+      if (formattedDate) {
+        state.FinancialsEnd = formattedDate;
+        console.log('✅ Redux: Financials end date set:', formattedDate);
+      }
+    },
+    
+    clearFinancialsDateRange: (state) => {
+      console.log('🧹 Redux: Clearing Financials date range');
+      state.FinancialsStart = null;
+      state.FinancialsEnd = null;
+    },
+
     // Clear all date ranges
     clearAllDateRanges: (state) => {
       state.AnalyticsDashboardStart = null;
@@ -485,6 +553,8 @@ const dateRangeSlice = createSlice({
       state.OrderIQDashboardEnd = null;
       state.SalesSplitDashboardStart = null;
       state.SalesSplitDashboardEnd = null;
+      state.FinancialsStart = null;
+      state.FinancialsEnd = null;
     },
   },
 });
@@ -527,11 +597,17 @@ export const {
   setOrderIQDashboardEndDate,
   clearOrderIQDashboardDateRange,
   
-  // NEW: Sales Split Dashboard actions
+  // Sales Split Dashboard actions
   setSalesSplitDashboardDateRange,
   setSalesSplitDashboardStartDate,
   setSalesSplitDashboardEndDate,
   clearSalesSplitDashboardDateRange,
+  
+  // NEW: Financials actions
+  setFinancialsDateRange,
+  setFinancialsStartDate,
+  setFinancialsEndDate,
+  clearFinancialsDateRange,
   
   // Clear all
   clearAllDateRanges,
@@ -788,7 +864,7 @@ export const selectHasOrderIQDashboardDateRange = (state) => {
   return hasRange;
 };
 
-// NEW: Sales Split Dashboard Selectors with safe fallbacks
+// Sales Split Dashboard Selectors with safe fallbacks
 export const selectSalesSplitDashboardStartDate = (state) => {
   const value = state.dateRange?.SalesSplitDashboardStart;
   console.log('🔍 selectSalesSplitDashboardStartDate:', { value, type: typeof value });
@@ -835,6 +911,53 @@ export const selectHasSalesSplitDashboardDateRange = (state) => {
   return hasRange;
 };
 
+// NEW: Financials Selectors with safe fallbacks
+export const selectFinancialsStartDate = (state) => {
+  const value = state.dateRange?.FinancialsStart;
+  console.log('🔍 selectFinancialsStartDate:', { value, type: typeof value });
+  return value;
+};
+
+export const selectFinancialsEndDate = (state) => {
+  const value = state.dateRange?.FinancialsEnd;
+  console.log('🔍 selectFinancialsEndDate:', { value, type: typeof value });
+  return value;
+};
+
+export const selectFinancialsDateRange = (state) => {
+  const startDate = state.dateRange?.FinancialsStart;
+  const endDate = state.dateRange?.FinancialsEnd;
+  
+  console.log('🔍 selectFinancialsDateRange raw state:', {
+    rawState: state.dateRange,
+    startDate,
+    endDate,
+    startType: typeof startDate,
+    endType: typeof endDate
+  });
+  
+  return {
+    startDate: startDate,
+    endDate: endDate,
+  };
+};
+
+export const selectHasFinancialsDateRange = (state) => {
+  const startDate = state.dateRange?.FinancialsStart;
+  const endDate = state.dateRange?.FinancialsEnd;
+  const hasRange = startDate !== null && endDate !== null;
+  
+  console.log('🔍 selectHasFinancialsDateRange:', {
+    startDate,
+    endDate,
+    hasRange,
+    startIsNull: startDate === null,
+    endIsNull: endDate === null
+  });
+  
+  return hasRange;
+};
+
 // Combined selectors for convenience
 export const selectAllDateRanges = (state) => ({
   analyticsDashboard: {
@@ -865,6 +988,10 @@ export const selectAllDateRanges = (state) => ({
     startDate: state.dateRange?.SalesSplitDashboardStart || null,
     endDate: state.dateRange?.SalesSplitDashboardEnd || null,
   },
+  financials: {
+    startDate: state.dateRange?.FinancialsStart || null,
+    endDate: state.dateRange?.FinancialsEnd || null,
+  },
 });
 
 export const selectHasAnyDateRange = (state) => 
@@ -874,7 +1001,8 @@ export const selectHasAnyDateRange = (state) =>
   selectHasSummaryFinancialDashboardDateRange(state) ||
   selectHasStoreSummaryProductionDateRange(state) ||
   selectHasOrderIQDashboardDateRange(state) ||
-  selectHasSalesSplitDashboardDateRange(state);
+  selectHasSalesSplitDashboardDateRange(state) ||
+  selectHasFinancialsDateRange(state);
 
 // Export reducer
 export default dateRangeSlice.reducer;
