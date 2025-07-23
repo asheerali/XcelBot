@@ -24,6 +24,7 @@ from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
+
 class OrderItemsRequest(BaseModel):
     company_id: Optional[int] = None
     location_id: Optional[int] = None
@@ -1083,20 +1084,151 @@ def get_avg_daily_orders(
 
 
 
-@router.get("/analyticsdashboard/{company_id}/{location_id}")
+# @router.get("/analyticsdashboard/{company_id}/{location_id}")
+# def get_analytics_dashboard(
+#     company_id: int, 
+#     location_id: int, 
+#     start_date: str = Query(None),
+#     end_date: str = Query(None),
+#     db: Session = Depends(get_db)
+# ):
+#     """Get total sales, total orders, average order value, and daily analytics tables"""
+#     print(f"Fetching analytics dashboard for company {company_id} and location {location_id} with date range {start_date} to {end_date}")
+#     try:
+#         storeorders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
+
+#                # Apply date filtering if start_date and end_date are provided
+#         if start_date and end_date:
+#             try:
+#                 start = datetime.strptime(start_date, "%Y-%m-%d").date()
+#                 end = datetime.strptime(end_date, "%Y-%m-%d").date()
+#                 print("Filtering store orders between dates:", start, end)
+#                 storeorders = [
+#                     order for order in storeorders
+#                     if (order.updated_at or order.created_at)
+#                     and start <= (order.updated_at or order.created_at).date() <= end
+#                 ]
+#             except ValueError:
+#                 return {"message": "Invalid date format. Use YYYY-MM-DD", "data": []}
+        
+        
+#         if not storeorders:
+#             return {
+#                 "message": "No store orders found for this company and location", 
+#                 "data": {
+#                     "total_sales": 0,
+#                     "total_orders": 0,
+#                     "avg_order_value": 0.0,
+#                     "daily_orders": [],
+#                     "avg_order_value_table": [],
+#                     "daily_sales_trend": []
+#                 }
+#             }
+
+#         if not isinstance(storeorders, list):
+#             storeorders = [storeorders] if storeorders else []
+
+#         total_orders = len(storeorders)
+#         total_sales = 0.0
+
+#         # Build rows with date and order_sales
+#         rows = []
+#         for order in storeorders:
+#             created_date = order.created_at.date()
+#             order_sales = 0.0
+#             if order.items_ordered and "items" in order.items_ordered:
+#                 for item in order.items_ordered["items"]:
+#                     total_price = item.get("total_price", 0)
+#                     order_sales += float(total_price)
+#             total_sales += order_sales
+#             rows.append({"created_at": created_date, "order_sales": order_sales})
+
+#         avg_order_value = round(total_sales / total_orders, 2) if total_orders > 0 else 0.0
+
+#         df = pd.DataFrame(rows)
+#         df["created_at"] = pd.to_datetime(df["created_at"])
+
+#         # Daily Orders
+#         daily_counts = df.groupby(df["created_at"].dt.date).size().reset_index(name="order_count")
+#         daily_counts["created_at"] = pd.to_datetime(daily_counts["created_at"])
+#         daily_counts = daily_counts.sort_values(by="created_at")
+#         daily_counts["moving_avg"] = daily_counts["order_count"].rolling(window=5, min_periods=1).mean().round(2)
+
+#         # Daily Sales and Avg Order Value
+#         daily_sales = df.groupby(df["created_at"].dt.date).agg(
+#             total_sales_per_day=("order_sales", "sum"),
+#             order_count=("order_sales", "count")
+#         ).reset_index()
+#         daily_sales["created_at"] = pd.to_datetime(daily_sales["created_at"])
+#         daily_sales["avg_order_value"] = (daily_sales["total_sales_per_day"] / daily_sales["order_count"]).round(2)
+#         daily_sales = daily_sales.sort_values(by="created_at")
+#         daily_sales["moving_avg"] = daily_sales["avg_order_value"].rolling(window=5, min_periods=1).mean().round(2)
+
+#         # Daily Sales Trend (new)
+#         daily_sales_trend_df = daily_sales[["created_at", "total_sales_per_day"]].copy()
+#         daily_sales_trend_df = daily_sales_trend_df.sort_values(by="created_at")
+#         daily_sales_trend_df["moving_avg"] = daily_sales_trend_df["total_sales_per_day"].rolling(window=5, min_periods=1).mean().round(2)
+
+#         # Format dates
+#         if platform.system() == "Windows":
+#             date_format = "%b %#d"
+#         else:
+#             date_format = "%b %-d"
+
+#         daily_counts = daily_counts.rename(columns={"created_at": "date"})
+#         daily_counts["date"] = daily_counts["date"].dt.strftime(date_format)
+
+#         daily_sales = daily_sales.rename(columns={"created_at": "date"})
+#         daily_sales["date"] = daily_sales["date"].dt.strftime(date_format)
+
+#         daily_sales_trend_df = daily_sales_trend_df.rename(columns={"created_at": "date", "total_sales_per_day": "total_sales"})
+#         daily_sales_trend_df["date"] = daily_sales_trend_df["date"].dt.strftime(date_format)
+
+#         # Company and Location Info
+#         company = db.query(Company).filter(Company.id == company_id).first()
+#         location = db.query(Store).filter(Store.id == location_id).first()
+
+#         return {
+#             "message": "Analytics dashboard data fetched successfully",
+#             "data": {
+#                 "company_name": company.name if company else "Unknown",
+#                 "location_name": location.name if location else "Unknown",
+#                 "total_sales": total_sales,
+#                 "total_orders": total_orders,
+#                 "avg_order_value": avg_order_value,
+#                 "daily_orders": daily_counts.to_dict(orient="records"),
+#                 "avg_order_value_table": daily_sales.to_dict(orient="records"),
+#                 "daily_sales_trend": daily_sales_trend_df.to_dict(orient="records")
+#             }
+#         }
+
+#     except Exception as e:
+#         print(f"Error fetching analytics dashboard data: {str(e)}")
+#         import traceback
+#         print(traceback.format_exc())
+#         raise HTTPException(status_code=500, detail=f"Error fetching analytics dashboard data: {str(e)}")
+
+
+@router.get("/analyticsdashboard/{company_id}/{location_ids}")
 def get_analytics_dashboard(
     company_id: int, 
-    location_id: int, 
+    location_ids: str,  # it will be like "2,3,5"
     start_date: str = Query(None),
     end_date: str = Query(None),
     db: Session = Depends(get_db)
 ):
     """Get total sales, total orders, average order value, and daily analytics tables"""
-    print(f"Fetching analytics dashboard for company {company_id} and location {location_id} with date range {start_date} to {end_date}")
-    try:
-        storeorders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
+    location_id_list = [int(i) for i in location_ids.split(",") if i.strip().isdigit()]
+    print(f"Fetching analytics dashboard for company {company_id} and locations {location_id_list} with date range {start_date} to {end_date}")
 
-               # Apply date filtering if start_date and end_date are provided
+    try:
+        # 1. Get all storeorders for all location_ids
+        storeorders = []
+        for loc_id in location_id_list:
+            orders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, loc_id)
+            storeorders.extend(orders or [])
+
+        # 2. Date filtering
         if start_date and end_date:
             try:
                 start = datetime.strptime(start_date, "%Y-%m-%d").date()
@@ -1109,11 +1241,10 @@ def get_analytics_dashboard(
                 ]
             except ValueError:
                 return {"message": "Invalid date format. Use YYYY-MM-DD", "data": []}
-        
-        
+
         if not storeorders:
             return {
-                "message": "No store orders found for this company and location", 
+                "message": "No store orders found for this company and locations", 
                 "data": {
                     "total_sales": 0,
                     "total_orders": 0,
@@ -1124,13 +1255,9 @@ def get_analytics_dashboard(
                 }
             }
 
-        if not isinstance(storeorders, list):
-            storeorders = [storeorders] if storeorders else []
-
         total_orders = len(storeorders)
         total_sales = 0.0
 
-        # Build rows with date and order_sales
         rows = []
         for order in storeorders:
             created_date = order.created_at.date()
@@ -1163,12 +1290,12 @@ def get_analytics_dashboard(
         daily_sales = daily_sales.sort_values(by="created_at")
         daily_sales["moving_avg"] = daily_sales["avg_order_value"].rolling(window=5, min_periods=1).mean().round(2)
 
-        # Daily Sales Trend (new)
+        # Daily Sales Trend
         daily_sales_trend_df = daily_sales[["created_at", "total_sales_per_day"]].copy()
         daily_sales_trend_df = daily_sales_trend_df.sort_values(by="created_at")
         daily_sales_trend_df["moving_avg"] = daily_sales_trend_df["total_sales_per_day"].rolling(window=5, min_periods=1).mean().round(2)
 
-        # Format dates
+        # Format dates for plotting
         if platform.system() == "Windows":
             date_format = "%b %#d"
         else:
@@ -1183,15 +1310,13 @@ def get_analytics_dashboard(
         daily_sales_trend_df = daily_sales_trend_df.rename(columns={"created_at": "date", "total_sales_per_day": "total_sales"})
         daily_sales_trend_df["date"] = daily_sales_trend_df["date"].dt.strftime(date_format)
 
-        # Company and Location Info
         company = db.query(Company).filter(Company.id == company_id).first()
-        location = db.query(Store).filter(Store.id == location_id).first()
 
         return {
             "message": "Analytics dashboard data fetched successfully",
             "data": {
                 "company_name": company.name if company else "Unknown",
-                "location_name": location.name if location else "Unknown",
+                "location_ids": location_ids,
                 "total_sales": total_sales,
                 "total_orders": total_orders,
                 "avg_order_value": avg_order_value,
@@ -1206,7 +1331,6 @@ def get_analytics_dashboard(
         import traceback
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error fetching analytics dashboard data: {str(e)}")
-
 
 
 @router.get("/allordersinvoices/{company_id}/{location_id}")
