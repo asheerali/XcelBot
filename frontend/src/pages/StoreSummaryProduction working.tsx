@@ -329,6 +329,7 @@ const DateRangeSelectorButton = ({ onDateRangeSelect, currentRange }) => {
     </>
   );
 };
+
 const StoreSummaryProduction = () => {
   const dispatch = useAppDispatch();
   
@@ -450,8 +451,8 @@ const StoreSummaryProduction = () => {
           
           // Only fetch orders if we have both company and location
           if (shouldFetchOrders) {
-            // FIXED: Pass entire locations array instead of just first location
-            fetchPromises.push(fetchOrdersData(companyId, locations));
+            const locationId = locations[0];
+            fetchPromises.push(fetchOrdersData(companyId, locationId));
           } else {
             // Clear orders data if no location selected
             setOrdersData([]);
@@ -541,44 +542,13 @@ const StoreSummaryProduction = () => {
     }
   };
 
-  // NEW: Helper function to get multiple location names
-  const getMultipleLocationNames = (companyId: string, locationIds: string[]) => {
-    if (!companyId || !locationIds || locationIds.length === 0 || !companiesData || companiesData.length === 0) {
-      return 'No locations selected';
-    }
-    
-    if (locationIds.length === 1) {
-      return getLocationName(companyId, locationIds[0]);
-    }
-    
-    try {
-      const company = companiesData.find(c => c && c.company_id && c.company_id.toString() === companyId);
-      const locationNames = locationIds
-        .map(locationId => {
-          const location = company?.locations?.find(l => l && l.location_id && l.location_id.toString() === locationId);
-          return location?.location_name || `Location ${locationId}`;
-        })
-        .filter(Boolean);
-      
-      if (locationNames.length <= 2) {
-        return locationNames.join(' & ');
-      } else {
-        return `${locationNames[0]} & ${locationNames.length - 1} others`;
-      }
-    } catch (error) {
-      console.error('Error getting multiple location names:', error);
-      return `${locationIds.length} locations selected`;
-    }
-  };
-
-  // UPDATED: Fetch orders data with multiple locations support and URL logging
-  const fetchOrdersData = async (companyId: string, locationIds: string[]) => {
+  // UPDATED: Fetch orders data with date range support and URL logging
+  const fetchOrdersData = async (companyId: string, locationId: string) => {
     try {
       setLocalError(null);
       
-      // Build URL with multiple location IDs
-      const locationIdsStr = locationIds.join(',');
-      let url = `${API_URL_Local}/api/storeorders/allordersinvoices/${companyId}/${locationIdsStr}`;
+      // Build URL with date range parameters if available
+      let url = `${API_URL_Local}/api/storeorders/allordersinvoices/${companyId}/${locationId}`;
       const urlParams = new URLSearchParams();
       
       if (selectedDateRange) {
@@ -595,8 +565,7 @@ const StoreSummaryProduction = () => {
       console.log('📤 Fetching Orders Data - URL:', url);
       console.log('📤 Orders API Call Details:', {
         companyId,
-        locationIds, // Now shows array of location IDs
-        locationCount: locationIds.length,
+        locationId,
         dateRange: selectedDateRange ? {
           startDate: formatDateForAPI(selectedDateRange.startDate),
           endDate: formatDateForAPI(selectedDateRange.endDate)
@@ -617,7 +586,6 @@ const StoreSummaryProduction = () => {
       console.log('✅ Orders data fetched successfully:', {
         count: result.data.length,
         total: result.total,
-        locationCount: locationIds.length,
         dateFiltered: !!selectedDateRange,
         url: url
       });
@@ -684,6 +652,7 @@ const StoreSummaryProduction = () => {
       setConsolidatedColumns([]);
     }
   };
+
   // Email Scheduler functions - UPDATED to include company ID
   const fetchScheduledEmails = async () => {
     if (selectedCompanies.length === 0) {
@@ -1015,12 +984,13 @@ const StoreSummaryProduction = () => {
     try {
       setLocalError(null);
 
-      // For now, we'll use the first selected company and all selected locations
+      // For now, we'll use the first selected company and location
       const companyId = selectedCompanies[0];
+      const locationId = selectedLocations[0];
 
       // Fetch both orders and consolidated data
       await Promise.all([
-        fetchOrdersData(companyId, selectedLocations), // FIXED: Pass entire array
+        fetchOrdersData(companyId, locationId),
         fetchConsolidatedData(companyId)
       ]);
 
@@ -1122,10 +1092,9 @@ const StoreSummaryProduction = () => {
       : 'All time';
 
     const companyName = selectedCompanies.length > 0 ? getCompanyName(selectedCompanies[0]) : 'Selected Company';
-    // UPDATED: Handle multiple locations in report
-    const locationText = selectedLocations.length > 0 && selectedCompanies.length > 0 
-      ? getMultipleLocationNames(selectedCompanies[0], selectedLocations)
-      : 'Selected Locations';
+    const locationName = selectedLocations.length > 0 && selectedCompanies.length > 0 
+      ? getLocationName(selectedCompanies[0], selectedLocations[0]) 
+      : 'Selected Location';
 
     return `
       <!DOCTYPE html>
@@ -1197,14 +1166,14 @@ const StoreSummaryProduction = () => {
       <body>
         <div class="header">
           <div class="company-name">${companyName}</div>
-          <div class="location">${locationText}</div>
+          <div class="location">${locationName}</div>
           <div class="date-range">Report Period: ${dateRangeText}</div>
         </div>
         
         <div class="order-summary">
           <div><strong>Order ID:</strong> ${order.order_id}</div>
           <div>
-            <strong>Order Date:</strong>
+            <strong>Order Date:</strong>{' '}
             ${new Date(order.created_at).toLocaleString('en-US', {
               month: 'numeric',
               day: 'numeric',
@@ -1235,7 +1204,7 @@ const StoreSummaryProduction = () => {
     printWindow.print();
   };
 
-  const generateConsolidatedReport = () => {
+const generateConsolidatedReport = () => {
     const currentDate = new Date().toLocaleString('en-GB', {
       day: '2-digit',
       month: '2-digit',
@@ -1435,9 +1404,16 @@ const StoreSummaryProduction = () => {
     return null;
   };
 
+  // Show empty state when no data - REMOVED since we handle this inline now
+  // const showEmptyState = !loading && 
+  //   (!ordersData || ordersData.length === 0) && 
+  //   selectedCompanies && selectedCompanies.length > 0 && 
+  //   selectedLocations && selectedLocations.length > 0 && 
+  //   dataLoaded;
   console.log('ordersData:', ordersData);
   // Combined error from Redux and local state
   const displayError = error || localError;
+
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
       {/* Header Section with Filters and Date Range */}
@@ -1616,7 +1592,7 @@ const StoreSummaryProduction = () => {
             </FormControl>
           </Box>
 
-          {/* Selected Filters Display - UPDATED to show multiple locations */}
+          {/* Selected Filters Display - MOVED BELOW DROPDOWNS */}
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
             {selectedCompanies && selectedCompanies.length > 0 && (
               <Chip
@@ -1628,7 +1604,7 @@ const StoreSummaryProduction = () => {
             )}
             {selectedLocations && selectedLocations.length > 0 && selectedCompanies && selectedCompanies.length > 0 && (
               <Chip
-                label={getMultipleLocationNames(selectedCompanies[0], selectedLocations)}
+                label={`${selectedLocations.length === 1 ? getLocationName(selectedCompanies[0], selectedLocations[0]) : `${selectedLocations.length} locations selected`}`}
                 color="secondary"
                 variant="outlined"
                 size="small"
@@ -1727,14 +1703,14 @@ const StoreSummaryProduction = () => {
               </Box>
             </Box>
 
-            {/* Location Orders - UPDATED to show multiple locations */}
+            {/* Location Orders */}
             <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, p: 2, backgroundColor: '#f8f9fa', borderRadius: 1 }}>
                 <Box>
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
                     {selectedLocations.length > 0 && selectedCompanies.length > 0 
-                      ? getMultipleLocationNames(selectedCompanies[0], selectedLocations)
-                      : 'Selected Locations'
+                      ? getLocationName(selectedCompanies[0], selectedLocations[0])
+                      : 'Selected Location'
                     }
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -1901,9 +1877,7 @@ const StoreSummaryProduction = () => {
         </Card>
       )}
 
-      {/* All Dialogs - Email Scheduler, Create Mails, Edit Email, Print, and Email Dialogs */}
-      
-      {/* Create Mails Dialog */}
+      {/* Create Mails Dialog - UPDATED with Global Time Scheduler */}
       <Dialog 
         open={createMailsDialog} 
         onClose={() => {
@@ -2036,7 +2010,7 @@ const StoreSummaryProduction = () => {
                     />
                   </Box>
 
-                  {/* Emails Table */}
+                  {/* Emails Table - UPDATED without individual time columns */}
                   <TableContainer component={Paper} variant="outlined">
                     <Table size="small">
                       <TableHead>
@@ -2133,7 +2107,7 @@ const StoreSummaryProduction = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Email Scheduler Dialog */}
+      {/* Email Scheduler Dialog - UPDATED to use company ID in API calls */}
       <Dialog 
         open={emailSchedulerDialog} 
         onClose={() => setEmailSchedulerDialog(false)}

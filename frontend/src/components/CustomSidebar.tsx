@@ -26,6 +26,7 @@ import {
 } from "@mui/material";
 import { Link, useLocation } from "react-router-dom";
 import { API_URL_Local } from "../constants";
+import apiClient from "../api/axiosConfig";
 import { 
   setSelectedCompanies, 
   setSelectedLocations,
@@ -124,8 +125,8 @@ const CustomSidebar = ({ onSignOut }) => {
   const [hasInitialized, setHasInitialized] = useState(false);
   const [userHasInteracted, setUserHasInteracted] = useState(false);
 
-  // Get selected values for dropdowns (now supports multiple)
-  const selectedCompany = selectedCompanies.length > 0 ? selectedCompanies : [];
+  // Get selected values for dropdowns (single company, multiple locations)
+  const selectedCompany = selectedCompanies.length > 0 ? selectedCompanies[0] : '';
   const selectedLocation = selectedLocations.length > 0 ? selectedLocations : [];
 
   // Responsive drawer width
@@ -268,20 +269,41 @@ const CustomSidebar = ({ onSignOut }) => {
     return item.title;
   };
 
-  // Fetch companies and locations data
+  // Fetch companies and locations data using apiClient
   useEffect(() => {
     const fetchCompaniesAndLocations = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`${API_URL_Local}/company-locations/all`);
-        if (response.ok) {
-          const data = await response.json();
-          setCompanies(data);
+        const response = await apiClient.get('/company-locations/all');
+        
+        if (response.data) {
+          setCompanies(response.data);
         } else {
-          console.error('Failed to fetch companies and locations');
+          console.error('No data received from company-locations API');
         }
       } catch (error) {
         console.error('Error fetching companies and locations:', error);
+        
+        // Handle different types of errors
+        if (error.response) {
+          // Server responded with error status
+          const status = error.response.status;
+          if (status === 401) {
+            console.error('Unauthorized: Invalid or expired token');
+            // Optionally redirect to login
+            // navigate('/sign-in');
+          } else if (status === 403) {
+            console.error('Forbidden: Insufficient permissions');
+          } else {
+            console.error(`Server error: ${status}`);
+          }
+        } else if (error.request) {
+          // Request was made but no response received
+          console.error('No response from server. Check if backend is running.');
+        } else {
+          // Something else happened
+          console.error('Request setup error:', error.message);
+        }
       } finally {
         setLoading(false);
       }
@@ -366,25 +388,36 @@ const CustomSidebar = ({ onSignOut }) => {
     }
   }, [isMobile]);
 
-  // Handle bulk company actions
-  const handleSelectAllCompanies = useCallback(() => {
-    setUserHasInteracted(true);
-    const allCompanyIds = companies.map(company => company.company_id.toString());
-    console.log('Selecting all companies:', allCompanyIds);
+  // Handle company selection (SINGLE selection)
+  const handleCompanyChange = useCallback((event) => {
+    const value = event.target.value;
     
-    setTimeout(() => {
-      dispatch(setSelectedCompanies(allCompanyIds));
-      dispatch(setSelectedLocations([])); // Clear locations when companies change
-    }, 0);
-  }, [companies, dispatch]);
-
-  const handleClearAllCompanies = useCallback(() => {
+    // Mark that user has interacted
     setUserHasInteracted(true);
-    console.log('Clearing all companies');
     
+    console.log('Company selection changed to:', value);
+    
+    // Use setTimeout to debounce Redux updates
     setTimeout(() => {
-      dispatch(setSelectedCompanies([]));
+      // For single selection, wrap in array to maintain Redux state structure
+      dispatch(setSelectedCompanies(value ? [value] : []));
+      // Clear location selection when company changes
       dispatch(setSelectedLocations([]));
+    }, 0);
+  }, [dispatch]);
+
+  // Handle location selection (multiple) with debouncing
+  const handleLocationChange = useCallback((event) => {
+    const value = typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value;
+    
+    // Mark that user has interacted
+    setUserHasInteracted(true);
+    
+    console.log('Location selection changed:', value);
+    
+    // Use setTimeout to debounce Redux updates
+    setTimeout(() => {
+      dispatch(setSelectedLocations(value));
     }, 0);
   }, [dispatch]);
 
@@ -405,37 +438,6 @@ const CustomSidebar = ({ onSignOut }) => {
     
     setTimeout(() => {
       dispatch(setSelectedLocations([]));
-    }, 0);
-  }, [dispatch]);
-  // Handle company selection (multiple) with debouncing
-  const handleCompanyChange = useCallback((event) => {
-    const value = typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value;
-    
-    // Mark that user has interacted
-    setUserHasInteracted(true);
-    
-    console.log('Company selection changed:', value);
-    
-    // Use setTimeout to debounce Redux updates
-    setTimeout(() => {
-      dispatch(setSelectedCompanies(value));
-      // Clear location selection when companies change to avoid invalid combinations
-      dispatch(setSelectedLocations([]));
-    }, 0);
-  }, [dispatch]);
-
-  // Handle location selection (multiple) with debouncing
-  const handleLocationChange = useCallback((event) => {
-    const value = typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value;
-    
-    // Mark that user has interacted
-    setUserHasInteracted(true);
-    
-    console.log('Location selection changed:', value);
-    
-    // Use setTimeout to debounce Redux updates
-    setTimeout(() => {
-      dispatch(setSelectedLocations(value));
     }, 0);
   }, [dispatch]);
 
@@ -722,7 +724,7 @@ const CustomSidebar = ({ onSignOut }) => {
 
     return (
       <Box sx={{ px: isSmallScreen ? 1 : 1.5, py: 1.5 }}> 
-        {/* Company Dropdown */}
+        {/* Company Dropdown - SINGLE SELECT */}
         <Box sx={{ mb: 1 }}>
           <FormControl 
             fullWidth 
@@ -761,48 +763,23 @@ const CustomSidebar = ({ onSignOut }) => {
               },
             }}
           >
-            <InputLabel>Companies *</InputLabel>
+            <InputLabel>Company *</InputLabel>
             <Select
-              multiple
               value={selectedCompany}
               onChange={handleCompanyChange}
-              label="Companies *"
+              label="Company *"
               disabled={loading}
               displayEmpty
               renderValue={(selected) => {
-                if (selected.length === 0) {
+                if (!selected) {
                   return (
                     <Box sx={{ color: alpha('#ffffff', 0.5), fontStyle: 'italic' }}>
-                      Select companies...
+                      Select company...
                     </Box>
                   );
                 }
-                return (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((companyId) => {
-                      const company = companies.find(c => c.company_id.toString() === companyId.toString());
-                      return (
-                        <Chip
-                          key={companyId}
-                          label={company ? company.company_name : companyId}
-                          size="small"
-                          sx={{
-                            backgroundColor: alpha('#667eea', 0.2),
-                            color: '#ffffff',
-                            fontSize: isSmallScreen ? '0.7rem' : '0.75rem',
-                            maxWidth: '80px',
-                            '& .MuiChip-label': {
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              paddingX: '6px',
-                            },
-                          }}
-                        />
-                      );
-                    })}
-                  </Box>
-                );
+                const company = companies.find(c => c.company_id.toString() === selected.toString());
+                return company ? company.company_name : selected;
               }}
               startAdornment={
                 <BusinessIcon sx={{ 
@@ -856,60 +833,10 @@ const CustomSidebar = ({ onSignOut }) => {
             </Select>
           </FormControl>
           
-          {/* Company Action Buttons */}
-          <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }}>
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<SelectAllIcon sx={{ fontSize: '0.8rem !important' }} />}
-              onClick={handleSelectAllCompanies}
-              disabled={loading || companies.length === 0 || selectedCompanies.length === companies.length}
-              sx={{
-                fontSize: isSmallScreen ? '0.65rem' : '0.7rem',
-                padding: isSmallScreen ? '2px 6px' : '3px 8px',
-                minWidth: 'auto',
-                borderColor: alpha('#ffffff', 0.3),
-                color: alpha('#ffffff', 0.8),
-                '&:hover': {
-                  borderColor: alpha('#ffffff', 0.5),
-                  backgroundColor: alpha('#ffffff', 0.05),
-                },
-                '&.Mui-disabled': {
-                  borderColor: alpha('#ffffff', 0.1),
-                  color: alpha('#ffffff', 0.3),
-                },
-              }}
-            >
-              All
-            </Button>
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<ClearAllIcon sx={{ fontSize: '0.8rem !important' }} />}
-              onClick={handleClearAllCompanies}
-              disabled={loading || selectedCompanies.length === 0}
-              sx={{
-                fontSize: isSmallScreen ? '0.65rem' : '0.7rem',
-                padding: isSmallScreen ? '2px 6px' : '3px 8px',
-                minWidth: 'auto',
-                borderColor: alpha('#ff6b6b', 0.3),
-                color: alpha('#ff6b6b', 0.8),
-                '&:hover': {
-                  borderColor: alpha('#ff6b6b', 0.5),
-                  backgroundColor: alpha('#ff6b6b', 0.05),
-                },
-                '&.Mui-disabled': {
-                  borderColor: alpha('#ffffff', 0.1),
-                  color: alpha('#ffffff', 0.3),
-                },
-              }}
-            >
-              Clear
-            </Button>
-          </Stack>
+          {/* No action buttons needed for single select */}
         </Box>
 
-        {/* Location Dropdown */}
+        {/* Location Dropdown - MULTIPLE SELECT */}
         <Box>
           <FormControl 
             fullWidth 

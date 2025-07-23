@@ -1332,83 +1332,9 @@ const AnalyticsDashboard = () => {
             <>
               {/* Analytics Data Display */}
               <Box sx={{ p: 3 }}>
-                {/* Header with company and location info - Updated for multiple selections */}
-                <Box sx={{ mb: 4, borderBottom: '1px solid #e0e0e0', pb: 2 }}>
-                  <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
-                    Analytics Dashboard
-                  </Typography>
-                  <Typography variant="subtitle1" color="text.secondary">
-                    {/* FIXED: Display information for multiple companies and locations */}
-                    {reduxSelectedCompanies.length === 1 && reduxSelectedLocations.length === 1 ? (
-                      // Single company and location - try to get names from analytics data or fallback to IDs
-                      `${analyticsData.company_name || getCompanyNameById(parseInt(reduxSelectedCompanies[0]))} - ${analyticsData.location_name || getLocationNameById(parseInt(reduxSelectedLocations[0]))}`
-                    ) : (
-                      // Multiple companies or locations
-                      `${reduxSelectedCompanies.length} Company(s) & ${reduxSelectedLocations.length} Location(s) Selected`
-                    )}
-                    {hasDateRange && (
-                      <span style={{ marginLeft: 16 }}>
-                        ({new Date(reduxDateRange.startDate).toLocaleDateString()} - {new Date(reduxDateRange.endDate).toLocaleDateString()})
-                      </span>
-                    )}
-                  </Typography>
-                  
-                  {/* Show detailed breakdown for multiple selections */}
-                  {(reduxSelectedCompanies.length > 1 || reduxSelectedLocations.length > 1) && (
-                    <Box sx={{ mt: 2 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        <strong>Companies:</strong> {reduxSelectedCompanies.map(id => getCompanyNameById(parseInt(id))).join(', ')}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        <strong>Locations:</strong> {reduxSelectedLocations.map(id => getLocationNameById(parseInt(id))).join(', ')}
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
+             
 
-                {/* Key Metrics Cards */}
-                <Grid container spacing={3} sx={{ mb: 4 }}>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>
-                        ${parseFloat(analyticsData.total_sales || 0).toFixed(2)}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Total Sales
-                      </Typography>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>
-                        {analyticsData.total_orders || 0}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Total Orders
-                      </Typography>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>
-                        ${parseFloat(analyticsData.avg_order_value || 0).toFixed(2)}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Avg Order Value
-                      </Typography>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>
-                        {analyticsData.daily_orders?.length || 0}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Days of Data
-                      </Typography>
-                    </Card>
-                  </Grid>
-                </Grid>
+             
 
                 {/* Pass analytics data to AnalyticsComponent */}
                 <AnalyticsComponenet 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
   Box,
@@ -21,6 +21,8 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Chip,
+  Stack,
 } from "@mui/material";
 import { Link, useLocation } from "react-router-dom";
 import { API_URL_Local } from "../constants";
@@ -52,6 +54,8 @@ import ShowChartIcon from "@mui/icons-material/ShowChart";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import FactoryIcon from "@mui/icons-material/Factory";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import SelectAllIcon from "@mui/icons-material/SelectAll";
+import ClearAllIcon from "@mui/icons-material/ClearAll";
 import BusinessIcon from "@mui/icons-material/Business";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 
@@ -116,12 +120,13 @@ const CustomSidebar = ({ onSignOut }) => {
   const [availableLocations, setAvailableLocations] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // NEW: State to track if we've already auto-initialized
+  // NEW: State to track if we've already auto-initialized and user interactions
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [userHasInteracted, setUserHasInteracted] = useState(false);
 
-  // Get single selected values for dropdowns
-  const selectedCompany = selectedCompanies.length > 0 ? selectedCompanies[0] : '';
-  const selectedLocation = selectedLocations.length > 0 ? selectedLocations[0] : '';
+  // Get selected values for dropdowns (now supports multiple)
+  const selectedCompany = selectedCompanies.length > 0 ? selectedCompanies : [];
+  const selectedLocation = selectedLocations.length > 0 ? selectedLocations : [];
 
   // Responsive drawer width
   const drawerWidth = getDrawerWidth(theme, isMobile, isTablet, isSmallScreen);
@@ -285,10 +290,11 @@ const CustomSidebar = ({ onSignOut }) => {
     fetchCompaniesAndLocations();
   }, []);
 
-  // NEW: Auto-initialize first company and location if Redux is empty
+  // NEW: Auto-initialize first company and location if Redux is empty (ONLY on first load)
   useEffect(() => {
     if (
       !hasInitialized && 
+      !userHasInteracted && // Only auto-select if user hasn't interacted yet
       companies.length > 0 && 
       selectedCompanies.length === 0 && 
       selectedLocations.length === 0
@@ -316,24 +322,37 @@ const CustomSidebar = ({ onSignOut }) => {
       
       setHasInitialized(true);
     }
-  }, [companies, selectedCompanies, selectedLocations, hasInitialized, dispatch]);
+  }, [companies, selectedCompanies, selectedLocations, hasInitialized, userHasInteracted, dispatch]);
 
-  // Update available locations when selected company changes
-  useEffect(() => {
-    if (selectedCompany && companies.length > 0) {
-      const selectedCompanyData = companies.find(company => company.company_id.toString() === selectedCompany.toString());
-      setAvailableLocations(selectedCompanyData ? selectedCompanyData.locations : []);
-      
-      // NEW: Auto-select first location if no location is selected and we have locations
-      if (selectedLocations.length === 0 && selectedCompanyData && selectedCompanyData.locations.length > 0) {
-        const firstLocationId = selectedCompanyData.locations[0].location_id.toString();
-        console.log('Auto-selecting first location for company:', firstLocationId);
-        dispatch(setSelectedLocations([firstLocationId]));
+  // Memoize expensive computations
+  const availableLocationsMemo = useMemo(() => {
+    if (selectedCompanies.length === 0 || companies.length === 0) return [];
+    
+    const allLocationsFromSelectedCompanies = [];
+    selectedCompanies.forEach(companyId => {
+      const companyData = companies.find(company => company.company_id.toString() === companyId.toString());
+      if (companyData && companyData.locations) {
+        allLocationsFromSelectedCompanies.push(...companyData.locations);
       }
-    } else {
-      setAvailableLocations([]);
+    });
+    
+    // Remove duplicates based on location_id
+    return allLocationsFromSelectedCompanies.filter((location, index, self) =>
+      index === self.findIndex(l => l.location_id === location.location_id)
+    );
+  }, [selectedCompanies, companies]);
+
+  // Update available locations when computed locations change
+  useEffect(() => {
+    setAvailableLocations(availableLocationsMemo);
+    
+    // Only auto-select first location if user hasn't interacted and no locations are selected
+    if (!userHasInteracted && selectedLocations.length === 0 && availableLocationsMemo.length > 0) {
+      const firstLocationId = availableLocationsMemo[0].location_id.toString();
+      console.log('Auto-selecting first location for selected companies:', firstLocationId);
+      dispatch(setSelectedLocations([firstLocationId]));
     }
-  }, [selectedCompany, companies, selectedLocations, dispatch]);
+  }, [availableLocationsMemo, selectedLocations, userHasInteracted, dispatch]);
 
   // Auto-close sidebar on small screens when open
   useEffect(() => {
@@ -347,18 +366,78 @@ const CustomSidebar = ({ onSignOut }) => {
     }
   }, [isMobile]);
 
-  // Handle company selection
-  const handleCompanyChange = (event) => {
-    const companyId = event.target.value;
-    dispatch(setSelectedCompanies([companyId]));
-    dispatch(setSelectedLocations([])); // Clear location selection when company changes
-  };
+  // Handle bulk company actions
+  const handleSelectAllCompanies = useCallback(() => {
+    setUserHasInteracted(true);
+    const allCompanyIds = companies.map(company => company.company_id.toString());
+    console.log('Selecting all companies:', allCompanyIds);
+    
+    setTimeout(() => {
+      dispatch(setSelectedCompanies(allCompanyIds));
+      dispatch(setSelectedLocations([])); // Clear locations when companies change
+    }, 0);
+  }, [companies, dispatch]);
 
-  // Handle location selection
-  const handleLocationChange = (event) => {
-    const locationId = event.target.value;
-    dispatch(setSelectedLocations([locationId]));
-  };
+  const handleClearAllCompanies = useCallback(() => {
+    setUserHasInteracted(true);
+    console.log('Clearing all companies');
+    
+    setTimeout(() => {
+      dispatch(setSelectedCompanies([]));
+      dispatch(setSelectedLocations([]));
+    }, 0);
+  }, [dispatch]);
+
+  // Handle bulk location actions
+  const handleSelectAllLocations = useCallback(() => {
+    setUserHasInteracted(true);
+    const allLocationIds = availableLocations.map(location => location.location_id.toString());
+    console.log('Selecting all locations:', allLocationIds);
+    
+    setTimeout(() => {
+      dispatch(setSelectedLocations(allLocationIds));
+    }, 0);
+  }, [availableLocations, dispatch]);
+
+  const handleClearAllLocations = useCallback(() => {
+    setUserHasInteracted(true);
+    console.log('Clearing all locations');
+    
+    setTimeout(() => {
+      dispatch(setSelectedLocations([]));
+    }, 0);
+  }, [dispatch]);
+  // Handle company selection (multiple) with debouncing
+  const handleCompanyChange = useCallback((event) => {
+    const value = typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value;
+    
+    // Mark that user has interacted
+    setUserHasInteracted(true);
+    
+    console.log('Company selection changed:', value);
+    
+    // Use setTimeout to debounce Redux updates
+    setTimeout(() => {
+      dispatch(setSelectedCompanies(value));
+      // Clear location selection when companies change to avoid invalid combinations
+      dispatch(setSelectedLocations([]));
+    }, 0);
+  }, [dispatch]);
+
+  // Handle location selection (multiple) with debouncing
+  const handleLocationChange = useCallback((event) => {
+    const value = typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value;
+    
+    // Mark that user has interacted
+    setUserHasInteracted(true);
+    
+    console.log('Location selection changed:', value);
+    
+    // Use setTimeout to debounce Redux updates
+    setTimeout(() => {
+      dispatch(setSelectedLocations(value));
+    }, 0);
+  }, [dispatch]);
 
   // Check if any INSIGHTIQ item is currently selected
   const isInsightiqSelected = insightiqItems.some(
@@ -644,184 +723,383 @@ const CustomSidebar = ({ onSignOut }) => {
     return (
       <Box sx={{ px: isSmallScreen ? 1 : 1.5, py: 1.5 }}> 
         {/* Company Dropdown */}
-        <FormControl 
-          fullWidth 
-          size="small" 
-          sx={{ 
-            mb: 1,
-            '& .MuiOutlinedInput-root': {
-              backgroundColor: alpha('#ffffff', 0.15),
-              borderRadius: '6px',
-              fontSize: fontSizes.dropdown,
-              '& fieldset': {
-                borderColor: alpha('#ffffff', 0.3),
-              },
-              '&:hover fieldset': {
-                borderColor: alpha('#ffffff', 0.5),
-              },
-              '&.Mui-focused fieldset': {
-                borderColor: '#ffffff',
-              },
-              '& .MuiSelect-select': {
-                color: '#ffffff',
+        <Box sx={{ mb: 1 }}>
+          <FormControl 
+            fullWidth 
+            size="small" 
+            sx={{ 
+              mb: 0.5,
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: alpha('#ffffff', 0.15),
+                borderRadius: '6px',
                 fontSize: fontSizes.dropdown,
-                padding: isSmallScreen ? '6px 10px' : '8px 12px',
-              },
-              '& .MuiSelect-icon': {
-                color: '#ffffff',
-                fontSize: isSmallScreen ? '1.1rem' : '1.3rem',
-              },
-            },
-            '& .MuiInputLabel-root': {
-              color: alpha('#ffffff', 0.7),
-              fontSize: fontSizes.dropdown,
-              '&.Mui-focused': {
-                color: '#ffffff',
-              },
-            },
-          }}
-        >
-          <InputLabel>Company *</InputLabel>
-          <Select
-            value={selectedCompany}
-            onChange={handleCompanyChange}
-            label="Company *"
-            disabled={loading}
-            startAdornment={
-              <BusinessIcon sx={{ 
-                color: alpha('#ffffff', 0.7), 
-                mr: 0.5, 
-                fontSize: isSmallScreen ? '0.8rem' : '0.9rem' 
-              }} />
-            }
-            MenuProps={{
-              PaperProps: {
-                sx: {
-                  bgcolor: '#1a1a1a',
+                '& fieldset': {
+                  borderColor: alpha('#ffffff', 0.3),
+                },
+                '&:hover fieldset': {
+                  borderColor: alpha('#ffffff', 0.5),
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#ffffff',
+                },
+                '& .MuiSelect-select': {
                   color: '#ffffff',
-                  '& .MuiMenuItem-root': {
-                    fontSize: fontSizes.dropdown,
-                    padding: isSmallScreen ? '6px 10px' : '8px 12px',
-                    '&:hover': {
-                      backgroundColor: alpha('#ffffff', 0.1),
-                    },
-                    '&.Mui-selected': {
-                      backgroundColor: alpha('#667eea', 0.3),
-                      '&:hover': {
-                        backgroundColor: alpha('#667eea', 0.4),
-                      },
-                    },
-                  },
+                  fontSize: fontSizes.dropdown,
+                  padding: isSmallScreen ? '6px 10px' : '8px 12px',
+                },
+                '& .MuiSelect-icon': {
+                  color: '#ffffff',
+                  fontSize: isSmallScreen ? '1.1rem' : '1.3rem',
+                },
+              },
+              '& .MuiInputLabel-root': {
+                color: alpha('#ffffff', 0.7),
+                fontSize: fontSizes.dropdown,
+                '&.Mui-focused': {
+                  color: '#ffffff',
                 },
               },
             }}
           >
-            {companies.map((company) => (
-              <MenuItem key={company.company_id} value={company.company_id.toString()}>
-                <Box sx={{ 
-                  overflow: 'hidden', 
-                  textOverflow: 'ellipsis', 
-                  whiteSpace: 'nowrap',
-                  maxWidth: '100%' 
-                }}>
-                  {company.company_name}
-                </Box>
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+            <InputLabel>Companies *</InputLabel>
+            <Select
+              multiple
+              value={selectedCompany}
+              onChange={handleCompanyChange}
+              label="Companies *"
+              disabled={loading}
+              displayEmpty
+              renderValue={(selected) => {
+                if (selected.length === 0) {
+                  return (
+                    <Box sx={{ color: alpha('#ffffff', 0.5), fontStyle: 'italic' }}>
+                      Select companies...
+                    </Box>
+                  );
+                }
+                return (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((companyId) => {
+                      const company = companies.find(c => c.company_id.toString() === companyId.toString());
+                      return (
+                        <Chip
+                          key={companyId}
+                          label={company ? company.company_name : companyId}
+                          size="small"
+                          sx={{
+                            backgroundColor: alpha('#667eea', 0.2),
+                            color: '#ffffff',
+                            fontSize: isSmallScreen ? '0.7rem' : '0.75rem',
+                            maxWidth: '80px',
+                            '& .MuiChip-label': {
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              paddingX: '6px',
+                            },
+                          }}
+                        />
+                      );
+                    })}
+                  </Box>
+                );
+              }}
+              startAdornment={
+                <BusinessIcon sx={{ 
+                  color: alpha('#ffffff', 0.7), 
+                  mr: 0.5, 
+                  fontSize: isSmallScreen ? '0.8rem' : '0.9rem' 
+                }} />
+              }
+              MenuProps={{
+                PaperProps: {
+                  sx: {
+                    bgcolor: '#1a1a1a',
+                    color: '#ffffff',
+                    '& .MuiMenuItem-root': {
+                      fontSize: fontSizes.dropdown,
+                      padding: isSmallScreen ? '6px 10px' : '8px 12px',
+                      '&:hover': {
+                        backgroundColor: alpha('#ffffff', 0.1),
+                      },
+                      '&.Mui-selected': {
+                        backgroundColor: alpha('#667eea', 0.3),
+                        '&:hover': {
+                          backgroundColor: alpha('#667eea', 0.4),
+                        },
+                      },
+                    },
+                  },
+                },
+              }}
+            >
+              {companies.map((company) => (
+                <MenuItem 
+                  key={company.company_id} 
+                  value={company.company_id.toString()}
+                  sx={{
+                    '&.Mui-selected': {
+                      backgroundColor: alpha('#667eea', 0.3),
+                    },
+                  }}
+                >
+                  <Box sx={{ 
+                    overflow: 'hidden', 
+                    textOverflow: 'ellipsis', 
+                    whiteSpace: 'nowrap',
+                    maxWidth: '100%' 
+                  }}>
+                    {company.company_name}
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          
+          {/* Company Action Buttons */}
+          <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<SelectAllIcon sx={{ fontSize: '0.8rem !important' }} />}
+              onClick={handleSelectAllCompanies}
+              disabled={loading || companies.length === 0 || selectedCompanies.length === companies.length}
+              sx={{
+                fontSize: isSmallScreen ? '0.65rem' : '0.7rem',
+                padding: isSmallScreen ? '2px 6px' : '3px 8px',
+                minWidth: 'auto',
+                borderColor: alpha('#ffffff', 0.3),
+                color: alpha('#ffffff', 0.8),
+                '&:hover': {
+                  borderColor: alpha('#ffffff', 0.5),
+                  backgroundColor: alpha('#ffffff', 0.05),
+                },
+                '&.Mui-disabled': {
+                  borderColor: alpha('#ffffff', 0.1),
+                  color: alpha('#ffffff', 0.3),
+                },
+              }}
+            >
+              All
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<ClearAllIcon sx={{ fontSize: '0.8rem !important' }} />}
+              onClick={handleClearAllCompanies}
+              disabled={loading || selectedCompanies.length === 0}
+              sx={{
+                fontSize: isSmallScreen ? '0.65rem' : '0.7rem',
+                padding: isSmallScreen ? '2px 6px' : '3px 8px',
+                minWidth: 'auto',
+                borderColor: alpha('#ff6b6b', 0.3),
+                color: alpha('#ff6b6b', 0.8),
+                '&:hover': {
+                  borderColor: alpha('#ff6b6b', 0.5),
+                  backgroundColor: alpha('#ff6b6b', 0.05),
+                },
+                '&.Mui-disabled': {
+                  borderColor: alpha('#ffffff', 0.1),
+                  color: alpha('#ffffff', 0.3),
+                },
+              }}
+            >
+              Clear
+            </Button>
+          </Stack>
+        </Box>
 
         {/* Location Dropdown */}
-        <FormControl 
-          fullWidth 
-          size="small"
-          disabled={!selectedCompany || availableLocations.length === 0}
-          sx={{ 
-            '& .MuiOutlinedInput-root': {
-              backgroundColor: alpha('#ffffff', 0.15),
-              borderRadius: '6px',
-              '& fieldset': {
-                borderColor: alpha('#ffffff', 0.3),
-              },
-              '&:hover fieldset': {
-                borderColor: alpha('#ffffff', 0.5),
-              },
-              '&.Mui-focused fieldset': {
-                borderColor: '#ffffff',
-              },
-              '&.Mui-disabled fieldset': {
-                borderColor: alpha('#ffffff', 0.2),
-              },
-              '& .MuiSelect-select': {
-                color: '#ffffff',
-                fontSize: fontSizes.dropdown,
-                padding: isSmallScreen ? '6px 10px' : '8px 12px',
-              },
-              '& .MuiSelect-icon': {
-                color: '#ffffff',
-                fontSize: isSmallScreen ? '1.1rem' : '1.3rem',
-              },
-            },
-            '& .MuiInputLabel-root': {
-              color: alpha('#ffffff', 0.7),
-              fontSize: fontSizes.dropdown,
-              '&.Mui-focused': {
-                color: '#ffffff',
-              },
-              '&.Mui-disabled': {
-                color: alpha('#ffffff', 0.4),
-              },
-            },
-          }}
-        >
-          <InputLabel>Location *</InputLabel>
-          <Select
-            value={selectedLocation}
-            onChange={handleLocationChange}
-            label="Location *"
-            startAdornment={
-              <LocationOnIcon sx={{ 
-                color: alpha('#ffffff', 0.7), 
-                mr: 0.5, 
-                fontSize: isSmallScreen ? '0.8rem' : '0.9rem' 
-              }} />
-            }
-            MenuProps={{
-              PaperProps: {
-                sx: {
-                  bgcolor: '#1a1a1a',
+        <Box>
+          <FormControl 
+            fullWidth 
+            size="small"
+            disabled={selectedCompanies.length === 0 || availableLocations.length === 0}
+            sx={{ 
+              mb: 0.5,
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: alpha('#ffffff', 0.15),
+                borderRadius: '6px',
+                '& fieldset': {
+                  borderColor: alpha('#ffffff', 0.3),
+                },
+                '&:hover fieldset': {
+                  borderColor: alpha('#ffffff', 0.5),
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#ffffff',
+                },
+                '&.Mui-disabled fieldset': {
+                  borderColor: alpha('#ffffff', 0.2),
+                },
+                '& .MuiSelect-select': {
                   color: '#ffffff',
-                  '& .MuiMenuItem-root': {
-                    fontSize: fontSizes.dropdown,
-                    padding: isSmallScreen ? '6px 10px' : '8px 12px',
-                    '&:hover': {
-                      backgroundColor: alpha('#ffffff', 0.1),
-                    },
-                    '&.Mui-selected': {
-                      backgroundColor: alpha('#667eea', 0.3),
-                      '&:hover': {
-                        backgroundColor: alpha('#667eea', 0.4),
-                      },
-                    },
-                  },
+                  fontSize: fontSizes.dropdown,
+                  padding: isSmallScreen ? '6px 10px' : '8px 12px',
+                },
+                '& .MuiSelect-icon': {
+                  color: '#ffffff',
+                  fontSize: isSmallScreen ? '1.1rem' : '1.3rem',
+                },
+              },
+              '& .MuiInputLabel-root': {
+                color: alpha('#ffffff', 0.7),
+                fontSize: fontSizes.dropdown,
+                '&.Mui-focused': {
+                  color: '#ffffff',
+                },
+                '&.Mui-disabled': {
+                  color: alpha('#ffffff', 0.4),
                 },
               },
             }}
           >
-            {availableLocations.map((location) => (
-              <MenuItem key={location.location_id} value={location.location_id.toString()}>
-                <Box sx={{ 
-                  overflow: 'hidden', 
-                  textOverflow: 'ellipsis', 
-                  whiteSpace: 'nowrap',
-                  maxWidth: '100%' 
-                }}>
-                  {location.location_name}
-                </Box>
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+            <InputLabel>Locations *</InputLabel>
+            <Select
+              multiple
+              value={selectedLocation}
+              onChange={handleLocationChange}
+              label="Locations *"
+              displayEmpty
+              renderValue={(selected) => {
+                if (selected.length === 0) {
+                  return (
+                    <Box sx={{ color: alpha('#ffffff', 0.5), fontStyle: 'italic' }}>
+                      Select locations...
+                    </Box>
+                  );
+                }
+                return (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((locationId) => {
+                      const location = availableLocations.find(l => l.location_id.toString() === locationId.toString());
+                      return (
+                        <Chip
+                          key={locationId}
+                          label={location ? location.location_name : locationId}
+                          size="small"
+                          sx={{
+                            backgroundColor: alpha('#667eea', 0.2),
+                            color: '#ffffff',
+                            fontSize: isSmallScreen ? '0.7rem' : '0.75rem',
+                            maxWidth: '80px',
+                            '& .MuiChip-label': {
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              paddingX: '6px',
+                            },
+                          }}
+                        />
+                      );
+                    })}
+                  </Box>
+                );
+              }}
+              startAdornment={
+                <LocationOnIcon sx={{ 
+                  color: alpha('#ffffff', 0.7), 
+                  mr: 0.5, 
+                  fontSize: isSmallScreen ? '0.8rem' : '0.9rem' 
+                }} />
+              }
+              MenuProps={{
+                PaperProps: {
+                  sx: {
+                    bgcolor: '#1a1a1a',
+                    color: '#ffffff',
+                    '& .MuiMenuItem-root': {
+                      fontSize: fontSizes.dropdown,
+                      padding: isSmallScreen ? '6px 10px' : '8px 12px',
+                      '&:hover': {
+                        backgroundColor: alpha('#ffffff', 0.1),
+                      },
+                      '&.Mui-selected': {
+                        backgroundColor: alpha('#667eea', 0.3),
+                        '&:hover': {
+                          backgroundColor: alpha('#667eea', 0.4),
+                        },
+                      },
+                    },
+                  },
+                },
+              }}
+            >
+              {availableLocations.map((location) => (
+                <MenuItem 
+                  key={location.location_id} 
+                  value={location.location_id.toString()}
+                  sx={{
+                    '&.Mui-selected': {
+                      backgroundColor: alpha('#667eea', 0.3),
+                    },
+                  }}
+                >
+                  <Box sx={{ 
+                    overflow: 'hidden', 
+                    textOverflow: 'ellipsis', 
+                    whiteSpace: 'nowrap',
+                    maxWidth: '100%' 
+                  }}>
+                    {location.location_name}
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          
+          {/* Location Action Buttons */}
+          <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<SelectAllIcon sx={{ fontSize: '0.8rem !important' }} />}
+              onClick={handleSelectAllLocations}
+              disabled={selectedCompanies.length === 0 || availableLocations.length === 0 || selectedLocation.length === availableLocations.length}
+              sx={{
+                fontSize: isSmallScreen ? '0.65rem' : '0.7rem',
+                padding: isSmallScreen ? '2px 6px' : '3px 8px',
+                minWidth: 'auto',
+                borderColor: alpha('#ffffff', 0.3),
+                color: alpha('#ffffff', 0.8),
+                '&:hover': {
+                  borderColor: alpha('#ffffff', 0.5),
+                  backgroundColor: alpha('#ffffff', 0.05),
+                },
+                '&.Mui-disabled': {
+                  borderColor: alpha('#ffffff', 0.1),
+                  color: alpha('#ffffff', 0.3),
+                },
+              }}
+            >
+              All
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<ClearAllIcon sx={{ fontSize: '0.8rem !important' }} />}
+              onClick={handleClearAllLocations}
+              disabled={selectedLocation.length === 0}
+              sx={{
+                fontSize: isSmallScreen ? '0.65rem' : '0.7rem',
+                padding: isSmallScreen ? '2px 6px' : '3px 8px',
+                minWidth: 'auto',
+                borderColor: alpha('#ff6b6b', 0.3),
+                color: alpha('#ff6b6b', 0.8),
+                '&:hover': {
+                  borderColor: alpha('#ff6b6b', 0.5),
+                  backgroundColor: alpha('#ff6b6b', 0.05),
+                },
+                '&.Mui-disabled': {
+                  borderColor: alpha('#ffffff', 0.1),
+                  color: alpha('#ffffff', 0.3),
+                },
+              }}
+            >
+              Clear
+            </Button>
+          </Stack>
+        </Box>
       </Box>
     );
   };
