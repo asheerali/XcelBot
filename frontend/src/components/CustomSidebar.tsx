@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import FolderIcon from "@mui/icons-material/Folder";
+
 import {
   Box,
   Drawer,
@@ -222,6 +224,7 @@ const CustomSidebar = ({ onSignOut }) => {
 
   // Other navigation items with multiple title options
   const navItems = [
+    
     { 
       title: "Payments", 
       shortTitle: "Payments",
@@ -229,6 +232,13 @@ const CustomSidebar = ({ onSignOut }) => {
       path: "/Payments", 
       icon: <PaymentIcon /> 
     },
+    {
+  title: "File Management",
+  shortTitle: "Files",
+  compactTitle: "Files",
+  path: "/FileManagement",
+  icon: <FolderIcon />
+},
     { 
       title: "Help Center", 
       shortTitle: "Help",
@@ -236,6 +246,7 @@ const CustomSidebar = ({ onSignOut }) => {
       path: "/HelpCenter", 
       icon: <HelpIcon /> 
     },
+    
     {
       title: "Company",
       shortTitle: "Company",
