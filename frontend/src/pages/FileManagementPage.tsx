@@ -30,6 +30,8 @@ import {
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import apiClient from "../api/axiosConfig"; // Adjust path as needed
+export const API_URL_Local = "http://localhost:8000";
+
 
 // Material-UI Icons
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -126,47 +128,87 @@ const FileManagementPage = () => {
     severity: "success",
   });
 
+//   const dataTypes = [
+//     {
+//       name: "PMix Sales",
+//       key: "salespmix",
+//       icon: TrendingUpIcon,
+//       color: theme.palette.primary.main,
+//       gradient: "linear-gradient(135deg, #1976d2 0%, #1565c0 100%)",
+//       bgGradient: "linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)",
+//       fileListEndpoint: "http://localhost:8000/salespmix/analytics/file-list",
+//       deleteEndpoint: "http://localhost:8000/salespmix/bulk/by-filename",
+//       locationsEndpoint: "http://localhost:8000/salespmix/analytics/locations",
+//       locationKey: "location",
+//     },
+//     {
+//       name: "Financials Companywide",
+//       key: "financialscompanywide",
+//       icon: AttachMoneyIcon,
+//       color: theme.palette.success.main,
+//       gradient: "linear-gradient(135deg, #388e3c 0%, #2e7d32 100%)",
+//       bgGradient: "linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%)",
+//       fileListEndpoint:
+//         "http://localhost:8000/financialscompanywide/analytics/file-list",
+//       deleteEndpoint:
+//         "http://localhost:8000/financialscompanywide/bulk/by-filename",
+//       locationsEndpoint:
+//         "http://localhost:8000/financialscompanywide/analytics/stores",
+//       locationKey: "store",
+//     },
+//     {
+//       name: "Budget",
+//       key: "budget",
+//       icon: AssessmentIcon,
+//       color: theme.palette.warning.main,
+//       gradient: "linear-gradient(135deg, #f57c00 0%, #ef6c00 100%)",
+//       bgGradient: "linear-gradient(135deg, #fff3e0 0%, #ffcc02 100%)",
+//       fileListEndpoint: "http://localhost:8000/budget/analytics/file-list",
+//       deleteEndpoint: "http://localhost:8000/budget/bulk/by-filename",
+//       locationsEndpoint: "http://localhost:8000/budget/analytics/stores",
+//       locationKey: "store",
+//     },
+//   ];
+
+
   const dataTypes = [
-    {
-      name: "PMix Sales",
-      key: "salespmix",
-      icon: TrendingUpIcon,
-      color: theme.palette.primary.main,
-      gradient: "linear-gradient(135deg, #1976d2 0%, #1565c0 100%)",
-      bgGradient: "linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)",
-      fileListEndpoint: "http://localhost:8000/salespmix/analytics/file-list",
-      deleteEndpoint: "http://localhost:8000/salespmix/bulk/by-filename",
-      locationsEndpoint: "http://localhost:8000/salespmix/analytics/locations",
-      locationKey: "location",
-    },
-    {
-      name: "Financials Companywide",
-      key: "financialscompanywide",
-      icon: AttachMoneyIcon,
-      color: theme.palette.success.main,
-      gradient: "linear-gradient(135deg, #388e3c 0%, #2e7d32 100%)",
-      bgGradient: "linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%)",
-      fileListEndpoint:
-        "http://localhost:8000/financialscompanywide/analytics/file-list",
-      deleteEndpoint:
-        "http://localhost:8000/financialscompanywide/bulk/by-filename",
-      locationsEndpoint:
-        "http://localhost:8000/financialscompanywide/analytics/stores",
-      locationKey: "store",
-    },
-    {
-      name: "Budget",
-      key: "budget",
-      icon: AssessmentIcon,
-      color: theme.palette.warning.main,
-      gradient: "linear-gradient(135deg, #f57c00 0%, #ef6c00 100%)",
-      bgGradient: "linear-gradient(135deg, #fff3e0 0%, #ffcc02 100%)",
-      fileListEndpoint: "http://localhost:8000/budget/analytics/file-list",
-      deleteEndpoint: "http://localhost:8000/budget/bulk/by-filename",
-      locationsEndpoint: "http://localhost:8000/budget/analytics/stores",
-      locationKey: "store",
-    },
-  ];
+  {
+    name: "PMix Sales",
+    key: "salespmix",
+    icon: TrendingUpIcon,
+    color: theme.palette.primary.main,
+    gradient: "linear-gradient(135deg, #1976d2 0%, #1565c0 100%)",
+    bgGradient: "linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)",
+    fileListEndpoint: `${API_URL_Local}/salespmix/analytics/file-list`,
+    deleteEndpoint: `${API_URL_Local}/salespmix/bulk/by-filename`,
+    locationsEndpoint: `${API_URL_Local}/salespmix/analytics/locations`,
+    locationKey: "location",
+  },
+  {
+    name: "Financials Companywide",
+    key: "financialscompanywide",
+    icon: AttachMoneyIcon,
+    color: theme.palette.success.main,
+    gradient: "linear-gradient(135deg, #388e3c 0%, #2e7d32 100%)",
+    bgGradient: "linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%)",
+    fileListEndpoint: `${API_URL_Local}/financialscompanywide/analytics/file-list`,
+    deleteEndpoint: `${API_URL_Local}/financialscompanywide/bulk/by-filename`,
+    locationsEndpoint: `${API_URL_Local}/financialscompanywide/analytics/stores`,
+    locationKey: "store",
+  },
+  {
+    name: "Budget",
+    key: "budget",
+    icon: AssessmentIcon,
+    color: theme.palette.warning.main,
+    gradient: "linear-gradient(135deg, #f57c00 0%, #ef6c00 100%)",
+    bgGradient: "linear-gradient(135deg, #fff3e0 0%, #ffcc02 100%)",
+    fileListEndpoint: `${API_URL_Local}/budget/analytics/file-list`,
+    deleteEndpoint: `${API_URL_Local}/budget/bulk/by-filename`,
+    locationsEndpoint: `${API_URL_Local}/budget/analytics/stores`,
+    locationKey: "store",
+  },
+];
 
   const currentDataType = dataTypes[activeTab];
 
@@ -214,19 +256,6 @@ const FileManagementPage = () => {
 
   const handleDeleteConfirm = async () => {
     try {
-      //   const response = await fetch(currentDataType.deleteEndpoint, {
-      //     method: "DELETE",
-      //     headers: {
-      //       "Content-Type": "application/json",
-      //     },
-      //     body: JSON.stringify({ file_name: deleteDialog.fileName }),
-      //   });
-
-
-    //   const response = await apiClient.delete(currentDataType.deleteEndpoint, {
-    //     data: { file_name: deleteDialog.fileName },
-    //   });
-
 
       const response =await apiClient.delete(currentDataType.deleteEndpoint, {
   params: {
