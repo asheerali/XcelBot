@@ -1224,8 +1224,17 @@ const Reports = () => {
               >
                 Manage your orders and track analytics with intelligent insights
               </Typography>
-              {selectedCompany !== 'all' && (
-                <Typography 
+              {/* {selectedCompany !== 'all' && (
+              
+              
+
+
+
+
+
+
+              
+              <Typography 
                   variant="body2" 
                   sx={{ 
                     color: '#1976d2',
@@ -1242,7 +1251,15 @@ const Reports = () => {
                   )}
                 </Typography>
               )}
+
+ */}
+
+
+
               {/* Display current date range */}
+           
+           
+{/*            
               <Typography 
                 variant="body2" 
                 sx={{ 
@@ -1270,6 +1287,9 @@ const Reports = () => {
                   </>
                 )}
               </Typography>
+           
+            */}
+           
             </Box>
             
             {/* Controls */}

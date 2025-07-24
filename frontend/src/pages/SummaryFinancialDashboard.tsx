@@ -29,7 +29,9 @@ const SummaryFinancialDashboard = () => {
 
   // NEW: Redux date range selectors
   const reduxDateRange = useSelector(selectSummaryFinancialDashboardDateRange);
-  const hasReduxDateRange = useSelector(selectHasSummaryFinancialDashboardDateRange);
+  const hasReduxDateRange = useSelector(
+    selectHasSummaryFinancialDashboardDateRange
+  );
 
   // Local state for non-Redux data
   const [companyLocationData, setCompanyLocationData] = useState([]);
@@ -50,37 +52,48 @@ const SummaryFinancialDashboard = () => {
 
   // NEW: Initialize local date range state from Redux on mount
   useEffect(() => {
-    if (hasReduxDateRange && reduxDateRange.startDate && reduxDateRange.endDate) {
-      console.log('💰 SummaryFinancialDashboard: Loading date range from Redux:', reduxDateRange);
-      
+    if (
+      hasReduxDateRange &&
+      reduxDateRange.startDate &&
+      reduxDateRange.endDate
+    ) {
+      console.log(
+        "💰 SummaryFinancialDashboard: Loading date range from Redux:",
+        reduxDateRange
+      );
+
       // FIXED: Convert YYYY-MM-DD format from Redux to Date objects without timezone issues
       // Create dates at noon to avoid timezone shifting
-      const startDateParts = reduxDateRange.startDate.split('-');
-      const endDateParts = reduxDateRange.endDate.split('-');
-      
+      const startDateParts = reduxDateRange.startDate.split("-");
+      const endDateParts = reduxDateRange.endDate.split("-");
+
       const startDate = new Date(
-        parseInt(startDateParts[0]), 
-        parseInt(startDateParts[1]) - 1, 
+        parseInt(startDateParts[0]),
+        parseInt(startDateParts[1]) - 1,
         parseInt(startDateParts[2]),
-        12, 0, 0 // Set to noon to avoid timezone issues
+        12,
+        0,
+        0 // Set to noon to avoid timezone issues
       );
-      
+
       const endDate = new Date(
-        parseInt(endDateParts[0]), 
-        parseInt(endDateParts[1]) - 1, 
+        parseInt(endDateParts[0]),
+        parseInt(endDateParts[1]) - 1,
         parseInt(endDateParts[2]),
-        12, 0, 0 // Set to noon to avoid timezone issues
+        12,
+        0,
+        0 // Set to noon to avoid timezone issues
       );
-      
-      console.log('💰 Converted dates:', {
+
+      console.log("💰 Converted dates:", {
         originalStart: reduxDateRange.startDate,
         originalEnd: reduxDateRange.endDate,
         convertedStart: startDate,
         convertedEnd: endDate,
         startDateLocal: startDate.toLocaleDateString(),
-        endDateLocal: endDate.toLocaleDateString()
+        endDateLocal: endDate.toLocaleDateString(),
       });
-      
+
       setSelectedDateRange({
         startDate,
         endDate,
@@ -164,130 +177,148 @@ const SummaryFinancialDashboard = () => {
 
   // UPDATED: Fetch financial data function using Redux state with improved date handling
   // UPDATED: Fetch financial data function using Redux state with improved date handling
-// UPDATED: Fetch financial data function using Redux state with improved date handling
-const fetchFinancialDataFromRedux = async () => {
-  const companies =
-    selectedCompanies.length > 0
-      ? selectedCompanies
-      : lastAppliedFilters.companies;
-  const locations =
-    selectedLocations.length > 0
-      ? selectedLocations
-      : lastAppliedFilters.locations;
+  // UPDATED: Fetch financial data function using Redux state with improved date handling
+  const fetchFinancialDataFromRedux = async () => {
+    const companies =
+      selectedCompanies.length > 0
+        ? selectedCompanies
+        : lastAppliedFilters.companies;
+    const locations =
+      selectedLocations.length > 0
+        ? selectedLocations
+        : lastAppliedFilters.locations;
 
-  // Only fetch if we have both company and location selected
-  if (companies.length > 0 && locations.length > 0) {
-    try {
-      setFinancialDataLoading(true);
-      
-      // FIXED: Handle multiple companies and locations by joining them with commas
-      const companyIds = companies.join(','); // Join multiple company IDs with commas
-      const locationIds = locations.join(','); // Join multiple location IDs with commas
+    // Only fetch if we have both company and location selected
+    if (companies.length > 0 && locations.length > 0) {
+      try {
+        setFinancialDataLoading(true);
 
-      console.log(
-        "Fetching financial data for companies:",
-        companyIds,
-        "locations:",
-        locationIds
-      );
+        // FIXED: Handle multiple companies and locations by joining them with commas
+        const companyIds = companies.join(","); // Join multiple company IDs with commas
+        const locationIds = locations.join(","); // Join multiple location IDs with commas
 
-      // UPDATED: Build URL with comma-separated IDs for multiple selection support
-      let financialUrl = `${API_URL_Local}/api/storeorders/financialsummary/${companyIds}/${locationIds}`;
-      let companySummaryUrl = `${API_URL_Local}/api/storeorders/companysummary/${companyIds}`;
+        console.log(
+          "Fetching financial data for companies:",
+          companyIds,
+          "locations:",
+          locationIds
+        );
 
-      // NEW: Determine which date range to use - prioritize Redux, then local state
-      let finalStartDate = "";
-      let finalEndDate = "";
+        // UPDATED: Build URL with comma-separated IDs for multiple selection support
+        let financialUrl = `${API_URL_Local}/api/storeorders/financialsummary/${companyIds}/${locationIds}`;
+        let companySummaryUrl = `${API_URL_Local}/api/storeorders/companysummary/${companyIds}`;
 
-      if (hasReduxDateRange && reduxDateRange.startDate && reduxDateRange.endDate) {
-        // Use Redux date range (already in YYYY-MM-DD format)
-        finalStartDate = reduxDateRange.startDate;
-        finalEndDate = reduxDateRange.endDate;
-        console.log('💰 Using Redux date range for API calls:', { finalStartDate, finalEndDate });
-      } else if (selectedDateRange.startDateStr && selectedDateRange.endDateStr) {
-        // Use local state date range
-        finalStartDate = selectedDateRange.startDateStr;
-        finalEndDate = selectedDateRange.endDateStr;
-        console.log('📅 Using local date range for API calls:', { finalStartDate, finalEndDate });
+        // NEW: Determine which date range to use - prioritize Redux, then local state
+        let finalStartDate = "";
+        let finalEndDate = "";
+
+        if (
+          hasReduxDateRange &&
+          reduxDateRange.startDate &&
+          reduxDateRange.endDate
+        ) {
+          // Use Redux date range (already in YYYY-MM-DD format)
+          finalStartDate = reduxDateRange.startDate;
+          finalEndDate = reduxDateRange.endDate;
+          console.log("💰 Using Redux date range for API calls:", {
+            finalStartDate,
+            finalEndDate,
+          });
+        } else if (
+          selectedDateRange.startDateStr &&
+          selectedDateRange.endDateStr
+        ) {
+          // Use local state date range
+          finalStartDate = selectedDateRange.startDateStr;
+          finalEndDate = selectedDateRange.endDateStr;
+          console.log("📅 Using local date range for API calls:", {
+            finalStartDate,
+            finalEndDate,
+          });
+        }
+
+        // Add date range parameters if available
+        if (finalStartDate && finalEndDate) {
+          const dateParams = `?start_date=${finalStartDate}&end_date=${finalEndDate}`;
+          financialUrl += dateParams;
+          companySummaryUrl += dateParams;
+
+          console.log("🚀 API CALLS WITH DATE RANGE AND MULTIPLE LOCATIONS:", {
+            message:
+              "Date range parameters being sent to backend with multiple locations",
+            startDate: finalStartDate,
+            endDate: finalEndDate,
+            dateParams: dateParams,
+            financialApiUrl: financialUrl,
+            companySummaryApiUrl: companySummaryUrl,
+            companyIds: companyIds,
+            locationIds: locationIds,
+            numberOfCompanies: companies.length,
+            numberOfLocations: locations.length,
+          });
+        } else {
+          console.log(
+            "🚀 API CALLS WITHOUT DATE RANGE BUT WITH MULTIPLE LOCATIONS:",
+            {
+              message:
+                "No date range selected - calling APIs without date parameters but with multiple locations",
+              financialApiUrl: financialUrl,
+              companySummaryApiUrl: companySummaryUrl,
+              companyIds: companyIds,
+              locationIds: locationIds,
+              numberOfCompanies: companies.length,
+              numberOfLocations: locations.length,
+            }
+          );
+        }
+
+        console.log("💰 FINAL API ENDPOINTS WITH MULTIPLE LOCATIONS:");
+        console.log("📊 Financial URL:", financialUrl);
+        console.log("🏢 Company Summary URL:", companySummaryUrl);
+
+        // Fetch financial summary data
+        const financialResponse = await fetch(financialUrl);
+
+        if (!financialResponse.ok) {
+          throw new Error(`HTTP error! status: ${financialResponse.status}`);
+        }
+
+        const financialData = await financialResponse.json();
+        console.log("Financial API Response:", financialData);
+        setFinancialData(financialData);
+
+        // Fetch company summary data for store breakdown and daily data
+        const companySummaryResponse = await fetch(companySummaryUrl);
+
+        if (!companySummaryResponse.ok) {
+          throw new Error(
+            `HTTP error! status: ${companySummaryResponse.status}`
+          );
+        }
+
+        const companySummaryData = await companySummaryResponse.json();
+        console.log("Company Summary API Response:", companySummaryData);
+        setCompanySummaryData(companySummaryData);
+
+        setError(null);
+      } catch (err) {
+        setError(`Failed to fetch financial data: ${err.message}`);
+        console.error("Error fetching financial data:", err);
+      } finally {
+        setFinancialDataLoading(false);
       }
-
-      // Add date range parameters if available
-      if (finalStartDate && finalEndDate) {
-        const dateParams = `?start_date=${finalStartDate}&end_date=${finalEndDate}`;
-        financialUrl += dateParams;
-        companySummaryUrl += dateParams;
-        
-        console.log('🚀 API CALLS WITH DATE RANGE AND MULTIPLE LOCATIONS:', {
-          message: 'Date range parameters being sent to backend with multiple locations',
-          startDate: finalStartDate,
-          endDate: finalEndDate,
-          dateParams: dateParams,
-          financialApiUrl: financialUrl,
-          companySummaryApiUrl: companySummaryUrl,
-          companyIds: companyIds,
-          locationIds: locationIds,
-          numberOfCompanies: companies.length,
-          numberOfLocations: locations.length
-        });
-      } else {
-        console.log('🚀 API CALLS WITHOUT DATE RANGE BUT WITH MULTIPLE LOCATIONS:', {
-          message: 'No date range selected - calling APIs without date parameters but with multiple locations',
-          financialApiUrl: financialUrl,
-          companySummaryApiUrl: companySummaryUrl,
-          companyIds: companyIds,
-          locationIds: locationIds,
-          numberOfCompanies: companies.length,
-          numberOfLocations: locations.length
-        });
-      }
-
-      console.log("💰 FINAL API ENDPOINTS WITH MULTIPLE LOCATIONS:");
-      console.log("📊 Financial URL:", financialUrl);
-      console.log("🏢 Company Summary URL:", companySummaryUrl);
-
-      // Fetch financial summary data
-      const financialResponse = await fetch(financialUrl);
-
-      if (!financialResponse.ok) {
-        throw new Error(`HTTP error! status: ${financialResponse.status}`);
-      }
-
-      const financialData = await financialResponse.json();
-      console.log("Financial API Response:", financialData);
-      setFinancialData(financialData);
-
-      // Fetch company summary data for store breakdown and daily data
-      const companySummaryResponse = await fetch(companySummaryUrl);
-
-      if (!companySummaryResponse.ok) {
-        throw new Error(
-          `HTTP error! status: ${companySummaryResponse.status}`
+    } else {
+      // Show message if no filters selected
+      if (companies.length === 0 || locations.length === 0) {
+        setError(
+          "Please select both a company and location to view financial data"
         );
       }
-
-      const companySummaryData = await companySummaryResponse.json();
-      console.log("Company Summary API Response:", companySummaryData);
-      setCompanySummaryData(companySummaryData);
-
-      setError(null);
-    } catch (err) {
-      setError(`Failed to fetch financial data: ${err.message}`);
-      console.error("Error fetching financial data:", err);
-    } finally {
+      setFinancialData(null);
+      setCompanySummaryData(null);
       setFinancialDataLoading(false);
     }
-  } else {
-    // Show message if no filters selected
-    if (companies.length === 0 || locations.length === 0) {
-      setError(
-        "Please select both a company and location to view financial data"
-      );
-    }
-    setFinancialData(null);
-    setCompanySummaryData(null);
-    setFinancialDataLoading(false);
-  }
-};
+  };
 
   // Legacy function for backward compatibility
   const fetchFinancialData = async () => {
@@ -440,14 +471,14 @@ const fetchFinancialDataFromRedux = async () => {
         });
 
         dailyData.push({
-        date: new Date(entry.date).toLocaleString('en-US', {
-              month: 'numeric',
-              day: 'numeric',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: true,
-            }),
+          date: new Date(entry.date).toLocaleString("en-US", {
+            month: "numeric",
+            day: "numeric",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          }),
 
           stores: stores,
           total: entry.daily_total || 0,
@@ -488,6 +519,28 @@ const fetchFinancialDataFromRedux = async () => {
   // Filter configuration
   const filterFields = getFilterFields();
 
+  // const handleFilterChange = useCallback(
+  //   (fieldKey, values) => {
+  //     console.log("🔄 Filter change triggered:", {
+  //       fieldKey,
+  //       values,
+  //       timestamp: Date.now(),
+  //     });
+
+  //     if (fieldKey === "companies") {
+  //       dispatch(setSelectedCompanies(values));
+
+  //       // Clear locations when companies change
+  //       if (values.length === 0) {
+  //         dispatch(setSelectedLocations([]));
+  //       }
+  //     } else if (fieldKey === "location") {
+  //       dispatch(setSelectedLocations(values));
+  //     }
+  //   },
+  //   [dispatch]
+  // );
+
   const handleFilterChange = useCallback(
     (fieldKey, values) => {
       console.log("🔄 Filter change triggered:", {
@@ -497,10 +550,12 @@ const fetchFinancialDataFromRedux = async () => {
       });
 
       if (fieldKey === "companies") {
-        dispatch(setSelectedCompanies(values));
+        // For companies, convert single value to array
+        const companyArray = Array.isArray(values) ? values : [values];
+        dispatch(setSelectedCompanies(companyArray));
 
         // Clear locations when companies change
-        if (values.length === 0) {
+        if (companyArray.length === 0 || !values) {
           dispatch(setSelectedLocations([]));
         }
       } else if (fieldKey === "location") {
@@ -525,7 +580,9 @@ const fetchFinancialDataFromRedux = async () => {
         setFinancialData(null);
         setCompanySummaryData(null);
         if (selectedCompanies.length === 0 || selectedLocations.length === 0) {
-          setError("Please select both a company and location to view financial data");
+          setError(
+            "Please select both a company and location to view financial data"
+          );
         }
       }
     };
@@ -569,25 +626,33 @@ const fetchFinancialDataFromRedux = async () => {
   // Date range utility functions
   const formatDateRange = () => {
     // NEW: Check Redux date range first, then local state
-    if (hasReduxDateRange && reduxDateRange.startDate && reduxDateRange.endDate) {
+    if (
+      hasReduxDateRange &&
+      reduxDateRange.startDate &&
+      reduxDateRange.endDate
+    ) {
       // FIXED: Use timezone-safe date conversion for display
-      const startDateParts = reduxDateRange.startDate.split('-');
-      const endDateParts = reduxDateRange.endDate.split('-');
-      
+      const startDateParts = reduxDateRange.startDate.split("-");
+      const endDateParts = reduxDateRange.endDate.split("-");
+
       const startDate = new Date(
-        parseInt(startDateParts[0]), 
-        parseInt(startDateParts[1]) - 1, 
+        parseInt(startDateParts[0]),
+        parseInt(startDateParts[1]) - 1,
         parseInt(startDateParts[2]),
-        12, 0, 0
+        12,
+        0,
+        0
       );
-      
+
       const endDate = new Date(
-        parseInt(endDateParts[0]), 
-        parseInt(endDateParts[1]) - 1, 
+        parseInt(endDateParts[0]),
+        parseInt(endDateParts[1]) - 1,
         parseInt(endDateParts[2]),
-        12, 0, 0
+        12,
+        0,
+        0
       );
-      
+
       const formatDate = (date) => {
         return date.toLocaleDateString("en-US", {
           month: "short",
@@ -598,7 +663,7 @@ const fetchFinancialDataFromRedux = async () => {
 
       return `${formatDate(startDate)} - ${formatDate(endDate)}`;
     }
-    
+
     if (!selectedDateRange.startDate || !selectedDateRange.endDate) {
       return "Select Date Range";
     }
@@ -618,19 +683,25 @@ const fetchFinancialDataFromRedux = async () => {
 
   // UPDATED: Date range handlers with Redux integration
   const handleDateRangeSelect = (range) => {
-    console.log('💰 SummaryFinancialDashboard: Date range selected:', range);
-    
+    console.log("💰 SummaryFinancialDashboard: Date range selected:", range);
+
     // FIXED: Ensure dates are properly formatted without timezone issues
-    const startDateStr = range.startDate.getFullYear() + '-' + 
-      String(range.startDate.getMonth() + 1).padStart(2, '0') + '-' + 
-      String(range.startDate.getDate()).padStart(2, '0');
-    
-    const endDateStr = range.endDate.getFullYear() + '-' + 
-      String(range.endDate.getMonth() + 1).padStart(2, '0') + '-' + 
-      String(range.endDate.getDate()).padStart(2, '0');
-    
-    console.log('💰 Formatted date strings:', { startDateStr, endDateStr });
-    
+    const startDateStr =
+      range.startDate.getFullYear() +
+      "-" +
+      String(range.startDate.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(range.startDate.getDate()).padStart(2, "0");
+
+    const endDateStr =
+      range.endDate.getFullYear() +
+      "-" +
+      String(range.endDate.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(range.endDate.getDate()).padStart(2, "0");
+
+    console.log("💰 Formatted date strings:", { startDateStr, endDateStr });
+
     // Update local state
     setSelectedDateRange({
       startDate: range.startDate,
@@ -640,10 +711,12 @@ const fetchFinancialDataFromRedux = async () => {
     });
 
     // NEW: Update Redux state
-    dispatch(setSummaryFinancialDashboardDateRange({
-      startDate: startDateStr,
-      endDate: endDateStr,
-    }));
+    dispatch(
+      setSummaryFinancialDashboardDateRange({
+        startDate: startDateStr,
+        endDate: endDateStr,
+      })
+    );
 
     setShowDateRangeModal(false);
 
@@ -875,6 +948,233 @@ const fetchFinancialDataFromRedux = async () => {
   const categoryBreakdown = getCategoryBreakdown();
   const dailyData = getDailyData();
   const periodTotal = getPeriodTotal();
+
+  const SingleSelectFilter = ({ field, currentValue, onValueChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [buttonPosition, setButtonPosition] = useState({
+      top: 0,
+      left: 0,
+      width: 0,
+    });
+    const buttonRef = useRef(null);
+
+    const isDisabled = field.options.length === 0 || field.disabled;
+
+    const filteredOptions = field.options.filter((option) =>
+      option.label.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const openDropdown = () => {
+      if (!isDisabled && buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        setButtonPosition({
+          top: rect.bottom + window.scrollY,
+          left: rect.left + window.scrollX,
+          width: rect.width,
+        });
+        setIsOpen(true);
+        setSearchTerm("");
+      }
+    };
+
+    const closeDropdown = () => {
+      setIsOpen(false);
+      setSearchTerm("");
+    };
+
+    const handleOptionSelect = (value) => {
+      onValueChange(value);
+      closeDropdown();
+    };
+
+    const selectedOption = field.options.find(
+      (option) => option.value === currentValue
+    );
+
+    return (
+      <>
+        {/* Dropdown Trigger Button */}
+        <div style={{ position: "relative", minWidth: "250px" }}>
+          <div
+            ref={buttonRef}
+            onClick={openDropdown}
+            style={{
+              border: "2px solid #e0e0e0",
+              borderRadius: "8px",
+              padding: "12px 16px",
+              backgroundColor: isDisabled ? "#f5f5f5" : "white",
+              cursor: isDisabled ? "not-allowed" : "pointer",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              minHeight: "48px",
+              transition: "border-color 0.2s",
+              borderColor: isOpen ? "#1976d2" : "#e0e0e0",
+              opacity: isDisabled ? 0.6 : 1,
+              userSelect: "none",
+            }}
+          >
+            <span
+              style={{ fontSize: "14px", color: isDisabled ? "#999" : "#333" }}
+            >
+              {isDisabled
+                ? `Loading ${field.label.toLowerCase()}...`
+                : selectedOption
+                ? selectedOption.label
+                : "Select Company"}
+            </span>
+            <span
+              style={{
+                transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                transition: "transform 0.2s",
+                color: isDisabled ? "#999" : "#333",
+              }}
+            >
+              ▼
+            </span>
+          </div>
+        </div>
+
+        {/* Modal Dropdown */}
+        {isOpen && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(0, 0, 0, 0.1)",
+              zIndex: 50000,
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "flex-start",
+            }}
+            onClick={closeDropdown}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: "absolute",
+                top: buttonPosition.top + 4,
+                left: buttonPosition.left,
+                width: Math.max(buttonPosition.width, 300),
+                backgroundColor: "white",
+                border: "2px solid #e0e0e0",
+                borderRadius: "8px",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+                maxHeight: "400px",
+                overflowY: "auto",
+              }}
+            >
+              {/* Header */}
+              <div
+                style={{
+                  padding: "16px",
+                  borderBottom: "1px solid #f0f0f0",
+                  backgroundColor: "#f8f9fa",
+                  borderRadius: "6px 6px 0 0",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span style={{ fontWeight: "600", color: "#333" }}>
+                  Select Company
+                </span>
+                <button
+                  onClick={closeDropdown}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    fontSize: "18px",
+                    cursor: "pointer",
+                    color: "#666",
+                    padding: "4px",
+                    borderRadius: "4px",
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Search Input */}
+              <div
+                style={{ padding: "16px", borderBottom: "1px solid #f0f0f0" }}
+              >
+                <input
+                  type="text"
+                  placeholder="Search companies..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  autoFocus
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    border: "1px solid #e0e0e0",
+                    borderRadius: "4px",
+                    fontSize: "14px",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+
+              {/* Options List */}
+              <div style={{ maxHeight: "250px", overflowY: "auto" }}>
+                {filteredOptions.map((option) => (
+                  <div
+                    key={option.value}
+                    onClick={() => handleOptionSelect(option.value)}
+                    style={{
+                      padding: "12px 16px",
+                      cursor: "pointer",
+                      backgroundColor:
+                        currentValue === option.value ? "#e3f2fd" : "white",
+                      borderBottom: "1px solid #f0f0f0",
+                      fontSize: "14px",
+                      userSelect: "none",
+                      transition: "background-color 0.2s",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (currentValue !== option.value) {
+                        e.target.style.backgroundColor = "#f5f5f5";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (currentValue !== option.value) {
+                        e.target.style.backgroundColor = "white";
+                      }
+                    }}
+                  >
+                    {option.label}
+                  </div>
+                ))}
+
+                {/* No Options Message */}
+                {filteredOptions.length === 0 && (
+                  <div
+                    style={{
+                      padding: "20px 16px",
+                      color: "#666",
+                      fontSize: "14px",
+                      textAlign: "center",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    {field.options.length === 0
+                      ? "No options available"
+                      : "No options found"}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
 
   // Modal-style Multi-select filter component
   const ModalMultiSelectFilter = ({ field, currentValues, onValuesChange }) => {
@@ -1219,9 +1519,11 @@ const fetchFinancialDataFromRedux = async () => {
 
   // Date Range Button Component
   const DateRangeButton = () => {
-    const displayText = hasReduxDateRange || (selectedDateRange.startDateStr && selectedDateRange.endDateStr) 
-      ? formatDateRange() 
-      : "Date Range";
+    const displayText =
+      hasReduxDateRange ||
+      (selectedDateRange.startDateStr && selectedDateRange.endDateStr)
+        ? formatDateRange()
+        : "Date Range";
 
     return (
       <button
@@ -1275,7 +1577,14 @@ const fetchFinancialDataFromRedux = async () => {
             <line x1="3" y1="10" x2="21" y2="10"></line>
           </svg>
         </div>
-        <span style={{ fontSize: "14px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <span
+          style={{
+            fontSize: "14px",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
           {displayText}
         </span>
       </button>
@@ -1290,30 +1599,38 @@ const fetchFinancialDataFromRedux = async () => {
     let initialStartDate = new Date();
     let initialEndDate = new Date();
 
-    if (hasReduxDateRange && reduxDateRange.startDate && reduxDateRange.endDate) {
+    if (
+      hasReduxDateRange &&
+      reduxDateRange.startDate &&
+      reduxDateRange.endDate
+    ) {
       // FIXED: Timezone-safe date conversion for date picker initialization
-      const startDateParts = reduxDateRange.startDate.split('-');
-      const endDateParts = reduxDateRange.endDate.split('-');
-      
+      const startDateParts = reduxDateRange.startDate.split("-");
+      const endDateParts = reduxDateRange.endDate.split("-");
+
       initialStartDate = new Date(
-        parseInt(startDateParts[0]), 
-        parseInt(startDateParts[1]) - 1, 
+        parseInt(startDateParts[0]),
+        parseInt(startDateParts[1]) - 1,
         parseInt(startDateParts[2]),
-        12, 0, 0
+        12,
+        0,
+        0
       );
-      
+
       initialEndDate = new Date(
-        parseInt(endDateParts[0]), 
-        parseInt(endDateParts[1]) - 1, 
+        parseInt(endDateParts[0]),
+        parseInt(endDateParts[1]) - 1,
         parseInt(endDateParts[2]),
-        12, 0, 0
+        12,
+        0,
+        0
       );
-      
-      console.log('💰 Modal initialized with Redux dates:', {
+
+      console.log("💰 Modal initialized with Redux dates:", {
         reduxStart: reduxDateRange.startDate,
         reduxEnd: reduxDateRange.endDate,
         convertedStart: initialStartDate,
-        convertedEnd: initialEndDate
+        convertedEnd: initialEndDate,
       });
     } else if (selectedDateRange.startDate && selectedDateRange.endDate) {
       initialStartDate = selectedDateRange.startDate;
@@ -1332,65 +1649,77 @@ const fetchFinancialDataFromRedux = async () => {
 
     // FIXED: Better handling of DateRangeSelector callback
     const handleDateRangeChange = (ranges) => {
-      console.log('📅 Date range changed - raw ranges:', ranges);
-      
+      console.log("📅 Date range changed - raw ranges:", ranges);
+
       // Handle different callback formats from DateRangeSelector
       if (ranges && ranges.selection) {
         // Format: { selection: { startDate, endDate, key } }
-        console.log('📅 Using ranges.selection format:', ranges.selection);
+        console.log("📅 Using ranges.selection format:", ranges.selection);
         setTempDateRange([ranges.selection]);
       } else if (ranges && Array.isArray(ranges) && ranges.length > 0) {
         // Format: [{ startDate, endDate, key }]
-        console.log('📅 Using array format:', ranges[0]);
+        console.log("📅 Using array format:", ranges[0]);
         setTempDateRange(ranges);
       } else if (ranges && ranges.startDate && ranges.endDate) {
         // Format: { startDate, endDate, key }
-        console.log('📅 Using direct object format:', ranges);
+        console.log("📅 Using direct object format:", ranges);
         setTempDateRange([ranges]);
       } else {
-        console.warn('⚠️ Unexpected date range format:', ranges);
+        console.warn("⚠️ Unexpected date range format:", ranges);
       }
     };
 
     const handleApplyRange = () => {
-      console.log('📅 Apply range clicked, tempDateRange:', tempDateRange);
-      
+      console.log("📅 Apply range clicked, tempDateRange:", tempDateRange);
+
       // FIXED: Better error handling and validation
       if (!tempDateRange || tempDateRange.length === 0) {
-        console.error('❌ Invalid tempDateRange - empty or null:', tempDateRange);
-        alert('Please select a valid date range');
+        console.error(
+          "❌ Invalid tempDateRange - empty or null:",
+          tempDateRange
+        );
+        alert("Please select a valid date range");
         return;
       }
 
       const range = tempDateRange[0];
-      
+
       // FIXED: Validate that range exists and has required properties
-      if (!range || typeof range !== 'object') {
-        console.error('❌ Range is not a valid object:', range);
-        alert('Please select a valid date range');
+      if (!range || typeof range !== "object") {
+        console.error("❌ Range is not a valid object:", range);
+        alert("Please select a valid date range");
         return;
       }
 
       if (!range.startDate || !range.endDate) {
-        console.error('❌ Range missing startDate or endDate:', range);
-        alert('Please select both start and end dates');
+        console.error("❌ Range missing startDate or endDate:", range);
+        alert("Please select both start and end dates");
         return;
       }
 
-      console.log('📅 Applying range:', range);
-      
+      console.log("📅 Applying range:", range);
+
       try {
         // FIXED: Use proper date formatting without timezone issues
-        const startDateStr = range.startDate.getFullYear() + '-' + 
-          String(range.startDate.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(range.startDate.getDate()).padStart(2, '0');
-        
-        const endDateStr = range.endDate.getFullYear() + '-' + 
-          String(range.endDate.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(range.endDate.getDate()).padStart(2, '0');
-        
-        console.log('💰 Modal applying formatted dates:', { startDateStr, endDateStr });
-        
+        const startDateStr =
+          range.startDate.getFullYear() +
+          "-" +
+          String(range.startDate.getMonth() + 1).padStart(2, "0") +
+          "-" +
+          String(range.startDate.getDate()).padStart(2, "0");
+
+        const endDateStr =
+          range.endDate.getFullYear() +
+          "-" +
+          String(range.endDate.getMonth() + 1).padStart(2, "0") +
+          "-" +
+          String(range.endDate.getDate()).padStart(2, "0");
+
+        console.log("💰 Modal applying formatted dates:", {
+          startDateStr,
+          endDateStr,
+        });
+
         handleDateRangeSelect({
           startDate: range.startDate,
           endDate: range.endDate,
@@ -1398,8 +1727,8 @@ const fetchFinancialDataFromRedux = async () => {
           endDateStr: endDateStr,
         });
       } catch (error) {
-        console.error('❌ Error applying date range:', error);
-        alert('Error applying date range. Please try again.');
+        console.error("❌ Error applying date range:", error);
+        alert("Error applying date range. Please try again.");
       }
     };
 
@@ -1500,13 +1829,15 @@ const fetchFinancialDataFromRedux = async () => {
               minHeight: "350px",
             }}
           >
-            <div style={{ 
-              width: "100%", 
-              height: "100%",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center"
-            }}>
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
               <DateRangeSelector
                 initialState={tempDateRange}
                 onSelect={handleDateRangeChange}
@@ -1814,6 +2145,7 @@ const fetchFinancialDataFromRedux = async () => {
             gap: "20px",
           }}
         >
+          {/*         
           {filterFields.map((field) => (
             <ModalMultiSelectFilter
               key={field.key}
@@ -1825,7 +2157,27 @@ const fetchFinancialDataFromRedux = async () => {
               }
               onValuesChange={(values) => handleFilterChange(field.key, values)}
             />
-          ))}
+          ))} */}
+
+          {filterFields.map((field) =>
+            field.key === "companies" ? (
+              <SingleSelectFilter
+                key={field.key}
+                field={field}
+                currentValue={selectedCompanies[0] || ""}
+                onValueChange={(value) => handleFilterChange(field.key, value)}
+              />
+            ) : (
+              <ModalMultiSelectFilter
+                key={field.key}
+                field={field}
+                currentValues={selectedLocations}
+                onValuesChange={(values) =>
+                  handleFilterChange(field.key, values)
+                }
+              />
+            )
+          )}
         </div>
 
         {/* Active filter chips - UPDATED to show Redux date range */}
@@ -1867,7 +2219,8 @@ const fetchFinancialDataFromRedux = async () => {
                   >
                     🏢 {company?.company_name || companyValue}
                     <button
-                      onClick={() => handleFilterChange("companies", [])}
+                      // onClick={() => handleFilterChange("companies", [])}
+                      onClick={() => handleFilterChange("companies", "")}
                       style={{
                         background: "none",
                         border: "none",
@@ -1928,8 +2281,9 @@ const fetchFinancialDataFromRedux = async () => {
                 );
               })}
               {/* UPDATED: Date range chip with individual cancel button */}
-              {(hasReduxDateRange || 
-                (selectedDateRange.startDateStr && selectedDateRange.endDateStr)) && (
+              {(hasReduxDateRange ||
+                (selectedDateRange.startDateStr &&
+                  selectedDateRange.endDateStr)) && (
                 <span
                   style={{
                     backgroundColor: "#fff3e0",
@@ -2045,7 +2399,8 @@ const fetchFinancialDataFromRedux = async () => {
                 : `${summaryStats.totalCost.toLocaleString()}`
             }
             subtitle={
-              hasReduxDateRange || (selectedDateRange.startDateStr && selectedDateRange.endDateStr)
+              hasReduxDateRange ||
+              (selectedDateRange.startDateStr && selectedDateRange.endDateStr)
                 ? formatDateRange()
                 : "Selected period"
             }
@@ -2060,7 +2415,8 @@ const fetchFinancialDataFromRedux = async () => {
                 : summaryStats.totalOrders.toLocaleString()
             }
             subtitle={
-              hasReduxDateRange || (selectedDateRange.startDateStr && selectedDateRange.endDateStr)
+              hasReduxDateRange ||
+              (selectedDateRange.startDateStr && selectedDateRange.endDateStr)
                 ? formatDateRange()
                 : "Selected period"
             }

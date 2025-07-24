@@ -1502,7 +1502,8 @@ const StoreSummaryProduction = () => {
               }}
             >
               <InputLabel>Companies</InputLabel>
-              <Select
+          
+              {/* <Select
                 multiple
                 value={selectedCompanies}
                 onChange={(event) => {
@@ -1542,7 +1543,35 @@ const StoreSummaryProduction = () => {
                     </Box>
                   </MenuItem>
                 ))}
-              </Select>
+              </Select> */}
+
+<Select
+  value={selectedCompanies.length > 0 ? selectedCompanies[0] : ''}
+  onChange={(event) => {
+    const value = event.target.value;
+    handleCompanyChange([value]); // Wrap in array since your handler expects array
+  }}
+  displayEmpty
+  label="Companies"
+  MenuProps={{
+    PaperProps: {
+      style: {
+        maxHeight: 300
+      }
+    }
+  }}
+>
+  <MenuItem disabled value="">
+    <em>Select Company</em>
+  </MenuItem>
+  {companiesData.map((company) => (
+    <MenuItem key={company.company_id} value={company.company_id.toString()}>
+      {company.company_name}
+    </MenuItem>
+  ))}
+</Select>
+
+
             </FormControl>
 
             {/* Location Filter */}
