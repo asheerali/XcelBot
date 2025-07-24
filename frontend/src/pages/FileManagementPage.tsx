@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import type { AlertColor } from "@mui/material";
 import {
   Box,
   Container,
@@ -28,6 +29,7 @@ import {
   Divider,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
+import apiClient from "../api/axiosConfig"; // Adjust path as needed
 
 // Material-UI Icons
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -180,9 +182,15 @@ const FileManagementPage = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch files
-      const filesResponse = await fetch(currentDataType.fileListEndpoint);
-      const filesData = await filesResponse.json();
+      //   // Fetch files
+      //   const filesResponse = await fetch(currentDataType.fileListEndpoint);
+      //   const filesData = await filesResponse.json();
+
+      const filesResponse = await apiClient.get(
+        currentDataType.fileListEndpoint
+      );
+      const filesData = filesResponse.data;
+
       setFiles(filesData);
 
       // Fetch locations
@@ -206,23 +214,42 @@ const FileManagementPage = () => {
 
   const handleDeleteConfirm = async () => {
     try {
-      const response = await fetch(currentDataType.deleteEndpoint, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ file_name: deleteDialog.fileName }),
-      });
+      //   const response = await fetch(currentDataType.deleteEndpoint, {
+      //     method: "DELETE",
+      //     headers: {
+      //       "Content-Type": "application/json",
+      //     },
+      //     body: JSON.stringify({ file_name: deleteDialog.fileName }),
+      //   });
 
-      if (response.ok) {
-        showAlert(
-          `File "${deleteDialog.fileName}" deleted successfully`,
-          "success"
-        );
-        fetchData(); // Refresh the data
-      } else {
-        throw new Error("Delete failed");
-      }
+
+    //   const response = await apiClient.delete(currentDataType.deleteEndpoint, {
+    //     data: { file_name: deleteDialog.fileName },
+    //   });
+
+
+      const response =await apiClient.delete(currentDataType.deleteEndpoint, {
+  params: {
+    file_name: deleteDialog.fileName,
+    confirm: true, // must be set to avoid HTTP 400
+  },
+});
+
+      //   if (response.ok) {
+      //     showAlert(
+      //       `File "${deleteDialog.fileName}" deleted successfully`,
+      //       "success"
+      //     );
+      //     fetchData(); // Refresh the data
+      //   } else {
+      //     throw new Error("Delete failed");
+      //   }
+
+      showAlert(
+        `File "${deleteDialog.fileName}" deleted successfully`,
+        "success"
+      );
+      fetchData(); // Refresh the data
     } catch (error) {
       showAlert("Error deleting file: " + error.message, "error");
     } finally {
@@ -273,11 +300,6 @@ const FileManagementPage = () => {
           >
             Date Range
           </TableCell>
-          {/* <TableCell
-            sx={{ fontWeight: 600, color: theme.palette.text.secondary }}
-          >
-            Total Sales
-          </TableCell> */}
         </>
       );
     } else {
@@ -293,11 +315,6 @@ const FileManagementPage = () => {
           >
             Year Range
           </TableCell>
-          {/* <TableCell
-            sx={{ fontWeight: 600, color: theme.palette.text.secondary }}
-          >
-            Total Sales
-          </TableCell> */}
         </>
       );
     }
@@ -336,19 +353,6 @@ const FileManagementPage = () => {
               </Typography>
             </Box>
           </TableCell>
-          <TableCell>
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              <AttachMoneyIcon
-                sx={{ mr: 1, color: theme.palette.success.main, fontSize: 16 }}
-              />
-              <Typography
-                variant="body2"
-                sx={{ fontWeight: 600, color: theme.palette.success.main }}
-              >
-                {formatCurrency(file.total_sales)}
-              </Typography>
-            </Box>
-          </TableCell>
         </>
       );
     } else {
@@ -379,19 +383,6 @@ const FileManagementPage = () => {
               />
               <Typography variant="body2">
                 {file.earliest_year} - {file.latest_year}
-              </Typography>
-            </Box>
-          </TableCell>
-          <TableCell>
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              <AttachMoneyIcon
-                sx={{ mr: 1, color: theme.palette.success.main, fontSize: 16 }}
-              />
-              <Typography
-                variant="body2"
-                sx={{ fontWeight: 600, color: theme.palette.success.main }}
-              >
-                {formatCurrency(file.total_sales)}
               </Typography>
             </Box>
           </TableCell>
@@ -490,7 +481,7 @@ const FileManagementPage = () => {
       <Container maxWidth="xl">
         {alert.show && (
           <Alert
-            severity={alert.severity}
+           severity={alert.severity as AlertColor}
             sx={{ mb: 3, borderRadius: 2 }}
             onClose={() => setAlert({ ...alert, show: false })}
           >
@@ -653,69 +644,6 @@ const FileManagementPage = () => {
               <MetricCard
                 sx={{
                   background:
-                    "linear-gradient(135deg, #fff3e0 0%, #ffcc02 100%)",
-                  border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`,
-                  "&::before": {
-                    background:
-                      "linear-gradient(135deg, #f57c00 0%, #ef6c00 100%)",
-                  },
-                }}
-              >
-                <Box
-                  sx={{
-                    p: 3,
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        color: theme.palette.warning.main,
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                        letterSpacing: 0.5,
-                      }}
-                    >
-                      Total Sales
-                    </Typography>
-                    <AttachMoneyIcon
-                      sx={{ color: theme.palette.warning.main, fontSize: 24 }}
-                    />
-                  </Box>
-                  <Typography
-                    variant="h3"
-                    sx={{
-                      fontWeight: 800,
-                      color: theme.palette.warning.main,
-                      lineHeight: 1,
-                      fontSize: "clamp(1.5rem, 3vw, 2rem)",
-                    }}
-                  >
-                    {formatCurrency(
-                      files.reduce(
-                        (sum, file) => sum + (file.total_sales || 0),
-                        0
-                      )
-                    )}
-                  </Typography>
-                </Box>
-              </MetricCard>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={3}>
-              <MetricCard
-                sx={{
-                  background:
                     "linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%)",
                   border: `1px solid ${alpha(
                     theme.palette.secondary.main,
@@ -815,141 +743,147 @@ const FileManagementPage = () => {
                   <Typography sx={{ ml: 2 }}>Loading files...</Typography>
                 </Box>
               ) : (
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow
-                        sx={{
-                          backgroundColor: alpha(
-                            theme.palette.primary.main,
-                            0.04
-                          ),
-                        }}
-                      >
-                        <TableCell
+                <Box sx={{ maxHeight: 400, overflowY: "auto" }}>
+                  <TableContainer>
+                    <Table>
+                      <TableHead>
+                        <TableRow
                           sx={{
-                            fontWeight: 600,
-                            color: theme.palette.text.secondary,
+                            backgroundColor: alpha(
+                              theme.palette.primary.main,
+                              0.04
+                            ),
                           }}
                         >
-                          File Name
-                        </TableCell>
-                        {renderFileColumns()}
-                        <TableCell
-                          align="center"
-                          sx={{
-                            fontWeight: 600,
-                            color: theme.palette.text.secondary,
-                          }}
-                        >
-                          Actions
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {files.length > 0 ? (
-                        files.map((file, index) => (
-                          <TableRow
-                            key={index}
-                            hover
+                          <TableCell
                             sx={{
-                              "&:hover": {
-                                backgroundColor: alpha(
-                                  currentDataType.color,
-                                  0.04
-                                ),
-                              },
+                              fontWeight: 600,
+                              color: theme.palette.text.secondary,
                             }}
                           >
-                            <TableCell>
-                              <Box
-                                sx={{ display: "flex", alignItems: "center" }}
-                              >
-                                <Box
-                                  sx={{
-                                    width: 40,
-                                    height: 40,
-                                    borderRadius: 2,
-                                    background: alpha(
-                                      currentDataType.color,
-                                      0.1
-                                    ),
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    mr: 2,
-                                  }}
-                                >
-                                  <DescriptionIcon
-                                    sx={{
-                                      color: currentDataType.color,
-                                      fontSize: 20,
-                                    }}
-                                  />
-                                </Box>
-                                <Box>
-                                  <Typography
-                                    variant="body2"
-                                    sx={{
-                                      fontWeight: 500,
-                                      fontFamily: "monospace",
-                                      wordBreak: "break-all",
-                                      maxWidth: 300,
-                                    }}
-                                  >
-                                    {file.file_name}
-                                  </Typography>
-                                </Box>
-                              </Box>
-                            </TableCell>
-                            {renderFileData(file)}
-                            <TableCell align="center">
-                              <Button
-                                variant="outlined"
-                                color="error"
-                                size="small"
-                                startIcon={<DeleteIcon />}
-                                onClick={() =>
-                                  handleDeleteClick(file.file_name)
-                                }
-                                sx={{
-                                  textTransform: "none",
-                                  borderRadius: 2,
-                                  px: 2,
-                                  py: 1,
-                                }}
-                              >
-                                Delete
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
-                            <DescriptionIcon
-                              sx={{
-                                fontSize: 48,
-                                color: theme.palette.text.disabled,
-                                mb: 2,
-                              }}
-                            />
-                            <Typography
-                              variant="h6"
-                              color="text.secondary"
-                              gutterBottom
-                            >
-                              No files found
-                            </Typography>
-                            <Typography variant="body2" color="text.disabled">
-                              Upload some files to get started
-                            </Typography>
+                            File Name
+                          </TableCell>
+                          {renderFileColumns()}
+                          <TableCell
+                            align="center"
+                            sx={{
+                              fontWeight: 600,
+                              color: theme.palette.text.secondary,
+                            }}
+                          >
+                            Actions
                           </TableCell>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                      </TableHead>
+                      <TableBody>
+                        {files.length > 0 ? (
+                          files.map((file, index) => (
+                            <TableRow
+                              key={index}
+                              hover
+                              sx={{
+                                "&:hover": {
+                                  backgroundColor: alpha(
+                                    currentDataType.color,
+                                    0.04
+                                  ),
+                                },
+                              }}
+                            >
+                              <TableCell>
+                                <Box
+                                  sx={{ display: "flex", alignItems: "center" }}
+                                >
+                                  <Box
+                                    sx={{
+                                      width: 40,
+                                      height: 40,
+                                      borderRadius: 2,
+                                      background: alpha(
+                                        currentDataType.color,
+                                        0.1
+                                      ),
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      mr: 2,
+                                    }}
+                                  >
+                                    <DescriptionIcon
+                                      sx={{
+                                        color: currentDataType.color,
+                                        fontSize: 20,
+                                      }}
+                                    />
+                                  </Box>
+                                  <Box>
+                                    <Typography
+                                      variant="body2"
+                                      sx={{
+                                        fontWeight: 500,
+                                        fontFamily: "monospace",
+                                        wordBreak: "break-all",
+                                        maxWidth: 300,
+                                      }}
+                                    >
+                                      {file.file_name}
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              </TableCell>
+                              {renderFileData(file)}
+                              <TableCell align="center">
+                                <Button
+                                  variant="outlined"
+                                  color="error"
+                                  size="small"
+                                  startIcon={<DeleteIcon />}
+                                  onClick={() =>
+                                    handleDeleteClick(file.file_name)
+                                  }
+                                  sx={{
+                                    textTransform: "none",
+                                    borderRadius: 2,
+                                    px: 2,
+                                    py: 1,
+                                  }}
+                                >
+                                  Delete
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell
+                              colSpan={4}
+                              align="center"
+                              sx={{ py: 8 }}
+                            >
+                              <DescriptionIcon
+                                sx={{
+                                  fontSize: 48,
+                                  color: theme.palette.text.disabled,
+                                  mb: 2,
+                                }}
+                              />
+                              <Typography
+                                variant="h6"
+                                color="text.secondary"
+                                gutterBottom
+                              >
+                                No files found
+                              </Typography>
+                              <Typography variant="body2" color="text.disabled">
+                                Upload some files to get started
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
               )}
             </ContentCard>
           </Grid>
@@ -978,7 +912,11 @@ const FileManagementPage = () => {
                 </Box>
               </Box>
 
-              <Box sx={{ p: 3 }}>
+              <Box
+                sx={{ p: 3, maxHeight: 500, overflowY: "auto" }}
+
+                //   {{ p: 3 }}
+              >
                 {locations.length > 0 ? (
                   <Box
                     sx={{ display: "flex", flexDirection: "column", gap: 2 }}
@@ -1017,7 +955,7 @@ const FileManagementPage = () => {
                         </Box>
 
                         <Grid container spacing={2}>
-                          <Grid item xs={6}>
+                          <Grid item xs={12}>
                             <Box sx={{ textAlign: "center" }}>
                               <Typography
                                 variant="h6"
@@ -1036,45 +974,7 @@ const FileManagementPage = () => {
                               </Typography>
                             </Box>
                           </Grid>
-                          <Grid item xs={6}>
-                            <Box sx={{ textAlign: "center" }}>
-                              <Typography
-                                variant="h6"
-                                sx={{
-                                  fontWeight: 700,
-                                  color: theme.palette.success.main,
-                                }}
-                              >
-                                {formatCurrency(location.total_sales)}
-                              </Typography>
-                              {/* <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                Total Sales
-                              </Typography> */}
-                            </Box>
-                          </Grid>
                         </Grid>
-
-                        {(location.average_sale_amount ||
-                          location.average_sales) && (
-                          <>
-                            <Divider sx={{ my: 2 }} />
-                            <Box sx={{ textAlign: "center" }}>
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                              >
-                                Average:{" "}
-                                {formatCurrency(
-                                  location.average_sale_amount ||
-                                    location.average_sales
-                                )}
-                              </Typography>
-                            </Box>
-                          </>
-                        )}
                       </StyledCard>
                     ))}
                   </Box>
