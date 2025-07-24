@@ -139,31 +139,6 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
 
   return (
     <>
-      {/* <Button
-        variant="outlined"
-        startIcon={<CalendarTodayIcon />}
-        endIcon={
-          selectedRange !== "Date Range" && (
-            <IconButton
-              size="small"
-              onClick={handleClear}
-              style={{ padding: "2px", marginLeft: "4px" }}
-            >
-              <ClearIcon style={{ fontSize: "16px" }} />
-            </IconButton>
-          )
-        }
-        onClick={handleOpen}
-        style={{
-          borderRadius: "8px",
-          textTransform: "none",
-          minWidth: "180px",
-          justifyContent: "flex-start",
-        }}
-      >
-        {selectedRange}
-      </Button> */}
-
       <Dialog
         open={isOpen}
         onClose={handleClose}
@@ -231,7 +206,6 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
     </>
   );
 };
-
 // FiltersOrderIQ2 Component
 const FiltersOrderIQ2 = ({
   onFiltersChange,
@@ -714,6 +688,61 @@ const FiltersOrderIQWithFilename = ({
     return `${selected.length} selected`;
   };
 
+  // UPDATED: Better status message rendering
+  const renderStatusMessage = () => {
+    if (loadingMasterFileDetails) {
+      return (
+        <Box style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <LinearProgress style={{ width: 100, height: 4 }} />
+          <Typography variant="body2" color="primary" style={{ fontWeight: 500 }}>
+            Loading data from {getApiCallCount()} file(s)...
+          </Typography>
+        </Box>
+      );
+    }
+
+    if (selectedCompanies.length === 0) {
+      return (
+        <Typography variant="body2" color="primary" style={{ fontWeight: 500 }}>
+          Step 1: Select companies to continue
+        </Typography>
+      );
+    }
+
+    if (selectedLocations.length === 0) {
+      return (
+        <Typography variant="body2" color="primary" style={{ fontWeight: 500 }}>
+          Step 2: Select locations to enable file selection
+        </Typography>
+      );
+    }
+
+    if (selectedFilenames.length === 0) {
+      return (
+        <Typography variant="body2" color="warning.main" style={{ fontWeight: 500 }}>
+          Step 3: Select files to load data ({getFilenameOptions().length} available)
+        </Typography>
+      );
+    }
+
+    if (getFilenameOptions().length === 0) {
+      return (
+        <Typography variant="body2" color="warning.main" style={{ fontWeight: 500 }}>
+          No files available for selected companies and locations
+        </Typography>
+      );
+    }
+
+    return (
+      <Typography variant="body2" color="textSecondary">
+        Ready to load: {selectedFilenames.length} file(s) selected
+        <span style={{ marginLeft: 8, color: "#4caf50" }}>
+          • Data will auto-load
+        </span>
+      </Typography>
+    );
+  };
+
   return (
     <Box style={{ marginBottom: 16 }}>
       <Grid container spacing={2} alignItems="flex-start">
@@ -834,61 +863,9 @@ const FiltersOrderIQWithFilename = ({
         </Grid>
       </Grid>
 
-      {/* Show selection guidance and active filters */}
+      {/* Updated status display */}
       <Box style={{ marginTop: 8 }}>
-        {loadingMasterFileDetails ? (
-          <Box style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <LinearProgress style={{ width: 100, height: 4 }} />
-            <Typography
-              variant="body2"
-              color="primary"
-              style={{ fontWeight: 500 }}
-            >
-              Loading filtered data from {getApiCallCount()} source(s)...
-            </Typography>
-          </Box>
-        ) : selectedCompanies.length === 0 ? (
-          <Box style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Typography
-              variant="body2"
-              color="primary"
-              style={{ fontWeight: 500 }}
-            >
-              Step 1: Select companies to continue
-            </Typography>
-          </Box>
-        ) : selectedLocations.length === 0 ? (
-          <Box style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Typography
-              variant="body2"
-              color="primary"
-              style={{ fontWeight: 500 }}
-            >
-              Step 2: Select locations to enable file selection
-            </Typography>
-          </Box>
-        ) : getFilenameOptions().length === 0 ? (
-          <Typography
-            variant="body2"
-            color="warning.main"
-            style={{ fontWeight: 500 }}
-          >
-            No files available for selected companies and locations
-          </Typography>
-        ) : (
-          <Typography variant="body2" color="textSecondary">
-            Active filters:{" "}
-            {selectedCompanies.length +
-              selectedLocations.length +
-              selectedFilenames.length}
-            <span style={{ marginLeft: 8, color: "#4caf50" }}>
-              • {getFilenameOptions().length} files available
-            </span>
-            <span style={{ marginLeft: 8, color: "#2196f3" }}>
-              • Data will auto-load on changes
-            </span>
-          </Typography>
-        )}
+        {renderStatusMessage()}
       </Box>
     </Box>
   );
@@ -944,155 +921,7 @@ const MasterFile = () => {
   const [selectedLocationId, setSelectedLocationId] = useState("");
   const [selectedDateRange, setSelectedDateRange] = useState(null);
 
-  // Auto-load data on component mount if we have saved filters
-  useEffect(() => {
-    const autoLoadData = async () => {
-      const { companies, locations, filenames } = lastAppliedFilters;
-
-      if (companies.length > 0 && locations.length > 0) {
-        console.log(
-          "Auto-loading data from saved filters:",
-          lastAppliedFilters
-        );
-
-        // Set the selections in Redux
-        dispatch(setSelectedCompanies(companies));
-        dispatch(setSelectedLocations(locations));
-        dispatch(setSelectedFilenames(filenames));
-
-        // Load data automatically
-        if (
-          companies.length === 1 &&
-          locations.length === 1 &&
-          filenames.length === 1
-        ) {
-          // Single file load
-          dispatch(
-            loadMasterFileData({
-              company_id: parseInt(companies[0]),
-              location_id: parseInt(locations[0]),
-              filename: filenames[0],
-            })
-          );
-        } else {
-          // Multiple files load
-          await handleMultipleFilesLoad(companies, locations, filenames);
-        }
-      }
-    };
-
-    // Only auto-load if we don't already have items loaded
-    if (items.length === 0 && lastAppliedFilters.companies.length > 0) {
-      autoLoadData();
-    }
-  }, []); // Run only once on mount
-
-  // Helper function to handle multiple files loading
-  const handleMultipleFilesLoad = async (companies, locations, filenames) => {
-    // Create filter combinations
-    let filteredDetails = masterFileDetails;
-
-    if (companies.length > 0) {
-      filteredDetails = filteredDetails.filter((item) =>
-        companies.includes(item.company_id.toString())
-      );
-    }
-
-    if (locations.length > 0) {
-      filteredDetails = filteredDetails.filter((item) =>
-        locations.includes(item.location_id.toString())
-      );
-    }
-
-    if (filenames.length > 0) {
-      filteredDetails = filteredDetails.filter((item) =>
-        filenames.includes(item.filename)
-      );
-    }
-
-    if (filteredDetails.length > 0) {
-      dispatch(loadMultipleMasterFileData(filteredDetails));
-    }
-  };
-
-  // Auto-apply filters when selections change
-  useEffect(() => {
-    const autoApplyFilters = async () => {
-      // Only auto-apply if we have companies and locations selected
-      if (selectedCompanies.length > 0 && selectedLocations.length > 0) {
-        console.log("Auto-applying filters due to selection change:", {
-          companies: selectedCompanies,
-          locations: selectedLocations,
-          filenames: selectedFilenames,
-          dateRange: selectedDateRange,
-        });
-
-        // Clear any previous errors
-        dispatch(clearError());
-
-        try {
-          // Prepare date range data for backend
-          const dateRangeParams = selectedDateRange ? {
-            start_date: selectedDateRange.startDate.toISOString().split('T')[0], // Format: YYYY-MM-DD
-            end_date: selectedDateRange.endDate.toISOString().split('T')[0]       // Format: YYYY-MM-DD
-          } : {};
-
-          // Single file scenario
-          if (
-            selectedCompanies.length === 1 &&
-            selectedLocations.length === 1 &&
-            selectedFilenames.length === 1
-          ) {
-            const apiParams = {
-              company_id: parseInt(selectedCompanies[0]),
-              location_id: parseInt(selectedLocations[0]),
-              filename: selectedFilenames[0],
-              ...dateRangeParams
-            };
-
-            console.log("Single file API params with date range:", apiParams);
-            dispatch(loadMasterFileData(apiParams));
-          } else {
-            // Multiple files scenario
-            await handleMultipleFilesLoadWithDateRange(
-              selectedCompanies,
-              selectedLocations,
-              selectedFilenames,
-              dateRangeParams
-            );
-          }
-
-          setUploadStatus({
-            type: "success",
-            message: `Successfully applied filters and loaded data${
-              selectedDateRange 
-                ? ` for period ${selectedDateRange.startDate.toLocaleDateString()} - ${selectedDateRange.endDate.toLocaleDateString()}` 
-                : ''
-            }`,
-          });
-
-          // Auto-clear success message after 3 seconds
-          setTimeout(() => setUploadStatus(null), 3000);
-        } catch (error) {
-          console.error("Error auto-applying filters:", error);
-          setUploadStatus({
-            type: "error",
-            message: "Failed to load filtered data",
-          });
-          // Auto-clear error message after 5 seconds
-          setTimeout(() => setUploadStatus(null), 5000);
-        }
-
-        setPage(0); // Reset to first page when filters change
-      }
-    };
-
-    // Debounce the auto-apply to avoid too many API calls
-    const timeoutId = setTimeout(autoApplyFilters, 500);
-    return () => clearTimeout(timeoutId);
-  }, [selectedCompanies, selectedLocations, selectedFilenames, selectedDateRange]);
-
-  // Updated helper function to handle multiple files loading with date range
+  // UPDATED: Helper function to handle multiple files loading with date range
   const handleMultipleFilesLoadWithDateRange = async (companies, locations, filenames, dateRangeParams) => {
     // Create filter combinations
     let filteredDetails = masterFileDetails;
@@ -1122,10 +951,131 @@ const MasterFile = () => {
         ...dateRangeParams
       }));
 
-      console.log("Multiple files API params with date range:", filteredDetailsWithDateRange);
+      console.log("Batched files API call with date range:", filteredDetailsWithDateRange);
+      
+      // This should make ONE API call with all files, not multiple calls
       dispatch(loadMultipleMasterFileData(filteredDetailsWithDateRange));
     }
   };
+
+  // Auto-load data on component mount if we have saved filters
+  useEffect(() => {
+    const autoLoadData = async () => {
+      const { companies, locations, filenames } = lastAppliedFilters;
+
+      if (companies.length > 0 && locations.length > 0 && filenames.length > 0) {
+        console.log(
+          "Auto-loading data from saved filters:",
+          lastAppliedFilters
+        );
+
+        // Set the selections in Redux
+        dispatch(setSelectedCompanies(companies));
+        dispatch(setSelectedLocations(locations));
+        dispatch(setSelectedFilenames(filenames));
+
+        // Load data automatically
+        if (
+          companies.length === 1 &&
+          locations.length === 1 &&
+          filenames.length === 1
+        ) {
+          // Single file load
+          dispatch(
+            loadMasterFileData({
+              company_id: parseInt(companies[0]),
+              location_id: parseInt(locations[0]),
+              filename: filenames[0],
+            })
+          );
+        } else {
+          // Multiple files load
+          await handleMultipleFilesLoadWithDateRange(companies, locations, filenames, {});
+        }
+      }
+    };
+
+    // Only auto-load if we don't already have items loaded
+    if (items.length === 0 && lastAppliedFilters.companies.length > 0 && lastAppliedFilters.filenames.length > 0) {
+      autoLoadData();
+    }
+  }, []); // Run only once on mount
+
+  // FIXED: Auto-apply filters when selections change - ONLY when files are selected
+  useEffect(() => {
+    const autoApplyFilters = async () => {
+      // KEY CHANGE: Only auto-apply if we have companies, locations, AND at least one filename
+      if (selectedCompanies.length > 0 && selectedLocations.length > 0 && selectedFilenames.length > 0) {
+        console.log("Auto-applying filters due to selection change:", {
+          companies: selectedCompanies,
+          locations: selectedLocations,
+          filenames: selectedFilenames,
+          dateRange: selectedDateRange,
+        });
+
+        // Clear any previous errors
+        dispatch(clearError());
+
+        try {
+          // Prepare date range data for backend
+          const dateRangeParams = selectedDateRange ? {
+            start_date: selectedDateRange.startDate.toISOString().split('T')[0],
+            end_date: selectedDateRange.endDate.toISOString().split('T')[0]
+          } : {};
+
+          // Single file scenario
+          if (
+            selectedCompanies.length === 1 &&
+            selectedLocations.length === 1 &&
+            selectedFilenames.length === 1
+          ) {
+            const apiParams = {
+              company_id: parseInt(selectedCompanies[0]),
+              location_id: parseInt(selectedLocations[0]),
+              filename: selectedFilenames[0],
+              ...dateRangeParams
+            };
+
+            console.log("Single file API params with date range:", apiParams);
+            dispatch(loadMasterFileData(apiParams));
+          } else {
+            // Multiple files scenario - BATCH THEM
+            await handleMultipleFilesLoadWithDateRange(
+              selectedCompanies,
+              selectedLocations,
+              selectedFilenames,
+              dateRangeParams
+            );
+          }
+
+          setUploadStatus({
+            type: "success",
+            message: `Successfully loaded data for ${selectedFilenames.length} file(s)${
+              selectedDateRange 
+                ? ` for period ${selectedDateRange.startDate.toLocaleDateString()} - ${selectedDateRange.endDate.toLocaleDateString()}` 
+                : ''
+            }`,
+          });
+
+          // Auto-clear success message after 3 seconds
+          setTimeout(() => setUploadStatus(null), 3000);
+        } catch (error) {
+          console.error("Error auto-applying filters:", error);
+          setUploadStatus({
+            type: "error",
+            message: "Failed to load filtered data",
+          });
+          setTimeout(() => setUploadStatus(null), 5000);
+        }
+
+        setPage(0);
+      }
+    };
+
+    // IMPROVED: Increase debounce time and add proper cleanup
+    const timeoutId = setTimeout(autoApplyFilters, 1000); // Increased from 500ms
+    return () => clearTimeout(timeoutId);
+  }, [selectedCompanies, selectedLocations, selectedFilenames, selectedDateRange]);
 
   // Get unique values for filters
   const getUniqueValues = (columnKey) => {
@@ -1257,6 +1207,12 @@ const MasterFile = () => {
 
   const handleFilenameChange = (values: string[]) => {
     dispatch(setSelectedFilenames(values));
+  };
+
+  // Date range handler (this will trigger auto-apply via useEffect)
+  const handleDateRangeSelect = (range) => {
+    setSelectedDateRange(range);
+    console.log("Selected date range:", range);
   };
 
   // Apply filters to items - Updated for dynamic data
@@ -1741,12 +1697,6 @@ const MasterFile = () => {
     setUploading(false);
   };
 
-  // Date range handler (this will trigger auto-apply via useEffect)
-  const handleDateRangeSelect = (range) => {
-    setSelectedDateRange(range);
-    console.log("Selected date range:", range);
-  };
-
   return (
     <Container maxWidth="xl" style={{ paddingTop: 24, paddingBottom: 24 }}>
       <Paper
@@ -2066,7 +2016,7 @@ const MasterFile = () => {
                   >
                     <Typography variant="body1" color="textSecondary">
                       {items.length === 0
-                        ? "No data loaded. Please select companies and locations to auto-load data."
+                        ? "No data loaded. Please select companies, locations, and files to auto-load data."
                         : "No items match the current filters."}
                     </Typography>
                   </TableCell>
@@ -2231,4 +2181,5 @@ const MasterFile = () => {
   );
 };
 
+// IMPORTANT: Make sure this export statement is present and correct
 export default MasterFile;
