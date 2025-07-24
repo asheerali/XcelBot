@@ -25,69 +25,6 @@ const initialState = {
   FinancialsDashboardEnd: null,
 };
 
-// ENHANCED: Universal date formatter with comprehensive timezone safety
-const formatDateUniversal = (date) => {
-  if (!date) return null;
-  
-  try {
-    let dateObj;
-    
-    // Handle different input types
-    if (date instanceof Date) {
-      dateObj = date;
-    } else if (typeof date === 'string') {
-      // If it's already in YYYY-MM-DD format, validate and return
-      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        const testDate = new Date(date + 'T12:00:00'); // Add noon time to avoid timezone issues
-        if (!isNaN(testDate.getTime()) && testDate.getFullYear() > 1970) {
-          return date; // Return the already formatted string
-        }
-      }
-      
-      // Handle MM/DD/YYYY format (common in US locales)
-      if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(date)) {
-        const [month, day, year] = date.split('/').map(Number);
-        dateObj = new Date(year, month - 1, day, 12, 0, 0); // Create at noon to avoid timezone issues
-      } else {
-        // For other string formats, parse carefully
-        dateObj = new Date(date);
-      }
-    } else if (typeof date === 'number') {
-      dateObj = new Date(date);
-    } else {
-      dateObj = new Date(date);
-    }
-    
-    // Validate the date
-    if (isNaN(dateObj.getTime()) || dateObj.getFullYear() <= 1970) {
-      console.warn('🚨 formatDateUniversal: Invalid date provided:', date);
-      return null;
-    }
-    
-    // CRITICAL FIX: Use local timezone methods to avoid UTC conversion issues
-    const year = dateObj.getFullYear();
-    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const day = String(dateObj.getDate()).padStart(2, '0');
-    
-    const formattedDate = `${year}-${month}-${day}`;
-    
-    console.log('📅 formatDateUniversal:', {
-      input: date,
-      inputType: typeof date,
-      parsed: dateObj.toISOString(),
-      localDate: dateObj.toLocaleDateString(),
-      formatted: formattedDate,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-    });
-    
-    return formattedDate;
-    
-  } catch (error) {
-    console.error('❌ Error in formatDateUniversal:', error, 'Input:', date);
-    return null;
-  }
-};
-
 // ORIGINAL: Helper function to format date as YYYY-MM-DD (date only, no time) in LOCAL timezone
 const formatDateOnly = (date) => {
   if (!date) return null;
@@ -105,96 +42,6 @@ const formatDateOnly = (date) => {
     return `${year}-${month}-${day}`;
   } catch (error) {
     console.error('Error formatting date:', error);
-    return null;
-  }
-};
-
-// ENHANCED: Helper function specifically for Sales Split Dashboard with comprehensive timezone safety
-const formatDateSalesSplit = (date) => {
-  if (!date) return null;
-  
-  console.log('🎯 formatDateSalesSplit called with:', {
-    date,
-    type: typeof date,
-    isDate: date instanceof Date,
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-  });
-  
-  try {
-    let dateObj;
-    
-    // Handle different input types with enhanced parsing
-    if (date instanceof Date) {
-      dateObj = date;
-    } else if (typeof date === 'string') {
-      // If it's already in YYYY-MM-DD format, validate and return
-      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        // Create a test date with noon time to avoid timezone edge cases
-        const testDate = new Date(date + 'T12:00:00');
-        if (!isNaN(testDate.getTime()) && testDate.getFullYear() > 1970) {
-          console.log('✅ formatDateSalesSplit: Already formatted string, returning as-is:', date);
-          return date;
-        }
-      }
-      
-      // Handle MM/DD/YYYY format (common in date pickers)
-      if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(date)) {
-        const [month, day, year] = date.split('/').map(Number);
-        // Create date at noon in local timezone to avoid DST issues
-        dateObj = new Date(year, month - 1, day, 12, 0, 0);
-        console.log('📅 formatDateSalesSplit: Parsed MM/DD/YYYY format:', {
-          original: date,
-          parsed: dateObj,
-          month, day, year
-        });
-      } else {
-        // For ISO strings or other formats, be more careful
-        if (date.includes('T')) {
-          // ISO string - extract date part only
-          const datePart = date.split('T')[0];
-          if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
-            return datePart;
-          }
-        }
-        // For other string formats, parse carefully
-        dateObj = new Date(date);
-      }
-    } else if (typeof date === 'number') {
-      dateObj = new Date(date);
-    } else {
-      dateObj = new Date(date);
-    }
-    
-    if (isNaN(dateObj.getTime()) || dateObj.getFullYear() <= 1970) {
-      console.error('❌ formatDateSalesSplit: Invalid date after parsing:', {
-        original: date,
-        parsed: dateObj,
-        isNaN: isNaN(dateObj.getTime()),
-        year: dateObj.getFullYear()
-      });
-      return null;
-    }
-    
-    // CRITICAL FIX: Use local timezone methods to avoid UTC conversion issues
-    // This ensures the date stays consistent regardless of server/client timezone
-    const year = dateObj.getFullYear();
-    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const day = String(dateObj.getDate()).padStart(2, '0');
-    
-    const formatted = `${year}-${month}-${day}`;
-    
-    console.log('✅ formatDateSalesSplit: Successfully formatted:', {
-      original: date,
-      originalType: typeof date,
-      dateObj: dateObj.toString(),
-      localString: dateObj.toLocaleDateString(),
-      formatted: formatted,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-    });
-    
-    return formatted;
-  } catch (error) {
-    console.error('❌ Error in formatDateSalesSplit:', error, 'Input:', date);
     return null;
   }
 };
@@ -612,20 +459,19 @@ const dateRangeSlice = createSlice({
       state.OrderIQDashboardEnd = null;
     },
 
-    // ENHANCED: Sales Split Dashboard Date Range Actions with comprehensive timezone safety
+    // Sales Split Dashboard Date Range Actions (for ExcelImport component)
     setSalesSplitDashboardDateRange: (state, action) => {
       const { startDate, endDate } = action.payload;
       console.log('📈 Redux BEFORE: setSalesSplitDashboardDateRange called with:', { 
         startDate, 
         endDate,
         startType: typeof startDate,
-        endType: typeof endDate,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        endType: typeof endDate 
       });
       
-      // ENHANCED: Use the improved formatting function for Sales Split Dashboard
-      const formattedStartDate = formatDateSalesSplit(startDate);
-      const formattedEndDate = formatDateSalesSplit(endDate);
+      // Format dates to date-only strings (YYYY-MM-DD)
+      const formattedStartDate = formatDateOnly(startDate);
+      const formattedEndDate = formatDateOnly(endDate);
       
       console.log('📈 Redux AFTER formatting:', {
         formattedStartDate,
@@ -644,8 +490,7 @@ const dateRangeSlice = createSlice({
           stateAfterUpdate: {
             SalesSplitDashboardStart: state.SalesSplitDashboardStart,
             SalesSplitDashboardEnd: state.SalesSplitDashboardEnd
-          },
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+          }
         });
       } else {
         console.error('❌ Redux: Invalid dates provided for Sales Split Dashboard, not storing:', { 
@@ -658,7 +503,7 @@ const dateRangeSlice = createSlice({
     },
     
     setSalesSplitDashboardStartDate: (state, action) => {
-      const formattedDate = formatDateSalesSplit(action.payload);
+      const formattedDate = formatDateOnly(action.payload);
       if (formattedDate) {
         state.SalesSplitDashboardStart = formattedDate;
         console.log('✅ Redux: Sales Split Dashboard start date set:', formattedDate);
@@ -666,7 +511,7 @@ const dateRangeSlice = createSlice({
     },
     
     setSalesSplitDashboardEndDate: (state, action) => {
-      const formattedDate = formatDateSalesSplit(action.payload);
+      const formattedDate = formatDateOnly(action.payload);
       if (formattedDate) {
         state.SalesSplitDashboardEnd = formattedDate;
         console.log('✅ Redux: Sales Split Dashboard end date set:', formattedDate);
@@ -819,19 +664,6 @@ export const {
   // Clear all
   clearAllDateRanges,
 } = dateRangeSlice.actions;
-
-// ENHANCED: Sales Split Dashboard selectors with timezone safety
-const parseStoredDateSalesSplit = (storedDate) => {
-  if (!storedDate) return null;
-  
-  // If it's already a valid YYYY-MM-DD string, return as-is
-  if (typeof storedDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(storedDate)) {
-    return storedDate;
-  }
-  
-  // Otherwise, format it properly using the enhanced Sales Split formatter
-  return formatDateSalesSplit(storedDate);
-};
 
 // FIXED: Simple direct selectors that match the actual state structure
 export const selectAnalyticsDashboardStartDate = (state) => {
@@ -1096,40 +928,29 @@ export const selectHasOrderIQDashboardDateRange = (state) => {
   return hasRange;
 };
 
-// ENHANCED: Sales Split Dashboard Selectors with comprehensive timezone safety
+// Sales Split Dashboard Selectors with safe fallbacks
 export const selectSalesSplitDashboardStartDate = (state) => {
-  const value = parseStoredDateSalesSplit(state.dateRange?.SalesSplitDashboardStart);
-  console.log('🔍 selectSalesSplitDashboardStartDate:', { 
-    value, 
-    type: typeof value,
-    raw: state.dateRange?.SalesSplitDashboardStart,
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-  });
+  const value = state.dateRange?.SalesSplitDashboardStart;
+  console.log('🔍 selectSalesSplitDashboardStartDate:', { value, type: typeof value });
   return value;
 };
 
 export const selectSalesSplitDashboardEndDate = (state) => {
-  const value = parseStoredDateSalesSplit(state.dateRange?.SalesSplitDashboardEnd);
-  console.log('🔍 selectSalesSplitDashboardEndDate:', { 
-    value, 
-    type: typeof value,
-    raw: state.dateRange?.SalesSplitDashboardEnd,
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-  });
+  const value = state.dateRange?.SalesSplitDashboardEnd;
+  console.log('🔍 selectSalesSplitDashboardEndDate:', { value, type: typeof value });
   return value;
 };
 
 export const selectSalesSplitDashboardDateRange = (state) => {
-  const startDate = parseStoredDateSalesSplit(state.dateRange?.SalesSplitDashboardStart);
-  const endDate = parseStoredDateSalesSplit(state.dateRange?.SalesSplitDashboardEnd);
+  const startDate = state.dateRange?.SalesSplitDashboardStart;
+  const endDate = state.dateRange?.SalesSplitDashboardEnd;
   
   console.log('🔍 selectSalesSplitDashboardDateRange raw state:', {
     rawState: state.dateRange,
     startDate,
     endDate,
     startType: typeof startDate,
-    endType: typeof endDate,
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    endType: typeof endDate
   });
   
   return {
@@ -1139,8 +960,8 @@ export const selectSalesSplitDashboardDateRange = (state) => {
 };
 
 export const selectHasSalesSplitDashboardDateRange = (state) => {
-  const startDate = parseStoredDateSalesSplit(state.dateRange?.SalesSplitDashboardStart);
-  const endDate = parseStoredDateSalesSplit(state.dateRange?.SalesSplitDashboardEnd);
+  const startDate = state.dateRange?.SalesSplitDashboardStart;
+  const endDate = state.dateRange?.SalesSplitDashboardEnd;
   const hasRange = startDate !== null && endDate !== null;
   
   console.log('🔍 selectHasSalesSplitDashboardDateRange:', {
@@ -1148,8 +969,7 @@ export const selectHasSalesSplitDashboardDateRange = (state) => {
     endDate,
     hasRange,
     startIsNull: startDate === null,
-    endIsNull: endDate === null,
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    endIsNull: endDate === null
   });
   
   return hasRange;
@@ -1249,13 +1069,8 @@ export const selectHasAnyDateRange = (state) =>
   selectHasSalesSplitDashboardDateRange(state) ||
   selectHasFinancialsDashboardDateRange(state); // NEW: Include Financials Dashboard
 
-// Export utility functions for components to use
-export { 
-  createLocalDateFromString, 
-  formatDateOnlyOrderIQ, 
-  formatDateSalesSplit,
-  formatDateUniversal 
-};
+// Export utility functions for OrderIQ Dashboard components to use
+export { createLocalDateFromString, formatDateOnlyOrderIQ };
 
 // Export reducer
 export default dateRangeSlice.reducer;
