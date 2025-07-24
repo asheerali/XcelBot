@@ -56,6 +56,14 @@ async def filter_pmix_data(
                 if not location_filter:  # If list becomes empty after filtering
                     location_filter = 'All'
         
+        
+                   # Convert all locations to lowercase if it's a list
+        if isinstance(location_filter, list):
+            location_filter = [loc.lower() for loc in location_filter]
+        elif isinstance(location_filter, str) and location_filter != 'All':
+            location_filter = location_filter.lower()
+            
+            
         # FIXED: Convert dates to pandas datetime objects immediately
         start_date_original = request.startDate if request.startDate else None
         end_date_original = request.endDate if request.endDate else None

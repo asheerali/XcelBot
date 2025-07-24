@@ -51,6 +51,12 @@ async def filter_excel_data(
             location_filter = "All"
         else:
             location_filter = request.locations if request.locations else 'All'
+                    
+                # Convert all locations to lowercase if it's a list
+        if isinstance(location_filter, list):
+            location_filter = [loc.lower() for loc in location_filter]
+        elif isinstance(location_filter, str) and location_filter != 'All':
+            location_filter = location_filter.lower()
 
         # FIXED: Convert dates to pandas datetime objects immediately
         start_date_original = request.startDate if request.startDate else None
