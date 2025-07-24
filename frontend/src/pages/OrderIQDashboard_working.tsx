@@ -54,7 +54,7 @@ import {
   setSelectedLocations,
   selectSelectedCompanies,
   selectSelectedLocations
-} from '../store/slices/masterFileSlice';
+} from '../store/slices/masterFileSlice'; // Adjust path as needed
 
 // Import OrderIQ Dashboard date range Redux actions and selectors
 import {
@@ -66,15 +66,15 @@ import {
   selectOrderIQDashboardEndDate,
   selectOrderIQDashboardDateRange,
   selectHasOrderIQDashboardDateRange
-} from '../store/slices/dateRangeSlice';
+} from '../store/slices/dateRangeSlice'; // Adjust path as needed
 
 import { API_URL_Local } from '../constants';
 import apiClient from "../api/axiosConfig";
 
 // Import your actual DateRangeSelector component
-import DateRangeSelector from '../components/DateRangeSelector';
+import DateRangeSelector from '../components/DateRangeSelector'; // Adjust path as needed
 
-// FIXED: DateRangeSelector Button Component with timezone safety
+// DateRangeSelector Button Component
 const DateRangeSelectorButton = ({ onDateRangeSelect, selectedRange, onClear }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [tempRange, setTempRange] = useState(null);
@@ -90,7 +90,7 @@ const DateRangeSelectorButton = ({ onDateRangeSelect, selectedRange, onClear }) 
   };
 
   const handleApply = () => {
-    if (tempRange && tempRange.startDate && tempRange.endDate) {
+    if (tempRange) {
       onDateRangeSelect(tempRange);
     }
     setIsOpen(false);
@@ -172,9 +172,7 @@ const DateRangeSelectorButton = ({ onDateRangeSelect, selectedRange, onClear }) 
           justifyContent: 'space-between'
         }}>
           <Typography variant="body2" color="text.secondary">
-            {tempRange && tempRange.startDate && tempRange.endDate && 
-              `${tempRange.startDate.toLocaleDateString()} - ${tempRange.endDate.toLocaleDateString()}`
-            }
+            {tempRange && `${tempRange.startDate?.toLocaleDateString()} - ${tempRange.endDate?.toLocaleDateString()}`}
           </Typography>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button 
@@ -188,7 +186,7 @@ const DateRangeSelectorButton = ({ onDateRangeSelect, selectedRange, onClear }) 
               onClick={handleApply} 
               variant="contained" 
               color="primary"
-              disabled={!tempRange || !tempRange.startDate || !tempRange.endDate}
+              disabled={!tempRange}
             >
               Apply Range
             </Button>
@@ -279,6 +277,8 @@ const OrderIQDashboard = () => {
   console.log('🔍 DEBUG: OrderIQ Redux State Investigation:');
   console.log('reduxDateRange:', reduxDateRange);
   console.log('hasDateRange:', hasDateRange);
+  console.log('reduxDateRange type:', typeof reduxDateRange);
+  console.log('reduxDateRange keys:', reduxDateRange ? Object.keys(reduxDateRange) : 'null');
 
   // State management
   const [filters, setFilters] = useState({});
@@ -288,6 +288,8 @@ const OrderIQDashboard = () => {
   const [updateOrderDialog, setUpdateOrderDialog] = useState({ open: false, order: null });
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
   const [orderToUpdate, setOrderToUpdate] = useState(null);
+  
+  // NEW: State for quantity inputs for each item
   const [itemQuantities, setItemQuantities] = useState({});
   
   // API data state
@@ -317,41 +319,113 @@ const OrderIQDashboard = () => {
     return reduxSelectedLocations.length > 0 ? reduxSelectedLocations[0] : null;
   });
 
-  // FIXED: Simplified apiDateRange computation with timezone safety
+  // ENHANCED: Improved apiDateRange computation with comprehensive debugging
   const apiDateRange = useMemo(() => {
-    console.log('🔍 Computing apiDateRange with:', { hasDateRange, reduxDateRange });
+    console.log('🔍 Computing apiDateRange with:', {
+      hasDateRange,
+      reduxDateRange,
+      startDate: reduxDateRange?.startDate,
+      endDate: reduxDateRange?.endDate
+    });
 
-    if (!hasDateRange || !reduxDateRange?.startDate || !reduxDateRange?.endDate) {
+    // Check all possible date range formats that might exist in Redux
+    if (!hasDateRange) {
+      console.log('❌ No date range in Redux (hasDateRange is false)');
       return null;
     }
 
-    // FIXED: Create Date objects in local timezone to avoid timezone shift
-    const createSafeDate = (dateStr) => {
-      const [year, month, day] = dateStr.split('-').map(Number);
-      return new Date(year, month - 1, day); // month is 0-indexed, creates date in local timezone
+    if (!reduxDateRange) {
+      console.log('❌ reduxDateRange is null/undefined');
+      return null;
+    }
+
+    // Try different possible field names that might exist in Redux
+    let startDateStr = null;
+    let endDateStr = null;
+
+    // Check various possible field names
+    if (reduxDateRange.startDate && reduxDateRange.endDate) {
+      startDateStr = reduxDateRange.startDate;
+      endDateStr = reduxDateRange.endDate;
+      console.log('✅ Found dates in startDate/endDate fields');
+    } else if (reduxDateRange.start_date && reduxDateRange.end_date) {
+      startDateStr = reduxDateRange.start_date;
+      endDateStr = reduxDateRange.end_date;
+      console.log('✅ Found dates in start_date/end_date fields');
+    } else if (reduxDateRange.startDateStr && reduxDateRange.endDateStr) {
+      startDateStr = reduxDateRange.startDateStr;
+      endDateStr = reduxDateRange.endDateStr;
+      console.log('✅ Found dates in startDateStr/endDateStr fields');
+    } else {
+      console.log('❌ No valid date fields found in reduxDateRange:', reduxDateRange);
+      return null;
+    }
+
+    if (!startDateStr || !endDateStr) {
+      console.log('❌ Missing start or end date:', { startDateStr, endDateStr });
+      return null;
+    }
+
+    // Ensure dates are in YYYY-MM-DD format
+    const formatDateString = (dateStr) => {
+      // If already in YYYY-MM-DD format, return as-is
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return dateStr;
+      }
+      
+      // If it's a Date object or Date string, convert it
+      try {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) {
+          throw new Error('Invalid date');
+        }
+        return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+      } catch (error) {
+        console.error('Error formatting date:', dateStr, error);
+        return null;
+      }
     };
 
-    const startDate = createSafeDate(reduxDateRange.startDate);
-    const endDate = createSafeDate(reduxDateRange.endDate);
+    const formattedStartDate = formatDateString(startDateStr);
+    const formattedEndDate = formatDateString(endDateStr);
 
-    return {
-      startDate,
-      endDate,
-      startDateStr: reduxDateRange.startDate,
-      endDateStr: reduxDateRange.endDate
+    if (!formattedStartDate || !formattedEndDate) {
+      console.log('❌ Failed to format dates:', { startDateStr, endDateStr });
+      return null;
+    }
+
+    // Convert YYYY-MM-DD strings to Date objects for display
+    const startDate = new Date(formattedStartDate + 'T00:00:00');
+    const endDate = new Date(formattedEndDate + 'T00:00:00');
+
+    const result = {
+      startDate: startDate,
+      endDate: endDate,
+      startDateStr: formattedStartDate,
+      endDateStr: formattedEndDate
     };
+
+    console.log('✅ Successfully computed apiDateRange:', result);
+    return result;
   }, [hasDateRange, reduxDateRange]);
 
-  // FIXED: Simplified date range display string computation
+  // ENHANCED: Better date range display string computation
   const dateRangeDisplayString = useMemo(() => {
-    if (!apiDateRange?.startDate || !apiDateRange?.endDate) {
+    console.log('🔍 Computing dateRangeDisplayString with apiDateRange:', apiDateRange);
+    
+    if (!apiDateRange || !apiDateRange.startDate || !apiDateRange.endDate) {
+      console.log('❌ No valid apiDateRange for display');
       return null;
     }
     
-    // FIXED: Use simple local date formatting
-    const startStr = apiDateRange.startDate.toLocaleDateString();
-    const endStr = apiDateRange.endDate.toLocaleDateString();
-    return `${startStr} - ${endStr}`;
+    try {
+      const displayString = `${apiDateRange.startDate.toLocaleDateString()} - ${apiDateRange.endDate.toLocaleDateString()}`;
+      console.log('✅ Date range display string:', displayString);
+      return displayString;
+    } catch (error) {
+      console.error('Error creating display string:', error);
+      return null;
+    }
   }, [apiDateRange]);
 
   // Derived data for dropdowns
@@ -363,6 +437,54 @@ const OrderIQDashboard = () => {
   const availableLocationsForCompany = selectedCompanyId 
     ? companyLocations.find(item => item.company_id === parseInt(selectedCompanyId))?.locations || []
     : [];
+
+  // Initialize component state from Redux on mount
+  useEffect(() => {
+    if (reduxSelectedCompanies.length > 0) {
+      const companyId = reduxSelectedCompanies[0];
+      setSelectedCompanyId(companyId);
+      console.log('OrderIQ: Loaded company from Redux:', companyId);
+    }
+    
+    if (reduxSelectedLocations.length > 0) {
+      const locationId = reduxSelectedLocations[0];
+      setSelectedLocationId(locationId);
+      console.log('OrderIQ: Loaded location from Redux:', locationId);
+    }
+  }, [reduxSelectedCompanies, reduxSelectedLocations]);
+
+  // Auto-fetch data when company, location, OR date range changes
+  useEffect(() => {
+    if (selectedCompanyId && selectedLocationId && companyLocations.length > 0) {
+      console.log('🚀 OrderIQ: Auto-fetching data due to filter change:', { 
+        companyId: selectedCompanyId, 
+        locationId: selectedLocationId,
+        dateRange: apiDateRange,
+        companyLocationsLoaded: companyLocations.length > 0
+      });
+      
+      fetchAvailableItems(selectedCompanyId, selectedLocationId, apiDateRange);
+      fetchRecentOrders(selectedCompanyId, selectedLocationId, apiDateRange);
+      fetchAnalytics(selectedCompanyId, selectedLocationId, apiDateRange);
+    } else {
+      console.log('⏸️ OrderIQ: Not fetching data:', {
+        selectedCompanyId: !!selectedCompanyId,
+        selectedLocationId: !!selectedLocationId,
+        companyLocationsLoaded: companyLocations.length > 0
+      });
+    }
+  }, [selectedCompanyId, selectedLocationId, companyLocations.length, apiDateRange]);
+
+  // Initialize item quantities when available items change
+  useEffect(() => {
+    if (availableItems.length > 0) {
+      const initialQuantities = {};
+      availableItems.forEach(item => {
+        initialQuantities[item.id] = 1; // Default quantity is 1
+      });
+      setItemQuantities(initialQuantities);
+    }
+  }, [availableItems]);
 
   // Success notification function
   const showNotification = (message, severity = 'success') => {
@@ -380,8 +502,9 @@ const OrderIQDashboard = () => {
     setNotification(prev => ({ ...prev, open: false }));
   };
 
-  // Handle quantity change for specific item
+  // NEW: Handle quantity change for specific item
   const handleQuantityChange = (itemId, newQuantity) => {
+    // Allow empty string for user to clear and type new number
     if (newQuantity === '') {
       setItemQuantities(prev => ({
         ...prev,
@@ -391,6 +514,7 @@ const OrderIQDashboard = () => {
     }
     
     const quantity = parseInt(newQuantity);
+    // Allow any positive integer, including 0 temporarily for editing
     if (!isNaN(quantity) && quantity >= 0) {
       setItemQuantities(prev => ({
         ...prev,
@@ -399,18 +523,345 @@ const OrderIQDashboard = () => {
     }
   };
 
+  // TESTING: Add a test function to manually set a date range for debugging
+  const testDateRange = () => {
+    console.log('🧪 Testing date range functionality...');
+    
+    const testRange = {
+      startDate: new Date('2024-01-01'),
+      endDate: new Date('2024-01-31'),
+      startDateStr: '2024-01-01',
+      endDateStr: '2024-01-31'
+    };
+    
+    console.log('Setting test date range:', testRange);
+    handleDateRangeSelect(testRange);
+  };
+
+  // Fetch company-locations data on component mount
+  useEffect(() => {
+    fetchCompanyLocations();
+  }, []);
+
+  const fetchCompanyLocations = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('Fetching company-locations...');
+      
+      const response = await apiClient.get('/company-locations/all');
+      
+      console.log('Company-locations API response:', response.data);
+      
+      // Check if data has the expected structure
+      if (!Array.isArray(response.data)) {
+        console.error('API response is not an array:', response.data);
+        throw new Error('Invalid response format: expected array of companies');
+      }
+      
+      // Validate the structure of each company
+      const validCompanies = response.data.filter(company => {
+        const isValid = company.company_id && company.company_name && Array.isArray(company.locations);
+        if (!isValid) {
+          console.warn('Invalid company structure:', company);
+        }
+        return isValid;
+      });
+      
+      if (validCompanies.length === 0) {
+        throw new Error('No valid companies found in response');
+      }
+      
+      console.log('Valid companies found:', validCompanies.length);
+      setCompanyLocations(validCompanies);
+      
+    } catch (err) {
+      console.error('Error fetching company-locations:', err);
+      
+      // Provide specific error messages based on the error type
+      let errorMessage = 'Failed to load companies and locations.';
+      
+      if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Access forbidden. You do not have permission to view companies and locations.';
+      } else if (err.response?.status === 404) {
+        errorMessage = 'API endpoint not found. Please verify the company-locations/all endpoint exists.';
+      } else if (err.response?.status === 500) {
+        errorMessage = 'Server internal error. Please check the server logs.';
+      } else if (err.code === 'NETWORK_ERROR' || err.message.includes('Network Error')) {
+        errorMessage = 'Network error: Cannot connect to the API server. Please check if the server is running and the URL is correct.';
+      }
+      
+      setError(errorMessage);
+      
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchRecentOrders = async (companyId, locationId, dateRange = null) => {
+    try {
+      setLoadingOrders(true);
+      
+      console.log('Fetching recent orders...', { companyId, locationId, dateRange });
+      
+      // Build URL with date range parameters if provided
+      let url = `/api/storeorders/detailsrecent/${companyId}/${locationId}`;
+      const params = new URLSearchParams();
+      
+      if (dateRange && dateRange.startDateStr && dateRange.endDateStr) {
+        params.append('start_date', dateRange.startDateStr);
+        params.append('end_date', dateRange.endDateStr);
+        url += `?${params.toString()}`;
+      }
+      
+      const response = await apiClient.get(url);
+      
+      console.log('Recent orders data:', response.data);
+      
+      // Check if data has expected structure
+      if (!response.data.data || !Array.isArray(response.data.data)) {
+        throw new Error('Invalid recent orders data structure received from API');
+      }
+      
+      // Transform the API response to match our component structure
+      const transformedOrders = response.data.data.map((order) => ({
+        id: order.id,
+        items: order.items_ordered?.total_items || 0,
+        total: order.items_ordered?.items?.reduce((sum, item) => sum + item.total_price, 0) || 0,
+        avg: order.items_ordered?.items?.length > 0 
+          ? (order.items_ordered.items.reduce((sum, item) => sum + item.total_price, 0) / order.items_ordered.items.length) 
+          : 0,
+        qty: order.items_ordered?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0,
+        date: new Date(order.created_at).toLocaleString('en-US', {
+          month: 'numeric',
+          day: 'numeric', 
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        }),
+        created_at: order.created_at,
+        company_name: order.company_name,
+        location_name: order.location_name,
+        orderItems: order.items_ordered?.items?.map(item => ({
+          id: item.item_id,
+          name: item.name,
+          price: item.unit_price,
+          unit: item.unit,
+          quantity: item.quantity,
+          category: item.category,
+          total_price: item.total_price
+        })) || []
+      }));
+      
+      setRecentOrders(transformedOrders);
+      console.log('Transformed recent orders:', transformedOrders);
+      
+    } catch (err) {
+      console.error('Error fetching recent orders:', err);
+      let errorMessage = 'Failed to load recent orders.';
+      
+      if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Access forbidden. You do not have permission to view recent orders.';
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  const fetchAnalytics = async (companyId, locationId, dateRange = null) => {
+    try {
+      setLoadingAnalytics(true);
+      
+      console.log('Fetching analytics...', { companyId, locationId, dateRange });
+      
+      // Build URL with date range parameters if provided
+      let url = `/api/storeorders/analytics/${companyId}/${locationId}`;
+      const params = new URLSearchParams();
+      
+      if (dateRange && dateRange.startDateStr && dateRange.endDateStr) {
+        params.append('start_date', dateRange.startDateStr);
+        params.append('end_date', dateRange.endDateStr);
+        url += `?${params.toString()}`;
+      }
+      
+      const response = await apiClient.get(url);
+      
+      console.log('Analytics data:', response.data);
+      
+      if (!response.data.data) {
+        throw new Error('Invalid analytics data structure received from API');
+      }
+      
+      setAnalyticsData(response.data.data);
+      
+    } catch (err) {
+      console.error('Error fetching analytics:', err);
+      let errorMessage = 'Failed to load analytics.';
+      
+      if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Access forbidden. You do not have permission to view analytics.';
+      }
+      
+      setError(errorMessage);
+      setAnalyticsData(null);
+    } finally {
+      setLoadingAnalytics(false);
+    }
+  };
+
+  const fetchAvailableItems = async (companyId, locationId, dateRange = null) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('📦 Fetching available items for:', { companyId, locationId, dateRange });
+      
+      // Build URL with date range parameters if provided
+      let url = `/api/masterfile/availableitems/${companyId}/${locationId}`;
+      const params = new URLSearchParams();
+      
+      if (dateRange && dateRange.startDateStr && dateRange.endDateStr) {
+        params.append('start_date', dateRange.startDateStr);
+        params.append('end_date', dateRange.endDateStr);
+        url += `?${params.toString()}`;
+      }
+      
+      const response = await apiClient.get(url);
+      
+      console.log('📦 Available items API response:', response.data);
+      
+      // Check if data has expected structure
+      if (!response.data.data || !response.data.data.dataframe || !Array.isArray(response.data.data.dataframe)) {
+        throw new Error('Invalid data structure received from API');
+      }
+      
+      // Transform the API response to match our component structure
+      const transformedItems = response.data.data.dataframe.map((item, index) => ({
+        id: `item_${index}_${companyId}_${locationId}`, // Generate unique ID
+        name: item.column1 || 'Unknown Item', // Products
+        category: item.column0 || 'Unknown Category', // Category
+        price: parseFloat(item.column4) || 0, // Current Price
+        unit: item.column3 || 'Unit', // UOM
+        batchSize: item.column2 || '', // Batch Size
+        previousPrice: item.column5 !== "-" && item.column5 ? parseFloat(item.column5) : null
+      }));
+      
+      console.log('📦 Transformed items:', transformedItems.length, 'items');
+      setAvailableItems(transformedItems);
+      
+    } catch (err) {
+      console.error('❌ Error fetching available items:', err);
+      let errorMessage = 'Failed to load available items.';
+      
+      if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Access forbidden. You do not have permission to view available items.';
+      } else if (err.response?.data?.message) {
+        errorMessage = `API Error: ${err.response.data.message}`;
+      } else if (err.message) {
+        errorMessage = `Error: ${err.message}`;
+      }
+      
+      setError(errorMessage);
+      setAvailableItems([]); // Clear items on error
+      
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // AI Suggestions function
+  const fetchAISuggestions = async () => {
+    if (!selectedCompanyId || !selectedLocationId) {
+      setError('Please select company and location to get AI suggestions');
+      return;
+    }
+
+    try {
+      setLoadingAISuggestions(true);
+      setError(null);
+      
+      console.log('Fetching AI suggestions...', { 
+        companyId: selectedCompanyId, 
+        locationId: selectedLocationId 
+      });
+      
+      const response = await apiClient.get(`/api/storeorders/aisuggestions/${selectedCompanyId}/${selectedLocationId}`);
+      
+      console.log('AI suggestions response:', response.data);
+      
+      // Check if data has expected structure
+      if (!response.data.data || !response.data.data.items_ordered || !Array.isArray(response.data.data.items_ordered.items)) {
+        throw new Error('Invalid AI suggestions data structure received from API');
+      }
+      
+      // Transform the API response to match our current order structure
+      const suggestedItems = response.data.data.items_ordered.items.map((item) => ({
+        id: item.item_id,
+        name: item.name,
+        category: item.category,
+        price: item.unit_price,
+        unit: item.unit,
+        quantity: item.quantity
+      }));
+      
+      console.log('Transformed AI suggestions:', suggestedItems);
+      
+      // Add suggested items to current order
+      if (suggestedItems.length > 0) {
+        // Replace current order with AI suggestions
+        setCurrentOrder(suggestedItems);
+        showNotification(`🤖 AI suggested ${suggestedItems.length} item${suggestedItems.length > 1 ? 's' : ''} based on your order history!`);
+      } else {
+        showNotification('🤖 No AI suggestions available at the moment. Try placing some orders first!', 'info');
+      }
+      
+    } catch (err) {
+      console.error('Error fetching AI suggestions:', err);
+      let errorMessage = 'Failed to load AI suggestions.';
+      
+      if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Access forbidden. You do not have permission to access AI suggestions.';
+      } else if (err.response?.status === 404) {
+        errorMessage = 'AI suggestions not available. No order history found for this location.';
+      } else if (err.response?.data?.message) {
+        errorMessage = `AI suggestions error: ${err.response.data.message}`;
+      }
+      
+      setError(errorMessage);
+      
+    } finally {
+      setLoadingAISuggestions(false);
+    }
+  };
+
   // Event handlers - Updated to sync with Redux
   const handleCompanyChange = (companyId) => {
     console.log('OrderIQ: Company changed to:', companyId);
     
     setSelectedCompanyId(companyId);
+    // Reset location when company changes
     setSelectedLocationId(null);
-    setAvailableItems([]);
-    setRecentOrders([]);
+    setAvailableItems([]); // Clear available items
+    setRecentOrders([]); // Clear recent orders
     setFilters(prev => ({ ...prev, companies: [companyId], location: [] }));
     
+    // Update Redux - store as array to match the existing pattern
     dispatch(setSelectedCompanies(companyId ? [companyId] : []));
-    dispatch(setSelectedLocations([]));
+    dispatch(setSelectedLocations([])); // Clear locations when company changes
   };
 
   const handleLocationChange = (locationId) => {
@@ -419,51 +870,69 @@ const OrderIQDashboard = () => {
     setSelectedLocationId(locationId);
     setFilters(prev => ({ ...prev, location: [locationId] }));
     
+    // Update Redux - store as array to match the existing pattern
     dispatch(setSelectedLocations(locationId ? [locationId] : []));
+    
+    // Data will auto-fetch via useEffect when both company and location are selected
   };
 
-  // FIXED: Simplified date range handler
+  // ENHANCED: Updated date range handler to use Redux with better debugging
   const handleDateRangeSelect = (range) => {
     console.log('🔥 OrderIQ: handleDateRangeSelect called with:', range);
+    console.log('Range startDate type:', typeof range.startDate);
+    console.log('Range endDate type:', typeof range.endDate);
+    console.log('Range startDateStr:', range.startDateStr);
+    console.log('Range endDateStr:', range.endDateStr);
     
-    if (!range.startDate || !range.endDate) {
-      console.error('Invalid date range - missing dates:', range);
+    // Ensure we have the proper format
+    let startDateStr, endDateStr;
+    
+    if (range.startDateStr && range.endDateStr) {
+      // Use the pre-formatted strings if available
+      startDateStr = range.startDateStr;
+      endDateStr = range.endDateStr;
+    } else if (range.startDate && range.endDate) {
+      // Format the Date objects
+      try {
+        startDateStr = range.startDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        endDateStr = range.endDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      } catch (error) {
+        console.error('Error formatting dates for Redux:', error);
+        return;
+      }
+    } else {
+      console.error('Invalid date range format:', range);
       return;
     }
     
-    // FIXED: Simple local timezone formatting
-    const formatDate = (date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
-    const startDateStr = formatDate(range.startDate);
-    const endDateStr = formatDate(range.endDate);
-    
     console.log('📤 Dispatching to Redux:', { startDateStr, endDateStr });
     
+    // Dispatch to Redux to store the date range
     dispatch(setOrderIQDashboardDateRange({
       startDate: startDateStr,
       endDate: endDateStr
     }));
+    
+    console.log('✅ OrderIQ: Date range dispatched to Redux, this will trigger data refresh via useEffect');
   };
 
-  // Handle date range clear
+  // NEW: Handle date range clear
   const handleDateRangeClear = () => {
-    console.log('🧹 OrderIQ: Clearing date range from Redux');
+    console.log('🧹 OrderIQ: Clearing date range from Redux, this will trigger data refresh');
     dispatch(clearOrderIQDashboardDateRange());
   };
 
-  // Add to order function
+  // UPDATED: Now uses quantity from itemQuantities state
   const handleAddToOrder = (item, quantity = null, showNotif = true) => {
+    // Use provided quantity or get from itemQuantities state
     let quantityToAdd = quantity !== null ? quantity : (itemQuantities[item.id] || 1);
     
+    // Convert to number if it's a string, and ensure it's at least 1
     if (typeof quantityToAdd === 'string') {
       quantityToAdd = parseInt(quantityToAdd) || 1;
     }
     
+    // Only add if quantity is 1 or greater
     if (quantityToAdd < 1) {
       return;
     }
@@ -511,10 +980,11 @@ const OrderIQDashboard = () => {
   };
 
   const handleAddRecentOrderToCart = (recentOrder) => {
+    // Add all items from the recent order to current order
     let itemsAdded = 0;
     recentOrder.orderItems.forEach(item => {
-      if (item.quantity > 0) {
-        handleAddToOrder(item, item.quantity, false);
+      if (item.quantity > 0) { // Only add items with quantity > 0
+        handleAddToOrder(item, item.quantity, false); // Don't show individual notifications
         itemsAdded++;
       }
     });
@@ -525,11 +995,14 @@ const OrderIQDashboard = () => {
   };
 
   const handleUpdateRecentOrder = (recentOrder) => {
+    // Set the order for updating and populate current order with its items
     setOrderToUpdate(recentOrder);
     setIsUpdatingOrder(true);
     
+    // Clear current order and populate with the order being updated
     const orderItems = recentOrder.orderItems.map(item => ({
       ...item,
+      // Ensure we have all required fields for the order update
       id: item.id,
       name: item.name,
       price: item.unit_price || item.price,
@@ -539,6 +1012,7 @@ const OrderIQDashboard = () => {
     }));
     
     setCurrentOrder(orderItems);
+    // Remove the dialog popup - directly proceed to update mode
   };
 
   const handleCancelOrderUpdate = () => {
@@ -547,254 +1021,7 @@ const OrderIQDashboard = () => {
     setCurrentOrder([]);
   };
 
-  // Initialize component state from Redux on mount
-  useEffect(() => {
-    if (reduxSelectedCompanies.length > 0) {
-      const companyId = reduxSelectedCompanies[0];
-      setSelectedCompanyId(companyId);
-      console.log('OrderIQ: Loaded company from Redux:', companyId);
-    }
-    
-    if (reduxSelectedLocations.length > 0) {
-      const locationId = reduxSelectedLocations[0];
-      setSelectedLocationId(locationId);
-      console.log('OrderIQ: Loaded location from Redux:', locationId);
-    }
-  }, [reduxSelectedCompanies, reduxSelectedLocations]);
-
-  // Auto-fetch data when company, location, OR date range changes
-  useEffect(() => {
-    if (selectedCompanyId && selectedLocationId && companyLocations.length > 0) {
-      console.log('🚀 OrderIQ: Auto-fetching data due to filter change:', { 
-        companyId: selectedCompanyId, 
-        locationId: selectedLocationId,
-        dateRange: apiDateRange,
-        companyLocationsLoaded: companyLocations.length > 0
-      });
-      
-      fetchAvailableItems(selectedCompanyId, selectedLocationId, apiDateRange);
-      fetchRecentOrders(selectedCompanyId, selectedLocationId, apiDateRange);
-      fetchAnalytics(selectedCompanyId, selectedLocationId, apiDateRange);
-    }
-  }, [selectedCompanyId, selectedLocationId, companyLocations.length, apiDateRange]);
-
-  // Initialize item quantities when available items change
-  useEffect(() => {
-    if (availableItems.length > 0) {
-      const initialQuantities = {};
-      availableItems.forEach(item => {
-        initialQuantities[item.id] = 1;
-      });
-      setItemQuantities(initialQuantities);
-    }
-  }, [availableItems]);
-
-  // Fetch company-locations data on component mount
-  useEffect(() => {
-    fetchCompanyLocations();
-  }, []);
-
-  // API FUNCTIONS START HERE
-  const fetchCompanyLocations = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await apiClient.get('/company-locations/all');
-      
-      if (!Array.isArray(response.data)) {
-        throw new Error('Invalid response format: expected array of companies');
-      }
-      
-      const validCompanies = response.data.filter(company => {
-        return company.company_id && company.company_name && Array.isArray(company.locations);
-      });
-      
-      if (validCompanies.length === 0) {
-        throw new Error('No valid companies found in response');
-      }
-      
-      setCompanyLocations(validCompanies);
-      
-    } catch (err) {
-      console.error('Error fetching company-locations:', err);
-      setError('Failed to load companies and locations.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchRecentOrders = async (companyId, locationId, dateRange = null) => {
-    try {
-      setLoadingOrders(true);
-      
-      let url = `/api/storeorders/detailsrecent/${companyId}/${locationId}`;
-      const params = new URLSearchParams();
-      
-      if (dateRange && dateRange.startDateStr && dateRange.endDateStr) {
-        params.append('start_date', dateRange.startDateStr);
-        params.append('end_date', dateRange.endDateStr);
-        url += `?${params.toString()}`;
-      }
-      
-      const response = await apiClient.get(url);
-      
-      if (!response.data.data || !Array.isArray(response.data.data)) {
-        throw new Error('Invalid recent orders data structure received from API');
-      }
-      
-      const transformedOrders = response.data.data.map((order) => ({
-        id: order.id,
-        items: order.items_ordered?.total_items || 0,
-        total: order.items_ordered?.items?.reduce((sum, item) => sum + item.total_price, 0) || 0,
-        avg: order.items_ordered?.items?.length > 0 
-          ? (order.items_ordered.items.reduce((sum, item) => sum + item.total_price, 0) / order.items_ordered.items.length) 
-          : 0,
-        qty: order.items_ordered?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0,
-        date: new Date(order.created_at).toLocaleString('en-US', {
-          month: 'numeric',
-          day: 'numeric', 
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true
-        }),
-        created_at: order.created_at,
-        company_name: order.company_name,
-        location_name: order.location_name,
-        orderItems: order.items_ordered?.items?.map(item => ({
-          id: item.item_id,
-          name: item.name,
-          price: item.unit_price,
-          unit: item.unit,
-          quantity: item.quantity,
-          category: item.category,
-          total_price: item.total_price
-        })) || []
-      }));
-      
-      setRecentOrders(transformedOrders);
-      
-    } catch (err) {
-      console.error('Error fetching recent orders:', err);
-      setError('Failed to load recent orders.');
-    } finally {
-      setLoadingOrders(false);
-    }
-  };
-
-  const fetchAnalytics = async (companyId, locationId, dateRange = null) => {
-    try {
-      setLoadingAnalytics(true);
-      
-      let url = `/api/storeorders/analytics/${companyId}/${locationId}`;
-      const params = new URLSearchParams();
-      
-      if (dateRange && dateRange.startDateStr && dateRange.endDateStr) {
-        params.append('start_date', dateRange.startDateStr);
-        params.append('end_date', dateRange.endDateStr);
-        url += `?${params.toString()}`;
-      }
-      
-      const response = await apiClient.get(url);
-      
-      if (!response.data.data) {
-        throw new Error('Invalid analytics data structure received from API');
-      }
-      
-      setAnalyticsData(response.data.data);
-      
-    } catch (err) {
-      console.error('Error fetching analytics:', err);
-      setError('Failed to load analytics.');
-      setAnalyticsData(null);
-    } finally {
-      setLoadingAnalytics(false);
-    }
-  };
-
-  const fetchAvailableItems = async (companyId, locationId, dateRange = null) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      let url = `/api/masterfile/availableitems/${companyId}/${locationId}`;
-      const params = new URLSearchParams();
-      
-      if (dateRange && dateRange.startDateStr && dateRange.endDateStr) {
-        params.append('start_date', dateRange.startDateStr);
-        params.append('end_date', dateRange.endDateStr);
-        url += `?${params.toString()}`;
-      }
-      
-      const response = await apiClient.get(url);
-      
-      if (!response.data.data || !response.data.data.dataframe || !Array.isArray(response.data.data.dataframe)) {
-        throw new Error('Invalid data structure received from API');
-      }
-      
-      const transformedItems = response.data.data.dataframe.map((item, index) => ({
-        id: `item_${index}_${companyId}_${locationId}`,
-        name: item.column1 || 'Unknown Item',
-        category: item.column0 || 'Unknown Category',
-        price: parseFloat(item.column4) || 0,
-        unit: item.column3 || 'Unit',
-        batchSize: item.column2 || '',
-        previousPrice: item.column5 !== "-" && item.column5 ? parseFloat(item.column5) : null
-      }));
-      
-      setAvailableItems(transformedItems);
-      
-    } catch (err) {
-      console.error('Error fetching available items:', err);
-      setError('Failed to load available items.');
-      setAvailableItems([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchAISuggestions = async () => {
-    if (!selectedCompanyId || !selectedLocationId) {
-      setError('Please select company and location to get AI suggestions');
-      return;
-    }
-
-    try {
-      setLoadingAISuggestions(true);
-      setError(null);
-      
-      const response = await apiClient.get(`/api/storeorders/aisuggestions/${selectedCompanyId}/${selectedLocationId}`);
-      
-      if (!response.data.data || !response.data.data.items_ordered || !Array.isArray(response.data.data.items_ordered.items)) {
-        throw new Error('Invalid AI suggestions data structure received from API');
-      }
-      
-      const suggestedItems = response.data.data.items_ordered.items.map((item) => ({
-        id: item.item_id,
-        name: item.name,
-        category: item.category,
-        price: item.unit_price,
-        unit: item.unit,
-        quantity: item.quantity
-      }));
-      
-      if (suggestedItems.length > 0) {
-        setCurrentOrder(suggestedItems);
-        showNotification(`🤖 AI suggested ${suggestedItems.length} item${suggestedItems.length > 1 ? 's' : ''} based on your order history!`);
-      } else {
-        showNotification('🤖 No AI suggestions available at the moment. Try placing some orders first!', 'info');
-      }
-      
-    } catch (err) {
-      console.error('Error fetching AI suggestions:', err);
-      setError('Failed to load AI suggestions.');
-    } finally {
-      setLoadingAISuggestions(false);
-    }
-  };
-
-  // Order submission
+  // ENHANCED: Order submission with comprehensive date range handling and debugging
   const handleSubmitOrder = async (e) => {
     if (e && e.preventDefault) {
       e.preventDefault();
@@ -814,9 +1041,18 @@ const OrderIQDashboard = () => {
       setLoading(true);
       setError(null);
       
+      // Get local time
       const now = new Date();
       const localTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString();
       
+      // DEBUGGING: Log the date range state before using it
+      console.log('🔍 SUBMIT ORDER - Date Range Debug:');
+      console.log('hasDateRange:', hasDateRange);
+      console.log('reduxDateRange:', reduxDateRange);
+      console.log('apiDateRange:', apiDateRange);
+      console.log('apiDateRange type:', typeof apiDateRange);
+      
+      // Build order data with comprehensive date range handling
       const orderData = {
         company_id: parseInt(selectedCompanyId),
         location_id: parseInt(selectedLocationId),
@@ -834,7 +1070,14 @@ const OrderIQDashboard = () => {
         order_date: localTime
       };
 
+      // Add date range information if available
       if (apiDateRange && apiDateRange.startDateStr && apiDateRange.endDateStr) {
+        console.log('✅ Adding date range to order data:', {
+          start: apiDateRange.startDateStr,
+          end: apiDateRange.endDateStr
+        });
+        
+        // Add multiple formats for backend compatibility
         orderData.date_range = {
           start_date: apiDateRange.startDateStr,
           end_date: apiDateRange.endDateStr
@@ -842,17 +1085,37 @@ const OrderIQDashboard = () => {
         orderData.start_date = apiDateRange.startDateStr;
         orderData.end_date = apiDateRange.endDateStr;
         orderData.has_date_range = true;
+        
       } else {
+        console.log('❌ No valid date range to add to order data');
         orderData.date_range = null;
         orderData.start_date = null;
         orderData.end_date = null;
         orderData.has_date_range = false;
       }
 
- 
-        
+      console.log('=== FINAL ORDER DATA FOR BACKEND ===');
+      console.log('Endpoint: /api/storeorders/orderitems');
+      console.log('Method: POST');
+      console.log('Has Date Range:', orderData.has_date_range);
+      if (orderData.has_date_range) {
+        console.log('Date Range:', orderData.date_range);
+        console.log('Start Date:', orderData.start_date);
+        console.log('End Date:', orderData.end_date);
+      }
 
-        const response = await apiClient.post('/api/storeorders/orderitems', orderData);
+      console.log(`=== FINAL ORDER DATA FOR BACKEND ===
+      Endpoint: /api/storeorders/orderitems
+      Method: POST
+      Has Date Range: ${orderData.has_date_range}
+      ${orderData.has_date_range ? `Date Range: ${JSON.stringify(orderData.date_range)}
+      Start Date: ${orderData.start_date}
+      End Date: ${orderData.end_date}` : ''}
+      `);
+      console.log('Full Payload:', JSON.stringify(orderData, null, 2));
+      console.log('=====================================');
+
+      const response = await apiClient.post('/api/storeorders/orderitems', orderData);
 
       console.log('Order submitted successfully:', response.data);
       
@@ -863,6 +1126,12 @@ const OrderIQDashboard = () => {
       
       // Refresh data
       if (selectedCompanyId && selectedLocationId) {
+        console.log('🔄 Refreshing all data after order submission with date range:', {
+          companyId: selectedCompanyId,
+          locationId: selectedLocationId,
+          dateRange: apiDateRange,
+          hasDateRange: !!apiDateRange
+        });
         fetchAvailableItems(selectedCompanyId, selectedLocationId, apiDateRange);
         fetchRecentOrders(selectedCompanyId, selectedLocationId, apiDateRange);
         fetchAnalytics(selectedCompanyId, selectedLocationId, apiDateRange);
@@ -888,7 +1157,7 @@ const OrderIQDashboard = () => {
     }
   };
 
-  // Order update
+  // ENHANCED: Order update with same comprehensive date range handling
   const handleSubmitOrderUpdate = async (e) => {
     if (e && e.preventDefault) {
       e.preventDefault();
@@ -908,9 +1177,17 @@ const OrderIQDashboard = () => {
       setLoading(true);
       setError(null);
       
+      // Get local time
       const now = new Date();
       const localTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString();
       
+      // DEBUGGING: Log the date range state for updates too
+      console.log('🔍 UPDATE ORDER - Date Range Debug:');
+      console.log('hasDateRange:', hasDateRange);
+      console.log('reduxDateRange:', reduxDateRange);
+      console.log('apiDateRange:', apiDateRange);
+      
+      // Build update data with same comprehensive date range handling
       const updateData = {
         order_id: orderToUpdate.id,
         company_id: parseInt(selectedCompanyId),
@@ -929,7 +1206,14 @@ const OrderIQDashboard = () => {
         updated_date: localTime
       };
 
+      // Add date range information if available
       if (apiDateRange && apiDateRange.startDateStr && apiDateRange.endDateStr) {
+        console.log('✅ Adding date range to update data:', {
+          start: apiDateRange.startDateStr,
+          end: apiDateRange.endDateStr
+        });
+        
+        // Add multiple formats for backend compatibility
         updateData.date_range = {
           start_date: apiDateRange.startDateStr,
           end_date: apiDateRange.endDateStr
@@ -937,12 +1221,26 @@ const OrderIQDashboard = () => {
         updateData.start_date = apiDateRange.startDateStr;
         updateData.end_date = apiDateRange.endDateStr;
         updateData.has_date_range = true;
+        
       } else {
+        console.log('❌ No valid date range to add to update data');
         updateData.date_range = null;
         updateData.start_date = null;
         updateData.end_date = null;
         updateData.has_date_range = false;
       }
+
+      console.log('=== ENHANCED ORDER UPDATE DATA BEING SENT TO BACKEND ===');
+      console.log('Endpoint: /api/storeorders/orderupdate');
+      console.log('Method: POST');
+      console.log('Has Date Range:', updateData.has_date_range);
+      if (updateData.has_date_range) {
+        console.log('Date Range:', updateData.date_range);
+        console.log('Start Date fuck this bith:', updateData.start_date);
+        console.log('End Date:', updateData.end_date);
+      }
+      console.log('Full Update Payload:', JSON.stringify(updateData, null, 2));
+      console.log('========================================================');
 
       const response = await apiClient.post('/api/storeorders/orderupdate', updateData);
 
@@ -954,6 +1252,12 @@ const OrderIQDashboard = () => {
       
       // Refresh all data after successful order update
       if (selectedCompanyId && selectedLocationId) {
+        console.log('🔄 Refreshing all data after order update with date range:', {
+          companyId: selectedCompanyId,
+          locationId: selectedLocationId,
+          dateRange: apiDateRange,
+          hasDateRange: !!apiDateRange
+        });
         fetchAvailableItems(selectedCompanyId, selectedLocationId, apiDateRange);
         fetchRecentOrders(selectedCompanyId, selectedLocationId, apiDateRange);
         fetchAnalytics(selectedCompanyId, selectedLocationId, apiDateRange);
@@ -1028,8 +1332,36 @@ const OrderIQDashboard = () => {
               selectedRange={dateRangeDisplayString}
               onClear={handleDateRangeClear}
             />
+            {/* DEBUG: Test button for date range functionality */}
+            <Button 
+              onClick={() => {
+                console.log('🧪 Testing date range...');
+                dispatch(setOrderIQDashboardDateRange({
+                  startDate: '2024-01-01',
+                  endDate: '2024-01-31'
+                }));
+              }} 
+              variant="outlined" 
+              size="small"
+              startIcon={<BugReportIcon />}
+              sx={{ ml: 1 }}
+            >
+              🧪 Test Date Range
+            </Button>
           </Box>
         </Box>
+
+        {/* Debug Info Panel */}
+        <Card sx={{ p: 2, mb: 3, bgcolor: '#f5f5f5', borderLeft: '4px solid #2196f3' }}>
+          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+            🔍 Debug Info:
+          </Typography>
+          <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+            hasDateRange: {hasDateRange ? 'true' : 'false'} | 
+            reduxDateRange: {reduxDateRange ? JSON.stringify(reduxDateRange) : 'null'} | 
+            apiDateRange: {apiDateRange ? JSON.stringify(apiDateRange) : 'null'}
+          </Typography>
+        </Card>
 
         {/* Filters Section */}
         <Card sx={{ p: 3, borderRadius: 2, mb: 3 }}>
@@ -1135,6 +1467,13 @@ const OrderIQDashboard = () => {
                         {' '}with date filter: {dateRangeDisplayString}
                       </span>
                     )}
+                  </Typography>
+                )}
+
+                {/* Show location count for selected company */}
+                {selectedCompanyId && availableLocationsForCompany.length > 0 && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    {availableLocationsForCompany.length} location{availableLocationsForCompany.length !== 1 ? 's' : ''} available for this company
                   </Typography>
                 )}
               </Grid>
@@ -1510,7 +1849,7 @@ const OrderIQDashboard = () => {
                               </Box>
                             }
                           />
-                          {/* Quantity input and Add button */}
+                          {/* NEW: Quantity input and Add button */}
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
                             <TextField
                               type="number"
