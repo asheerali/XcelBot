@@ -162,6 +162,7 @@ const parseReduxDate = (dateStr: string | null): Date | null => {
   try {
     // Redux stores dates as YYYY-MM-DD format
     const [year, month, day] = dateStr.split('-').map(Number);
+    // FIXED: Create date in local timezone (not UTC)
     return new Date(year, month - 1, day); // month is 0-indexed in Date constructor
   } catch (error) {
     console.error('Error parsing Redux date:', error);
@@ -171,7 +172,38 @@ const parseReduxDate = (dateStr: string | null): Date | null => {
 
 // Helper function to format date range for API calls
 const formatDateForAPI = (date: Date): string => {
-  return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
+  if (!date) return '';
+  try {
+    // FIXED: Use local timezone instead of UTC to avoid date shifting
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  } catch (error) {
+    console.error('Error formatting date for API:', error);
+    return '';
+  }
+};
+
+const formatDateOnly = (date: Date | string | null): string | null => {
+  if (!date) return null;
+  try {
+    const dateObj = date instanceof Date ? date : new Date(date);
+    if (isNaN(dateObj.getTime()) || dateObj.getFullYear() <= 1970) {
+      return null;
+    }
+    
+    // Use local timezone instead of UTC
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return null;
+  }
 };
 
 // DateRangeSelector Button Component - UPDATED with Redux integration
