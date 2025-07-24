@@ -1501,6 +1501,7 @@ def get_analytics_dashboard(
             rows.append({
                 "order_id": order.id,
                 "created_at": created_date,
+                "formatted_created_at": created_date.strftime("%#m/%#d/%Y, %#I:%M:%S %p"),
                 "items_count": items_count,
                 "total_quantity": total_quantity,
                 "total_amount": total_amount,
