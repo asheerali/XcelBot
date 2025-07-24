@@ -625,10 +625,7 @@ async def upload_excel(
             print('Location:', request.location)
             print("Dashboard:", request.dashboard) 
 
-            
         excel_data_copy = io.BytesIO(file_content)
-
-        
 
         if request.dashboard == "Sales Split and Product Mix" or request.dashboard == "Product Mix" or request.dashboard == "Sales Split":
             # Process the dashboard data using the separate module
@@ -639,6 +636,10 @@ async def upload_excel(
             # Strip whitespace from column names
             df.columns = df.columns.str.strip()
 
+            print("---------------------------------------------------------")
+            df["Location"] = df["Location"].str.lower()
+            print("i am here printing the locations df columns:", df["Location"])
+            
             # === Fill & Type Conversion ===
             int_cols = ['Qty']
             bool_cols = ['Void?', 'Deferred', 'Tax Exempt']
@@ -867,6 +868,9 @@ async def upload_excel(
             # Fill excluded (metadata/helper) columns with empty string
             df[exclude_cols] = df[exclude_cols].fillna('')
             df["Store"] = df["Store"].str.replace(r'^\d{4}:\s*', '', regex=True)
+            
+            df["Store"] = df["Store"].str.lower()
+            print("i am here printing the store df columns:", df["Store"])
 
 
             # Strip whitespace from column names for budget dataframe
@@ -969,6 +973,9 @@ async def upload_excel(
 
             df_budget["Store"] = df_budget["Store"].str.replace(r'^\d{4}:\s*', '', regex=True)
             df_budget["Store"].unique()  # Display unique values in the 'stores' column
+
+            df_budget["Store"] = df_budget["Store"].str.lower()
+            print("i am here printing the store df_budget columns:", df_budget["Store"])
 
             years = df["Year"].unique().tolist()  # Display unique values in the 'Year' column
             dates = df["Helper 4"].unique().tolist()  # Display unique values in the 'Helper 4' column

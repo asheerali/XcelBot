@@ -80,6 +80,12 @@ async def filter_companywide_data(
         else:
             location_filter = request.locations if request.locations else 'All'
         
+        # Convert all locations to lowercase if it's a list
+        if isinstance(location_filter, list):
+            location_filter = [loc.lower() for loc in location_filter]
+        elif isinstance(location_filter, str) and location_filter != 'All':
+            location_filter = location_filter.lower()
+
         # Handle year filter
         year_filter = request.year if request.year else None
         
