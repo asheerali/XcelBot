@@ -1326,8 +1326,6 @@ const OrderIQDashboard = () => {
             </Typography>
           </Box>
           
-       
-       
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <DateRangeSelectorButton 
               onDateRangeSelect={handleDateRangeSelect}
@@ -1335,7 +1333,7 @@ const OrderIQDashboard = () => {
               onClear={handleDateRangeClear}
             />
             {/* DEBUG: Test button for date range functionality */}
-            {/* <Button 
+            <Button 
               onClick={() => {
                 console.log('🧪 Testing date range...');
                 dispatch(setOrderIQDashboardDateRange({
@@ -1349,14 +1347,11 @@ const OrderIQDashboard = () => {
               sx={{ ml: 1 }}
             >
               🧪 Test Date Range
-            </Button> */}
+            </Button>
           </Box>
-
-
-
         </Box>
 
-        {/* Debug Info Panel
+        {/* Debug Info Panel */}
         <Card sx={{ p: 2, mb: 3, bgcolor: '#f5f5f5', borderLeft: '4px solid #2196f3' }}>
           <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
             🔍 Debug Info:
@@ -1366,7 +1361,7 @@ const OrderIQDashboard = () => {
             reduxDateRange: {reduxDateRange ? JSON.stringify(reduxDateRange) : 'null'} | 
             apiDateRange: {apiDateRange ? JSON.stringify(apiDateRange) : 'null'}
           </Typography>
-        </Card> */}
+        </Card>
 
         {/* Filters Section */}
         <Card sx={{ p: 3, borderRadius: 2, mb: 3 }}>
@@ -1476,11 +1471,11 @@ const OrderIQDashboard = () => {
                 )}
 
                 {/* Show location count for selected company */}
-                {/* {selectedCompanyId && availableLocationsForCompany.length > 0 && (
+                {selectedCompanyId && availableLocationsForCompany.length > 0 && (
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                     {availableLocationsForCompany.length} location{availableLocationsForCompany.length !== 1 ? 's' : ''} available for this company
                   </Typography>
-                )} */}
+                )}
               </Grid>
             </Grid>
           )}

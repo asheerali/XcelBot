@@ -25,7 +25,7 @@ const initialState = {
   FinancialsDashboardEnd: null,
 };
 
-// ORIGINAL: Helper function to format date as YYYY-MM-DD (date only, no time) in LOCAL timezone
+// Helper function to format date as YYYY-MM-DD (date only, no time) in LOCAL timezone
 const formatDateOnly = (date) => {
   if (!date) return null;
   try {
@@ -44,58 +44,6 @@ const formatDateOnly = (date) => {
     console.error('Error formatting date:', error);
     return null;
   }
-};
-
-// ENHANCED: Helper function specifically for OrderIQ Dashboard with timezone safety
-const formatDateOnlyOrderIQ = (date) => {
-  if (!date) return null;
-  try {
-    let dateObj;
-    
-    // Handle different input types
-    if (date instanceof Date) {
-      dateObj = date;
-    } else if (typeof date === 'string') {
-      // If it's already in YYYY-MM-DD format, validate and return
-      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        const testDate = new Date(date + 'T12:00:00'); // Add noon time to avoid timezone issues
-        if (!isNaN(testDate.getTime()) && testDate.getFullYear() > 1970) {
-          return date; // Return the already formatted string
-        }
-      }
-      // For other string formats, parse carefully
-      dateObj = new Date(date);
-    } else {
-      dateObj = new Date(date);
-    }
-    
-    if (isNaN(dateObj.getTime()) || dateObj.getFullYear() <= 1970) {
-      return null;
-    }
-    
-    // CRITICAL FIX: Use local timezone methods to avoid UTC conversion issues
-    const year = dateObj.getFullYear();
-    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const day = String(dateObj.getDate()).padStart(2, '0');
-    
-    return `${year}-${month}-${day}`;
-  } catch (error) {
-    console.error('Error formatting date for OrderIQ:', error);
-    return null;
-  }
-};
-
-// NEW: Helper function to create Date object from YYYY-MM-DD string in local timezone
-const createLocalDateFromString = (dateString) => {
-  if (!dateString) return null;
-  
-  if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-    const [year, month, day] = dateString.split('-').map(Number);
-    // Create date in local timezone (month is 0-indexed)
-    return new Date(year, month - 1, day);
-  }
-  
-  return null;
 };
 
 // Create the date range slice
@@ -394,7 +342,7 @@ const dateRangeSlice = createSlice({
       state.StoreSummaryProductionEnd = null;
     },
 
-    // FIXED: OrderIQDashboard Date Range Actions with enhanced timezone safety
+    // OrderIQDashboard Date Range Actions
     setOrderIQDashboardDateRange: (state, action) => {
       const { startDate, endDate } = action.payload;
       console.log('🛒 Redux BEFORE: setOrderIQDashboardDateRange called with:', { 
@@ -404,9 +352,9 @@ const dateRangeSlice = createSlice({
         endType: typeof endDate 
       });
       
-      // ENHANCED: Use the improved formatting function for OrderIQ
-      const formattedStartDate = formatDateOnlyOrderIQ(startDate);
-      const formattedEndDate = formatDateOnlyOrderIQ(endDate);
+      // Format dates to date-only strings (YYYY-MM-DD)
+      const formattedStartDate = formatDateOnly(startDate);
+      const formattedEndDate = formatDateOnly(endDate);
       
       console.log('🛒 Redux AFTER formatting:', {
         formattedStartDate,
@@ -438,7 +386,7 @@ const dateRangeSlice = createSlice({
     },
     
     setOrderIQDashboardStartDate: (state, action) => {
-      const formattedDate = formatDateOnlyOrderIQ(action.payload);
+      const formattedDate = formatDateOnly(action.payload);
       if (formattedDate) {
         state.OrderIQDashboardStart = formattedDate;
         console.log('✅ Redux: OrderIQ Dashboard start date set:', formattedDate);
@@ -446,7 +394,7 @@ const dateRangeSlice = createSlice({
     },
     
     setOrderIQDashboardEndDate: (state, action) => {
-      const formattedDate = formatDateOnlyOrderIQ(action.payload);
+      const formattedDate = formatDateOnly(action.payload);
       if (formattedDate) {
         state.OrderIQDashboardEnd = formattedDate;
         console.log('✅ Redux: OrderIQ Dashboard end date set:', formattedDate);
@@ -869,34 +817,22 @@ export const selectHasStoreSummaryProductionDateRange = (state) => {
   return hasRange;
 };
 
-// ENHANCED: OrderIQDashboard Selectors with timezone safety
-const parseStoredDateOrderIQ = (storedDate) => {
-  if (!storedDate) return null;
-  
-  // If it's already a valid YYYY-MM-DD string, return as-is
-  if (typeof storedDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(storedDate)) {
-    return storedDate;
-  }
-  
-  // Otherwise, format it properly using the enhanced OrderIQ formatter
-  return formatDateOnlyOrderIQ(storedDate);
-};
-
+// OrderIQDashboard Selectors with safe fallbacks
 export const selectOrderIQDashboardStartDate = (state) => {
-  const value = parseStoredDateOrderIQ(state.dateRange?.OrderIQDashboardStart);
+  const value = state.dateRange?.OrderIQDashboardStart;
   console.log('🔍 selectOrderIQDashboardStartDate:', { value, type: typeof value });
   return value;
 };
 
 export const selectOrderIQDashboardEndDate = (state) => {
-  const value = parseStoredDateOrderIQ(state.dateRange?.OrderIQDashboardEnd);
+  const value = state.dateRange?.OrderIQDashboardEnd;
   console.log('🔍 selectOrderIQDashboardEndDate:', { value, type: typeof value });
   return value;
 };
 
 export const selectOrderIQDashboardDateRange = (state) => {
-  const startDate = parseStoredDateOrderIQ(state.dateRange?.OrderIQDashboardStart);
-  const endDate = parseStoredDateOrderIQ(state.dateRange?.OrderIQDashboardEnd);
+  const startDate = state.dateRange?.OrderIQDashboardStart;
+  const endDate = state.dateRange?.OrderIQDashboardEnd;
   
   console.log('🔍 selectOrderIQDashboardDateRange raw state:', {
     rawState: state.dateRange,
@@ -913,8 +849,8 @@ export const selectOrderIQDashboardDateRange = (state) => {
 };
 
 export const selectHasOrderIQDashboardDateRange = (state) => {
-  const startDate = parseStoredDateOrderIQ(state.dateRange?.OrderIQDashboardStart);
-  const endDate = parseStoredDateOrderIQ(state.dateRange?.OrderIQDashboardEnd);
+  const startDate = state.dateRange?.OrderIQDashboardStart;
+  const endDate = state.dateRange?.OrderIQDashboardEnd;
   const hasRange = startDate !== null && endDate !== null;
   
   console.log('🔍 selectHasOrderIQDashboardDateRange:', {
@@ -1068,9 +1004,6 @@ export const selectHasAnyDateRange = (state) =>
   selectHasOrderIQDashboardDateRange(state) ||
   selectHasSalesSplitDashboardDateRange(state) ||
   selectHasFinancialsDashboardDateRange(state); // NEW: Include Financials Dashboard
-
-// Export utility functions for OrderIQ Dashboard components to use
-export { createLocalDateFromString, formatDateOnlyOrderIQ };
 
 // Export reducer
 export default dateRangeSlice.reducer;

@@ -1362,7 +1362,7 @@ const AnalyticsDashboard = () => {
                   </Box>
 
                   {/* Enhanced Key Metrics Cards - Responsive Design */}
-
+            // Replace the Enhanced Key Metrics Cards section with this fixed design
 
 {/* Fixed Modern Key Metrics Cards - No Text Wrapping */}
 <Grid container spacing={{ xs: 2, sm: 3, md: 4 }} sx={{ mb: 4 }}>

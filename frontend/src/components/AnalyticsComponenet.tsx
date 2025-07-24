@@ -19,53 +19,13 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 
-// Import API base URL
-import { API_URL_Local } from "../constants";
-
 // Styled Components
-const StatsCard = styled(Card)(({ theme }) => ({
-  borderRadius: 16,
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  background: `linear-gradient(145deg, ${theme.palette.background.paper} 0%, ${alpha(theme.palette.background.paper, 0.8)} 100%)`,
-  boxShadow: `0 8px 32px ${alpha(theme.palette.common.black, 0.08)}`,
-  '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: `0 16px 48px ${alpha(theme.palette.common.black, 0.12)}`
-  }
-}));
-
 const ChartCard = styled(Card)(({ theme }) => ({
   borderRadius: 16,
   background: theme.palette.background.paper,
   boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.08)}`,
   overflow: 'hidden',
   height: '400px'
-}));
-
-const StatsContainer = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: theme.spacing(3)
-}));
-
-const StatsContent = styled(Box)(() => ({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 8
-}));
-
-const StatsIcon = styled(Box)(({ theme, color }) => ({
-  width: 60,
-  height: 60,
-  borderRadius: '50%',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  background: `linear-gradient(135deg, ${color} 0%, ${alpha(color, 0.8)} 100%)`,
-  color: theme.palette.common.white,
-  boxShadow: `0 8px 16px ${alpha(color, 0.3)}`
 }));
 
 // Format currency
@@ -114,155 +74,23 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-const AnalyticsComponenet = ({ appliedFilters = { companies: [], locations: [], dateRange: null } }) => {
+// FIXED: Accept analyticsData as prop instead of fetching independently
+const AnalyticsComponenet = ({ 
+  appliedFilters = { companies: [], locations: [], dateRange: null },
+  analyticsData = null // NEW: Accept analyticsData from parent
+}) => {
   const theme = useTheme();
-  
-  // State for analytics data
-  const [analyticsData, setAnalyticsData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
-  // Extract applied filter values
+  // Remove all the fetching logic since we're now getting data from parent
+  // const [analyticsData, setAnalyticsData] = useState(null);
+  // const [loading, setLoading] = useState(false);
+  // const [error, setError] = useState(null);
+
+  // Extract applied filter values for display purposes
   const { companies: appliedCompanies, locations: appliedLocations, dateRange: appliedDateRange } = appliedFilters;
 
   // Debug logging
-  console.log('AnalyticsComponenet appliedFilters:', appliedFilters);
-
-  // Fetch analytics data from API
- // Fetch analytics data from API
-  const fetchAnalyticsData = async () => {
-    // Only fetch if we have both company and location applied
-    if (!appliedCompanies || !appliedLocations || appliedCompanies.length === 0 || appliedLocations.length === 0) {
-      console.log('Not fetching - no applied filters');
-      setAnalyticsData(null);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Use the first applied company and location
-      const companyId = appliedCompanies[0];
-      const locationId = appliedLocations[0];
-
-      // Build the API URL
-      let apiUrl = `${API_URL_Local}/api/storeorders/analyticsdashboard/${companyId}/${locationId}`;
-      
-      // FIXED: Add date range parameters if they exist
-      const params = new URLSearchParams();
-      let dateInfo = "No date range - fetching all data";
-      
-      if (appliedDateRange?.startDate && appliedDateRange?.endDate) {
-        // Handle both Date objects and ISO strings
-        let startDateObj, endDateObj;
-        
-        if (typeof appliedDateRange.startDate === 'string') {
-          startDateObj = new Date(appliedDateRange.startDate);
-        } else {
-          startDateObj = appliedDateRange.startDate;
-        }
-        
-        if (typeof appliedDateRange.endDate === 'string') {
-          endDateObj = new Date(appliedDateRange.endDate);
-        } else {
-          endDateObj = appliedDateRange.endDate;
-        }
-        
-        // Validate dates before formatting
-        if (!isNaN(startDateObj.getTime()) && !isNaN(endDateObj.getTime()) && 
-            startDateObj.getFullYear() > 1970 && endDateObj.getFullYear() > 1970) {
-          // Format dates correctly for backend (yyyy-MM-dd)
-          const startDate = startDateObj.toISOString().split('T')[0];
-          const endDate = endDateObj.toISOString().split('T')[0];
-          
-          params.append('start_date', startDate);
-          params.append('end_date', endDate);
-          
-          dateInfo = `Date range: ${startDate} to ${endDate}`;
-        } else {
-          dateInfo = "Invalid dates provided - fetching all data";
-        }
-      }
-      
-      if (params.toString()) {
-        apiUrl += `?${params.toString()}`;
-      }
-
-      console.log('📤 === ANALYTICS COMPONENT API CALL ===');
-      console.log('📤 Company ID:', companyId);
-      console.log('📤 Location ID:', locationId);
-      console.log('📤 Date Info:', dateInfo);
-      console.log('📤 Full API URL:', apiUrl);
-      console.log('📤 Query Parameters:', params.toString());
-      console.log('📤 === END ANALYTICS COMPONENT API ===');
-
-      const response = await fetch(apiUrl, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      
-      if (result.data) {
-        setAnalyticsData(result.data);
-        console.log('✅ Analytics data fetched successfully with date range:', {
-          company: result.data.company_name,
-          location: result.data.location_name,
-          totalSales: result.data.total_sales,
-          totalOrders: result.data.total_orders,
-          dateRangeUsed: dateInfo
-        });
-      } else {
-        throw new Error('No data received from API');
-      }
-    } catch (err) {
-      console.error('❌ Error fetching analytics data:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch data when applied filters change
-  useEffect(() => {
-    fetchAnalyticsData();
-  }, [appliedFilters]);
-
-  // Loading state
-  if (loading) {
-    return (
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: 400,
-        flexDirection: 'column',
-        gap: 2,
-        p: 4
-      }}>
-        <CircularProgress size={50} />
-        <Typography variant="body1">Loading analytics data...</Typography>
-      </Box>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">
-          Error loading analytics data: {error}
-        </Alert>
-      </Box>
-    );
-  }
+  console.log('AnalyticsComponenet received analyticsData:', analyticsData);
 
   // No applied filters state
   if (!appliedCompanies || !appliedLocations || appliedCompanies.length === 0 || appliedLocations.length === 0) {
@@ -278,10 +106,10 @@ const AnalyticsComponenet = ({ appliedFilters = { companies: [], locations: [], 
       }}>
         <AnalyticsIcon sx={{ fontSize: 60, color: 'text.secondary' }} />
         <Typography variant="h6" color="text.secondary" align="center">
-          Select company and location, then click "Apply Filters" to view analytics
+          Select company and location to view analytics
         </Typography>
         <Typography variant="body2" color="text.secondary" align="center">
-          Use the filters above to choose a company and location, then click the Apply Filters button
+          Use the filters above to choose a company and location
         </Typography>
       </Box>
     );
@@ -309,77 +137,11 @@ const AnalyticsComponenet = ({ appliedFilters = { companies: [], locations: [], 
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
-          Analytics Dashboard
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          {analyticsData.company_name} - {analyticsData.location_name}
-        </Typography>
-      </Box>
+      {/* REMOVED: Header section - no longer needed since parent handles this */}
+      
+      {/* REMOVED: Stats Cards - parent component now handles metrics display */}
 
-      {/* Stats Cards - Only 3 cards, removed Total Guests */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {/* Total Sales */}
-        <Grid item xs={12} sm={6} md={4}>
-          <StatsCard>
-            <StatsContainer>
-              <StatsContent>
-                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                  Total Sales
-                </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.success.main }}>
-                  {formatCurrency(analyticsData.total_sales)}
-                </Typography>
-              </StatsContent>
-              <StatsIcon color={theme.palette.success.main}>
-                <AttachMoneyIcon sx={{ fontSize: 28 }} />
-              </StatsIcon>
-            </StatsContainer>
-          </StatsCard>
-        </Grid>
-
-        {/* Total Orders */}
-        <Grid item xs={12} sm={6} md={4}>
-          <StatsCard>
-            <StatsContainer>
-              <StatsContent>
-                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                  Total Orders
-                </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.info.main }}>
-                  {formatNumber(analyticsData.total_orders)}
-                </Typography>
-              </StatsContent>
-              <StatsIcon color={theme.palette.info.main}>
-                <ShoppingCartIcon sx={{ fontSize: 28 }} />
-              </StatsIcon>
-            </StatsContainer>
-          </StatsCard>
-        </Grid>
-
-        {/* Average Order Value */}
-        <Grid item xs={12} sm={6} md={4}>
-          <StatsCard>
-            <StatsContainer>
-              <StatsContent>
-                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                  Avg Order Value
-                </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.warning.main }}>
-                  {formatCurrency(analyticsData.avg_order_value)}
-                </Typography>
-              </StatsContent>
-              <StatsIcon color={theme.palette.warning.main}>
-                <TrendingUpIcon sx={{ fontSize: 28 }} />
-              </StatsIcon>
-            </StatsContainer>
-          </StatsCard>
-        </Grid>
-      </Grid>
-
-      {/* Charts */}
+      {/* Charts Only - This is what AnalyticsComponent should focus on */}
       <Grid container spacing={3}>
         {/* Daily Orders Chart */}
         <Grid item xs={12} md={6}>
