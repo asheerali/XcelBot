@@ -1868,6 +1868,8 @@ export default function ProductMixDashboard() {
       )}
 
       {/* Success Alert for Data Update with Formatting Info and Company ID */}
+    
+    
       {dataUpdated && (
         <Alert 
           severity="success" 
@@ -1876,12 +1878,15 @@ export default function ProductMixDashboard() {
         >
           <Typography variant="body2">
             <strong>✅ Filters Applied Successfully!</strong> 
-            {selectedCompany && (
+          
+            {/* {selectedCompany && (
               <span> | <strong>Company:</strong> {selectedCompanyName} (ID: {selectedCompany})</span>
             )}
+             */}
           </Typography>
         </Alert>
       )}
+
 
       {/* Debug Info for Development */}
       {formattedCurrentData && (

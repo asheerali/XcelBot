@@ -991,7 +991,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       )}
 
       {/* Filter Requirements Status */}
-      <Box sx={{ mt: 3 }}>
+      {/* <Box sx={{ mt: 3 }}>
         <Alert 
           severity={displaySelectedLocations.length > 0 ? "success" : "warning"}
         >
@@ -1005,10 +1005,10 @@ const FilterSection: React.FC<FilterSectionProps> = ({
             )}
           </Typography>
         </Alert>
-      </Box>
+      </Box> */}
 
       {/* Debug Info - Show Redux state in development */}
-      {process.env.NODE_ENV === 'development' && onReduxLocationChange && (
+      {/* {process.env.NODE_ENV === 'development' && onReduxLocationChange && (
         <Alert severity="info" sx={{ mt: 2 }}>
           <Typography variant="body2">
             <strong>Debug - Redux Integration:</strong><br />
@@ -1021,7 +1021,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
             Multiple Locations: {displaySelectedLocations.length > 1 ? 'Yes' : 'No'}
           </Typography>
         </Alert>
-      )}
+      )} */}
 
       {/* Date Range Picker Dialog */}
       <Dialog
