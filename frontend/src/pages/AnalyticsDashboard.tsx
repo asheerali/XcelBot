@@ -498,151 +498,180 @@ const AnalyticsDashboard = () => {
   });
 
   // FIXED: Enhanced analytics data fetching with support for multiple companies and locations
-  const fetchAnalyticsData = async (
-    companyIds,
-    locationIds,
-    dateRange = null
-  ) => {
-    try {
-      setAnalyticsLoading(true);
-      setAnalyticsError(null);
+// The issue is in the fetchAnalyticsData function around line 232-280
+// Here's the fixed version:
 
-      console.log("🔍 Fetching analytics data for:", {
-        companyIds,
-        locationIds,
-        dateRange,
-        hasDateRange,
-      });
+const fetchAnalyticsData = async (
+  companyIds,
+  locationIds,
+  dateRange = null
+) => {
+  try {
+    setAnalyticsLoading(true);
+    setAnalyticsError(null);
 
-      // Validate inputs
-      if (
-        !companyIds ||
-        !locationIds ||
-        companyIds.length === 0 ||
-        locationIds.length === 0
-      ) {
-        throw new Error("Company IDs and Location IDs are required");
-      }
+    console.log("🔍 Fetching analytics data for:", {
+      companyIds,
+      locationIds,
+      dateRange,
+      hasDateRange,
+    });
 
-      // Convert arrays to comma-separated strings
-      const companyIdsStr = Array.isArray(companyIds)
-        ? companyIds.join(",")
-        : companyIds;
-      const locationIdsStr = Array.isArray(locationIds)
-        ? locationIds.join(",")
-        : locationIds;
+    // Validate inputs
+    if (
+      !companyIds ||
+      !locationIds ||
+      companyIds.length === 0 ||
+      locationIds.length === 0
+    ) {
+      throw new Error("Company IDs and Location IDs are required");
+    }
 
-      // Build the API URL with multiple IDs
-      let apiUrl = `${API_URL_Local}/api/storeorders/analyticsdashboard/${companyIdsStr}/${locationIdsStr}`;
+    // ✅ FIXED: Ensure proper array handling and integer conversion
+    const companyIdsArray = Array.isArray(companyIds) ? companyIds : [companyIds];
+    const locationIdsArray = Array.isArray(locationIds) ? locationIds : [locationIds];
+    
+    // ✅ FIXED: Convert to integers and then to strings for consistent formatting
+    const companyIdsStr = companyIdsArray
+      .map(id => parseInt(id, 10))
+      .filter(id => !isNaN(id))
+      .join(",");
+      
+    const locationIdsStr = locationIdsArray
+      .map(id => parseInt(id, 10))
+      .filter(id => !isNaN(id))
+      .join(",");
 
-      // FIXED: Improved date range parameter handling
-      const params = new URLSearchParams();
+    // ✅ FIXED: Additional validation after conversion
+    if (!companyIdsStr || !locationIdsStr) {
+      throw new Error("Invalid company or location IDs after conversion");
+    }
 
-      if (dateRange?.startDate && dateRange?.endDate) {
-        // Handle both Date objects and ISO strings
-        let startDateObj, endDateObj;
+    console.log("🔍 FIXED: Processed IDs for API:", {
+      originalCompanyIds: companyIds,
+      originalLocationIds: locationIds,
+      processedCompanyIds: companyIdsStr,
+      processedLocationIds: locationIdsStr,
+      companyCount: companyIdsArray.length,
+      locationCount: locationIdsArray.length,
+    });
 
-        if (dateRange.startDate instanceof Date) {
-          startDateObj = dateRange.startDate;
-        } else {
-          startDateObj = new Date(dateRange.startDate);
-        }
+    // Build the API URL with multiple IDs
+    let apiUrl = `${API_URL_Local}/api/storeorders/analyticsdashboard/${companyIdsStr}/${locationIdsStr}`;
 
-        if (dateRange.endDate instanceof Date) {
-          endDateObj = dateRange.endDate;
-        } else {
-          endDateObj = new Date(dateRange.endDate);
-        }
+    // Handle date range parameters
+    const params = new URLSearchParams();
 
-        // Validate dates before formatting
-        if (
-          !isNaN(startDateObj.getTime()) &&
-          !isNaN(endDateObj.getTime()) &&
-          startDateObj.getFullYear() > 1970 &&
-          endDateObj.getFullYear() > 1970
-        ) {
-          // Format dates correctly for backend (yyyy-MM-dd)
-          const startDate = startDateObj.toISOString().split("T")[0];
-          const endDate = endDateObj.toISOString().split("T")[0];
+    if (dateRange?.startDate && dateRange?.endDate) {
+      let startDateObj, endDateObj;
 
-          params.append("start_date", startDate);
-          params.append("end_date", endDate);
-
-          console.log(
-            "📅 FIXED: Date range parameters being sent to backend:",
-            {
-              original: dateRange,
-              formatted: { start_date: startDate, end_date: endDate },
-            }
-          );
-        } else {
-          console.warn("⚠️ Invalid dates provided, skipping date range");
-        }
+      if (dateRange.startDate instanceof Date) {
+        startDateObj = dateRange.startDate;
       } else {
-        console.log("📅 No date range provided - fetching all data");
+        startDateObj = new Date(dateRange.startDate);
       }
 
-      if (params.toString()) {
-        apiUrl += `?${params.toString()}`;
+      if (dateRange.endDate instanceof Date) {
+        endDateObj = dateRange.endDate;
+      } else {
+        endDateObj = new Date(dateRange.endDate);
       }
 
-      console.log("🌐 Backend API Request:", {
-        url: apiUrl,
-        company_ids: companyIdsStr,
-        location_ids: locationIdsStr,
-        company_count: Array.isArray(companyIds) ? companyIds.length : 1,
-        location_count: Array.isArray(locationIds) ? locationIds.length : 1,
-        timestamp: new Date().toISOString(),
-      });
+      if (
+        !isNaN(startDateObj.getTime()) &&
+        !isNaN(endDateObj.getTime()) &&
+        startDateObj.getFullYear() > 1970 &&
+        endDateObj.getFullYear() > 1970
+      ) {
+        const startDate = startDateObj.toISOString().split("T")[0];
+        const endDate = endDateObj.toISOString().split("T")[0];
 
-      const response = await fetch(apiUrl, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+        params.append("start_date", startDate);
+        params.append("end_date", endDate);
 
-      console.log("🔄 Backend Response Status:", {
+        console.log("📅 Date range parameters being sent to backend:", {
+          original: dateRange,
+          formatted: { start_date: startDate, end_date: endDate },
+        });
+      } else {
+        console.warn("⚠️ Invalid dates provided, skipping date range");
+      }
+    } else {
+      console.log("📅 No date range provided - fetching all data");
+    }
+
+    if (params.toString()) {
+      apiUrl += `?${params.toString()}`;
+    }
+
+    console.log("🌐 FIXED Backend API Request:", {
+      url: apiUrl,
+      company_ids: companyIdsStr,
+      location_ids: locationIdsStr,
+      company_count: companyIdsArray.length,
+      location_count: locationIdsArray.length,
+      expected_format: `${API_URL_Local}/api/storeorders/analyticsdashboard/1,2/3,4,5`,
+      timestamp: new Date().toISOString(),
+    });
+
+    const response = await fetch(apiUrl, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    console.log("🔄 Backend Response Status:", {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      url: apiUrl,
+    });
+
+    if (!response.ok) {
+      // ✅ FIXED: Better error handling with URL info
+      const errorText = await response.text();
+      console.error("❌ Backend Error Response:", {
         status: response.status,
         statusText: response.statusText,
-        ok: response.ok,
+        url: apiUrl,
+        responseText: errorText,
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      console.log("📊 Backend Data Received:", {
-        success: true,
-        dataReceived: !!result.data,
-        totalSales: result.data?.total_sales,
-        totalOrders: result.data?.total_orders,
-        recordCount: result.data?.daily_orders?.length || 0,
-        companiesProcessed: Array.isArray(companyIds) ? companyIds.length : 1,
-        locationsProcessed: Array.isArray(locationIds) ? locationIds.length : 1,
-      });
-
-      if (result.data) {
-        setAnalyticsData(result.data);
-      } else {
-        throw new Error("No data received from analytics API");
-      }
-    } catch (err) {
-      console.error("❌ Error fetching analytics data:", {
-        error: err.message,
-        companyIds,
-        locationIds,
-        dateRange,
-      });
-      setAnalyticsError(err.message);
-      setAnalyticsData(null);
-    } finally {
-      setAnalyticsLoading(false);
+      throw new Error(`HTTP error! status: ${response.status}, URL: ${apiUrl}`);
     }
-  };
 
+    const result = await response.json();
+
+    console.log("📊 Backend Data Received:", {
+      success: true,
+      dataReceived: !!result.data,
+      totalSales: result.data?.total_sales,
+      totalOrders: result.data?.total_orders,
+      recordCount: result.data?.daily_orders?.length || 0,
+      companiesProcessed: companyIdsArray.length,
+      locationsProcessed: locationIdsArray.length,
+      finalUrl: apiUrl,
+    });
+
+    if (result.data) {
+      setAnalyticsData(result.data);
+    } else {
+      throw new Error("No data received from analytics API");
+    }
+  } catch (err) {
+    console.error("❌ Error fetching analytics data:", {
+      error: err.message,
+      companyIds,
+      locationIds,
+      dateRange,
+      stack: err.stack,
+    });
+    setAnalyticsError(err.message);
+    setAnalyticsData(null);
+  } finally {
+    setAnalyticsLoading(false);
+  }
+};
   // FIXED: Auto-apply filters when Redux state changes - Updated to use all selected IDs
   useEffect(() => {
     // Only apply filters if we have both companies and locations selected
