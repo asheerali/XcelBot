@@ -48,18 +48,18 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
   // Helper function to format numbers with commas (preserving decimals)
   const formatNumber = (value: number) => {
     if (isNaN(value) || value === null || value === undefined) return "0";
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 0,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
     }).format(value);
   };
 
   // Helper function to format currency (preserving decimals)
   const formatCurrency = (value: number) => {
     if (isNaN(value) || value === null || value === undefined) return "$0.00";
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
@@ -87,9 +87,9 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
   };
 
   // Process Daily Sales data from table8 (Day of Week data) - FULL VALUES
-// Process Daily Sales data from table8 (Day of Week data) - CONSISTENT DAY ORDER
-// Process Daily Sales data from table8 (Day of Week data) - FULL VALUES
-// Process Daily Sales data from table8 (Day of Week data) - FULL VALUES
+  // Process Daily Sales data from table8 (Day of Week data) - CONSISTENT DAY ORDER
+  // Process Daily Sales data from table8 (Day of Week data) - FULL VALUES
+  // Process Daily Sales data from table8 (Day of Week data) - FULL VALUES
   const processDailySalesData = () => {
     if (
       !tableData.table8 ||
@@ -102,12 +102,12 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
         day: `Week ${row.Week}`,
         sales: parseFloat(
           row["Grand Total"] ||
-          row[
-            Object.keys(row).find((key) =>
-              key.toLowerCase().includes("total")
-            ) || ""
-          ] ||
-          0
+            row[
+              Object.keys(row).find((key) =>
+                key.toLowerCase().includes("total")
+              ) || ""
+            ] ||
+            0
         ),
         movingAverage: 0, // No moving average for fallback data
       }));
@@ -116,15 +116,23 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
     console.log("Processing table8 data:", tableData.table8);
 
     // Define day order (Monday first) and abbreviated days for display
-    const dayOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    const dayOrder = [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ];
     const daysOfWeekMap = {
-      "Monday": "Mon",
-      "Tuesday": "Tue", 
-      "Wednesday": "Wed",
-      "Thursday": "Thu",
-      "Friday": "Fri",
-      "Saturday": "Sat",
-      "Sunday": "Sun"
+      Monday: "Mon",
+      Tuesday: "Tue",
+      Wednesday: "Wed",
+      Thursday: "Thu",
+      Friday: "Fri",
+      Saturday: "Sat",
+      Sunday: "Sun",
     };
 
     // Process the data from table8 - FULL VALUES (preserving decimals)
@@ -132,8 +140,11 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
       day: daysOfWeekMap[row.Day_of_Week] || row.Day_of_Week,
       fullDayName: row.Day_of_Week,
       sales: parseFloat(String(row.Sales || 0).replace(/[$,]/g, "")) || 0,
-      movingAverage: parseFloat(String(row.Moving_Avg || 0).replace(/[$,]/g, "")) || 0,
+      movingAverage:
+        parseFloat(String(row.Moving_Avg || 0).replace(/[$,]/g, "")) || 0,
       date: row.Date, // Keep the date for reference
+      dayFormatted: row.Day, // add this line
+
     }));
 
     // Sort the data to ensure Monday comes first
@@ -144,61 +155,78 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
     });
   };
 
-// Enhanced version with both options available
-const processDailySalesDataWithOptions = (startWithSunday = false) => {
-  if (
-    !tableData.table8 ||
-    !Array.isArray(tableData.table8) ||
-    tableData.table8.length === 0
-  ) {
-    console.log("No table8 data available, using fallback");
-    return tableData.table1.map((row: any) => ({
-      day: `Week ${row.Week}`,
-      sales: parseFloat(
-        row["Grand Total"] ||
-        row[
-          Object.keys(row).find((key) =>
-            key.toLowerCase().includes("total")
-          ) || ""
-        ] ||
-        0
-      ),
-      movingAverage: 0,
-    }));
-  }
+  // Enhanced version with both options available
+  const processDailySalesDataWithOptions = (startWithSunday = false) => {
+    if (
+      !tableData.table8 ||
+      !Array.isArray(tableData.table8) ||
+      tableData.table8.length === 0
+    ) {
+      console.log("No table8 data available, using fallback");
+      return tableData.table1.map((row: any) => ({
+        day: `Week ${row.Week}`,
+        sales: parseFloat(
+          row["Grand Total"] ||
+            row[
+              Object.keys(row).find((key) =>
+                key.toLowerCase().includes("total")
+              ) || ""
+            ] ||
+            0
+        ),
+        movingAverage: 0,
+      }));
+    }
 
-  const daysOfWeekMap = {
-    "Monday": "Mon",
-    "Tuesday": "Tue", 
-    "Wednesday": "Wed",
-    "Thursday": "Thu",
-    "Friday": "Fri",
-    "Saturday": "Sat",
-    "Sunday": "Sun"
-  };
+    const daysOfWeekMap = {
+      Monday: "Mon",
+      Tuesday: "Tue",
+      Wednesday: "Wed",
+      Thursday: "Thu",
+      Friday: "Fri",
+      Saturday: "Sat",
+      Sunday: "Sun",
+    };
 
-  // Choose day order based on parameter
-  const dayOrder = startWithSunday 
-    ? ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-    : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    // Choose day order based on parameter
+    const dayOrder = startWithSunday
+      ? [
+          "Sunday",
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+        ]
+      : [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday",
+        ];
 
-  // Process the data and create a map for easy lookup
-  const dataMap = new Map();
-  tableData.table8.forEach((row: any) => {
-    const dayName = row.Day_of_Week;
-    dataMap.set(dayName, {
-      day: daysOfWeekMap[dayName] || dayName,
-      sales: parseFloat(String(row.Sales || 0).replace(/[$,]/g, "")) || 0,
-      movingAverage: parseFloat(String(row.Moving_Avg || 0).replace(/[$,]/g, "")) || 0,
-      date: row.Date,
+    // Process the data and create a map for easy lookup
+    const dataMap = new Map();
+    tableData.table8.forEach((row: any) => {
+      const dayName = row.Day_of_Week;
+      dataMap.set(dayName, {
+        day: daysOfWeekMap[dayName] || dayName,
+        sales: parseFloat(String(row.Sales || 0).replace(/[$,]/g, "")) || 0,
+        movingAverage:
+          parseFloat(String(row.Moving_Avg || 0).replace(/[$,]/g, "")) || 0,
+        date: row.Date,
+      });
     });
-  });
 
-  // Return data in consistent order
-  return dayOrder
-    .filter(day => dataMap.has(day))
-    .map(day => dataMap.get(day));
-};
+    // Return data in consistent order
+    return dayOrder
+      .filter((day) => dataMap.has(day))
+      .map((day) => dataMap.get(day));
+  };
 
   // ENHANCED: Process Sales Category Line Chart data from table9 - FULL VALUES
   const processSalesCategoryData = () => {
@@ -230,7 +258,8 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
       tableData.table9
         .filter((row: any) => row.Category && row.Category !== "Grand Total")
         .forEach((row: any) => {
-          const rawValue = parseFloat(String(row[weekCol] || 0).replace(/[$,]/g, "")) || 0;
+          const rawValue =
+            parseFloat(String(row[weekCol] || 0).replace(/[$,]/g, "")) || 0;
           // FULL VALUES: Preserve decimals, no rounding
           weekData[row.Category] = rawValue;
         });
@@ -247,7 +276,7 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
     if (!tableData.table9 || !Array.isArray(tableData.table9)) {
       return [];
     }
-    
+
     return tableData.table9
       .filter((row: any) => row.Category && row.Category !== "Grand Total")
       .map((row: any) => row.Category);
@@ -305,20 +334,26 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
       .filter((row: any) => row.Week && row.Week !== "Grand Total")
       .map((row: any) => ({
         week: row.Week,
-        totalSales: parseFloat(String(row.Total_Sales || 0).replace(/[$,]/g, "")) || 0,
-        totalOrders: parseFloat(String(row.Total_Orders || 0).replace(/[$,]/g, "")) || 0,
+        totalSales:
+          parseFloat(String(row.Total_Sales || 0).replace(/[$,]/g, "")) || 0,
+        totalOrders:
+          parseFloat(String(row.Total_Orders || 0).replace(/[$,]/g, "")) || 0,
         // FULL VALUES: Keep original sales values with decimals
-        salesDisplay: parseFloat(String(row.Total_Sales || 0).replace(/[$,]/g, "")) || 0,
+        salesDisplay:
+          parseFloat(String(row.Total_Sales || 0).replace(/[$,]/g, "")) || 0,
       }));
   };
 
   // ENHANCED: Calculate moving average for weekly sales data - FULL VALUES
-  const calculateMovingAverage = (data: any[], periods: { [key: string]: number } = { '3week': 3, '5week': 5 }) => {
+  const calculateMovingAverage = (
+    data: any[],
+    periods: { [key: string]: number } = { "3week": 3, "5week": 5 }
+  ) => {
     if (data.length < 2) return data;
 
     return data.map((item, index) => {
       const enhanced = { ...item };
-      
+
       // Calculate different moving averages
       Object.entries(periods).forEach(([name, period]) => {
         if (index < period - 1) {
@@ -326,18 +361,20 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
           const startIndex = 0;
           const endIndex = index + 1;
           const subset = data.slice(startIndex, endIndex);
-          const average = subset.reduce((sum, d) => sum + d.salesDisplay, 0) / subset.length;
+          const average =
+            subset.reduce((sum, d) => sum + d.salesDisplay, 0) / subset.length;
           enhanced[`movingAverage${period}Week`] = average;
         } else {
           // Calculate moving average for the specified period
           const startIndex = index - period + 1;
           const endIndex = index + 1;
           const subset = data.slice(startIndex, endIndex);
-          const average = subset.reduce((sum, d) => sum + d.salesDisplay, 0) / period;
+          const average =
+            subset.reduce((sum, d) => sum + d.salesDisplay, 0) / period;
           enhanced[`movingAverage${period}Week`] = average;
         }
       });
-      
+
       return enhanced;
     });
   };
@@ -345,13 +382,14 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
   // Enhanced daily sales processing with moving average - FULL VALUES
   const processDailySalesWithMovingAverage = () => {
     const dailyData = processDailySalesData();
-    
+
     // Calculate 3-day moving average for daily data
     return dailyData.map((item, index) => {
       if (index < 2) {
         // For first two days, use available data
         const subset = dailyData.slice(0, index + 1);
-        const average = subset.reduce((sum, d) => sum + d.sales, 0) / subset.length;
+        const average =
+          subset.reduce((sum, d) => sum + d.sales, 0) / subset.length;
         return {
           ...item,
           movingAverage: average,
@@ -392,9 +430,9 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
   const weeklySalesData = processWeeklySalesData();
 
   // Calculate enhanced moving average for weekly sales data with multiple periods
-  const weeklySalesWithMovingAvg = calculateMovingAverage(weeklySalesData, { 
-    '3': 3,  // 3-week moving average
-    '5': 5   // 5-week moving average
+  const weeklySalesWithMovingAvg = calculateMovingAverage(weeklySalesData, {
+    "3": 3, // 3-week moving average
+    "5": 5, // 5-week moving average
   });
 
   console.log("Processed data:", {
@@ -502,7 +540,7 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
 
     // Get categories from table9 (excluding Grand Total)
     const categories = getCategoriesFromTable9();
-    
+
     console.log("Rendering lines for categories:", categories);
 
     return categories.map((category: string, index: number) => (
@@ -528,26 +566,33 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
   // DEBUGGING: Table9 Debug Component (remove in production)
   const Table9DebugInfo = () => {
     if (!tableData.table9) return null;
-    
+
     return (
-      <div style={{ 
-        padding: "10px", 
-        backgroundColor: "#f0f9ff", 
-        borderRadius: "4px",
-        margin: "10px 0",
-        fontSize: "12px",
-        fontFamily: "monospace",
-        border: "1px solid #0ea5e9"
-      }}>
+      <div
+        style={{
+          padding: "10px",
+          backgroundColor: "#f0f9ff",
+          borderRadius: "4px",
+          margin: "10px 0",
+          fontSize: "12px",
+          fontFamily: "monospace",
+          border: "1px solid #0ea5e9",
+        }}
+      >
         <strong>📊 Table9 Debug Info:</strong>
         <div style={{ marginTop: "8px" }}>
           <strong>Categories:</strong> {getCategoriesFromTable9().join(", ")}
         </div>
         <div>
-          <strong>Weeks:</strong> {Object.keys(tableData.table9[0] || {}).filter(k => k.startsWith("Week")).join(", ")}
+          <strong>Weeks:</strong>{" "}
+          {Object.keys(tableData.table9[0] || {})
+            .filter((k) => k.startsWith("Week"))
+            .join(", ")}
         </div>
         <details style={{ marginTop: "8px" }}>
-          <summary style={{ cursor: "pointer", fontWeight: "bold" }}>Raw Data (First 2 rows)</summary>
+          <summary style={{ cursor: "pointer", fontWeight: "bold" }}>
+            Raw Data (First 2 rows)
+          </summary>
           <pre style={{ marginTop: "8px", fontSize: "10px" }}>
             {JSON.stringify(tableData.table9.slice(0, 2), null, 2)}
           </pre>
@@ -649,7 +694,7 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
                 tick={{ fontSize: 12 }}
                 tickFormatter={(value) => formatNumber(value)}
               />
-       <Tooltip
+              <Tooltip
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
                     const data = payload[0].payload;
@@ -657,14 +702,14 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
                     const formatDate = (dateStr: string) => {
                       if (!dateStr) return "";
                       const date = new Date(dateStr);
-                      return date.toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
+                      return date.toLocaleDateString("en-US", {
+                        weekday: "short",
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
                       });
                     };
-                    
+
                     return (
                       <div
                         style={{
@@ -673,14 +718,28 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
                           border: "2px solid #4D8D8D",
                           borderRadius: "8px",
                           boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-                          minWidth: "200px"
+                          minWidth: "200px",
                         }}
                       >
-                        <div style={{ fontWeight: "bold", marginBottom: "8px", color: "#333" }}>
+                        <div
+                          style={{
+                            fontWeight: "bold",
+                            marginBottom: "8px",
+                            color: "#333",
+                          }}
+                        >
                           Day: {label}
                         </div>
-                        <div style={{ color: "#555", marginBottom: "8px", fontSize: "12px" }}>
-                          Date: {formatDate(data.date)}
+                        <div
+                          style={{
+                            color: "#555",
+                            marginBottom: "8px",
+                            fontSize: "12px",
+                          }}
+                        >
+                          {/* Date: {data.Day} */}
+                          Date: {data.dayFormatted}
+                          {/* Date: {formatDate(data.date)} */}
                         </div>
                         <div style={{ color: "#4D8D8D", marginBottom: "4px" }}>
                           Sales: {formatCurrency(data.sales)}
@@ -694,9 +753,7 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
                   return null;
                 }}
               />
-              <Legend 
-                wrapperStyle={{ paddingTop: "20px" }}
-              />
+              <Legend wrapperStyle={{ paddingTop: "20px" }} />
               <Bar
                 dataKey="sales"
                 fill={bars_color}
@@ -716,7 +773,7 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
                 name="Moving Average"
               />
             </ComposedChart>
-          </ResponsiveContainer> 
+          </ResponsiveContainer>
         </div>
       </div>
 
@@ -750,8 +807,16 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
           </div>
 
           {/* ENHANCED: Data validation and debug info */}
-          <div style={{ fontSize: "12px", color: "#666", marginBottom: "10px", textAlign: "center" }}>
-            Showing {salesCategoryData.length} weeks • {getCategoriesFromTable9().length} categories
+          <div
+            style={{
+              fontSize: "12px",
+              color: "#666",
+              marginBottom: "10px",
+              textAlign: "center",
+            }}
+          >
+            Showing {salesCategoryData.length} weeks •{" "}
+            {getCategoriesFromTable9().length} categories
           </div>
 
           <div
@@ -791,7 +856,7 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
                       borderRadius: "8px",
                       boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
                       border: "none",
-                      minWidth: "250px"
+                      minWidth: "250px",
                     }}
                     content={({ active, payload, label }) => {
                       if (active && payload && payload.length) {
@@ -803,19 +868,28 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
                               border: "2px solid #4D8D8D",
                               borderRadius: "8px",
                               boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-                              minWidth: "200px"
+                              minWidth: "200px",
                             }}
                           >
-                            <div style={{ fontWeight: "bold", marginBottom: "8px", color: "#333" }}>
+                            <div
+                              style={{
+                                fontWeight: "bold",
+                                marginBottom: "8px",
+                                color: "#333",
+                              }}
+                            >
                               {label}: Category Sales
                             </div>
                             {payload.map((entry, index) => (
-                              <div key={index} style={{ 
-                                color: entry.color, 
-                                marginBottom: "4px",
-                                display: "flex",
-                                justifyContent: "space-between"
-                              }}>
+                              <div
+                                key={index}
+                                style={{
+                                  color: entry.color,
+                                  marginBottom: "4px",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                }}
+                              >
                                 <span>{entry.name}:</span>
                                 <span style={{ fontWeight: "bold" }}>
                                   {formatCurrency(entry.value)}
@@ -851,7 +925,8 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
               >
                 <div>No category trend data available</div>
                 <div style={{ fontSize: "14px", marginTop: "8px" }}>
-                  Expected table9 structure: Category, Week 14, Week 15, Week 16, Week 17
+                  Expected table9 structure: Category, Week 14, Week 15, Week
+                  16, Week 17
                 </div>
               </div>
             )}
@@ -900,7 +975,7 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
               textAlign: "center",
             }}
           >
-            Weekly Sales Trend 
+            Weekly Sales Trend
           </div>
           <div style={{ height: "450px" }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -937,20 +1012,44 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
                             border: "none",
                             borderRadius: "8px",
                             boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-                            minWidth: "250px"
+                            minWidth: "250px",
                           }}
                         >
                           <p
-                            style={{ margin: "0 0 8px 0", fontWeight: "bold", fontSize: "14px" }}
+                            style={{
+                              margin: "0 0 8px 0",
+                              fontWeight: "bold",
+                              fontSize: "14px",
+                            }}
                           >{`${label}`}</p>
-                          <p style={{ margin: "0 0 4px 0", color: "#4D8D8D", fontSize: "13px" }}>
+                          <p
+                            style={{
+                              margin: "0 0 4px 0",
+                              color: "#4D8D8D",
+                              fontSize: "13px",
+                            }}
+                          >
                             {`Total Sales: ${formatCurrency(data.totalSales)}`}
                           </p>
-                          <p style={{ margin: "0 0 4px 0", color: "#666", fontSize: "13px" }}>
+                          <p
+                            style={{
+                              margin: "0 0 4px 0",
+                              color: "#666",
+                              fontSize: "13px",
+                            }}
+                          >
                             {`Total Orders: ${formatNumber(data.totalOrders)}`}
                           </p>
-                          <p style={{ margin: "0 0 4px 0", color: "#ff0000", fontSize: "13px" }}>
-                            {`Moving Avg: ${formatCurrency(data.movingAverage3Week)}`}
+                          <p
+                            style={{
+                              margin: "0 0 4px 0",
+                              color: "#ff0000",
+                              fontSize: "13px",
+                            }}
+                          >
+                            {`Moving Avg: ${formatCurrency(
+                              data.movingAverage3Week
+                            )}`}
                           </p>
                         </div>
                       );
@@ -958,21 +1057,18 @@ const processDailySalesDataWithOptions = (startWithSunday = false) => {
                     return null;
                   }}
                 />
-                <Legend 
-                  wrapperStyle={{ paddingTop: "20px" }}
-                  iconType="line"
-                />
-                
+                <Legend wrapperStyle={{ paddingTop: "20px" }} iconType="line" />
+
                 {/* Weekly Sales Bars */}
                 <Bar
                   dataKey="salesDisplay"
-                  fill= {bars_color}
+                  fill={bars_color}
                   barSize={40}
                   radius={[4, 4, 0, 0]}
                   animationDuration={1500}
                   name="Weekly Sales"
                 />
-                
+
                 {/* 3-Week Moving Average Line (red color) */}
                 <Line
                   type="monotone"
