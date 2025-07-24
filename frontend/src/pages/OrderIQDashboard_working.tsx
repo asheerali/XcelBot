@@ -2143,6 +2143,8 @@ const OrderIQDashboard = () => {
         }}
         message={notification.message}
       />
+
+      {/* AI Suggestions Dialog */}
     </Container>
   );
 };
