@@ -2,7 +2,7 @@
 from collections import defaultdict
 import platform
 import traceback
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy.orm import Session
 from models.locations import Store
 from models.companies import Company
@@ -1333,46 +1333,154 @@ def get_analytics_dashboard(
         raise HTTPException(status_code=500, detail=f"Error fetching analytics dashboard data: {str(e)}")
 
 
-@router.get("/allordersinvoices/{company_id}/{location_id}")
+# @router.get("/allordersinvoices/{company_id}/{location_id}")
+# def get_analytics_dashboard(
+#     company_id: int, 
+#     location_id: int, 
+#     startDate: str = Query(None),
+#     endDate: str = Query(None),
+#     db: Session = Depends(get_db)
+# ):
+#     """Get total sales, total orders, average order value, and daily analytics tables"""
+#     print(f"Fetching all orders and invoices for company {company_id} and location {location_id} with date range {startDate} to {endDate}")
+#     try:
+#         # storeorders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
+#         storeorders = storeorders_crud.get_recent_storeorders_by_company_and_location(db, company_id, location_id, limit="all")
+
+
+#         if not isinstance(storeorders, list):
+#             storeorders = [storeorders] if storeorders else []
+
+#         # Apply date filtering if startDate and endDate are provided
+#         if startDate and endDate:
+#             try:
+#                 start = datetime.strptime(startDate, "%Y-%m-%d").date()
+#                 end = datetime.strptime(endDate, "%Y-%m-%d").date()
+#                 print("Filtering store orders between dates:", start, end)
+#                 storeorders = [
+#                     order for order in storeorders
+#                     if (order.updated_at or order.created_at)
+#                     and start <= (order.updated_at or order.created_at).date() <= end
+#                 ]
+#             except ValueError:
+#                 return {"message": "Invalid date format. Use YYYY-MM-DD", "data": []}
+        
+        
+
+
+#         total_sales = 0.0
+#         # Build rows with date and order_sales
+#         rows = []
+#         for order in storeorders:
+#             # print("i am here in the store orders printing the _items_ordered_", order)
+#             the_date = order.updated_at if order.updated_at else order.created_at
+#             created_date = the_date
+#             total_amount = 0.0
+#             total_quantity = 0
+
+#             if order.items_ordered:
+#                 items = order.items_ordered.get("items", [])
+#                 for item in items:
+#                     total_price = item.get("total_price", 0)
+#                     if total_price is None:
+#                         total_price = 0
+
+#                     quantity = item.get("quantity", 0)
+#                     if quantity is None:
+#                         quantity = 0
+#                     total_amount += float(total_price)
+#                     total_quantity += int(quantity)
+
+#                 items_count = order.items_ordered.get("total_items", len(items))
+#             else:
+#                 items_count = 0
+
+#             total_sales += total_amount
+#             rows.append({
+#                 "order_id": order.id,
+#                 "created_at": created_date,
+#                 "items_count": items_count,
+#                 "total_quantity": total_quantity,
+#                 "total_amount": total_amount,
+#             })
+
+#         return {
+#             "message": "Analytics dashboard data fetched successfully",
+#             "data": rows,
+#             "total": total_sales
+#         }
+
+#     except Exception as e:
+#         print(f"Error fetching analytics dashboard data: {str(e)}")
+#         import traceback
+#         print(traceback.format_exc())
+#         raise HTTPException(status_code=500, detail=f"Error fetching analytics dashboard data: {str(e)}")
+
+
+@router.get("/allordersinvoices/{company_id}/{location_ids}")
 def get_analytics_dashboard(
-    company_id: int, 
-    location_id: int, 
-    startDate: str = Query(None),
-    endDate: str = Query(None),
+    company_id: int,
+    location_ids: str = Path(..., description="Comma-separated location IDs, e.g., 3,6,8"),
+    startDate: Optional[str] = Query(None),
+    endDate: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
+    
     """Get total sales, total orders, average order value, and daily analytics tables"""
-    print(f"Fetching all orders and invoices for company {company_id} and location {location_id} with date range {startDate} to {endDate}")
+    print(f"Fetching all orders and invoices for company {company_id} and locations {location_ids} with date range {startDate} to {endDate}")
+    fallback_row = [{
+        "order_id": "#-",
+        "created_at": "-",
+        "items_count": 0,
+        "total_quantity": 0,
+        "total_amount": 0.0
+    }]
+
     try:
-        # storeorders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
-        storeorders = storeorders_crud.get_recent_storeorders_by_company_and_location(db, company_id, location_id, limit="all")
+        # Parse location IDs
+        try:
+            location_id_list = [int(loc_id.strip()) for loc_id in location_ids.split(",") if loc_id.strip().isdigit()]
+            if not location_id_list:
+                return {"message": "No valid location IDs provided", 
+                        "data": fallback_row,
+                        "total": 0
+                        }
+                
+        except Exception:
+            return {
+                
+                "message": "Invalid location_ids format. Provide comma-separated integers.", 
+                 "data": fallback_row,
+                "total": 0
+                }
 
+        # Get orders for all locations
+        storeorders = []
+        for loc_id in location_id_list:
+            orders = storeorders_crud.get_recent_storeorders_by_company_and_location(db, company_id, loc_id, limit="all")
+            if isinstance(orders, list):
+                storeorders.extend(orders)
+            elif orders:
+                storeorders.append(orders)
 
-        if not isinstance(storeorders, list):
-            storeorders = [storeorders] if storeorders else []
-
-        # Apply date filtering if startDate and endDate are provided
         if startDate and endDate:
             try:
                 start = datetime.strptime(startDate, "%Y-%m-%d").date()
                 end = datetime.strptime(endDate, "%Y-%m-%d").date()
-                print("Filtering store orders between dates:", start, end)
                 storeorders = [
                     order for order in storeorders
                     if (order.updated_at or order.created_at)
                     and start <= (order.updated_at or order.created_at).date() <= end
                 ]
             except ValueError:
-                return {"message": "Invalid date format. Use YYYY-MM-DD", "data": []}
-        
-        
-
+                return {"message": "Invalid date format. Use YYYY-MM-DD", 
+                        "data": fallback_row,
+                        "total": 0
+                        }
 
         total_sales = 0.0
-        # Build rows with date and order_sales
         rows = []
         for order in storeorders:
-            # print("i am here in the store orders printing the _items_ordered_", order)
             the_date = order.updated_at if order.updated_at else order.created_at
             created_date = the_date
             total_amount = 0.0
@@ -1381,16 +1489,10 @@ def get_analytics_dashboard(
             if order.items_ordered:
                 items = order.items_ordered.get("items", [])
                 for item in items:
-                    total_price = item.get("total_price", 0)
-                    if total_price is None:
-                        total_price = 0
-
-                    quantity = item.get("quantity", 0)
-                    if quantity is None:
-                        quantity = 0
+                    total_price = item.get("total_price", 0) or 0
+                    quantity = item.get("quantity", 0) or 0
                     total_amount += float(total_price)
                     total_quantity += int(quantity)
-
                 items_count = order.items_ordered.get("total_items", len(items))
             else:
                 items_count = 0
@@ -1412,9 +1514,10 @@ def get_analytics_dashboard(
 
     except Exception as e:
         print(f"Error fetching analytics dashboard data: {str(e)}")
-        import traceback
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error fetching analytics dashboard data: {str(e)}")
+
+
 
 
 
@@ -1491,40 +1594,196 @@ def get_consolidated_production(company_id: int,
 
 
 
-@router.get("/financialsummary/{company_id}/{location_id}")
+# @router.get("/financialsummary/{company_id}/{location_id}")
+# def get_financial_summary(
+#     company_id: int, 
+#     location_id: int, 
+#     start_date: str = Query(None),
+#     end_date: str = Query(None),
+#     db: Session = Depends(get_db)
+# ):
+    
+#     """Get total sales, total orders, average order value, and daily analytics tables"""
+#     try:
+#         storeorders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
+
+
+
+#         # Apply date filtering if start_date and end_date are provided
+#         if start_date and end_date:
+#             try:
+#                 start = datetime.strptime(start_date, "%Y-%m-%d").date()
+#                 end = datetime.strptime(end_date, "%Y-%m-%d").date()
+#                 print("Filtering store orders between dates:", start, end)
+#                 storeorders = [
+#                     order for order in storeorders
+#                     if (order.updated_at or order.created_at)
+#                     and start <= (order.updated_at or order.created_at).date() <= end
+#                 ]
+#             except ValueError:
+#                 return {"message": "Invalid date format. Use YYYY-MM-DD", "data": []}
+        
+        
+
+#         if not storeorders:
+#             return {
+#                 "message": "No store orders found for this company and location", 
+#                 "data": {
+#                     "total_sales": 0,
+#                     "total_orders": 0,
+#                     "orders_cost_per_day": 0.0
+#                 }
+#             }
+
+#         if not isinstance(storeorders, list):
+#             storeorders = [storeorders] if storeorders else []
+
+#         total_orders = len(storeorders)
+#         total_sales = 0.0
+
+#         # Build rows with date and order_sales
+#         rows = []
+#         for order in storeorders:
+#             created_date = order.created_at.date()
+#             order_sales = 0.0
+#             if order.items_ordered and "items" in order.items_ordered:
+#                 print("i am here in the store orders printing the items_ordered_", order.items_ordered["items"]) 
+                
+#                 for item in order.items_ordered["items"]:
+#                     total_price = item.get("total_price", 0)
+#                     if total_price is None:
+#                         total_price = 0
+#                     order_sales += float(total_price)
+#             total_sales += order_sales
+#             rows.append({"created_at": created_date, "order_sales": order_sales})
+
+#         avg_order_value = round(total_sales / total_orders, 2) if total_orders > 0 else 0.0
+
+#         df = pd.DataFrame(rows)
+#         df["created_at"] = pd.to_datetime(df["created_at"])
+
+#         # Daily Orders
+#         daily_counts = df.groupby(df["created_at"].dt.date).size().reset_index(name="order_count")
+#         daily_counts["created_at"] = pd.to_datetime(daily_counts["created_at"])
+#         daily_counts = daily_counts.sort_values(by="created_at")
+#         daily_counts["moving_avg"] = daily_counts["order_count"].rolling(window=5, min_periods=1).mean().round(2)
+
+#         # Daily Sales and Avg Order Value
+#         daily_sales = df.groupby(df["created_at"].dt.date).agg(
+#             total_sales_per_day=("order_sales", "sum"),
+#             order_count=("order_sales", "count")
+#         ).reset_index()
+#         daily_sales["created_at"] = pd.to_datetime(daily_sales["created_at"])
+#         daily_sales["avg_order_value"] = (daily_sales["total_sales_per_day"] / daily_sales["order_count"]).round(2)
+#         daily_sales = daily_sales.sort_values(by="created_at")
+#         daily_sales["moving_avg"] = daily_sales["avg_order_value"].rolling(window=5, min_periods=1).mean().round(2)
+
+#         # Daily Sales Trend (new)
+#         daily_sales_trend_df = daily_sales[["created_at", "total_sales_per_day"]].copy()
+#         daily_sales_trend_df = daily_sales_trend_df.sort_values(by="created_at")
+#         daily_sales_trend_df["moving_avg"] = daily_sales_trend_df["total_sales_per_day"].rolling(window=5, min_periods=1).mean().round(2)
+
+#         # Format dates
+#         if platform.system() == "Windows":
+#             date_format = "%b %#d"
+#         else:
+#             date_format = "%b %-d"
+
+#         daily_counts = daily_counts.rename(columns={"created_at": "date"})
+#         daily_counts["date"] = daily_counts["date"].dt.strftime(date_format)
+
+#         daily_sales = daily_sales.rename(columns={"created_at": "date"})
+#         daily_sales["date"] = daily_sales["date"].dt.strftime(date_format)
+
+#         daily_sales_trend_df = daily_sales_trend_df.rename(columns={"created_at": "date", "total_sales_per_day": "total_sales"})
+#         daily_sales_trend_df["date"] = daily_sales_trend_df["date"].dt.strftime(date_format)
+
+#         # Company and Location Info
+#         company = db.query(Company).filter(Company.id == company_id).first()
+#         location = db.query(Store).filter(Store.id == location_id).first()
+        
+
+#         # Step: Cost Breakdown by Category
+#         category_costs = {}
+
+#         for order in storeorders:
+#             if order.items_ordered and "items" in order.items_ordered:
+#                 for item in order.items_ordered["items"]:
+#                     category = item.get("category", "Uncategorized")
+#                     cost = item.get("total_price", 0.0)
+#                     if cost is None:
+#                         cost = 0.0
+#                     cost = float(cost)
+#                     category_costs[category] = category_costs.get(category, 0.0) + cost
+
+#         # Convert to DataFrame
+#         category_rows = [{"category": k, "cost": v} for k, v in category_costs.items()]
+#         cost_breakdown_by_category_df = pd.DataFrame(category_rows)
+
+#         if cost_breakdown_by_category_df.empty:
+#             cost_breakdown_by_category_df = pd.DataFrame(columns=["category", "cost", "percentage"])
+#         else:
+#             total_category_cost = cost_breakdown_by_category_df["cost"].sum()
+#             cost_breakdown_by_category_df["cost"] = cost_breakdown_by_category_df["cost"].round(2)
+#             cost_breakdown_by_category_df["percentage"] = (
+#                 (cost_breakdown_by_category_df["cost"] / total_category_cost) * 100
+#             ).round(2)
+
+
+#         return {
+#             "message": "Financial summary data fetched successfully",
+#             "data": {
+#                 "company_name": company.name if company else "Unknown",
+#                 "location_name": location.name if location else "Unknown",
+#                 "total_sales": total_sales,
+#                 "total_orders": total_orders,
+#                 "orders_cost_per_day": round(total_sales / total_orders, 2) if total_orders > 0 else 0.0,
+#                 "cost_breakdown_by_category": cost_breakdown_by_category_df.to_dict(orient="records"),
+#             }
+#         }
+
+#     except Exception as e:
+#         print(f"Error fetching financial summary data: {str(e)}")
+#         import traceback
+#         print(traceback.format_exc())
+#         raise HTTPException(status_code=500, detail=f"Error fetching analytics dashboard data: {str(e)}")
+
+
+@router.get("/financialsummary/{company_id}/{location_ids}")
 def get_financial_summary(
-    company_id: int, 
-    location_id: int, 
+    company_id: int,
+    location_ids: str,
     start_date: str = Query(None),
     end_date: str = Query(None),
     db: Session = Depends(get_db)
 ):
-    
-    """Get total sales, total orders, average order value, and daily analytics tables"""
     try:
-        storeorders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
+        # Step 1: Convert comma-separated location_ids to a list of ints
+        location_id_list = [int(loc.strip()) for loc in location_ids.split(",") if loc.strip().isdigit()]
 
+        all_storeorders = []
 
+        for location_id in location_id_list:
+            orders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
+            if orders:
+                all_storeorders.extend(orders)
 
-        # Apply date filtering if start_date and end_date are provided
+        # Step 2: Filter by date range
         if start_date and end_date:
             try:
                 start = datetime.strptime(start_date, "%Y-%m-%d").date()
                 end = datetime.strptime(end_date, "%Y-%m-%d").date()
-                print("Filtering store orders between dates:", start, end)
-                storeorders = [
-                    order for order in storeorders
+                all_storeorders = [
+                    order for order in all_storeorders
                     if (order.updated_at or order.created_at)
                     and start <= (order.updated_at or order.created_at).date() <= end
                 ]
             except ValueError:
                 return {"message": "Invalid date format. Use YYYY-MM-DD", "data": []}
-        
-        
 
-        if not storeorders:
+        if not all_storeorders:
             return {
-                "message": "No store orders found for this company and location", 
+                "message": "No store orders found for the provided company and location(s)",
                 "data": {
                     "total_sales": 0,
                     "total_orders": 0,
@@ -1532,24 +1791,16 @@ def get_financial_summary(
                 }
             }
 
-        if not isinstance(storeorders, list):
-            storeorders = [storeorders] if storeorders else []
-
-        total_orders = len(storeorders)
+        total_orders = len(all_storeorders)
         total_sales = 0.0
-
-        # Build rows with date and order_sales
         rows = []
-        for order in storeorders:
+
+        for order in all_storeorders:
             created_date = order.created_at.date()
             order_sales = 0.0
             if order.items_ordered and "items" in order.items_ordered:
-                print("i am here in the store orders printing the items_ordered_", order.items_ordered["items"]) 
-                
                 for item in order.items_ordered["items"]:
-                    total_price = item.get("total_price", 0)
-                    if total_price is None:
-                        total_price = 0
+                    total_price = item.get("total_price", 0) or 0.0
                     order_sales += float(total_price)
             total_sales += order_sales
             rows.append({"created_at": created_date, "order_sales": order_sales})
@@ -1559,13 +1810,7 @@ def get_financial_summary(
         df = pd.DataFrame(rows)
         df["created_at"] = pd.to_datetime(df["created_at"])
 
-        # Daily Orders
-        daily_counts = df.groupby(df["created_at"].dt.date).size().reset_index(name="order_count")
-        daily_counts["created_at"] = pd.to_datetime(daily_counts["created_at"])
-        daily_counts = daily_counts.sort_values(by="created_at")
-        daily_counts["moving_avg"] = daily_counts["order_count"].rolling(window=5, min_periods=1).mean().round(2)
-
-        # Daily Sales and Avg Order Value
+        # Daily sales and averages
         daily_sales = df.groupby(df["created_at"].dt.date).agg(
             total_sales_per_day=("order_sales", "sum"),
             order_count=("order_sales", "count")
@@ -1575,72 +1820,40 @@ def get_financial_summary(
         daily_sales = daily_sales.sort_values(by="created_at")
         daily_sales["moving_avg"] = daily_sales["avg_order_value"].rolling(window=5, min_periods=1).mean().round(2)
 
-        # Daily Sales Trend (new)
-        daily_sales_trend_df = daily_sales[["created_at", "total_sales_per_day"]].copy()
-        daily_sales_trend_df = daily_sales_trend_df.sort_values(by="created_at")
-        daily_sales_trend_df["moving_avg"] = daily_sales_trend_df["total_sales_per_day"].rolling(window=5, min_periods=1).mean().round(2)
-
-        # Format dates
-        if platform.system() == "Windows":
-            date_format = "%b %#d"
-        else:
-            date_format = "%b %-d"
-
-        daily_counts = daily_counts.rename(columns={"created_at": "date"})
-        daily_counts["date"] = daily_counts["date"].dt.strftime(date_format)
-
-        daily_sales = daily_sales.rename(columns={"created_at": "date"})
-        daily_sales["date"] = daily_sales["date"].dt.strftime(date_format)
-
-        daily_sales_trend_df = daily_sales_trend_df.rename(columns={"created_at": "date", "total_sales_per_day": "total_sales"})
-        daily_sales_trend_df["date"] = daily_sales_trend_df["date"].dt.strftime(date_format)
-
-        # Company and Location Info
-        company = db.query(Company).filter(Company.id == company_id).first()
-        location = db.query(Store).filter(Store.id == location_id).first()
-        
-
-        # Step: Cost Breakdown by Category
+        # Category breakdown
         category_costs = {}
-
-        for order in storeorders:
+        for order in all_storeorders:
             if order.items_ordered and "items" in order.items_ordered:
                 for item in order.items_ordered["items"]:
                     category = item.get("category", "Uncategorized")
-                    cost = item.get("total_price", 0.0)
-                    if cost is None:
-                        cost = 0.0
-                    cost = float(cost)
+                    cost = float(item.get("total_price", 0.0) or 0.0)
                     category_costs[category] = category_costs.get(category, 0.0) + cost
 
-        # Convert to DataFrame
         category_rows = [{"category": k, "cost": v} for k, v in category_costs.items()]
         cost_breakdown_by_category_df = pd.DataFrame(category_rows)
 
-        if cost_breakdown_by_category_df.empty:
-            cost_breakdown_by_category_df = pd.DataFrame(columns=["category", "cost", "percentage"])
-        else:
+        if not cost_breakdown_by_category_df.empty:
             total_category_cost = cost_breakdown_by_category_df["cost"].sum()
             cost_breakdown_by_category_df["cost"] = cost_breakdown_by_category_df["cost"].round(2)
             cost_breakdown_by_category_df["percentage"] = (
                 (cost_breakdown_by_category_df["cost"] / total_category_cost) * 100
             ).round(2)
-
+        else:
+            cost_breakdown_by_category_df = pd.DataFrame(columns=["category", "cost", "percentage"])
 
         return {
             "message": "Financial summary data fetched successfully",
             "data": {
-                "company_name": company.name if company else "Unknown",
-                "location_name": location.name if location else "Unknown",
+                "company_id": company_id,
+                "location_ids": location_id_list,
                 "total_sales": total_sales,
                 "total_orders": total_orders,
-                "orders_cost_per_day": round(total_sales / total_orders, 2) if total_orders > 0 else 0.0,
+                "orders_cost_per_day": avg_order_value,
                 "cost_breakdown_by_category": cost_breakdown_by_category_df.to_dict(orient="records"),
             }
         }
 
     except Exception as e:
-        print(f"Error fetching financial summary data: {str(e)}")
         import traceback
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error fetching analytics dashboard data: {str(e)}")
