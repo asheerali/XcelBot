@@ -6,6 +6,8 @@ import {
   RouterProvider,
   Navigate,
 } from "react-router-dom";
+import FileManagementPage from "./pages/FileManagementPage";
+
 import { Provider } from "react-redux";
 // import { store } from "./store";
 import { store, persistor } from "./store"; // UPDATED
@@ -61,7 +63,7 @@ const router = createBrowserRouter([
     path: "/reset-password",
     Component: ResetPasswordView,
   },
-  { 
+  {
     path: "HomePage",
     Component: HomePage,
   },
@@ -100,7 +102,7 @@ const router = createBrowserRouter([
             path: "AnalyticsDashboard",
             Component: AnalyticsDashboard,
           },
-         {
+          {
             path: "MasterFile",
             Component: MasterFile,
           },
@@ -112,10 +114,8 @@ const router = createBrowserRouter([
             path: "Reports",
             Component: Reports,
           },
-          
-        
-          
-           {
+
+          {
             path: "daterange",
             Component: DateRangeSelector,
           },
@@ -126,6 +126,10 @@ const router = createBrowserRouter([
           {
             path: "upload-excel",
             Component: ExcelUploadPage,
+          },
+          {
+            path: "FileManagement",
+            Component: FileManagementPage,
           },
           {
             path: "HelpCenter",
@@ -143,7 +147,7 @@ const router = createBrowserRouter([
             path: "ContactTeam",
             Component: ContactTeam,
           },
-           {
+          {
             path: "CompanyLocationManager",
             Component: CompanyLocationManager,
           },
@@ -161,13 +165,12 @@ const router = createBrowserRouter([
           },
           {
             path: "SummaryFinancialDashboard",
-            Component:  SummaryFinancialDashboard,
+            Component: SummaryFinancialDashboard,
           },
           {
             path: "OrderIQDashboard",
-            Component:  OrderIQDashboard, // Assuming you have this component
+            Component: OrderIQDashboard, // Assuming you have this component
           },
-
 
           {
             path: "ComingSoon",
@@ -179,7 +182,6 @@ const router = createBrowserRouter([
           },
         ],
       },
-      
     ],
   },
 ]);

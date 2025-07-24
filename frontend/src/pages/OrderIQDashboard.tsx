@@ -1634,6 +1634,7 @@ const OrderIQDashboard = () => {
                           </Button>
                         </span>
                       </Tooltip>
+{/*                   
                       {recentOrders.length > 0 && (
                         <Button 
                           variant="outlined" 
@@ -1642,7 +1643,9 @@ const OrderIQDashboard = () => {
                         >
                           🔄 Repeat Last Order
                         </Button>
-                      )}
+                      )} */}
+
+
                     </Box>
                   </Box>
                 ) : (
