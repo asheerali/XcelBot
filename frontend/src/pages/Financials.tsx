@@ -1234,8 +1234,9 @@ export function Financials() {
       hasMinimumReqs: hasMinimumRequirements()
     });
 
-    // FIXED: Only run when companies are loaded AND we're not already initialized
-    if (!companiesLoading && companyLocations.length > 0 && !autoFilterInitialized) {
+    // FIXED: Run auto-filter when companies are loaded AND we have minimum requirements
+    // Remove the autoFilterInitialized check here to allow sidebar location changes to trigger
+    if (!companiesLoading && companyLocations.length > 0) {
       console.log('✅ INITIAL LOAD: Companies loaded, checking for persisted Redux state');
 
       // If we have persisted companies and locations, immediately run auto-filter
@@ -1245,10 +1246,11 @@ export function Financials() {
           companies: selectedCompanies,
           locations: selectedLocations,
           dateRange: getSelectedDateRangeForAPI,
-          availableLocations: availableLocations.length
+          availableLocations: availableLocations.length,
+          autoFilterInitialized
         });
         
-        // Mark as initialized to prevent duplicate runs
+        // Mark as initialized AFTER we decide to run the filter
         setAutoFilterInitialized(true);
         
         // Set refs to current state
@@ -1270,8 +1272,7 @@ export function Financials() {
     } else {
       console.log('⏸️ INITIAL LOAD: Conditions not met for auto-filter:', {
         companiesStillLoading: companiesLoading,
-        noCompanyLocations: companyLocations.length === 0,
-        alreadyInitialized: autoFilterInitialized
+        noCompanyLocations: companyLocations.length === 0
       });
     }
   }, [
@@ -1284,20 +1285,37 @@ export function Financials() {
     availableLocations.length,
     hasMinimumRequirements,
     applyFiltersAutomatically
-    // REMOVED: autoFilterInitialized from dependencies to prevent blocking when it becomes true
+    // REMOVED: autoFilterInitialized to allow sidebar changes to trigger auto-filter
   ]);
 
   // ✅ FIXED: Auto-filtering effect for user interactions and changes after initialization
   useEffect(() => {
-    // Skip if not initialized yet (initial load is handled above)
+    // NEW: Always check for changes if we have minimum requirements, regardless of initialization
+    console.log('🔄 CHANGE DETECTION: Checking for changes:', {
+      autoFilterInitialized,
+      hasMinimumRequirements: hasMinimumRequirements(),
+      hasChanges: checkForChanges()
+    });
+
+    // Skip if we don't have minimum requirements
+    if (!hasMinimumRequirements()) {
+      console.log('⏸️ CHANGE DETECTION: Minimum requirements not met');
+      return;
+    }
+
+    // If not initialized yet, let the initial load effect handle it
     if (!autoFilterInitialized) {
+      console.log('⏸️ CHANGE DETECTION: Not initialized yet, letting initial load handle it');
       return;
     }
 
     // Check if there are actual changes using proper array comparison
     if (!checkForChanges()) {
+      console.log('⏸️ CHANGE DETECTION: No changes detected');
       return;
     }
+
+    console.log('✅ CHANGE DETECTION: Changes detected, triggering auto-filter');
 
     // Clear existing timeout
     if (debounceTimeoutRef.current) {
@@ -1306,7 +1324,7 @@ export function Financials() {
 
     // Set new timeout for debounced auto-filtering (for user interactions)
     debounceTimeoutRef.current = setTimeout(() => {
-      console.log('🔄 Auto-filter triggered by user changes');
+      console.log('🔄 Auto-filter triggered by user changes (companies/locations/daterange)');
       applyFiltersAutomatically();
     }, 500); // 500ms debounce
 
@@ -1316,7 +1334,7 @@ export function Financials() {
         clearTimeout(debounceTimeoutRef.current);
       }
     };
-  }, [selectedCompanies, selectedLocations, getSelectedDateRangeForAPI, autoFilterInitialized, checkForChanges, applyFiltersAutomatically]);
+  }, [selectedCompanies, selectedLocations, getSelectedDateRangeForAPI, autoFilterInitialized, checkForChanges, applyFiltersAutomatically, hasMinimumRequirements]);
 
   // NEW: Effect to handle manual user interactions when autoFilterInitialized is false
   useEffect(() => {
