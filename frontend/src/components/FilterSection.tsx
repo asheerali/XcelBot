@@ -1,4 +1,4 @@
-// FilterSection.tsx - Fixed Auto-Filtering with Better Performance and Multiple Location Support
+// FilterSection.tsx - COMPLETE FIXED Version with Proper Date Range Integration
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
@@ -56,20 +56,32 @@ import {
   updateSalesFilters
 } from '../store/excelSlice';
 
-// UPDATED: Import masterFileSlice Redux
+// Import masterFileSlice Redux
 import { useSelector, useDispatch } from "react-redux";
 import {
   setSelectedLocations,
   selectSelectedLocations 
 } from "../store/slices/masterFileSlice";
 
-// UPDATED: Location interface to match company-locations API
+// ✅ FIX: Import proper date range actions for Sales Split Dashboard
+import {
+  setSalesSplitDashboardDateRange,
+  setSalesSplitDashboardStartDate,
+  setSalesSplitDashboardEndDate,
+  clearSalesSplitDashboardDateRange,
+  selectSalesSplitDashboardDateRange,
+  selectSalesSplitDashboardStartDate,
+  selectSalesSplitDashboardEndDate,
+  selectHasSalesSplitDashboardDateRange
+} from '../store/slices/dateRangeSlice';
+
+// Location interface to match company-locations API
 interface LocationObject {
   location_id: number;
   location_name: string;
 }
 
-// Custom MultiSelect component with search functionality (keeping existing implementation)
+// Custom MultiSelect component with search functionality
 interface MultiSelectProps {
   id: string;
   label: string;
@@ -96,7 +108,7 @@ const MultiSelect: React.FC<MultiSelectProps> = React.memo(({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
 
-  // FIXED: Initialize with all options selected if initiallySelectAll is true
+  // Initialize with all options selected if initiallySelectAll is true
   useEffect(() => {
     if (initiallySelectAll && options.length > 0 && !hasInitialized && value.length === 0) {
       console.log(`🎯 FilterSection: Initializing ${label} with all options selected:`, options);
@@ -342,7 +354,7 @@ const MultiSelect: React.FC<MultiSelectProps> = React.memo(({
   );
 });
 
-// UPDATED: Interface with new Redux-related props
+// Interface with Redux-related props
 interface FilterSectionProps {
   dateRangeType: string;
   availableDateRanges: string[];
@@ -360,7 +372,7 @@ interface FilterSectionProps {
   categoriesOverride?: string[];
   dashboardType?: 'Sales Split' | 'Financials' | 'Sales Wide' | 'Product Mix';
   initiallySelectAll?: boolean;
-  // NEW: Redux-related props for company-location integration
+  // Redux-related props for company-location integration
   availableLocationObjects?: LocationObject[];
   selectedCompanyId?: string;
   reduxSelectedLocations?: string[];
@@ -384,7 +396,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   categoriesOverride,
   dashboardType = 'Sales Split',
   initiallySelectAll = false,
-  // NEW: Redux props
+  // Redux props
   availableLocationObjects = [],
   selectedCompanyId,
   reduxSelectedLocations = [],
@@ -401,11 +413,30 @@ const FilterSection: React.FC<FilterSectionProps> = ({
   const productMixCategories = useAppSelector(selectProductMixCategories);
   const salesFilters = useAppSelector(state => state.excel.salesFilters);
   
-  // UPDATED: Get Redux locations state
+  // Get Redux locations state
   const reduxLocationSelections = useSelector(selectSelectedLocations);
   
-  // Loading state for auto-filtering
+  // ✅ FIX: Use proper Redux selectors for Sales Split Dashboard dates
+  const salesSplitDateRange = useSelector(selectSalesSplitDashboardDateRange);
+  const reduxStartDate = useSelector(selectSalesSplitDashboardStartDate) || '';
+  const reduxEndDate = useSelector(selectSalesSplitDashboardEndDate) || '';
+  const hasDateRange = useSelector(selectHasSalesSplitDashboardDateRange);
+  
+  console.log('📅 FilterSection: Redux date state:', {
+    salesSplitDateRange,
+    reduxStartDate,
+    reduxEndDate,
+    hasDateRange,
+    propsStartDate: startDate,
+    propsEndDate: endDate
+  });
+  
+  // ✅ COMPREHENSIVE FIX: Multiple flags to prevent conflicts + TARGETED FIX
   const [isAutoFiltering, setIsAutoFiltering] = useState(false);
+  const [isManuallyTriggering, setIsManuallyTriggering] = useState(false);
+  const [isApplyingDateRange, setIsApplyingDateRange] = useState(false);
+  const [isManualDateRangeApply, setIsManualDateRangeApply] = useState(false);
+  const [dateChangeSource, setDateChangeSource] = useState<'manual' | 'auto' | null>(null);
   
   // Refs to track previous values and prevent unnecessary re-renders
   const previousFiltersRef = useRef<{
@@ -469,29 +500,50 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     [availableCategories, filterCategories]
   );
   
-  // UPDATED: State for multi-select arrays - use Redux state for locations when available
+  // State for multi-select arrays - use Redux state for locations when available
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   
-  // UPDATED: Use Redux state for locations if available, fallback to local state
+  // Use Redux state for locations if available, fallback to local state
   const [localSelectedLocations, setLocalSelectedLocations] = useState<string[]>([]);
   const selectedLocations = onReduxLocationChange ? reduxSelectedLocations : localSelectedLocations;
   
-  // State for date range - LOCAL state that we manage directly
-  const [localStartDate, setLocalStartDate] = useState<string>(startDate || '');
-  const [localEndDate, setLocalEndDate] = useState<string>(endDate || '');
+  // ✅ FIX: Use Redux date state as primary source, fallback to props
+  const currentStartDate = reduxStartDate || startDate || '';
+  const currentEndDate = reduxEndDate || endDate || '';
   
   // State for date range dialog
   const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
   const [selectedRange, setSelectedRange] = useState({
-    startDate: startDate ? new Date(startDate) : new Date(),
-    endDate: endDate ? new Date(endDate) : new Date(),
+    startDate: currentStartDate ? new Date(currentStartDate) : new Date(),
+    endDate: currentEndDate ? new Date(currentEndDate) : new Date(),
   });
 
-  // Update local date state when props change
+  // ✅ FIX: Update selected range when Redux dates change
   useEffect(() => {
-    setLocalStartDate(startDate || '');
-    setLocalEndDate(endDate || '');
-  }, [startDate, endDate]);
+    console.log('📅 FilterSection: Updating selectedRange from Redux dates:', {
+      reduxStartDate,
+      reduxEndDate,
+      currentStartDate,
+      currentEndDate
+    });
+    
+    if (currentStartDate && currentEndDate) {
+      try {
+        const newStartDate = new Date(currentStartDate);
+        const newEndDate = new Date(currentEndDate);
+        
+        // Only update if dates are valid
+        if (!isNaN(newStartDate.getTime()) && !isNaN(newEndDate.getTime())) {
+          setSelectedRange({
+            startDate: newStartDate,
+            endDate: newEndDate,
+          });
+        }
+      } catch (error) {
+        console.warn('📅 FilterSection: Invalid dates from Redux:', { currentStartDate, currentEndDate, error });
+      }
+    }
+  }, [currentStartDate, currentEndDate, reduxStartDate, reduxEndDate]);
 
   // Update local state when Redux filters change
   useEffect(() => {
@@ -500,9 +552,32 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     }
   }, [salesFilters.selectedCategories]);
 
-  // UPDATED: Handle location change with Redux integration
+  // Helper function to convert location IDs to names for API
+  const getLocationNamesForApi = useCallback((currentLocations: string[]) => {
+    if (availableLocationObjects.length > 0 && onReduxLocationChange) {
+      // Convert location IDs to names for API
+      return currentLocations.map(locationId => {
+        const location = availableLocationObjects.find(loc => loc.location_id.toString() === locationId);
+        return location ? location.location_name : locationId;
+      });
+    } else {
+      // Use location values as-is (legacy mode)
+      return [...currentLocations];
+    }
+  }, [availableLocationObjects, onReduxLocationChange]);
+
+  // Handle location change with Redux integration and enhanced blocking
   const handleLocationChange = useCallback((newValue: string[]) => {
     console.log('📍 FilterSection: Location selection changed to:', newValue);
+    
+    // ✅ Set manual triggering flag to prevent double calls
+    setIsManuallyTriggering(true);
+    setDateChangeSource('manual');
+    
+    // Clear any pending auto-filter timeouts
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
     
     if (onReduxLocationChange) {
       // Use Redux dispatch - need to convert names to IDs
@@ -523,7 +598,36 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       // Use local state
       setLocalSelectedLocations(newValue);
     }
-  }, [onReduxLocationChange, availableLocationObjects]);
+    
+    // ✅ ENHANCED: Auto-trigger filter if we have locations and optional date range
+    if (newValue.length > 0 && onApplyFiltersWithDates) {
+      const locationNamesForApi = getLocationNamesForApi(newValue);
+      
+      console.log('🚀 FilterSection: Location changed - triggering immediate filter with current state:', {
+        locations: locationNamesForApi,
+        startDate: currentStartDate,
+        endDate: currentEndDate,
+        categories: selectedCategories
+      });
+      
+      // Small delay to ensure Redux state is updated
+      setTimeout(() => {
+        onApplyFiltersWithDates(
+          currentStartDate || '',
+          currentEndDate || '',
+          [...selectedCategories],
+          locationNamesForApi
+        );
+      }, 200);
+    }
+    
+    // Reset manual flag after operation
+    setTimeout(() => {
+      setIsManuallyTriggering(false);
+      setDateChangeSource(null);
+    }, 2000);
+    
+  }, [onReduxLocationChange, availableLocationObjects, getLocationNamesForApi, onApplyFiltersWithDates, currentStartDate, currentEndDate, selectedCategories, timeoutRef]);
 
   // Handle category change (multi-select)
   const handleCategoryChange = useCallback((newValue: string[]) => {
@@ -541,21 +645,34 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     setSelectedRange(range);
   };
 
-  // Apply date range - sets the date range locally
+  // ✅ ENHANCED: Apply date range with comprehensive blocking and Redux integration
   const applyDateRange = useCallback(() => {
     const formattedStartDate = format(selectedRange.startDate, 'MM/dd/yyyy');
     const formattedEndDate = format(selectedRange.endDate, 'MM/dd/yyyy');
     
-    console.log('📅 FilterSection: Setting date range locally:', {
+    console.log('📅 FilterSection: Applying date range MANUALLY - blocking ALL auto-filters:', {
       startDate: formattedStartDate,
       endDate: formattedEndDate
     });
     
-    // Update local state
-    setLocalStartDate(formattedStartDate);
-    setLocalEndDate(formattedEndDate);
+    // ✅ CRITICAL: Set ALL manual flags to prevent any auto-filtering
+    setIsManualDateRangeApply(true);
+    setIsManuallyTriggering(true);
+    setIsApplyingDateRange(true);
+    setDateChangeSource('manual');
     
-    // Update Redux state for persistence
+    // Clear any pending timeouts
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    // ✅ FIX: Update Redux state for Sales Split Dashboard dates
+    reduxDispatch(setSalesSplitDashboardDateRange({
+      startDate: formattedStartDate,
+      endDate: formattedEndDate
+    }));
+    
+    // Also update legacy Redux state for compatibility
     dispatch(updateSalesFilters({ 
       startDate: formattedStartDate,
       endDate: formattedEndDate,
@@ -563,7 +680,36 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     }));
     
     setIsDateRangeOpen(false);
-  }, [selectedRange, dispatch]);
+    
+    // ✅ MANUAL TRIGGER: Only if locations are selected
+    if (onApplyFiltersWithDates && selectedLocations.length > 0) {
+      console.log('🚀 FilterSection: MANUALLY triggering filter with new date range');
+      
+      const locationNamesForApi = getLocationNamesForApi(selectedLocations);
+      
+      // Use a small delay to ensure state is updated
+      setTimeout(() => {
+        onApplyFiltersWithDates(
+          formattedStartDate,
+          formattedEndDate,
+          [...selectedCategories],
+          locationNamesForApi
+        );
+      }, 100);
+    } else if (selectedLocations.length === 0) {
+      console.log('⚠️ FilterSection: No locations selected - date range set but no API call');
+    }
+    
+    // ✅ CRITICAL: Reset ALL flags after a longer delay
+    setTimeout(() => {
+      console.log('🔄 FilterSection: Resetting ALL manual flags');
+      setIsManualDateRangeApply(false);
+      setIsManuallyTriggering(false);
+      setIsApplyingDateRange(false);
+      setDateChangeSource(null);
+    }, 5000); // Increased to 5 seconds for safety
+    
+  }, [selectedRange, dispatch, reduxDispatch, onApplyFiltersWithDates, selectedLocations, selectedCategories, getLocationNamesForApi, timeoutRef]);
 
   // Format display date
   const formatDisplayDate = (dateStr: string) => {
@@ -581,11 +727,11 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     return locations.length > 0; // Only location is required, others are optional but will use defaults
   }, []);
 
-  // ✅ FIXED: Check if any filter has actually changed - CREATE COPIES to avoid mutation error
+  // Check if any filter has actually changed - CREATE COPIES to avoid mutation error
   const hasFiltersChanged = useCallback((currentLocations: string[], currentStartDate: string, currentEndDate: string, currentCategories: string[]) => {
     const prev = previousFiltersRef.current;
     
-    // ✅ CRITICAL FIX: Create copies of arrays before sorting to avoid read-only property error
+    // Create copies of arrays before sorting to avoid read-only property error
     const currentLocationsCopy = [...currentLocations].sort();
     const prevLocationsCopy = [...prev.locations].sort();
     const currentCategoriesCopy = [...currentCategories].sort();
@@ -618,11 +764,26 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     return locationsChanged || startDateChanged || endDateChanged || categoriesChanged;
   }, []);
 
-  // UPDATED: Enhanced apply filters with Redux location handling - AUTO TRIGGER
+  // ✅ ENHANCED: Auto-filter with comprehensive blocking and location validation
   const triggerAutoFilter = useCallback(async () => {
+    // ✅ CRITICAL FIX: Skip auto-filter if any manual operation is active
+    if (isManuallyTriggering || isApplyingDateRange || isManualDateRangeApply) {
+      console.log('⏸️ FilterSection: Skipping auto-filter - manual operation in progress:', {
+        isManuallyTriggering,
+        isApplyingDateRange,
+        isManualDateRangeApply,
+        dateChangeSource
+      });
+      return;
+    }
+    
+    // ✅ Additional check: Skip if date change source is manual
+    if (dateChangeSource === 'manual') {
+      console.log('⏸️ FilterSection: Skipping auto-filter - date change was manual');
+      return;
+    }
+    
     const currentLocations = selectedLocations;
-    const currentStartDate = localStartDate;
-    const currentEndDate = localEndDate;
     const currentCategories = selectedCategories;
 
     console.log('🎯 FilterSection: Checking auto-filter trigger:', {
@@ -632,7 +793,11 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       selectedLocations: currentLocations,
       useRedux: !!onReduxLocationChange,
       companyId: selectedCompanyId,
-      isInitialized
+      isInitialized,
+      isManuallyTriggering,
+      isApplyingDateRange,
+      isManualDateRangeApply,
+      dateChangeSource
     });
 
     // Don't trigger on initial load
@@ -641,9 +806,9 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       return;
     }
 
-    // Check if minimum requirements are met
+    // ✅ ENHANCED: Check if minimum requirements are met (locations are required)
     if (!hasMinimumFilters(currentLocations, currentStartDate, currentEndDate, currentCategories)) {
-      console.warn('⚠️ FilterSection: Minimum filter requirements not met');
+      console.warn('⚠️ FilterSection: Minimum filter requirements not met - locations required');
       return;
     }
 
@@ -653,16 +818,23 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       return;
     }
 
-    // ✅ FIXED: Check if filters actually changed with proper array handling
+    // Check if filters actually changed with proper array handling
     if (!hasFiltersChanged(currentLocations, currentStartDate, currentEndDate, currentCategories)) {
       console.log('⏭️ FilterSection: No filter changes detected - skipping auto-filter');
       return;
     }
 
+    // ✅ ENHANCED: Validate that we have meaningful data to send
+    if (currentLocations.length === 0) {
+      console.warn('⚠️ FilterSection: No locations selected - cannot auto-filter');
+      return;
+    }
+
     setIsAutoFiltering(true);
+    setDateChangeSource('auto'); // Mark as auto-triggered
 
     try {
-      // ✅ FIXED: Update Redux state with copied arrays
+      // Update Redux state with copied arrays
       dispatch(updateSalesFilters({ 
         selectedCategories: [...currentCategories], // Create copy
         location: currentLocations[0] || '', // Use first selected location for backward compatibility
@@ -675,63 +847,59 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       if (onApplyFiltersWithDates) {
         console.log('🚀 FilterSection: Auto-filtering with new callback and Redux location state');
         
-        // UPDATED: Convert location IDs back to location names for API compatibility
-        let locationNamesForApi: string[] = [];
+        const locationNamesForApi = getLocationNamesForApi(currentLocations);
         
-        if (availableLocationObjects.length > 0 && onReduxLocationChange) {
-          // Convert location IDs to names for API
-          locationNamesForApi = currentLocations.map(locationId => {
-            const location = availableLocationObjects.find(loc => loc.location_id.toString() === locationId);
-            return location ? location.location_name : locationId;
-          });
-          console.log('📍 FilterSection: Converted location IDs to names for API:', {
-            locationIds: currentLocations,
-            locationNames: locationNamesForApi
-          });
+        console.log('📍 FilterSection: Converted location IDs to names for API:', {
+          locationIds: currentLocations,
+          locationNames: locationNamesForApi
+        });
+        
+        // ✅ ENHANCED: Only proceed if we have valid locations
+        if (locationNamesForApi.length > 0) {
+          await onApplyFiltersWithDates(
+            currentStartDate || '', 
+            currentEndDate || '', 
+            [...currentCategories], // Create copy
+            locationNamesForApi
+          );
         } else {
-          // Use location values as-is (legacy mode)
-          locationNamesForApi = [...currentLocations]; // Create copy
+          console.warn('⚠️ FilterSection: No valid location names for API - skipping call');
         }
-        
-        await onApplyFiltersWithDates(
-          currentStartDate || '', 
-          currentEndDate || '', 
-          [...currentCategories], // Create copy
-          locationNamesForApi
-        );
       } else {
         console.log('⚠️ FilterSection: Auto-filtering with legacy callback');
         
-        // Legacy approach - update parent state first, then call API
-        const locationEvent = {
-          target: { value: currentLocations[0] || '' }
-        } as SelectChangeEvent;
-        
-        const startEvent = {
-          target: { value: currentStartDate }
-        } as React.ChangeEvent<HTMLInputElement>;
-        
-        const endEvent = {
-          target: { value: currentEndDate }
-        } as React.ChangeEvent<HTMLInputElement>;
-        
-        const dateRangeEvent = {
-          target: { value: 'Custom Date Range' }
-        } as SelectChangeEvent;
-        
-        // Update parent component state
-        onLocationChange(locationEvent);
-        onStartDateChange(startEvent);
-        onEndDateChange(endEvent);
-        onDateRangeChange(dateRangeEvent);
-        
-        // Add a small delay to allow state to update
-        setTimeout(() => {
-          onApplyFilters();
-        }, 100);
+        // Legacy approach - only proceed if we have locations
+        if (currentLocations.length > 0) {
+          const locationEvent = {
+            target: { value: currentLocations[0] || '' }
+          } as SelectChangeEvent;
+          
+          const startEvent = {
+            target: { value: currentStartDate }
+          } as React.ChangeEvent<HTMLInputElement>;
+          
+          const endEvent = {
+            target: { value: currentEndDate }
+          } as React.ChangeEvent<HTMLInputElement>;
+          
+          const dateRangeEvent = {
+            target: { value: 'Custom Date Range' }
+          } as SelectChangeEvent;
+          
+          // Update parent component state
+          onLocationChange(locationEvent);
+          onStartDateChange(startEvent);
+          onEndDateChange(endEvent);
+          onDateRangeChange(dateRangeEvent);
+          
+          // Add a small delay to allow state to update
+          setTimeout(() => {
+            onApplyFilters();
+          }, 100);
+        }
       }
 
-      // ✅ FIXED: Update previous filters reference with copies
+      // Update previous filters reference with copies
       previousFiltersRef.current = {
         locations: [...currentLocations],
         startDate: currentStartDate,
@@ -743,11 +911,17 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       console.error('❌ FilterSection: Auto-filter error:', error);
     } finally {
       setIsAutoFiltering(false);
+      // Reset source after auto-filter completes
+      setTimeout(() => setDateChangeSource(null), 500);
     }
   }, [
+    isManuallyTriggering,
+    isApplyingDateRange,
+    isManualDateRangeApply,
+    dateChangeSource,
     selectedLocations,
-    localStartDate,
-    localEndDate,
+    currentStartDate,
+    currentEndDate,
     selectedCategories,
     onReduxLocationChange,
     selectedCompanyId,
@@ -756,7 +930,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     hasFiltersChanged,
     dispatch,
     onApplyFiltersWithDates,
-    availableLocationObjects,
+    getLocationNamesForApi,
     onLocationChange,
     onStartDateChange,
     onEndDateChange,
@@ -764,22 +938,50 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     onApplyFilters
   ]);
 
-  // Debounced auto-filter function
+  // ✅ ENHANCED: Debounced auto-filter with comprehensive blocking
   const debouncedAutoFilter = useCallback(() => {
+    // ✅ Skip if any manual operation is in progress
+    if (isManuallyTriggering || isApplyingDateRange || isManualDateRangeApply || dateChangeSource === 'manual') {
+      console.log('⏸️ FilterSection: Skipping debounced auto-filter - manual operation active');
+      return;
+    }
+    
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
     
     timeoutRef.current = setTimeout(() => {
-      triggerAutoFilter();
-    }, 300); // Reduced debounce time for better responsiveness
-  }, [triggerAutoFilter]);
+      // Double-check flags before executing
+      if (!isManuallyTriggering && !isApplyingDateRange && !isManualDateRangeApply && dateChangeSource !== 'manual') {
+        triggerAutoFilter();
+      } else {
+        console.log('⏸️ FilterSection: Cancelled debounced auto-filter - manual operation detected');
+      }
+    }, 500); // Increased debounce time
+  }, [triggerAutoFilter, isManuallyTriggering, isApplyingDateRange, isManualDateRangeApply, dateChangeSource]);
 
-  // Single useEffect to monitor all filter changes
+  // ✅ ENHANCED: useEffect with TARGETED flag checking
   useEffect(() => {
     // Mark as initialized after first render
     if (!isInitialized) {
       setIsInitialized(true);
+      return;
+    }
+
+    // ✅ Skip auto-filter if any manual operation is active
+    if (isManuallyTriggering || isApplyingDateRange || isManualDateRangeApply) {
+      console.log('⏸️ FilterSection: Skipping useEffect auto-filter - manual operation active:', {
+        isManuallyTriggering,
+        isApplyingDateRange,
+        isManualDateRangeApply,
+        dateChangeSource
+      });
+      return;
+    }
+
+    // ✅ Skip if this is a manual date change
+    if (dateChangeSource === 'manual') {
+      console.log('⏸️ FilterSection: Skipping useEffect auto-filter - manual date change');
       return;
     }
 
@@ -792,9 +994,31 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [selectedLocations, localStartDate, localEndDate, selectedCategories, debouncedAutoFilter, isInitialized]);
+  }, [
+    selectedLocations, 
+    currentStartDate, 
+    currentEndDate, 
+    selectedCategories, 
+    debouncedAutoFilter, 
+    isInitialized, 
+    isManuallyTriggering,
+    isApplyingDateRange,
+    isManualDateRangeApply,
+    dateChangeSource
+  ]);
 
-  // UPDATED: Determine which locations to use and convert for display
+  // ✅ Cleanup for all flags including new one
+  useEffect(() => {
+    return () => {
+      setIsApplyingDateRange(false);
+      setDateChangeSource(null);
+      setIsManuallyTriggering(false);
+      setIsAutoFiltering(false);
+      setIsManualDateRangeApply(false);
+    };
+  }, []);
+
+  // Determine which locations to use and convert for display
   const displayLocations = useMemo(() => {
     if (availableLocationObjects.length > 0) {
       return availableLocationObjects.map(loc => loc.location_name);
@@ -802,7 +1026,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     return locations || [];
   }, [availableLocationObjects, locations]);
 
-  // UPDATED: Convert selected location IDs to names for display
+  // Convert selected location IDs to names for display
   const displaySelectedLocations = useMemo(() => {
     if (availableLocationObjects.length > 0 && onReduxLocationChange) {
       return selectedLocations.map(id => {
@@ -813,9 +1037,47 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     return selectedLocations;
   }, [selectedLocations, availableLocationObjects, onReduxLocationChange]);
 
+  // Helper function to clear date range
+  const handleClearDateRange = () => {
+    console.log('🧹 Clearing date range');
+    
+    // ✅ FIX: Clear both Redux and legacy state
+    reduxDispatch(clearSalesSplitDashboardDateRange());
+    
+    // Update legacy Redux state for compatibility
+    dispatch(updateSalesFilters({ 
+      startDate: '',
+      endDate: '',
+      dateRangeType: 'Custom Date Range'
+    }));
+  };
+
+  // ✅ FIX: Redux-based date handlers that update Sales Split Dashboard dates
+  const handleStartDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newStartDate = event.target.value;
+    console.log('📅 Start date changed to:', newStartDate);
+    
+    // Update Sales Split Dashboard Redux state
+    reduxDispatch(setSalesSplitDashboardStartDate(newStartDate));
+    
+    // Update legacy Redux state for compatibility
+    dispatch(updateSalesFilters({ startDate: newStartDate }));
+  };
+
+  const handleEndDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newEndDate = event.target.value;
+    console.log('📅 End date changed to:', newEndDate);
+    
+    // Update Sales Split Dashboard Redux state
+    reduxDispatch(setSalesSplitDashboardEndDate(newEndDate));
+    
+    // Update legacy Redux state for compatibility
+    dispatch(updateSalesFilters({ endDate: newEndDate }));
+  };
+
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
-      {/* Header with Auto-Filter Indicator */}
+      {/* ✅ ENHANCED: Header with comprehensive status indicators including new flag */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
         <FilterListIcon color="primary" />
         <Typography variant="h6" sx={{ fontWeight: 500 }}>
@@ -839,11 +1101,38 @@ const FilterSection: React.FC<FilterSectionProps> = ({
             variant="outlined"
           />
         )}
+        {isManuallyTriggering && (
+          <Chip 
+            icon={<CircularProgress size={16} />}
+            label="Applying Filters..."
+            size="small"
+            color="warning"
+            variant="outlined"
+          />
+        )}
+        {isApplyingDateRange && (
+          <Chip 
+            icon={<CircularProgress size={16} />}
+            label="Setting Date Range..."
+            size="small"
+            color="info"
+            variant="outlined"
+          />
+        )}
+        {isManualDateRangeApply && (
+          <Chip 
+            icon={<CircularProgress size={16} />}
+            label="Manual Date Range..."
+            size="small"
+            color="warning"
+            variant="outlined"
+          />
+        )}
         <Chip 
           icon={<AutorenewIcon />}
-          label="Auto-Update"
+          label={dateChangeSource === 'manual' ? 'Manual Mode' : 'Auto-Update'}
           size="small"
-          color="success"
+          color={dateChangeSource === 'manual' ? 'warning' : 'success'}
           variant="outlined"
           sx={{ ml: 'auto' }}
         />
@@ -868,7 +1157,7 @@ const FilterSection: React.FC<FilterSectionProps> = ({
       )}
 
       <Grid container spacing={2}>
-        {/* Location filter - UPDATED to use Redux state */}
+        {/* Location filter - Using Redux state */}
         <Grid item xs={12} sm={6} md={4}>
           <MultiSelect
             id="location-select"
@@ -899,11 +1188,12 @@ const FilterSection: React.FC<FilterSectionProps> = ({
                 borderColor: 'primary.main',
               }
             }}
+            disabled={isApplyingDateRange || isManualDateRangeApply}
           >
             <Box sx={{ textAlign: 'left' }}>
               <Typography variant="body2" component="div">
-                {localStartDate && localEndDate 
-                  ? `${formatDisplayDate(localStartDate)} - ${formatDisplayDate(localEndDate)}`
+                {currentStartDate && currentEndDate 
+                  ? `${formatDisplayDate(currentStartDate)} - ${formatDisplayDate(currentEndDate)}`
                   : 'Select Date Range (Optional)'
                 }
               </Typography>
@@ -926,18 +1216,20 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         </Grid>
       </Grid>
 
-      {/* Active filters display with auto-filter status */}
-      {(displaySelectedLocations.length > 0 || selectedCategories.length > 0 || (localStartDate && localEndDate)) && (
+      {/* Active filters display with comprehensive status */}
+      {(displaySelectedLocations.length > 0 || selectedCategories.length > 0 || (currentStartDate && currentEndDate)) && (
         <Box sx={{ mt: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
             <Typography variant="body2" color="text.secondary">
               Active Filters:
             </Typography>
-            {isAutoFiltering && (
+            {(isAutoFiltering || isManuallyTriggering || isApplyingDateRange || isManualDateRangeApply) && (
               <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <CircularProgress size={16} />
                 <Typography variant="caption" color="primary">
-                  Updating...
+                  {isManualDateRangeApply ? 'Manual Date Range...' :
+                   isApplyingDateRange ? 'Setting Date Range...' : 
+                   isManuallyTriggering ? 'Applying Filters...' : 'Auto-Updating...'}
                 </Typography>
               </Box>
             )}
@@ -958,17 +1250,14 @@ const FilterSection: React.FC<FilterSectionProps> = ({
               />
             )}
             
-            {localStartDate && localEndDate && (
+            {currentStartDate && currentEndDate && (
               <Chip 
-                label={`Date Range: ${formatDisplayDate(localStartDate)} - ${formatDisplayDate(localEndDate)}`} 
+                label={`Date Range: ${formatDisplayDate(currentStartDate)} - ${formatDisplayDate(currentEndDate)}`} 
                 color="secondary" 
                 variant="outlined" 
                 size="small" 
                 icon={<CalendarTodayIcon />} 
-                onDelete={() => {
-                  setLocalStartDate('');
-                  setLocalEndDate('');
-                }}
+                onDelete={handleClearDateRange}
               />
             )}
             
@@ -990,35 +1279,33 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         </Box>
       )}
 
-      {/* Filter Requirements Status */}
-      {/* <Box sx={{ mt: 3 }}>
-        <Alert 
-          severity={displaySelectedLocations.length > 0 ? "success" : "warning"}
-        >
-          <Typography variant="body2">
-            <strong>Filter Status:</strong><br />
-            • Location: {displaySelectedLocations.length > 0 ? `✓ ${displaySelectedLocations.length} selected` : '✗ Required for auto-filtering'}<br />
-            • Date Range: {(localStartDate && localEndDate) ? '✓ Selected' : '○ Optional (will use defaults)'}<br />
-            • Dining Options: {selectedCategories.length > 0 ? `✓ ${selectedCategories.length} selected` : '○ Optional (will use defaults)'}<br />
-            {displaySelectedLocations.length > 0 && (
-              <><br /><strong>Auto-filtering is active - data updates when filters change!</strong></>
-            )}
-          </Typography>
-        </Alert>
-      </Box> */}
-
-      {/* Debug Info - Show Redux state in development */}
-      {/* {process.env.NODE_ENV === 'development' && onReduxLocationChange && (
+      {/* ✅ ENHANCED DEBUG: Development mode information with comprehensive tracking
+      {process.env.NODE_ENV === 'development' && (
         <Alert severity="info" sx={{ mt: 2 }}>
           <Typography variant="body2">
-            <strong>Debug - Redux Integration:</strong><br />
-            Company ID: {selectedCompanyId || 'None'}<br />
-            Redux Location IDs: [{selectedLocations.join(', ')}]<br />
-            Display Location Names: [{displaySelectedLocations.join(', ')}]<br />
-            Available Locations: [{displayLocations.join(', ')}]<br />
-            Auto-Filtering: {isAutoFiltering ? 'Active' : 'Idle'}<br />
+            <strong>Debug - Filter State:</strong><br />
+            Manual Triggering: {isManuallyTriggering ? 'Yes' : 'No'}<br />
+            Applying Date Range: {isApplyingDateRange ? 'Yes' : 'No'}<br />
+            Manual Date Range Apply: {isManualDateRangeApply ? 'Yes' : 'No'}<br />
+            Auto Filtering: {isAutoFiltering ? 'Yes' : 'No'}<br />
+            Date Change Source: {dateChangeSource || 'None'}<br />
             Initialized: {isInitialized ? 'Yes' : 'No'}<br />
-            Multiple Locations: {displaySelectedLocations.length > 1 ? 'Yes' : 'No'}
+            Redux Mode: {onReduxLocationChange ? 'Yes' : 'No'}<br />
+            Selected Locations: [{displaySelectedLocations.join(', ')}]<br />
+            Available Locations: [{displayLocations.join(', ')}]<br />
+            Current Start Date: {currentStartDate || 'None'}<br />
+            Current End Date: {currentEndDate || 'None'}<br />
+            Redux Start Date: {reduxStartDate || 'None'}<br />
+            Redux End Date: {reduxEndDate || 'None'}<br />
+            Props Start Date: {startDate || 'None'}<br />
+            Props End Date: {endDate || 'None'}<br />
+            Selected Categories: {selectedCategories.length} items<br />
+            Has Pending Timeout: {timeoutRef.current ? 'Yes' : 'No'}<br />
+            Minimum Filters Met: {hasMinimumFilters(selectedLocations, currentStartDate, currentEndDate, selectedCategories) ? 'Yes' : 'No'}<br />
+            <strong>Last Filter State:</strong><br />
+            Previous Locations: [{previousFiltersRef.current.locations.join(', ')}]<br />
+            Previous Start Date: {previousFiltersRef.current.startDate || 'None'}<br />
+            Previous End Date: {previousFiltersRef.current.endDate || 'None'}
           </Typography>
         </Alert>
       )} */}
@@ -1035,8 +1322,8 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           <DateRangeSelector
             initialState={[
               {
-                startDate: localStartDate ? new Date(localStartDate) : new Date(),
-                endDate: localEndDate ? new Date(localEndDate) : new Date(),
+                startDate: currentStartDate ? new Date(currentStartDate) : new Date(),
+                endDate: currentEndDate ? new Date(currentEndDate) : new Date(),
                 key: 'selection'
               }
             ]}
@@ -1045,8 +1332,13 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setIsDateRangeOpen(false)}>Cancel</Button>
-          <Button onClick={applyDateRange} variant="contained" color="primary">
-            Set Date Range
+          <Button 
+            onClick={applyDateRange} 
+            variant="contained" 
+            color="primary"
+            disabled={isApplyingDateRange || isManualDateRangeApply}
+          >
+            {(isApplyingDateRange || isManualDateRangeApply) ? 'Setting...' : 'Set Date Range'}
           </Button>
         </DialogActions>
       </Dialog>

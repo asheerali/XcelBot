@@ -1502,14 +1502,14 @@ export function Financials() {
                 icon={<BusinessIcon sx={{ fontSize: '1rem' }} />}
                 label={`Companies: ${selectedCompanyNames.join(', ')}`}
                 color="primary"
-                variant="filled"
+                variant="outlined"
                 onDelete={() => dispatch(setSelectedCompanies([]))}
                 sx={{
                   borderRadius: '24px',
                   height: '36px',
                   fontSize: '0.875rem',
                   fontWeight: 600,
-                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+       
                   color: theme.palette.primary.main,
                   border: `2px solid ${alpha(theme.palette.primary.main, 0.3)}`,
                   backdropFilter: 'blur(10px)',
@@ -1541,10 +1541,10 @@ export function Financials() {
                   fontSize: '0.875rem',
                   fontWeight: 600,
                   border: `2px solid ${alpha(theme.palette.secondary.main, 0.3)}`,
-                  background: alpha(theme.palette.secondary.main, 0.05),
+        
                   backdropFilter: 'blur(10px)',
                   '&:hover': {
-                    background: alpha(theme.palette.secondary.main, 0.1),
+
                     transform: 'translateY(-1px)',
                     boxShadow: `0 4px 12px ${alpha(theme.palette.secondary.main, 0.2)}`
                   },

@@ -1,8 +1,8 @@
-// Modified ExcelImport.tsx - Removed file upload dependency, always show full interface
+// ExcelImport.tsx - OPTIMIZED Version with Single API Call Logic
 
 import * as React from 'react';
 import axios from 'axios';
-import apiClient from '../api/axiosConfig'; // Use configured axios with auth for filter API
+import apiClient from '../api/axiosConfig';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -13,18 +13,10 @@ import Alert from '@mui/material/Alert';
 import Grid from '@mui/material/Grid';
 import Snackbar from '@mui/material/Snackbar';
 import { SelectChangeEvent } from '@mui/material/Select';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
-import TextField from '@mui/material/TextField';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
-import Skeleton from '@mui/material/Skeleton';
 import Fade from '@mui/material/Fade';
 import Chip from '@mui/material/Chip';
-import Paper from '@mui/material/Paper';
-import Backdrop from '@mui/material/Backdrop';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
@@ -33,14 +25,12 @@ import CardContent from '@mui/material/CardContent';
 import { styled, alpha, keyframes } from '@mui/material/styles';
 
 // Icons
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import InsightsIcon from '@mui/icons-material/Insights';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import DashboardIcon from '@mui/icons-material/Dashboard';
 import BusinessIcon from '@mui/icons-material/Business';
 
 // Import components
@@ -50,11 +40,9 @@ import SalesCharts from './graphs/SalesCharts';
 import DeliveryPercentageChart from './graphs/DeliveryPercentageChart';
 import InHousePercentageChart from './graphs/InHousePercentageChart';
 import CateringPercentageChart from './graphs/CateringPercentageChart';
-import FirstPartyPercentageChart from './graphs/PercentageFirstThirdPartyChart';
 import TotalSalesChart from './graphs/TotalSalesChart';
 import WowTrendsChart from './graphs/WowTrendsChart';
 import PercentageFirstThirdPartyChart from './graphs/PercentageFirstThirdPartyChart';
-import SalesDashboard from './SalesDashboard';
 import SalesSplitDashboard from './SalesSplitDashboard';
 import { API_URL_Local } from '../constants';
 
@@ -77,7 +65,7 @@ import {
   selectSelectedLocations 
 } from "../store/slices/masterFileSlice";
 
-// NEW: Date range Redux integration
+// Date range Redux integration
 import {
   setSalesSplitDashboardDateRange,
   setSalesSplitDashboardStartDate,
@@ -92,14 +80,13 @@ import {
 // Extract actions from the slice
 const { setLoading, setError } = excelSlice.actions;
 
-// Company interface
+// Interfaces
 interface Company {
   company_id: number;
   company_name: string;
   locations: Location[];
 }
 
-// Location interface
 interface Location {
   location_id: number;
   location_name: string;
@@ -141,43 +128,8 @@ const CompanyInfoChip = styled(Chip)(({ theme }) => ({
   },
 }));
 
-const LoadingOverlay = styled(Backdrop)(({ theme }) => ({
-  zIndex: theme.zIndex.drawer + 1,
-  background: 'rgba(255, 255, 255, 0.9)',
-  backdropFilter: 'blur(8px)',
-}));
-
-const ModernLoader = () => (
-  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-    <Box sx={{ position: 'relative' }}>
-      <CircularProgress size={60} thickness={4} />
-      <Box
-        sx={{
-          top: 0,
-          left: 0,
-          bottom: 0,
-          right: 0,
-          position: 'absolute',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <AnalyticsIcon sx={{ fontSize: 24, color: 'primary.main' }} />
-      </Box>
-    </Box>
-    <Typography variant="h6" sx={{ fontWeight: 500 }}>
-      Loading Data...
-    </Typography>
-    <Typography variant="body2" color="text.secondary">
-      Fetching your sales data
-    </Typography>
-  </Box>
-);
-
 // API endpoints
-const COMPANY_LOCATIONS_API_URL = API_URL_Local + '/company-locations/all'; // Public endpoint - no auth
-// Filter API uses apiClient with auth
+const COMPANY_LOCATIONS_API_URL = API_URL_Local + '/company-locations/all';
 
 // Main Component
 export function ExcelImport() {
@@ -219,26 +171,30 @@ export function ExcelImport() {
   const [salesSplitTab, setSalesSplitTab] = React.useState<number>(0);
   const [chartKey, setChartKey] = React.useState<number>(0);
   
-  // NEW: Get date range from Redux instead of local state
+  // ✅ OPTIMIZED: Single API call management
+  const [isApiCallInProgress, setIsApiCallInProgress] = React.useState(false);
+  const apiCallTimeoutRef = React.useRef<NodeJS.Timeout>();
+  const lastSuccessfulCallRef = React.useRef<string>(''); // Track last successful call signature
+  
+  // Get date range from Redux
   const salesSplitDateRange = useSelector(selectSalesSplitDashboardDateRange);
   const startDate = salesSplitDateRange.startDate || '';
   const endDate = salesSplitDateRange.endDate || '';
   const hasDateRange = useSelector(selectHasSalesSplitDashboardDateRange);
   
-  // Date and filter state (keeping some local state for UI)
+  // Date and filter state
   const [dateRangeType, setDateRangeType] = React.useState<string>('Custom Date Range');
   const [availableDateRanges] = React.useState<string[]>(['Custom Date Range']);
-  const [isWaitingForBackendResponse, setIsWaitingForBackendResponse] = React.useState<boolean>(false);
   const [hasValidData, setHasValidData] = React.useState<boolean>(false);
   const [showSuccessNotification, setShowSuccessNotification] = React.useState<boolean>(false);
 
-  console.log('📈 ExcelImport: Redux date range state:', {
+  console.log('📈 ExcelImport: Current state:', {
     salesSplitDateRange,
     startDate,
     endDate,
     hasDateRange,
-    startDateType: typeof startDate,
-    endDateType: typeof endDate
+    isApiCallInProgress,
+    hasValidData
   });
 
   // Fetch company-locations data on component mount
@@ -249,7 +205,7 @@ export function ExcelImport() {
       
       try {
         console.log('🏢 Fetching company-locations from:', COMPANY_LOCATIONS_API_URL);
-        const response = await axios.get(COMPANY_LOCATIONS_API_URL); // Use regular axios without auth
+        const response = await axios.get(COMPANY_LOCATIONS_API_URL);
         
         console.log('📥 Company-locations response:', response.data);
         setCompanies(response.data || []);
@@ -289,20 +245,11 @@ export function ExcelImport() {
     }
   }, [selectedCompany, availableLocations, selectedLocations.length, reduxDispatch]);
 
-  // Sync with currentCompanyId from Excel slice if it exists
-  React.useEffect(() => {
-    if (currentCompanyId && selectedCompanies.length === 0) {
-      console.log('🏢 Syncing company ID from Excel Redux:', currentCompanyId);
-      reduxDispatch(setSelectedCompanies([currentCompanyId]));
-    }
-  }, [currentCompanyId, selectedCompanies.length, reduxDispatch]);
-
   // Set success notification when tableData changes
   React.useEffect(() => {
     if (reduxTableData && Object.keys(reduxTableData).length > 0) {
       console.log('✅ Data loaded successfully');
       setHasValidData(true);
-      setIsWaitingForBackendResponse(false);
       setShowSuccessNotification(true);
       setChartKey(prevKey => prevKey + 1);
     }
@@ -316,15 +263,10 @@ export function ExcelImport() {
     reduxDispatch(setSelectedCompanies([companyId]));
     reduxDispatch(setSelectedLocations([])); // Clear locations when company changes
     
-    console.log('🏢 Cleared locations due to company change');
-  };
-
-  // Handle location selection change
-  const handleLocationChange = (event: SelectChangeEvent) => {
-    const locationId = event.target.value;
-    console.log('📍 Location selection changed to:', locationId);
+    // Clear existing data when company changes
+    setHasValidData(false);
     
-    reduxDispatch(setSelectedLocations([locationId]));
+    console.log('🏢 Cleared locations due to company change');
   };
 
   // Get selected company and location names for display
@@ -349,233 +291,296 @@ export function ExcelImport() {
     setChartKey(prevKey => prevKey + 1);
   };
 
-  // MAIN FILTER FUNCTION - No file dependency
-  // Fixed handleApplyFiltersWithDates function in ExcelImport.tsx
-// MAIN FILTER FUNCTION - Fixed to properly send multiple locations to backend
-const handleApplyFiltersWithDates = (
-  explicitStartDate: string, 
-  explicitEndDate: string, 
-  categories: string[],
-  selectedFilterLocations: string[] // This correctly receives array of location IDs or names
-) => {
-  console.log('🎯 Applying filters with Redux dates:', {
-    explicitStartDate,
-    explicitEndDate,
-    reduxStartDate: startDate,
-    reduxEndDate: endDate,
-    categories,
-    selectedFilterLocations, // ✅ This should be an array
-    activeCompanyId
-  });
-
-  // NEW: Store the date range in Redux for persistence
-  if (explicitStartDate && explicitEndDate) {
-    console.log('💾 Storing date range in Redux:', { explicitStartDate, explicitEndDate });
-    dispatch(setSalesSplitDashboardDateRange({
+  // ✅ OPTIMIZED: Single API call function with improved deduplication
+  const handleApplyFiltersWithDates = React.useCallback((
+    explicitStartDate: string, 
+    explicitEndDate: string, 
+    categories: string[],
+    selectedFilterLocations: string[]
+  ) => {
+    // ✅ Create unique call signature to prevent duplicates
+    const callSignature = JSON.stringify({
       startDate: explicitStartDate,
-      endDate: explicitEndDate
-    }));
-  }
+      endDate: explicitEndDate,
+      categories: categories.sort(),
+      locations: selectedFilterLocations.sort(),
+      companyId: activeCompanyId
+    });
 
-  // Check if we have required data
-  if (!activeCompanyId) {
-    setLocalError('Please select a company first.');
-    return;
-  }
+    console.log('🎯 ExcelImport: Filter request received:', {
+      explicitStartDate,
+      explicitEndDate,
+      categories,
+      selectedFilterLocations,
+      activeCompanyId,
+      callSignature
+    });
 
-  if (selectedFilterLocations.length === 0) {
-    setLocalError('Please select at least one location.');
-    return;
-  }
-
-  try {
-    console.log('🔄 Starting backend request');
-    setIsWaitingForBackendResponse(true);
-    setHasValidData(false);
-    
-    dispatch(setLoading(true));
-    dispatch(setError(null));
-    setLocalError('');
-    
-    // Format dates correctly for API
-    let formattedStartDate: string | null = null;
-    let formattedEndDate: string | null = null;
-    
-    if (explicitStartDate) {
-      const dateParts = explicitStartDate.split('/');
-      if (dateParts.length === 3) {
-        formattedStartDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
-      }
-    }
-    
-    if (explicitEndDate) {
-      const dateParts = explicitEndDate.split('/');
-      if (dateParts.length === 3) {
-        formattedEndDate = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
-      }
+    // ✅ Skip if identical call is already in progress or recently completed
+    if (isApiCallInProgress) {
+      console.log('⏸️ ExcelImport: API call already in progress, skipping duplicate');
+      return;
     }
 
-    console.log('📅 Formatted dates for API:', {
-      original: { start: explicitStartDate, end: explicitEndDate },
-      formatted: { start: formattedStartDate, end: formattedEndDate }
-    });
-    
-    // ✅ FIXED: Prepare filter data with MULTIPLE LOCATIONS SUPPORT
-    const filterData = {
-      // No fileName required for company-location API mode
-      startDate: formattedStartDate,
-      endDate: formattedEndDate,
-      
-      // ✅ CRITICAL FIX: Send ALL selected locations as array
-      locations: selectedFilterLocations, // This is the key fix - send as array
-      
-      // Keep single location for backward compatibility (first selected location)
-      location: selectedFilterLocations[0] || null,
-      
-      dateRangeType: 'Custom Date Range',
-      selectedCategories: categories,
-      categories: categories.join(','),
-      company_id: activeCompanyId,
-      
-      // ✅ NEW: Add metadata for backend to handle multiple locations properly
-      multipleLocations: selectedFilterLocations.length > 1,
-      locationCount: selectedFilterLocations.length,
-    };
-    
-    console.log('📤 Sending filter request with MULTIPLE LOCATIONS:', {
-      ...filterData,
-      locationsArray: selectedFilterLocations,
-      locationsCount: selectedFilterLocations.length
-    });
-    
-    // Call filter API with authentication
-    apiClient.post('/api/salessplit/filter', filterData)
-      .then(response => {
-        console.log('📥 Received filter response for multiple locations:', {
-          status: response.status,
-          dataKeys: Object.keys(response.data || {}),
-          locationsProcessed: selectedFilterLocations
-        });
-        
-        if (response.data) {
-          dispatch(setTableData(response.data));
-          
-          setLocalError('');
-          setChartKey(prevKey => prevKey + 1);
-          
-          // Mark that we have valid data
-          setHasValidData(true);
-          setIsWaitingForBackendResponse(false);
-          
-          console.log('✅ Filter applied successfully for multiple locations:', selectedFilterLocations);
-        } else {
-          throw new Error('Invalid response data');
-        }
-      })
-      .catch(err => {
-        console.error('❌ Filter error with multiple locations:', {
-          error: err,
-          locations: selectedFilterLocations,
-          requestData: filterData
-        });
-        
-        setIsWaitingForBackendResponse(false);
-        setHasValidData(false);
-        
-        let errorMessage = 'Error filtering data';
-        if (err.response) {
-          if (err.response.status === 401) {
-            errorMessage = 'Authentication failed. Please log in again.';
-            // Auth interceptor will handle redirect to login
-          } else {
-            const detail = err.response.data?.detail;
-            errorMessage = `Server error: ${detail || err.response.status}`;
-            
-            if (err.response.status === 404) {
-              errorMessage = 'API endpoint not found. Is the server running?';
-            }
-            
-            // ✅ NEW: Special handling for multiple location errors
-            if (detail && detail.includes('location')) {
-              errorMessage = `Location error: ${detail}. Locations sent: ${selectedFilterLocations.join(', ')}`;
-            }
-          }
-        } else if (err.request) {
-          errorMessage = 'No response from server. Please check if the backend is running.';
-        }
-        
-        setLocalError(errorMessage);
-        dispatch(setError(errorMessage));
-      })
-      .finally(() => {
-        dispatch(setLoading(false));
-      });
-    
-  } catch (err: any) {
-    console.error('Filter error:', err);
-    setIsWaitingForBackendResponse(false);
-    setHasValidData(false);
-    
-    const errorMessage = 'Error applying filters: ' + (err.message || 'Unknown error');
-    setLocalError(errorMessage);
-    dispatch(setError(errorMessage));
-    dispatch(setLoading(false));
-  }
-};
+    if (callSignature === lastSuccessfulCallRef.current) {
+      console.log('⏸️ ExcelImport: Identical call recently completed, skipping duplicate');
+      return;
+    }
 
-  // Legacy method for backward compatibility
-  const handleApplyFilters = (location = selectedLocation, dateRange = dateRangeType) => {
-    console.log('⚠️ Using legacy handleApplyFilters');
-    
+    // ✅ Validate required data
     if (!activeCompanyId) {
       setLocalError('Please select a company first.');
       return;
     }
 
-    if (!location) {
-      setLocalError('Please select a location first.');
+    if (selectedFilterLocations.length === 0) {
+      setLocalError('Please select at least one location.');
       return;
     }
 
-    // NEW: Use Redux date range if available, fallback to empty strings
-    const currentStartDate = startDate || '';
-    const currentEndDate = endDate || '';
+    // ✅ Set API call in progress
+    setIsApiCallInProgress(true);
+    setHasValidData(false);
+    setLocalError('');
+
+    // Clear any existing timeout
+    if (apiCallTimeoutRef.current) {
+      clearTimeout(apiCallTimeoutRef.current);
+    }
+
+    try {
+      console.log('🔄 Starting SINGLE backend request');
+      
+      dispatch(setLoading(true));
+      dispatch(setError(null));
+      
+      // ✅ Store dates in Redux for persistence
+      if (explicitStartDate && explicitEndDate) {
+        reduxDispatch(setSalesSplitDashboardDateRange({
+          startDate: explicitStartDate,
+          endDate: explicitEndDate
+        }));
+      }
+      
+      // ✅ Format dates correctly for API
+      let formattedStartDate: string | null = null;
+      let formattedEndDate: string | null = null;
+      
+      const dateToUse = {
+        start: explicitStartDate || startDate || '',
+        end: explicitEndDate || endDate || ''
+      };
+      
+      console.log('📅 ExcelImport: Processing dates:', {
+        explicitStartDate,
+        explicitEndDate,
+        reduxStartDate: startDate,
+        reduxEndDate: endDate,
+        finalDates: dateToUse
+      });
+      
+      // Format start date
+      if (dateToUse.start) {
+        try {
+          if (dateToUse.start.includes('/')) {
+            const dateParts = dateToUse.start.split('/');
+            if (dateParts.length === 3) {
+              const [month, day, year] = dateParts;
+              formattedStartDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            }
+          } else if (dateToUse.start.includes('-')) {
+            formattedStartDate = dateToUse.start;
+          } else {
+            const parsedDate = new Date(dateToUse.start);
+            if (!isNaN(parsedDate.getTime())) {
+              formattedStartDate = parsedDate.toISOString().split('T')[0];
+            }
+          }
+        } catch (error) {
+          console.warn('📅 ExcelImport: Error formatting start date:', error);
+        }
+      }
+      
+      // Format end date
+      if (dateToUse.end) {
+        try {
+          if (dateToUse.end.includes('/')) {
+            const dateParts = dateToUse.end.split('/');
+            if (dateParts.length === 3) {
+              const [month, day, year] = dateParts;
+              formattedEndDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            }
+          } else if (dateToUse.end.includes('-')) {
+            formattedEndDate = dateToUse.end;
+          } else {
+            const parsedDate = new Date(dateToUse.end);
+            if (!isNaN(parsedDate.getTime())) {
+              formattedEndDate = parsedDate.toISOString().split('T')[0];
+            }
+          }
+        } catch (error) {
+          console.warn('📅 ExcelImport: Error formatting end date:', error);
+        }
+      }
+
+      console.log('📅 ExcelImport: Formatted dates for API:', {
+        original: dateToUse,
+        formatted: { start: formattedStartDate, end: formattedEndDate }
+      });
+      
+      // ✅ Prepare comprehensive filter data
+      const filterData = {
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+        locations: selectedFilterLocations,
+        location: selectedFilterLocations[0] || null,
+        dateRangeType: 'Custom Date Range',
+        selectedCategories: categories,
+        categories: categories.join(','),
+        company_id: activeCompanyId,
+        multipleLocations: selectedFilterLocations.length > 1,
+        locationCount: selectedFilterLocations.length,
+        // ✅ Add deduplication tracking
+        callSignature,
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log('📤 ExcelImport: Sending SINGLE optimized request:', filterData);
+      
+      // ✅ Make single API call
+      apiClient.post('/api/salessplit/filter', filterData)
+        .then(response => {
+          console.log('📥 ExcelImport: Received successful response:', {
+            status: response.status,
+            dataKeys: Object.keys(response.data || {}),
+            locations: selectedFilterLocations
+          });
+          console.log('📥 ExcelImport: Response data:', response.data);
+          if (response.data) {
+            dispatch(setTableData(response.data));
+            setHasValidData(true);
+            lastSuccessfulCallRef.current = callSignature; // Store successful call signature
+            
+            console.log('✅ ExcelImport: Filter applied successfully');
+          } else {
+            throw new Error('Invalid response data');
+          }
+        })
+        .catch(err => {
+          console.error('❌ ExcelImport: Filter error:', {
+            error: err,
+            requestData: filterData
+          });
+          
+          setHasValidData(false);
+          
+          let errorMessage = 'Error filtering data';
+          if (err.response) {
+            if (err.response.status === 401) {
+              errorMessage = 'Authentication failed. Please log in again.';
+            } else {
+              const detail = err.response.data?.detail;
+              errorMessage = `Server error: ${detail || err.response.status}`;
+              
+              if (err.response.status === 404) {
+                errorMessage = 'API endpoint not found. Is the server running?';
+              }
+              
+              if (detail && detail.includes('location')) {
+                errorMessage = `Location error: ${detail}. Locations: ${selectedFilterLocations.join(', ')}`;
+              }
+              
+              if (detail && detail.includes('date')) {
+                errorMessage = `Date error: ${detail}. Dates: ${formattedStartDate} to ${formattedEndDate}`;
+              }
+            }
+          } else if (err.request) {
+            errorMessage = 'No response from server. Please check if the backend is running.';
+          }
+          
+          setLocalError(errorMessage);
+          dispatch(setError(errorMessage));
+        })
+        .finally(() => {
+          dispatch(setLoading(false));
+          
+          // ✅ Reset API call state with timeout to prevent rapid successive calls
+          apiCallTimeoutRef.current = setTimeout(() => {
+            setIsApiCallInProgress(false);
+          }, 1000); // 1 second cooldown period
+          
+          console.log('🏁 ExcelImport: API request completed');
+        });
+      
+    } catch (err: any) {
+      console.error('❌ ExcelImport: Unexpected error:', err);
+      setHasValidData(false);
+      
+      const errorMessage = 'Error applying filters: ' + (err.message || 'Unknown error');
+      setLocalError(errorMessage);
+      dispatch(setError(errorMessage));
+      dispatch(setLoading(false));
+      setIsApiCallInProgress(false);
+    }
+  }, [isApiCallInProgress, activeCompanyId, startDate, endDate, dispatch, reduxDispatch, lastSuccessfulCallRef]);
+
+  // ✅ SIMPLIFIED: Legacy method for backward compatibility
+  const handleApplyFilters = React.useCallback(() => {
+    console.log('⚠️ ExcelImport: Legacy handleApplyFilters called - redirecting to optimized version');
     
-    console.log('📈 Legacy filter using Redux dates:', {
-      currentStartDate,
-      currentEndDate,
-      location,
-      dateRange
+    if (!selectedLocations.length) {
+      setLocalError('Please select at least one location.');
+      return;
+    }
+
+    // Get location names for the legacy API
+    const locationNames = selectedLocations.map(locationId => {
+      const location = availableLocations.find(loc => loc.location_id.toString() === locationId);
+      return location ? location.location_name : locationId;
     });
 
-    // Use the main filter function with current Redux state
     const selectedCategories = salesFilters?.selectedCategories || [];
-    handleApplyFiltersWithDates(currentStartDate, currentEndDate, selectedCategories, [location]);
-  };
+    
+    handleApplyFiltersWithDates(
+      startDate,
+      endDate,
+      selectedCategories,
+      locationNames
+    );
+  }, [selectedLocations, availableLocations, salesFilters, startDate, endDate, handleApplyFiltersWithDates]);
 
-  // NEW: Redux-based date handlers
+  // Redux-based date handlers
   const handleStartDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newStartDate = event.target.value;
     console.log('📅 Start date changed to:', newStartDate);
-    dispatch(setSalesSplitDashboardStartDate(newStartDate));
+    reduxDispatch(setSalesSplitDashboardStartDate(newStartDate));
   };
 
   const handleEndDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newEndDate = event.target.value;
     console.log('📅 End date changed to:', newEndDate);
-    dispatch(setSalesSplitDashboardEndDate(newEndDate));
+    reduxDispatch(setSalesSplitDashboardEndDate(newEndDate));
   };
 
-  // NEW: Helper function to clear date range
+  // Helper function to clear date range
   const handleClearDateRange = () => {
     console.log('🧹 Clearing Sales Split Dashboard date range');
-    dispatch(clearSalesSplitDashboardDateRange());
+    reduxDispatch(clearSalesSplitDashboardDateRange());
   };
 
   // Helper function to determine if we should show data
   const shouldShowData = () => {
-    return hasValidData && !isWaitingForBackendResponse && reduxTableData && Object.keys(reduxTableData).length > 0;
+    return hasValidData && !isApiCallInProgress && reduxTableData && Object.keys(reduxTableData).length > 0;
   };
+
+  // Cleanup on unmount
+  React.useEffect(() => {
+    return () => {
+      if (apiCallTimeoutRef.current) {
+        clearTimeout(apiCallTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <>
@@ -623,7 +628,7 @@ const handleApplyFiltersWithDates = (
               </Box>
             )}
 
-            {/* NEW: Date Range Status Display */}
+            {/* Date Range Status Display */}
             {hasDateRange && (
               <Box sx={{ 
                 display: 'flex', 
@@ -670,7 +675,7 @@ const handleApplyFiltersWithDates = (
               </Alert>
             )}
             
-            {/* Company Selection Only */}
+            {/* Company Selection */}
             <FormControl fullWidth size="small" disabled={companiesLoading}>
               <InputLabel>Company</InputLabel>
               <Select
@@ -706,7 +711,7 @@ const handleApplyFiltersWithDates = (
                   variant="outlined"
                   sx={{ fontWeight: 500 }}
                 />
-                {/* NEW: Date Range Management */}
+                {/* Date Range Management */}
                 {hasDateRange && (
                   <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                     <Chip
@@ -724,7 +729,21 @@ const handleApplyFiltersWithDates = (
           </CardContent>
         </CleanCard>
 
-        {/* ALWAYS SHOW FILTERS AND DASHBOARD - No file dependency */}
+        {/* ✅ OPTIMIZED: Single API call status indicator */}
+        {isApiCallInProgress && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <CircularProgress size={16} />
+              <Typography variant="body2">
+                <strong>Processing filter request...</strong>
+                <br />
+                <small>Single optimized API call in progress</small>
+              </Typography>
+            </Box>
+          </Alert>
+        )}
+
+        {/* FILTERS AND DASHBOARD */}
         <Grid container spacing={2}>
           {/* Filter Section - Always visible */}
           <Grid item xs={12} sx={{ mt: 2 }}>
@@ -732,7 +751,7 @@ const handleApplyFiltersWithDates = (
               dateRangeType={dateRangeType}
               availableDateRanges={availableDateRanges}
               onDateRangeChange={handleDateRangeChange}
-              customDateRange={true} // Always show custom date range
+              customDateRange={true}
               startDate={startDate}
               endDate={endDate}
               onStartDateChange={handleStartDateChange}
@@ -785,8 +804,8 @@ const handleApplyFiltersWithDates = (
           </Fade>
         )}
 
-        {/* Show loading state when waiting for backend response */}
-        {isWaitingForBackendResponse && (
+        {/* Loading state */}
+        {isApiCallInProgress && (
           <Fade in>
             <Alert 
               severity="info" 
@@ -799,14 +818,16 @@ const handleApplyFiltersWithDates = (
               <Typography variant="subtitle2" fontWeight={600}>
                 Loading Data...
               </Typography>
-              Please wait while we fetch the latest data from the backend.
+              Fetching data with optimized single API call.
               <br />
-              <small>Company: {selectedCompanyName} | Location: {selectedLocationName}</small>
+              <small>
+                Company: {selectedCompanyName} | Locations: {selectedLocations.length} selected
+              </small>
             </Alert>
           </Fade>
         )}
 
-        {/* Main Dashboard - Always show, even without data */}
+        {/* Main Dashboard */}
         <CleanCard sx={{ borderRadius: 2, mb: 3, overflow: 'hidden', mt: 2 }}>
           <Box sx={{ 
             background: '#ffffff',
@@ -838,14 +859,14 @@ const handleApplyFiltersWithDates = (
                       />
                     </Box>
                   </Fade>
-                ) : isWaitingForBackendResponse ? (
+                ) : isApiCallInProgress ? (
                   <Box sx={{ textAlign: 'center', py: 6 }}>
                     <CircularProgress size={40} sx={{ mb: 2 }} />
                     <Typography variant="h6" color="text.secondary" gutterBottom>
                       Loading data...
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Company: {selectedCompanyName} | Location: {selectedLocationName}
+                      Company: {selectedCompanyName}
                     </Typography>
                   </Box>
                 ) : (
@@ -857,7 +878,6 @@ const handleApplyFiltersWithDates = (
                     <Typography variant="body2" color="text.secondary" paragraph>
                       Select a company and location, then apply filters to view your sales data
                     </Typography>
-                    {/* Show selection status */}
                     <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 1, mb: 2 }}>
                       <Chip
                         label={selectedCompany ? `Company: ${selectedCompanyName}` : 'No Company Selected'}
@@ -865,8 +885,8 @@ const handleApplyFiltersWithDates = (
                         variant="outlined"
                       />
                       <Chip
-                        label={selectedLocation ? `Location: ${selectedLocationName}` : 'No Location Selected'}
-                        color={selectedLocation ? 'success' : 'default'}
+                        label={selectedLocations.length > 0 ? `Locations: ${selectedLocations.length} selected` : 'No Locations Selected'}
+                        color={selectedLocations.length > 0 ? 'success' : 'default'}
                         variant="outlined"
                       />
                     </Box>
@@ -891,7 +911,7 @@ const handleApplyFiltersWithDates = (
                         <Typography variant="h5" sx={{ fontWeight: 600 }}>
                           Detailed Analysis
                         </Typography>
-                        {(activeCompanyId || selectedLocation) && (
+                        {(activeCompanyId || selectedLocations.length > 0) && (
                           <Box sx={{ ml: 2, display: 'flex', gap: 1 }}>
                             {activeCompanyId && (
                               <CompanyInfoChip
@@ -900,10 +920,10 @@ const handleApplyFiltersWithDates = (
                                 size="small"
                               />
                             )}
-                            {selectedLocation && (
+                            {selectedLocations.length > 0 && (
                               <CompanyInfoChip
                                 icon={<BusinessIcon />}
-                                label={`${selectedLocationName}`}
+                                label={`${selectedLocations.length} Locations`}
                                 size="small"
                               />
                             )}
@@ -930,19 +950,124 @@ const handleApplyFiltersWithDates = (
                         </div>
                       </CleanCard>
 
-                      <Typography variant="body1" color="text.secondary">
-                        More detailed analysis components would go here...
-                      </Typography>
+                      {/* Additional Analytics Sections */}
+                      <Grid container spacing={3}>
+                        {/* Table Display Section */}
+                        <Grid item xs={12}>
+                          <CleanCard sx={{ p: 3 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                              <TableChartIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
+                              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                Data Tables
+                              </Typography>
+                            </Box>
+                            
+                            <TableDisplay 
+                              tableData={reduxTableData}
+                              selectedLocation={selectedLocation}
+                            />
+                          </CleanCard>
+                        </Grid>
+
+                        {/* Additional Chart Sections */}
+                        {reduxTableData.table2 && reduxTableData.table2.length > 0 && (
+                          <Grid item xs={12} md={6}>
+                            <CleanCard sx={{ p: 3 }}>
+                              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                                Delivery Percentage
+                              </Typography>
+                              <DeliveryPercentageChart 
+                                tableData={reduxTableData}
+                                selectedLocation={selectedLocation}
+                                height={300}
+                              />
+                            </CleanCard>
+                          </Grid>
+                        )}
+
+                        {reduxTableData.table3 && reduxTableData.table3.length > 0 && (
+                          <Grid item xs={12} md={6}>
+                            <CleanCard sx={{ p: 3 }}>
+                              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                                In-House Percentage
+                              </Typography>
+                              <InHousePercentageChart 
+                                tableData={reduxTableData}
+                                selectedLocation={selectedLocation}
+                                height={300}
+                              />
+                            </CleanCard>
+                          </Grid>
+                        )}
+
+                        {reduxTableData.table4 && reduxTableData.table4.length > 0 && (
+                          <Grid item xs={12} md={6}>
+                            <CleanCard sx={{ p: 3 }}>
+                              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                                Catering Percentage
+                              </Typography>
+                              <CateringPercentageChart 
+                                tableData={reduxTableData}
+                                selectedLocation={selectedLocation}
+                                height={300}
+                              />
+                            </CleanCard>
+                          </Grid>
+                        )}
+
+                        {reduxTableData.table5 && reduxTableData.table5.length > 0 && (
+                          <Grid item xs={12} md={6}>
+                            <CleanCard sx={{ p: 3 }}>
+                              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                                First vs Third Party
+                              </Typography>
+                              <PercentageFirstThirdPartyChart 
+                                tableData={reduxTableData}
+                                selectedLocation={selectedLocation}
+                                height={300}
+                              />
+                            </CleanCard>
+                          </Grid>
+                        )}
+
+                        {/* Total Sales Trend */}
+                        <Grid item xs={12}>
+                          <CleanCard sx={{ p: 3 }}>
+                            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                              Total Sales Trend
+                            </Typography>
+                            <TotalSalesChart 
+                              tableData={reduxTableData}
+                              selectedLocation={selectedLocation}
+                              height={400}
+                            />
+                          </CleanCard>
+                        </Grid>
+
+                        {/* Week-over-Week Trends */}
+                        <Grid item xs={12}>
+                          <CleanCard sx={{ p: 3 }}>
+                            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                              Week-over-Week Trends
+                            </Typography>
+                            <WowTrendsChart 
+                              tableData={reduxTableData}
+                              selectedLocation={selectedLocation}
+                              height={400}
+                            />
+                          </CleanCard>
+                        </Grid>
+                      </Grid>
                     </Box>
                   </Fade>
-                ) : isWaitingForBackendResponse ? (
+                ) : isApiCallInProgress ? (
                   <Box sx={{ textAlign: 'center', py: 6 }}>
                     <CircularProgress size={40} sx={{ mb: 2 }} />
                     <Typography variant="h6" color="text.secondary" gutterBottom>
                       Loading detailed analysis...
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Company: {selectedCompanyName} | Location: {selectedLocationName}
+                      Company: {selectedCompanyName}
                     </Typography>
                   </Box>
                 ) : (
@@ -954,7 +1079,6 @@ const handleApplyFiltersWithDates = (
                     <Typography variant="body2" color="text.secondary">
                       Apply filters to see detailed analysis
                     </Typography>
-                    {/* Show what's needed */}
                     <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 1, mt: 2 }}>
                       <Chip
                         label={selectedCompany ? `✓ Company Selected` : '! Select Company'}
@@ -963,8 +1087,8 @@ const handleApplyFiltersWithDates = (
                         size="small"
                       />
                       <Chip
-                        label={selectedLocation ? `✓ Location Selected` : '! Select Location'}
-                        color={selectedLocation ? 'success' : 'warning'}
+                        label={selectedLocations.length > 0 ? `✓ Locations Selected` : '! Select Locations'}
+                        color={selectedLocations.length > 0 ? 'success' : 'warning'}
                         variant="outlined"
                         size="small"
                       />
@@ -981,19 +1105,31 @@ const handleApplyFiltersWithDates = (
             )}
           </div>
         </CleanCard>
-      </Box>
 
-      {/* Loading Overlay */}
-      {reduxLoading && (
-        <LoadingOverlay open={true}>
-          <ModernLoader />
-        </LoadingOverlay>
-      )}
+        {/* ✅ OPTIMIZED DEBUG: Single API call tracking
+        {process.env.NODE_ENV === 'development' && (
+          <Alert severity="info" sx={{ mt: 2 }}>
+            <Typography variant="body2">
+              <strong>Debug - Optimized API State:</strong><br />
+              API Call In Progress: {isApiCallInProgress ? 'Yes' : 'No'}<br />
+              Has Valid Data: {hasValidData ? 'Yes' : 'No'}<br />
+              Last Successful Call: {lastSuccessfulCallRef.current ? 'Yes' : 'None'}<br />
+              Redux Start Date: {startDate || 'None'}<br />
+              Redux End Date: {endDate || 'None'}<br />
+              Has Date Range: {hasDateRange ? 'Yes' : 'No'}<br />
+              Active Company ID: {activeCompanyId || 'None'}<br />
+              Selected Locations: [{selectedLocations.join(', ')}]<br />
+              Available Locations: {availableLocations.length} locations<br />
+              Chart Key: {chartKey}
+            </Typography>
+          </Alert>
+        )} */}
+      </Box>
 
       {/* Success notification */}
       <Snackbar
         open={showSuccessNotification}
-        autoHideDuration={5000}
+        autoHideDuration={3000}
         onClose={() => setShowSuccessNotification(false)}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
@@ -1010,7 +1146,7 @@ const handleApplyFiltersWithDates = (
           <Typography variant="subtitle2" fontWeight={600}>
             Success!
           </Typography>
-          Data loaded successfully and insights generated.
+          Data loaded with single optimized API call.
         </Alert>
       </Snackbar>
     </>

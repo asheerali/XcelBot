@@ -2083,7 +2083,7 @@ export default function ProductMixDashboard() {
                   <Chip
                     label={`Company: ${selectedCompanyName}`}
                     color="primary"
-                    variant="filled"
+                    variant="outlined"
                     size="small"
                     icon={<BusinessIcon />}
                     onDelete={() => reduxDispatch(setSelectedCompanies([]))}
