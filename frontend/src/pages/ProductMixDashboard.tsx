@@ -36,7 +36,7 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
-import axios from "axios"; // Added axios import
+import axios from "axios";
 import { format } from 'date-fns';
 
 // Icons
@@ -52,14 +52,13 @@ import SearchIcon from "@mui/icons-material/Search";
 import CloseIcon from "@mui/icons-material/Close";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
-import BusinessIcon from "@mui/icons-material/Business"; // Company icon
+import BusinessIcon from "@mui/icons-material/Business";
 import AutorenewIcon from "@mui/icons-material/Autorenew";
 
 // Updated imports for the dashboard components
 import MenuAnalysisDashboard from "../components/SalesDashboard";
 import MenuAnalysisDashboardtwo from "../components/MenuAnalysisDashboardtwo";
 import DateRangeSelector from "../components/DateRangeSelector";
-// Import MenuItemsTable component
 import MenuItemsTable from "../components/MenuItemsTable";
 
 // Import Redux hooks
@@ -72,7 +71,7 @@ import {
   excelSlice,
 } from "../store/excelSlice";
 
-// UPDATED: Import masterFileSlice Redux
+// Import masterFileSlice Redux
 import { useSelector, useDispatch } from "react-redux";
 import {
   setSelectedCompanies, 
@@ -81,23 +80,34 @@ import {
   selectSelectedLocations 
 } from "../store/slices/masterFileSlice";
 
+// NEW: Import Redux date range actions and selectors
+import {
+  setProductMixDashboardDateRange,
+  setProductMixDashboardStartDate,
+  setProductMixDashboardEndDate,
+  clearProductMixDashboardDateRange,
+  selectProductMixDashboardStartDate,
+  selectProductMixDashboardEndDate,
+  selectProductMixDashboardDateRange,
+  selectHasProductMixDashboardDateRange,
+} from "../store/slices/dateRangeSlice";
+
 // Extract actions from the slice
 const { setLoading, setError } = excelSlice.actions;
 
-import { API_URL_Local } from "../constants"; // Import API base URL
+import { API_URL_Local } from "../constants";
 
-// API URLs - UPDATED to use company-locations endpoint
+// API URLs
 const PRODUCT_MIX_FILTER_API_URL = API_URL_Local + "/api/pmix/filter";
-const COMPANY_LOCATIONS_API_URL = API_URL_Local + "/company-locations/all"; // UPDATED: Company-Locations API endpoint
+const COMPANY_LOCATIONS_API_URL = API_URL_Local + "/company-locations/all";
 
-// UPDATED: Company interface to match company-locations API response
+// Interfaces
 interface Company {
   company_id: number;
   company_name: string;
   locations: Location[];
 }
 
-// UPDATED: Location interface to match company-locations API response
 interface Location {
   location_id: number;
   location_name: string;
@@ -167,7 +177,7 @@ export const formatPercentage = (value: number | string | null | undefined, deci
 };
 
 /**
- * FIXED: Clean a value by removing commas, currency symbols, and converting to number
+ * Clean a value by removing commas, currency symbols, and converting to number
  */
 const cleanAndParseValue = (value: any): number => {
   if (typeof value === 'number') return value;
@@ -183,8 +193,7 @@ const cleanAndParseValue = (value: any): number => {
 };
 
 /**
- * UPDATED: Specific formatter for SalesDashboard component data
- * Now handles table11 instead of table2 for Sales Categories Performance
+ * Specific formatter for SalesDashboard component data
  */
 const prepareSalesDashboardData = (data: any): any => {
   if (!data) return data;
@@ -194,18 +203,14 @@ const prepareSalesDashboardData = (data: any): any => {
   // Clone the data
   const preparedData = { ...data };
   
-  // FIXED: Preserve table1 formatting from enhanceDataWithFormatting
+  // Preserve table1 formatting from enhanceDataWithFormatting
   if (preparedData.table1) {
     console.log('🔧 Preserving table1 formatting for KPI cards:', preparedData.table1);
-    
-    // Don't modify table1 - it's already properly formatted by enhanceDataWithFormatting
-    // Just ensure it's passed through correctly
     preparedData.table1 = [...preparedData.table1];
-    
     console.log('✅ Table1 preserved for KPI cards:', preparedData.table1);
   }
   
-  // UPDATED: Special handling for table11 which powers the Sales Categories Performance section
+  // Special handling for table11 which powers the Sales Categories Performance section
   if (preparedData.table11) {
     console.log('🎯 Processing table11 (Sales Categories from backend) before formatting:', preparedData.table11);
     
@@ -215,10 +220,6 @@ const prepareSalesDashboardData = (data: any): any => {
       const lastPeriodSales = item.Last_4_Weeks_Sales || 0;
       const percentChange = item.Percent_Change || 0;
       const category = item['Sales Category'] || `Category ${index + 1}`;
-      
-      // Calculate percentage of total if needed (you might want to calculate this based on total sales)
-      // For now, we'll use the sales value as is
-      const salesPercentage = percentChange; // Using the percent change from backend
       
       const formatted = {
         // Original table11 fields preserved
@@ -241,7 +242,7 @@ const prepareSalesDashboardData = (data: any): any => {
         LastPeriodSales: lastPeriodSales,
         SalesChange: thisPeriodSales - lastPeriodSales,
         
-        // ENHANCED: Multiple formats for different components
+        // Multiple formats for different components
         FormattedSales: formatNumber(thisPeriodSales),
         FormattedSalesWithCurrency: formatCurrency(thisPeriodSales, false),
         FormattedPercentage: `${percentChange}%`,
@@ -256,31 +257,13 @@ const prepareSalesDashboardData = (data: any): any => {
         DisplayPercentage: `${percentChange}%`,
       };
       
-      console.log(`📊 Table11->Table2 item ${index} transformed:`, {
-        original: { 
-          'Sales Category': category,
-          This_4_Weeks_Sales: thisPeriodSales, 
-          Last_4_Weeks_Sales: lastPeriodSales,
-          Percent_Change: percentChange 
-        },
-        transformed: {
-          Category: formatted.Category,
-          Sales: formatted.Sales,
-          FormattedSales: formatted.FormattedSales,
-          FormattedSalesWithCurrency: formatted.FormattedSalesWithCurrency,
-          Percentage: formatted.Percentage,
-          FormattedPercentage: formatted.FormattedPercentage,
-          NumericSales: formatted.NumericSales
-        }
-      });
-      
       return formatted;
     });
     
     console.log('✅ Table11 transformed to Table2 format for Sales Categories Performance:', preparedData.table2);
   }
   
-  // ALSO: Apply same formatting to other relevant tables (but NOT table1!)
+  // Apply same formatting to other relevant tables
   ['table3', 'table4', 'table5', 'table6'].forEach(tableName => {
     if (preparedData[tableName]) {
       preparedData[tableName] = preparedData[tableName].map((item: any) => ({
@@ -300,17 +283,7 @@ const prepareSalesDashboardData = (data: any): any => {
 };
 
 /**
- * Debug component to show formatting status
- */
-const FormattingDebugInfo: React.FC<{ data: any }> = ({ data }) => {
-  if (!data?._formatting) return null;
-  
-  return null;
-};
-
-/**
- * UPDATED: Enhanced data transformation that now handles table11
- * This fixes both the Table1 array issue and adds table11 support
+ * Enhanced data transformation that handles table11
  */
 const enhanceDataWithFormatting = (data: any): any => {
   if (!data) return data;
@@ -320,7 +293,7 @@ const enhanceDataWithFormatting = (data: any): any => {
   
   console.log('🔍 Raw data before formatting (looking for table11):', enhancedData);
   
-  // FIXED: Apply formatting to table1 - Handle pre-formatted values
+  // Apply formatting to table1 - Handle pre-formatted values
   if (enhancedData.table1) {
     console.log('🎯 Processing table1 BEFORE fix:', enhancedData.table1);
     
@@ -330,12 +303,11 @@ const enhanceDataWithFormatting = (data: any): any => {
       const result = {
         ...item,
         
-        // FIXED: Clean values before formatting
+        // Clean values before formatting
         net_sales: (() => {
           const rawValue = Array.isArray(item.net_sales) ? item.net_sales[0] : item.net_sales;
           const cleanValue = cleanAndParseValue(rawValue);
           const formatted = cleanValue > 0 ? formatNumber(cleanValue) : '0';
-          console.log('🔍 NET_SALES:', { original: rawValue, cleaned: cleanValue, formatted });
           return formatted;
         })(),
         net_sales_raw: (() => {
@@ -347,7 +319,6 @@ const enhanceDataWithFormatting = (data: any): any => {
           const rawValue = Array.isArray(item.orders) ? item.orders[0] : item.orders;
           const cleanValue = cleanAndParseValue(rawValue);
           const formatted = cleanValue > 0 ? formatNumber(cleanValue) : '0';
-          console.log('🔍 ORDERS:', { original: rawValue, cleaned: cleanValue, formatted });
           return formatted;
         })(),
         orders_raw: (() => {
@@ -359,7 +330,6 @@ const enhanceDataWithFormatting = (data: any): any => {
           const rawValue = Array.isArray(item.qty_sold) ? item.qty_sold[0] : item.qty_sold;
           const cleanValue = cleanAndParseValue(rawValue);
           const formatted = cleanValue > 0 ? formatNumber(cleanValue) : '0';
-          console.log('🔍 QTY_SOLD:', { original: rawValue, cleaned: cleanValue, formatted });
           return formatted;
         })(),
         qty_sold_raw: (() => {
@@ -371,7 +341,6 @@ const enhanceDataWithFormatting = (data: any): any => {
           const rawValue = Array.isArray(item.total_quantity) ? item.total_quantity[0] : item.total_quantity;
           const cleanValue = cleanAndParseValue(rawValue);
           const formatted = cleanValue > 0 ? formatNumber(cleanValue) : '0';
-          console.log('🔍 TOTAL_QUANTITY:', { original: rawValue, cleaned: cleanValue, formatted });
           return formatted;
         })(),
         total_quantity_raw: (() => {
@@ -383,7 +352,6 @@ const enhanceDataWithFormatting = (data: any): any => {
           const rawValue = Array.isArray(item.average_order_value) ? item.average_order_value[0] : item.average_order_value;
           const cleanValue = cleanAndParseValue(rawValue);
           const formatted = cleanValue > 0 ? formatCurrency(cleanValue) : '$0.00';
-          console.log('🔍 AVG_ORDER_VALUE:', { original: rawValue, cleaned: cleanValue, formatted });
           return formatted;
         })(),
         average_order_value_raw: (() => {
@@ -395,7 +363,6 @@ const enhanceDataWithFormatting = (data: any): any => {
           const rawValue = Array.isArray(item.average_items_per_order) ? item.average_items_per_order[0] : item.average_items_per_order;
           const cleanValue = cleanAndParseValue(rawValue);
           const formatted = cleanValue > 0 ? formatNumber(cleanValue) : '0';
-          console.log('🔍 AVG_ITEMS_PER_ORDER:', { original: rawValue, cleaned: cleanValue, formatted });
           return formatted;
         })(),
         average_items_per_order_raw: (() => {
@@ -414,85 +381,6 @@ const enhanceDataWithFormatting = (data: any): any => {
           const cleanValue = cleanAndParseValue(rawValue);
           return cleanValue > 0 ? formatNumber(cleanValue) : '0';
         })(),
-        sales: (() => {
-          const rawValue = Array.isArray(item.net_sales) ? item.net_sales[0] : item.net_sales;
-          const cleanValue = cleanAndParseValue(rawValue);
-          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
-        })(),
-        Sales: (() => {
-          const rawValue = Array.isArray(item.net_sales) ? item.net_sales[0] : item.net_sales;
-          const cleanValue = cleanAndParseValue(rawValue);
-          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
-        })(),
-        
-        Orders: (() => {
-          const rawValue = Array.isArray(item.orders) ? item.orders[0] : item.orders;
-          const cleanValue = cleanAndParseValue(rawValue);
-          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
-        })(),
-        unique_orders: (() => {
-          const rawValue = Array.isArray(item.unique_orders) ? item.unique_orders[0] : item.unique_orders;
-          const cleanValue = cleanAndParseValue(rawValue);
-          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
-        })(),
-        
-        QTY_Sold: (() => {
-          const rawValue = Array.isArray(item.qty_sold) ? item.qty_sold[0] : item.qty_sold;
-          const cleanValue = cleanAndParseValue(rawValue);
-          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
-        })(),
-        'Qty Sold': (() => {
-          const rawValue = Array.isArray(item.qty_sold) ? item.qty_sold[0] : item.qty_sold;
-          const cleanValue = cleanAndParseValue(rawValue);
-          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
-        })(),
-        quantity: (() => {
-          const rawValue = Array.isArray(item.qty_sold) ? item.qty_sold[0] : item.qty_sold;
-          const cleanValue = cleanAndParseValue(rawValue);
-          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
-        })(),
-        Quantity: (() => {
-          const rawValue = Array.isArray(item.qty_sold) ? item.qty_sold[0] : item.qty_sold;
-          const cleanValue = cleanAndParseValue(rawValue);
-          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
-        })(),
-        
-        'Average Order Value': (() => {
-          const rawValue = Array.isArray(item.average_order_value) ? item.average_order_value[0] : item.average_order_value;
-          const cleanValue = cleanAndParseValue(rawValue);
-          return cleanValue > 0 ? formatCurrency(cleanValue) : '$0.00';
-        })(),
-        'Avg Order Value': (() => {
-          const rawValue = Array.isArray(item.average_order_value) ? item.average_order_value[0] : item.average_order_value;
-          const cleanValue = cleanAndParseValue(rawValue);
-          return cleanValue > 0 ? formatCurrency(cleanValue) : '$0.00';
-        })(),
-        avgOrderValue: (() => {
-          const rawValue = Array.isArray(item.average_order_value) ? item.average_order_value[0] : item.average_order_value;
-          const cleanValue = cleanAndParseValue(rawValue);
-          return cleanValue > 0 ? formatCurrency(cleanValue) : '$0.00';
-        })(),
-        AvgOrderValue: (() => {
-          const rawValue = Array.isArray(item.average_order_value) ? item.average_order_value[0] : item.average_order_value;
-          const cleanValue = cleanAndParseValue(rawValue);
-          return cleanValue > 0 ? formatCurrency(cleanValue) : '$0.00';
-        })(),
-        
-        'Average items per order': (() => {
-          const rawValue = Array.isArray(item.average_items_per_order) ? item.average_items_per_order[0] : item.average_items_per_order;
-          const cleanValue = cleanAndParseValue(rawValue);
-          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
-        })(),
-        'Average Items Per Order': (() => {
-          const rawValue = Array.isArray(item.average_items_per_order) ? item.average_items_per_order[0] : item.average_items_per_order;
-          const cleanValue = cleanAndParseValue(rawValue);
-          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
-        })(),
-        avgItemsPerOrder: (() => {
-          const rawValue = Array.isArray(item.average_items_per_order) ? item.average_items_per_order[0] : item.average_items_per_order;
-          const cleanValue = cleanAndParseValue(rawValue);
-          return cleanValue > 0 ? formatNumber(cleanValue) : '0';
-        })(),
         
         // Keep change values as is
         net_sales_change: item.net_sales_change?.[0] || item.net_sales_change || 0,
@@ -502,21 +390,13 @@ const enhanceDataWithFormatting = (data: any): any => {
         average_items_per_order_change: item.average_items_per_order_change?.[0] || item.average_items_per_order_change || 0,
       };
       
-      console.log('✅ Table1 item AFTER cleaning and transformation:', {
-        net_sales: result.net_sales,
-        orders: result.orders,
-        qty_sold: result.qty_sold,
-        average_order_value: result.average_order_value,
-        average_items_per_order: result.average_items_per_order
-      });
-      
       return result;
     });
     
     console.log('✅ Table1 AFTER fix (should show cleaned values):', enhancedData.table1);
   }
   
-  // NEW: Process table11 (Sales Categories from backend)
+  // Process table11 (Sales Categories from backend)
   if (enhancedData.table11) {
     console.log('🎯 Processing table11 (Sales Categories from backend) before formatting:', enhancedData.table11);
     
@@ -549,28 +429,13 @@ const enhanceDataWithFormatting = (data: any): any => {
         ChangePercent: originalPercentChange,
       };
       
-      console.log(`📊 Table11 item ${index} formatted:`, {
-        original: {
-          'Sales Category': originalCategory,
-          This_4_Weeks_Sales: originalThisPeriodSales,
-          Last_4_Weeks_Sales: originalLastPeriodSales,
-          Percent_Change: originalPercentChange
-        },
-        formatted: {
-          Category: formatted.Category,
-          This_4_Weeks_Sales_Formatted: formatted.This_4_Weeks_Sales_Formatted,
-          This_4_Weeks_Sales_Currency: formatted.This_4_Weeks_Sales_Currency,
-          Percent_Change_Formatted: formatted.Percent_Change_Formatted
-        }
-      });
-      
       return formatted;
     });
     
     console.log('✅ Table11 after formatting (Sales Categories with enhanced display):', enhancedData.table11);
   }
   
-  // LEGACY: Keep table2 processing for backward compatibility (but table11 takes precedence)
+  // Process other tables
   if (enhancedData.table2 && !enhancedData.table11) {
     console.log('🎯 Processing legacy table2 (fallback when no table11):', enhancedData.table2);
     
@@ -580,14 +445,14 @@ const enhanceDataWithFormatting = (data: any): any => {
       
       const formatted = {
         ...item,
-        // CRITICAL: Keep original raw values for calculations
+        // Keep original raw values for calculations
         SalesRaw: originalSales,
         PercentageRaw: originalPercentage,
         
-        // OVERRIDE: Format sales values with commas - NO ROUNDING
+        // Format sales values with commas - NO ROUNDING
         Sales: typeof originalSales === 'number' ? formatNumber(originalSales) : originalSales,
         
-        // OVERRIDE: Format percentage - NO ROUNDING, preserve exact value
+        // Format percentage - NO ROUNDING, preserve exact value
         Percentage: typeof originalPercentage === 'number' ? 
           formatPercentage(originalPercentage, 2) : 
           originalPercentage,
@@ -603,55 +468,38 @@ const enhanceDataWithFormatting = (data: any): any => {
         NumericPercentage: originalPercentage,
       };
       
-      console.log(`📊 Table2 item ${index} formatted (LEGACY FALLBACK):`, {
-        original: { Sales: originalSales, Percentage: originalPercentage },
-        formatted: { 
-          Sales: formatted.Sales, 
-          Percentage: formatted.Percentage,
-          DisplaySales: formatted.DisplaySales 
-        }
-      });
-      
       return formatted;
     });
     
     console.log('✅ Table2 after formatting (LEGACY - prefer table11):', enhancedData.table2);
   }
   
-  // ENHANCED: table3 - Menu Group Sales
+  // Process other tables
   if (enhancedData.table3) {
-    console.log('🎯 Processing table3 (Menu Groups) before formatting:', enhancedData.table3);
-    
     enhancedData.table3 = enhancedData.table3.map((item: any) => ({
       ...item,
       Sales: typeof item.Sales === 'number' ? formatNumber(item.Sales) : item.Sales,
-      SalesRaw: item.Sales, // Keep raw value for calculations
+      SalesRaw: item.Sales,
       DisplaySales: typeof item.Sales === 'number' ? formatCurrency(item.Sales, false) : item.Sales,
     }));
   }
   
-  // ENHANCED: table4 - Server Sales
   if (enhancedData.table4) {
-    console.log('🎯 Processing table4 (Server Sales) before formatting:', enhancedData.table4);
-    
     enhancedData.table4 = enhancedData.table4.map((item: any) => ({
       ...item,
       Sales: typeof item.Sales === 'number' ? formatNumber(item.Sales) : item.Sales,
-      SalesRaw: item.Sales, // Keep raw value for calculations
+      SalesRaw: item.Sales,
       DisplaySales: typeof item.Sales === 'number' ? formatCurrency(item.Sales, false) : item.Sales,
     }));
   }
   
-  // ENHANCED: table5 - Item Sales by Server
   if (enhancedData.table5) {
-    console.log('🎯 Processing table5 (Item Sales) before formatting:', enhancedData.table5);
-    
     enhancedData.table5 = enhancedData.table5.map((item: any) => ({
       ...item,
       Quantity: typeof item.Quantity === 'number' ? formatNumber(item.Quantity) : item.Quantity,
-      QuantityRaw: item.Quantity, // Keep raw value for calculations
+      QuantityRaw: item.Quantity,
       Sales: typeof item.Sales === 'number' ? formatNumber(item.Sales) : item.Sales,
-      SalesRaw: item.Sales, // Keep raw value for calculations
+      SalesRaw: item.Sales,
       DisplaySales: typeof item.Sales === 'number' ? formatCurrency(item.Sales, false) : item.Sales,
     }));
   }
@@ -660,15 +508,15 @@ const enhanceDataWithFormatting = (data: any): any => {
     enhancedData.table6 = enhancedData.table6.map((item: any) => ({
       ...item,
       Sales: typeof item.Sales === 'number' ? formatCurrency(item.Sales, false) : item.Sales,
-      SalesRaw: item.Sales, // Keep raw value for calculations
+      SalesRaw: item.Sales,
     }));
   }
   
   if (enhancedData.table7) {
     enhancedData.table7 = enhancedData.table7.map((item: any) => ({
       ...item,
-      Price: typeof item.Price === 'number' ? formatCurrency(item.Price / 100) : item.Price, // Convert cents to dollars
-      PriceRaw: item.Price, // Keep raw value for calculations
+      Price: typeof item.Price === 'number' ? formatCurrency(item.Price / 100) : item.Price,
+      PriceRaw: item.Price,
     }));
   }
   
@@ -676,41 +524,34 @@ const enhanceDataWithFormatting = (data: any): any => {
     enhancedData.table8 = enhancedData.table8.map((item: any) => ({
       ...item,
       Change: typeof item.Change === 'number' ? formatNumber(item.Change) : item.Change,
-      ChangeRaw: item.Change, // Keep raw value for calculations
+      ChangeRaw: item.Change,
     }));
   }
   
   if (enhancedData.table9) {
     enhancedData.table9 = enhancedData.table9.map((item: any) => ({
       ...item,
-      Price: typeof item.Price === 'number' ? formatCurrency(item.Price / 100) : item.Price, // Convert cents to dollars
-      PriceRaw: item.Price, // Keep raw value for calculations
+      Price: typeof item.Price === 'number' ? formatCurrency(item.Price / 100) : item.Price,
+      PriceRaw: item.Price,
     }));
   }
   
-  // FIXED: Format table12 (Menu Items Table) specifically - This fixes the T_Sales $NaN issue
+  // Format table12 (Menu Items Table) specifically
   if (enhancedData.table12) {
     console.log('🎯 Processing table12 BEFORE T_Sales fix:', enhancedData.table12);
     
     enhancedData.table12 = enhancedData.table12.map((item: any) => {
-      console.log('🔧 Fixing table12 item T_Sales/B_Sales:', {
-        T_Sales: item.T_Sales,
-        B_Sales: item.B_Sales,
-        T_Sales_type: typeof item.T_Sales,
-        B_Sales_type: typeof item.B_Sales
-      });
-      
       const formatted = {
         ...item,
         
-        // FIXED: T_Sales field - ensure it's a number and format properly
+        // T_Sales field - ensure it's a number and format properly
         T_Sales: typeof item.T_Sales === 'number' ? item.T_Sales : (parseFloat(item.T_Sales) || 0),
         T_Sales_Raw: item.T_Sales,
         T_Sales_Formatted: typeof item.T_Sales === 'number' ? 
           formatCurrency(item.T_Sales, false) : 
           formatCurrency(parseFloat(item.T_Sales) || 0, false),
         
-        // FIXED: B_Sales field - ensure it's a number and format properly  
+        // B_Sales field - ensure it's a number and format properly  
         B_Sales: typeof item.B_Sales === 'number' ? item.B_Sales : (parseFloat(item.B_Sales) || 0),
         B_Sales_Raw: item.B_Sales,
         B_Sales_Formatted: typeof item.B_Sales === 'number' ? 
@@ -756,16 +597,6 @@ const enhanceDataWithFormatting = (data: any): any => {
         'Margin %': typeof item['Margin %'] === 'number' ? formatPercentage(item['Margin %']) : item['Margin %'],
         'Food Cost %': typeof item['Food Cost %'] === 'number' ? formatPercentage(item['Food Cost %']) : item['Food Cost %'],
       };
-      
-      console.log('✅ Table12 item AFTER T_Sales fix:', {
-        original: { T_Sales: item.T_Sales, B_Sales: item.B_Sales },
-        formatted: { 
-          T_Sales: formatted.T_Sales, 
-          T_Sales_Formatted: formatted.T_Sales_Formatted,
-          B_Sales: formatted.B_Sales,
-          B_Sales_Formatted: formatted.B_Sales_Formatted
-        }
-      });
       
       return formatted;
     });
@@ -815,7 +646,7 @@ function TabPanel(props: TabPanelProps) {
       id={`product-mix-tabpanel-${index}`}
       aria-labelledby={`product-mix-tab-${index}`}
       {...other}
-      style={{ width: "100%" }} // Add explicit width
+      style={{ width: "100%" }}
     >
       {value === index && <Box sx={{ pt: 3, width: "100%" }}>{children}</Box>}
     </div>
@@ -1087,7 +918,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
 export default function ProductMixDashboard() {
   const theme = useTheme();
   const dispatch = useAppDispatch();
-  const reduxDispatch = useDispatch(); // UPDATED: Add Redux dispatch for masterFileSlice
+  const reduxDispatch = useDispatch();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isTablet = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -1101,11 +932,24 @@ export default function ProductMixDashboard() {
     error,
   } = useAppSelector((state) => state.excel);
 
-  // UPDATED: Get current selections from Redux (masterFileSlice)
+  // NEW: Get Redux date range state for Product Mix Dashboard
+  const reduxStartDate = useAppSelector(selectProductMixDashboardStartDate);
+  const reduxEndDate = useAppSelector(selectProductMixDashboardEndDate);
+  const hasReduxDateRange = useAppSelector(selectHasProductMixDashboardDateRange);
+
+  console.log('🏷️ ProductMix Redux dates:', {
+    reduxStartDate,
+    reduxEndDate,
+    hasReduxDateRange,
+    reduxStartType: typeof reduxStartDate,
+    reduxEndType: typeof reduxEndDate
+  });
+
+  // Get current selections from Redux (masterFileSlice)
   const selectedCompanies = useSelector(selectSelectedCompanies);
   const selectedLocations = useSelector(selectSelectedLocations);
   
-  // UPDATED: Convert to single values for dropdowns (using new API structure)
+  // Convert to single values for dropdowns (using new API structure)
   const selectedCompany = selectedCompanies.length > 0 ? selectedCompanies[0] : '';
   const selectedLocation = selectedLocations.length > 0 ? selectedLocations[0] : '';
 
@@ -1119,12 +963,12 @@ export default function ProductMixDashboard() {
     (f) => f.location === currentProductMixLocation
   );
 
-  // UPDATED: Company-related state for new API structure
+  // Company-related state for new API structure
   const [companies, setCompanies] = useState<Company[]>([]);
   const [companiesLoading, setCompaniesLoading] = useState(false);
   const [companiesError, setCompaniesError] = useState<string>("");
 
-  // UPDATED: Get available locations for selected company
+  // Get available locations for selected company
   const availableLocations = React.useMemo(() => {
     if (!selectedCompany) return [];
     const company = companies.find(c => c.company_id.toString() === selectedCompany);
@@ -1137,7 +981,7 @@ export default function ProductMixDashboard() {
   const [filterError, setFilterError] = useState<string>("");
   const [dataUpdated, setDataUpdated] = useState<boolean>(false);
 
-  // UPDATED: Auto-filtering state
+  // Auto-filtering state
   const [isAutoFiltering, setIsAutoFiltering] = useState(false);
   
   // Refs to track previous values and prevent unnecessary re-renders
@@ -1165,9 +1009,52 @@ export default function ProductMixDashboard() {
   // Track if component has been initialized to avoid initial auto-filter
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // UPDATED: No default date range - empty state
+  // Initialize dates from Redux state, convert YYYY-MM-DD to MM/dd/yyyy for display
   const [localStartDate, setLocalStartDate] = useState<string>("");
   const [localEndDate, setLocalEndDate] = useState<string>("");
+
+  // Function to convert Redux date format (YYYY-MM-DD) to display format (MM/dd/yyyy)
+  const convertReduxDateToDisplay = (reduxDate: string | null): string => {
+    if (!reduxDate) return "";
+    try {
+      const [year, month, day] = reduxDate.split('-');
+      return `${month}/${day}/${year}`;
+    } catch (e) {
+      console.error('Error converting Redux date to display:', e);
+      return "";
+    }
+  };
+
+  // Function to convert display date format (MM/dd/yyyy) to Redux format (YYYY-MM-DD)
+  const convertDisplayDateToRedux = (displayDate: string): string => {
+    if (!displayDate) return "";
+    try {
+      const [month, day, year] = displayDate.split('/');
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    } catch (e) {
+      console.error('Error converting display date to Redux:', e);
+      return "";
+    }
+  };
+
+  // Initialize local dates from Redux on component mount
+  useEffect(() => {
+    if (hasReduxDateRange) {
+      const displayStartDate = convertReduxDateToDisplay(reduxStartDate);
+      const displayEndDate = convertReduxDateToDisplay(reduxEndDate);
+      
+      console.log('🏷️ ProductMix: Initializing from Redux dates:', {
+        reduxStartDate,
+        reduxEndDate,
+        displayStartDate,
+        displayEndDate
+      });
+      
+      setLocalStartDate(displayStartDate);
+      setLocalEndDate(displayEndDate);
+    }
+  }, [reduxStartDate, reduxEndDate, hasReduxDateRange]);
+
   const [isDateRangeOpen, setIsDateRangeOpen] = useState(false);
   const [selectedRange, setSelectedRange] = useState({
     startDate: new Date(),
@@ -1195,14 +1082,14 @@ export default function ProductMixDashboard() {
     ?.map((item) => item["Menu Item"])
     .filter(Boolean) || ["No menu items available"];
 
-  // UPDATED: Filter states using multiselect arrays - No defaults, but use Redux for locations
+  // Filter states using multiselect arrays - No defaults, but use Redux for locations
   const [localSelectedLocations, setLocalSelectedLocations] = useState<string[]>([]);
   const [selectedServers, setSelectedServers] = useState<string[]>([]);
   const [selectedMenuItems, setSelectedMenuItems] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [hasInitializedLocations, setHasInitializedLocations] = useState(false);
 
-  // UPDATED: Fetch company-locations data on component mount
+  // Fetch company-locations data on component mount
   useEffect(() => {
     const fetchCompanyLocations = async () => {
       setCompaniesLoading(true);
@@ -1242,7 +1129,7 @@ export default function ProductMixDashboard() {
     fetchCompanyLocations();
   }, [selectedCompanies.length, reduxDispatch]);
 
-  // UPDATED: Auto-select first location when company changes and has only one location
+  // Auto-select first location when company changes and has only one location
   useEffect(() => {
     if (selectedCompany && availableLocations.length === 1 && selectedLocations.length === 0) {
       reduxDispatch(setSelectedLocations([availableLocations[0].location_id.toString()]));
@@ -1295,7 +1182,7 @@ export default function ProductMixDashboard() {
     return companyChanged || locationsChanged || startDateChanged || endDateChanged || categoriesChanged || serversChanged || menuItemsChanged;
   }, []);
 
-  // UPDATED: Handle company selection change (updated for new API structure)
+  // Handle company selection change (updated for new API structure)
   const handleCompanyChange = (event: SelectChangeEvent) => {
     const companyId = event.target.value;
     console.log('🏢 ProductMix: Company selection changed to:', companyId);
@@ -1317,7 +1204,7 @@ export default function ProductMixDashboard() {
   const selectedLocationName = availableLocations.find(l => l.location_id.toString() === selectedLocation)?.location_name || 
                                 (selectedLocation ? `Location ID: ${selectedLocation}` : 'No Location Selected');
 
-  // UPDATED: Determine which locations to use and convert for display
+  // Determine which locations to use and convert for display
   const displayLocations = React.useMemo(() => {
     if (availableLocations.length > 0) {
       return availableLocations.map(loc => loc.location_name);
@@ -1325,7 +1212,7 @@ export default function ProductMixDashboard() {
     return locations || [];
   }, [availableLocations, locations]);
 
-  // UPDATED: Convert selected location IDs to names for display
+  // Convert selected location IDs to names for display
   const displaySelectedLocations = React.useMemo(() => {
     if (availableLocations.length > 0) {
       return selectedLocations.map(id => {
@@ -1336,7 +1223,7 @@ export default function ProductMixDashboard() {
     return localSelectedLocations;
   }, [selectedLocations, availableLocations, localSelectedLocations]);
 
-  // UPDATED: Handle location change with Redux integration
+  // Handle location change with Redux integration
   const handleLocationChange = (newValue: string[]) => {
     console.log('📍 ProductMix: Location selection changed to:', newValue);
     
@@ -1363,7 +1250,7 @@ export default function ProductMixDashboard() {
     }
   };
 
-  // Date range handling - following DateRangeSelector pattern
+  // Date range handling with Redux integration
   const openDateRangePicker = () => {
     setIsDateRangeOpen(true);
   };
@@ -1372,20 +1259,35 @@ export default function ProductMixDashboard() {
     setSelectedRange(range);
   };
 
+  // Apply date range with Redux integration
   const applyDateRange = () => {
     const formattedStartDate = format(selectedRange.startDate, 'MM/dd/yyyy');
     const formattedEndDate = format(selectedRange.endDate, 'MM/dd/yyyy');
     
-    console.log('📅 ProductMix: Setting date range locally:', {
+    console.log('📅 ProductMix: Setting date range with Redux integration:', {
       startDate: formattedStartDate,
       endDate: formattedEndDate
     });
     
-    // Update local state
+    // Update local state for display
     setLocalStartDate(formattedStartDate);
     setLocalEndDate(formattedEndDate);
     
-    // Update Redux state for persistence
+    // Update Redux date range state
+    const reduxStartDate = convertDisplayDateToRedux(formattedStartDate);
+    const reduxEndDate = convertDisplayDateToRedux(formattedEndDate);
+    
+    console.log('📅 ProductMix: Storing in Redux:', {
+      reduxStartDate,
+      reduxEndDate
+    });
+    
+    reduxDispatch(setProductMixDashboardDateRange({
+      startDate: selectedRange.startDate,
+      endDate: selectedRange.endDate
+    }));
+    
+    // Update existing Redux state for persistence (backward compatibility)
     dispatch(updateProductMixFilters({ 
       startDate: formattedStartDate,
       endDate: formattedEndDate,
@@ -1393,6 +1295,25 @@ export default function ProductMixDashboard() {
     }));
     
     setIsDateRangeOpen(false);
+  };
+
+  // Clear date range with Redux integration
+  const clearDateRange = () => {
+    console.log('🧹 ProductMix: Clearing date range from Redux and local state');
+    
+    // Clear local state
+    setLocalStartDate("");
+    setLocalEndDate("");
+    
+    // Clear Redux state
+    reduxDispatch(clearProductMixDashboardDateRange());
+    
+    // Clear existing Redux filters (backward compatibility)
+    dispatch(updateProductMixFilters({ 
+      startDate: "",
+      endDate: "",
+      dateRangeType: ""
+    }));
   };
 
   // Format display date
@@ -1426,7 +1347,7 @@ export default function ProductMixDashboard() {
     setTabValue(newValue);
   };
 
-  // UPDATED: Auto-filter function (converted from handleApplyFilters)
+  // Auto-filter function (converted from handleApplyFilters)
   const triggerAutoFilter = useCallback(async () => {
     const currentCompany = selectedCompany;
     const effectiveSelectedLocations = availableLocations.length > 0 ? displaySelectedLocations : localSelectedLocations;
@@ -1490,7 +1411,7 @@ export default function ProductMixDashboard() {
         }
       }
 
-      // UPDATED: Prepare the request payload with Redux company and location data
+      // Prepare the request payload with Redux company and location data
       const payload = {
         fileName: currentProductMixFile?.fileName || "",
         locations: effectiveSelectedLocations, // Send as array
@@ -1501,7 +1422,7 @@ export default function ProductMixDashboard() {
         categories: currentCategories,
         menuItems: currentMenuItems,
         dashboard: "Product Mix",
-        company_id: currentCompany, // UPDATED: Use Redux selected company ID
+        company_id: currentCompany, // Use Redux selected company ID
       };
 
       console.log("🚀 Sending Product Mix auto-filter request with Redux state:", payload);
@@ -1512,7 +1433,7 @@ export default function ProductMixDashboard() {
       console.log("📥 Received Product Mix auto-filter response:", response.data);
 
       if (response.data) {
-        // ENHANCED: Apply formatting to the response data
+        // Apply formatting to the response data
         const formattedResponseData = enhanceDataWithFormatting(response.data);
         
         // Extract categories from the filtered data
@@ -1540,7 +1461,7 @@ export default function ProductMixDashboard() {
 
         console.log("📊 Enhanced data with auto-filters, formatting, and Redux company:", enhancedData);
 
-        // IMPORTANT: Update Product Mix data for ALL selected locations with Redux company_id
+        // Update Product Mix data for ALL selected locations with Redux company_id
         effectiveSelectedLocations.forEach(location => {
           dispatch(addProductMixData({
             location: location,
@@ -1698,18 +1619,77 @@ export default function ProductMixDashboard() {
     };
   }, []);
 
-  // ENHANCED: Apply formatting to current data before rendering
+  // Apply formatting to current data before rendering
   const formattedCurrentData = enhanceDataWithFormatting(currentProductMixData);
   
-  // ENHANCED: Prepare data specifically for SalesDashboard component
+  // Prepare data specifically for SalesDashboard component
   const salesDashboardData = prepareSalesDashboardData(formattedCurrentData);
+
+  // Show Redux date range status in filters section
+  const renderDateRangeFilter = () => (
+    <Grid item {...gridSizes}>
+      <Box sx={{ position: "relative", width: "100%" }}>
+        <InputLabel
+          sx={{
+            position: "absolute",
+            top: -6,
+            left: 8,
+            backgroundColor: "white",
+            px: 0.5,
+            fontSize: "0.75rem",
+            pointerEvents: "none",
+          }}
+        >
+          Date Range {hasReduxDateRange && <span style={{ color: '#1976d2' }}>• Redux</span>}
+        </InputLabel>
+        <Button
+          variant="outlined"
+          onClick={openDateRangePicker}
+          startIcon={<CalendarTodayIcon />}
+          fullWidth
+          sx={{ 
+            height: 40, 
+            justifyContent: 'flex-start',
+            textTransform: 'none',
+            borderColor: hasReduxDateRange ? '#1976d2' : 'rgba(0, 0, 0, 0.23)',
+            color: (!localStartDate || !localEndDate) ? 'text.secondary' : 'text.primary',
+            padding: '8px 14px',
+            '&:hover': {
+              borderColor: 'primary.main',
+            }
+          }}
+        >
+          <Box sx={{ textAlign: 'left', flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="body2" component="div" sx={{ fontSize: '0.875rem' }}>
+              {(!localStartDate || !localEndDate) 
+                ? "Select date range (optional)" 
+                : `${formatDisplayDate(localStartDate)} - ${formatDisplayDate(localEndDate)}`
+              }
+            </Typography>
+            {(localStartDate && localEndDate) && (
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  clearDateRange();
+                }}
+                sx={{ ml: 1 }}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            )}
+          </Box>
+        </Button>
+      </Box>
+    </Grid>
+  );
 
   return (
     <Box sx={{ 
       p: { xs: 1, sm: 2, md: 3 },
-      width: "100%",  // Ensure full width
-      maxWidth: "none",  // Remove any max-width constraints
-      boxSizing: "border-box"  // Include padding in width calculation
+      width: "100%",
+      maxWidth: "none",
+      boxSizing: "border-box"
     }}>
       {/* Dashboard Header */}
       <Box
@@ -1720,7 +1700,7 @@ export default function ProductMixDashboard() {
           mb: 3,
           flexWrap: "wrap",
           gap: 2,
-          width: "100%"  // Add explicit width
+          width: "100%"
         }}
       >
         <div style={{ 
@@ -1762,7 +1742,6 @@ export default function ProductMixDashboard() {
                 fill="currentColor"
                 style={{ fontSize: 'inherit' }}
               >
-                {/* 4-square logo matching your design */}
                 <rect x="10" y="10" width="35" height="35" rx="4" fill="#5A8DEE"/>
                 <rect x="55" y="10" width="35" height="35" rx="4" fill="#4285F4"/>
                 <rect x="10" y="55" width="35" height="35" rx="4" fill="#1976D2"/>
@@ -1770,11 +1749,20 @@ export default function ProductMixDashboard() {
               </svg>
             </span>
             Product Mix Dashboard
+            {hasReduxDateRange && (
+              <Chip 
+                label="Redux Dates Active" 
+                size="small" 
+                color="primary" 
+                variant="outlined"
+                sx={{ fontSize: '0.75rem', ml: 2 }}
+              />
+            )}
           </h1>
         </div>
       </Box>
 
-      {/* UPDATED: Company Selection Section with new API structure */}
+      {/* Company Selection Section */}
       <Card elevation={3} sx={{ 
         mb: 3, 
         borderRadius: 2, 
@@ -1789,6 +1777,15 @@ export default function ProductMixDashboard() {
               Company Selection
             </Typography>
             {companiesLoading && <CircularProgress size={20} />}
+            {hasReduxDateRange && (
+              <Chip 
+                label={`Date Range: ${formatDisplayDate(localStartDate)} - ${formatDisplayDate(localEndDate)}`}
+                size="small" 
+                color="secondary" 
+                variant="outlined"
+                sx={{ ml: 'auto' }}
+              />
+            )}
           </Box>
           
           {/* Error display */}
@@ -1836,14 +1833,17 @@ export default function ProductMixDashboard() {
               />
             </Box>
           )}
-      
-          
-      
         </CardContent>
       </Card>
 
       {/* Company Selection Alert */}
-    
+      {!selectedCompany && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          <Typography variant="body2">
+            Please select a company above to see available locations for filtering.
+          </Typography>
+        </Alert>
+      )}
 
       {/* Alert message when no data is available */}
       {!currentProductMixData && (
@@ -1867,9 +1867,7 @@ export default function ProductMixDashboard() {
         </Alert>
       )}
 
-      {/* Success Alert for Data Update with Formatting Info and Company ID */}
-    
-    
+      {/* Success Alert for Data Update with Redux Date Range Info */}
       {dataUpdated && (
         <Alert 
           severity="success" 
@@ -1877,29 +1875,24 @@ export default function ProductMixDashboard() {
           onClose={() => setDataUpdated(false)}
         >
           <Typography variant="body2">
-            <strong>✅ Filters Applied Successfully!</strong> 
-          
-            {/* {selectedCompany && (
-              <span> | <strong>Company:</strong> {selectedCompanyName} (ID: {selectedCompany})</span>
+            <strong>✅ Filters Applied Successfully!</strong>
+            {hasReduxDateRange && (
+              <span> | <strong>Redux Date Range:</strong> {formatDisplayDate(localStartDate)} - {formatDisplayDate(localEndDate)}</span>
             )}
-             */}
+            {selectedCompany && (
+              <span> | <strong>Company:</strong> {selectedCompanyName}</span>
+            )}
           </Typography>
         </Alert>
       )}
 
-
-      {/* Debug Info for Development */}
-      {formattedCurrentData && (
-        <FormattingDebugInfo data={formattedCurrentData} />
-      )}
-
-      {/* Filters Section */}
+      {/* Filters Section with Redux Date Range Integration */}
       <Card elevation={3} sx={{ 
         mb: 3, 
         borderRadius: 2, 
         overflow: "hidden",
-        width: "100%",  // Add explicit width
-        maxWidth: "none"  // Remove any max-width constraints
+        width: "100%",
+        maxWidth: "none"
       }}>
         <CardContent sx={{ p: { xs: 2, md: 3 }, width: "100%" }}>
           {/* Filter Header */}
@@ -1918,6 +1911,17 @@ export default function ProductMixDashboard() {
                   color="primary" 
                   variant="outlined"
                   icon={<BusinessIcon />}
+                  sx={{ ml: 1 }}
+                />
+              )}
+
+              {/* Redux Date Range Status */}
+              {hasReduxDateRange && (
+                <Chip 
+                  label="🕒 Redux Dates"
+                  size="small"
+                  color="secondary"
+                  variant="outlined"
                   sx={{ ml: 1 }}
                 />
               )}
@@ -1944,15 +1948,6 @@ export default function ProductMixDashboard() {
             </Box>
           </Box>
 
-          {/* Company Selection Alert */}
-          {!selectedCompany && (
-            <Alert severity="warning" sx={{ mb: 3 }}>
-              <Typography variant="body2">
-                Please select a company above to see available locations for filtering.
-              </Typography>
-            </Alert>
-          )}
-
           {/* No locations available alert */}
           {selectedCompany && displayLocations.length === 0 && (
             <Alert severity="info" sx={{ mb: 3 }}>
@@ -1962,9 +1957,8 @@ export default function ProductMixDashboard() {
             </Alert>
           )}
 
-
           <Grid container spacing={2} sx={{ width: "100%" }}>
-            {/* Location filter - UPDATED to use Redux state */}
+            {/* Location filter */}
             <Grid item {...gridSizes}>
               <MultiSelect
                 id="location-select"
@@ -1977,50 +1971,8 @@ export default function ProductMixDashboard() {
               />
             </Grid>
 
-            {/* Date Range filter - Updated to be optional */}
-            <Grid item {...gridSizes}>
-              <Box sx={{ position: "relative", width: "100%" }}>
-                <InputLabel
-                  sx={{
-                    position: "absolute",
-                    top: -6,
-                    left: 8,
-                    backgroundColor: "white",
-                    px: 0.5,
-                    fontSize: "0.75rem",
-                    pointerEvents: "none",
-                  }}
-                >
-                  Date Range
-                </InputLabel>
-                <Button
-                  variant="outlined"
-                  onClick={openDateRangePicker}
-                  startIcon={<CalendarTodayIcon />}
-                  fullWidth
-                  sx={{ 
-                    height: 40, 
-                    justifyContent: 'flex-start',
-                    textTransform: 'none',
-                    borderColor: 'rgba(0, 0, 0, 0.23)',
-                    color: (!localStartDate || !localEndDate) ? 'text.secondary' : 'text.primary',
-                    padding: '8px 14px',
-                    '&:hover': {
-                      borderColor: 'primary.main',
-                    }
-                  }}
-                >
-                  <Box sx={{ textAlign: 'left', flexGrow: 1 }}>
-                    <Typography variant="body2" component="div" sx={{ fontSize: '0.875rem' }}>
-                      {(!localStartDate || !localEndDate) 
-                        ? "Select date range (optional)" 
-                        : `${formatDisplayDate(localStartDate)} - ${formatDisplayDate(localEndDate)}`
-                      }
-                    </Typography>
-                  </Box>
-                </Button>
-              </Box>
-            </Grid>
+            {/* Date Range filter with Redux integration */}
+            {renderDateRangeFilter()}
 
             {/* Category filter */}
             <Grid item {...gridSizes}>
@@ -2053,7 +2005,7 @@ export default function ProductMixDashboard() {
             </Grid>
           </Grid>
 
-          {/* Active filters display with auto-filter status */}
+          {/* Active filters display with Redux date range status */}
           {(selectedCompany ||
             displaySelectedLocations.length > 0 ||
             (localStartDate && localEndDate) ||
@@ -2073,6 +2025,13 @@ export default function ProductMixDashboard() {
                     <CircularProgress size={16} />
                     <Typography variant="caption" color="primary">
                       Updating...
+                    </Typography>
+                  </Box>
+                )}
+                {hasReduxDateRange && (
+                  <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Typography variant="caption" color="secondary">
+                      Redux Date Range Active
                     </Typography>
                   </Box>
                 )}
@@ -2108,14 +2067,11 @@ export default function ProductMixDashboard() {
                 {(localStartDate && localEndDate) && (
                   <Chip
                     label={`Date Range: ${formatDisplayDate(localStartDate)} - ${formatDisplayDate(localEndDate)}`}
-                    color="secondary"
+                    color={hasReduxDateRange ? "secondary" : "default"}
                     variant="outlined"
                     size="small"
                     icon={<CalendarTodayIcon />}
-                    onDelete={() => {
-                      setLocalStartDate("");
-                      setLocalEndDate("");
-                    }}
+                    onDelete={clearDateRange}
                   />
                 )}
 
@@ -2166,8 +2122,6 @@ export default function ProductMixDashboard() {
               </Box>
             </Box>
           )}
-    
-         
         </CardContent>
       </Card>
 
@@ -2180,8 +2134,8 @@ export default function ProductMixDashboard() {
               borderRadius: 2, 
               mb: 3, 
               overflow: "hidden",
-              width: "100%",  // Add explicit width
-              maxWidth: "none"  // Remove any max-width constraints
+              width: "100%",
+              maxWidth: "none"
             }}
             elevation={3}
           >
@@ -2190,7 +2144,7 @@ export default function ProductMixDashboard() {
               onChange={handleTabChange}
               variant="fullWidth"
               sx={{
-                width: "100%",  // Ensure tabs take full width
+                width: "100%",
                 "& .MuiTab-root": {
                   fontWeight: 500,
                   textTransform: "none",
@@ -2208,38 +2162,41 @@ export default function ProductMixDashboard() {
               }}
             >
               <Tab label="Performance" />
+              <Tab label="Menu Analysis" />
             </Tabs>
 
             {/* Server Performance Tab */}
             <TabPanel value={tabValue} index={0}>
               <Box sx={{ 
                 p: { xs: 1, sm: 2, md: 3 },
-                width: "100%",  // Add explicit width
-                boxSizing: "border-box"  // Ensure padding doesn't affect width
+                width: "100%",
+                boxSizing: "border-box"
               }}>
                 {isAutoFiltering ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                     <CircularProgress size={40} />
-                    <Typography sx={{ ml: 2 }}>Auto-filtering data with enhanced formatting and table11 support...</Typography>
+                    <Typography sx={{ ml: 2 }}>
+                      Auto-filtering data with Redux date range integration...
+                    </Typography>
                   </Box>
                 ) : (
-                  <Box sx={{ width: "100%" }}>  {/* Add explicit width */}
-                    {/* Sales Dashboard Component - Now receives table11-enhanced data */}
+                  <Box sx={{ width: "100%" }}>
+                    {/* Sales Dashboard Component with Redux date range support */}
                     <MenuAnalysisDashboard 
-                      key={`performance-${currentProductMixLocation}-${salesDashboardData?.filterTimestamp || 'original'}`}
+                      key={`performance-${currentProductMixLocation}-${salesDashboardData?.filterTimestamp || 'original'}-${hasReduxDateRange ? 'redux' : 'local'}`}
                       productMixData={salesDashboardData} 
                     />
                     
                     {/* Divider */}
-                    <Box sx={{ my: 4, width: "100%" }}>  {/* Add explicit width */}
+                    <Box sx={{ my: 4, width: "100%" }}>
                       <Divider sx={{ borderColor: '#e0e0e0', borderWidth: 1 }} />
                     </Box>
                     
-                    {/* Menu Items Table Component - Now receives formatted data */}
+                    {/* Menu Items Table Component with Redux date range support */}
                     <Box sx={{ 
                       mt: 4, 
-                      width: "100%",  // Add explicit width
-                      overflow: "hidden"  // Prevent any overflow issues
+                      width: "100%",
+                      overflow: "hidden"
                     }}>
                       <Typography 
                         variant="h5" 
@@ -2251,9 +2208,18 @@ export default function ProductMixDashboard() {
                         }}
                       >
                         📊 Menu Items Analysis 
+                        {hasReduxDateRange && (
+                          <Chip 
+                            label="Redux Dates" 
+                            size="small" 
+                            color="secondary" 
+                            variant="outlined"
+                            sx={{ ml: 2 }}
+                          />
+                        )}
                       </Typography>
                       <MenuItemsTable 
-                        key={`menu-items-${currentProductMixLocation}-${formattedCurrentData?.filterTimestamp || 'original'}`}
+                        key={`menu-items-${currentProductMixLocation}-${formattedCurrentData?.filterTimestamp || 'original'}-${hasReduxDateRange ? 'redux' : 'local'}`}
                         table12={formattedCurrentData?.table12 || []} 
                       />
                     </Box>
@@ -2262,21 +2228,23 @@ export default function ProductMixDashboard() {
               </Box>
             </TabPanel>
 
-            {/* Menu Analysis Tab */}
+            {/* Menu Analysis Tab with Redux integration */}
             <TabPanel value={tabValue} index={1}>
               <Box sx={{ 
                 p: { xs: 1, sm: 2, md: 3 },
-                width: "100%",  // Add explicit width
+                width: "100%",
                 boxSizing: "border-box"
               }}>
                 {isAutoFiltering ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                     <CircularProgress size={40} />
-                    <Typography sx={{ ml: 2 }}>Auto-filtering data with enhanced formatting and table11 support...</Typography>
+                    <Typography sx={{ ml: 2 }}>
+                      Auto-filtering data with Redux date range integration...
+                    </Typography>
                   </Box>
                 ) : (
                   <MenuAnalysisDashboardtwo
-                    key={`menu-analysis-${currentProductMixLocation}-${formattedCurrentData?.filterTimestamp || 'original'}`}
+                    key={`menu-analysis-${currentProductMixLocation}-${formattedCurrentData?.filterTimestamp || 'original'}-${hasReduxDateRange ? 'redux' : 'local'}`}
                     productMixData={formattedCurrentData}
                   />
                 )}
@@ -2300,14 +2268,25 @@ export default function ProductMixDashboard() {
         </Card>
       )}
 
-      {/* Date Range Picker Dialog */}
+      {/* Date Range Picker Dialog with Redux integration */}
       <Dialog
         open={isDateRangeOpen}
         onClose={() => setIsDateRangeOpen(false)}
         maxWidth="lg"
         fullWidth
       >
-        <DialogTitle>Select Date Range</DialogTitle>
+        <DialogTitle>
+          Select Date Range
+          {hasReduxDateRange && (
+            <Chip 
+              label="Will update Redux state" 
+              size="small" 
+              color="secondary" 
+              variant="outlined"
+              sx={{ ml: 2 }}
+            />
+          )}
+        </DialogTitle>
         <DialogContent>
           <DateRangeSelector
             initialState={[
@@ -2323,7 +2302,7 @@ export default function ProductMixDashboard() {
         <DialogActions>
           <Button onClick={() => setIsDateRangeOpen(false)}>Cancel</Button>
           <Button onClick={applyDateRange} variant="contained" color="primary">
-            Set Date Range
+            Set Date Range (Redux)
           </Button>
         </DialogActions>
       </Dialog>

@@ -26,6 +26,9 @@ const initialState = {
   // NEW: Add SalesDashboard date range
   SalesDashboardStart: null,
   SalesDashboardEnd: null,
+  // NEW: Add ProductMixDashboard date range
+  ProductMixDashboardStart: null,
+  ProductMixDashboardEnd: null,
 };
 
 // ORIGINAL: Helper function to format date as YYYY-MM-DD (date only, no time) in LOCAL timezone
@@ -657,6 +660,71 @@ const dateRangeSlice = createSlice({
       state.SalesDashboardEnd = null;
     },
 
+    // NEW: Product Mix Dashboard Date Range Actions
+    setProductMixDashboardDateRange: (state, action) => {
+      const { startDate, endDate } = action.payload;
+      console.log('🏷️ Redux BEFORE: setProductMixDashboardDateRange called with:', { 
+        startDate, 
+        endDate,
+        startType: typeof startDate,
+        endType: typeof endDate 
+      });
+      
+      // Format dates to date-only strings (YYYY-MM-DD)
+      const formattedStartDate = formatDateOnly(startDate);
+      const formattedEndDate = formatDateOnly(endDate);
+      
+      console.log('🏷️ Redux AFTER formatting:', {
+        formattedStartDate,
+        formattedEndDate,
+        formattedStartType: typeof formattedStartDate,
+        formattedEndType: typeof formattedEndDate
+      });
+      
+      if (formattedStartDate && formattedEndDate) {
+        state.ProductMixDashboardStart = formattedStartDate;
+        state.ProductMixDashboardEnd = formattedEndDate;
+        
+        console.log('✅ Redux: Product Mix Dashboard date range stored successfully:', {
+          storedStart: state.ProductMixDashboardStart,
+          storedEnd: state.ProductMixDashboardEnd,
+          stateAfterUpdate: {
+            ProductMixDashboardStart: state.ProductMixDashboardStart,
+            ProductMixDashboardEnd: state.ProductMixDashboardEnd
+          }
+        });
+      } else {
+        console.error('❌ Redux: Invalid dates provided for Product Mix Dashboard, not storing:', { 
+          originalStart: startDate, 
+          originalEnd: endDate,
+          formattedStart: formattedStartDate,
+          formattedEnd: formattedEndDate
+        });
+      }
+    },
+    
+    setProductMixDashboardStartDate: (state, action) => {
+      const formattedDate = formatDateOnly(action.payload);
+      if (formattedDate) {
+        state.ProductMixDashboardStart = formattedDate;
+        console.log('✅ Redux: Product Mix Dashboard start date set:', formattedDate);
+      }
+    },
+    
+    setProductMixDashboardEndDate: (state, action) => {
+      const formattedDate = formatDateOnly(action.payload);
+      if (formattedDate) {
+        state.ProductMixDashboardEnd = formattedDate;
+        console.log('✅ Redux: Product Mix Dashboard end date set:', formattedDate);
+      }
+    },
+    
+    clearProductMixDashboardDateRange: (state) => {
+      console.log('🧹 Redux: Clearing Product Mix Dashboard date range');
+      state.ProductMixDashboardStart = null;
+      state.ProductMixDashboardEnd = null;
+    },
+
     // Clear all date ranges
     clearAllDateRanges: (state) => {
       state.AnalyticsDashboardStart = null;
@@ -677,6 +745,8 @@ const dateRangeSlice = createSlice({
       state.FinancialsDashboardEnd = null;
       state.SalesDashboardStart = null;
       state.SalesDashboardEnd = null;
+      state.ProductMixDashboardStart = null;
+      state.ProductMixDashboardEnd = null;
     },
   },
 });
@@ -736,6 +806,12 @@ export const {
   setSalesDashboardStartDate,
   setSalesDashboardEndDate,
   clearSalesDashboardDateRange,
+  
+  // NEW: Product Mix Dashboard actions
+  setProductMixDashboardDateRange,
+  setProductMixDashboardStartDate,
+  setProductMixDashboardEndDate,
+  clearProductMixDashboardDateRange,
   
   // Clear all
   clearAllDateRanges,
@@ -1145,6 +1221,53 @@ export const selectHasSalesDashboardDateRange = (state) => {
   return hasRange;
 };
 
+// NEW: Product Mix Dashboard Selectors with safe fallbacks
+export const selectProductMixDashboardStartDate = (state) => {
+  const value = state.dateRange?.ProductMixDashboardStart;
+  console.log('🔍 selectProductMixDashboardStartDate:', { value, type: typeof value });
+  return value;
+};
+
+export const selectProductMixDashboardEndDate = (state) => {
+  const value = state.dateRange?.ProductMixDashboardEnd;
+  console.log('🔍 selectProductMixDashboardEndDate:', { value, type: typeof value });
+  return value;
+};
+
+export const selectProductMixDashboardDateRange = (state) => {
+  const startDate = state.dateRange?.ProductMixDashboardStart;
+  const endDate = state.dateRange?.ProductMixDashboardEnd;
+  
+  console.log('🔍 selectProductMixDashboardDateRange raw state:', {
+    rawState: state.dateRange,
+    startDate,
+    endDate,
+    startType: typeof startDate,
+    endType: typeof endDate
+  });
+  
+  return {
+    startDate: startDate,
+    endDate: endDate,
+  };
+};
+
+export const selectHasProductMixDashboardDateRange = (state) => {
+  const startDate = state.dateRange?.ProductMixDashboardStart;
+  const endDate = state.dateRange?.ProductMixDashboardEnd;
+  const hasRange = startDate !== null && endDate !== null;
+  
+  console.log('🔍 selectHasProductMixDashboardDateRange:', {
+    startDate,
+    endDate,
+    hasRange,
+    startIsNull: startDate === null,
+    endIsNull: endDate === null
+  });
+  
+  return hasRange;
+};
+
 // Combined selectors for convenience
 export const selectAllDateRanges = (state) => ({
   analyticsDashboard: {
@@ -1185,6 +1308,11 @@ export const selectAllDateRanges = (state) => ({
     startDate: state.dateRange?.SalesDashboardStart || null,
     endDate: state.dateRange?.SalesDashboardEnd || null,
   },
+  // NEW: Add Product Mix Dashboard to combined selectors
+  productMixDashboard: {
+    startDate: state.dateRange?.ProductMixDashboardStart || null,
+    endDate: state.dateRange?.ProductMixDashboardEnd || null,
+  },
 });
 
 export const selectHasAnyDateRange = (state) => 
@@ -1196,7 +1324,8 @@ export const selectHasAnyDateRange = (state) =>
   selectHasOrderIQDashboardDateRange(state) ||
   selectHasSalesSplitDashboardDateRange(state) ||
   selectHasFinancialsDashboardDateRange(state) || // NEW: Include Financials Dashboard
-  selectHasSalesDashboardDateRange(state); // NEW: Include Sales Dashboard
+  selectHasSalesDashboardDateRange(state) || // NEW: Include Sales Dashboard
+  selectHasProductMixDashboardDateRange(state); // NEW: Include Product Mix Dashboard
 
 // Export utility functions for OrderIQ Dashboard components to use
 export { createLocalDateFromString, formatDateOnlyOrderIQ };
