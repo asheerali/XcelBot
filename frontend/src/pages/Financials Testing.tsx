@@ -1030,59 +1030,39 @@ export function Financials() {
     return selectedCompanies.length > 0 && selectedLocations.length > 0;
   }, [selectedCompanies, selectedLocations]);
 
-  // ✅ FIXED: Apply filters with proper array handling - NOW USES REDUX DATE RANGE WITH ENHANCED DEBUGGING
+  // ✅ FIXED: Apply filters with proper array handling - NOW USES REDUX DATE RANGE
   const applyFiltersAutomatically = React.useCallback(async () => {
-    console.log('🚀 AUTO-FILTER: Starting applyFiltersAutomatically');
-    console.log('📋 AUTO-FILTER: Current state check:', {
-      hasMinimumRequirements: hasMinimumRequirements(),
-      selectedCompanies,
-      selectedLocations,
-      availableLocations: availableLocations.length,
-      getSelectedDateRangeForAPI
-    });
-
     if (!hasMinimumRequirements()) {
-      console.log('⏸️ AUTO-FILTER: Minimum requirements not met - aborting');
+      console.log('⏸️ Auto-filter: Minimum requirements not met');
       return;
     }
 
-    console.log('✅ AUTO-FILTER: Minimum requirements met - proceeding');
     setIsAutoFiltering(true);
     setFilterError('');
     
     try {
       // Find the current financial file data
       const currentFile = financialFiles.find(f => f.location === currentFinancialLocation);
-      console.log('📁 AUTO-FILTER: Current file found:', !!currentFile, currentFile?.fileName);
       
       if (!currentFile) {
-        console.log('⚠️ AUTO-FILTER: No current financial file found, proceeding with API call');
+        console.log('⚠️ No current financial file found, proceeding with API call');
       }
 
       // ✅ FIXED: Convert location IDs to names for API compatibility (like your other file)
       let locationNamesForApi = [];
       
-      console.log('🔄 AUTO-FILTER: Converting location IDs to names');
-      console.log('📍 AUTO-FILTER: Available locations:', availableLocations);
-      console.log('📍 AUTO-FILTER: Selected location IDs:', selectedLocations);
-      
       if (availableLocations.length > 0) {
         // Convert location IDs to names for API
         locationNamesForApi = selectedLocations.map(locationId => {
           const location = availableLocations.find(loc => String(loc.id) === String(locationId));
-          console.log(`📍 AUTO-FILTER: Converting ID ${locationId} to name: ${location?.name || 'NOT_FOUND'}`);
           return location ? location.name : String(locationId);
         });
       } else {
-        console.log('⚠️ AUTO-FILTER: No available locations, using raw selected locations');
         locationNamesForApi = [...selectedLocations]; // Create copy
       }
 
-      console.log('📍 AUTO-FILTER: Final location names for API:', locationNamesForApi);
-
       // NEW: Use Redux date range instead of local state
       const selectedDateRangeForAPI = getSelectedDateRangeForAPI;
-      console.log('📅 AUTO-FILTER: Date range for API:', selectedDateRangeForAPI);
 
       // ✅ FIXED: Send ALL locations as array to backend with Redux date range
       const payload = {
@@ -1094,18 +1074,13 @@ export function Financials() {
         company_id: String(selectedCompanies[0])
       };
 
-      console.log('🚀 AUTO-FILTER: Sending API request to:', FINANCIAL_FILTER_API_URL);
-      console.log('📦 AUTO-FILTER: Request payload:', JSON.stringify(payload, null, 2));
-      console.log(`📍 AUTO-FILTER: Selected ${locationNamesForApi.length} locations:`, locationNamesForApi);
-      console.log('📅 AUTO-FILTER: Redux Date Range state:', { startDate, endDate, hasDateRange });
+      console.log('🚀 Auto-filtering: Sending financial filter request with Redux date range:', payload);
+      console.log(`📍 Selected ${locationNamesForApi.length} locations:`, locationNamesForApi);
+      console.log('📅 Redux Date Range:', { startDate, endDate, hasDateRange });
 
       // Make API call to financial filter endpoint
       const response = await axios.post(FINANCIAL_FILTER_API_URL, payload);
-      
-      console.log('📥 AUTO-FILTER: API Response received');
-      console.log('📊 AUTO-FILTER: Response status:', response.status);
-      console.log('📊 AUTO-FILTER: Response data keys:', Object.keys(response.data || {}));
-      console.log('📊 AUTO-FILTER: Full response data:', response.data);
+      console.log('📥 Auto-filtering: Received financial filter response:', response.data);
 
       if (response.data) {
         // Create new table data object
@@ -1128,17 +1103,7 @@ export function Financials() {
           table16: response.data.table16 || []
         };
 
-        console.log('📊 AUTO-FILTER: Processing response data');
-        console.log('📊 AUTO-FILTER: Table data lengths:', {
-          table1: newTableData.table1.length,
-          table2: newTableData.table2.length,
-          table3: newTableData.table3.length,
-          table4: newTableData.table4.length,
-          table5: newTableData.table5.length
-        });
-
         setCurrentTableData(newTableData);
-        console.log('✅ AUTO-FILTER: Table data updated in state');
 
         // ✅ FIXED: Update Redux filters with proper array copies
         const storeValue = locationNamesForApi.length === 1 
@@ -1148,10 +1113,6 @@ export function Financials() {
         const dateRangeString = selectedDateRangeForAPI 
           ? `${selectedDateRangeForAPI.startDateStr} - ${selectedDateRangeForAPI.endDateStr}` 
           : '';
-
-        console.log('🔄 AUTO-FILTER: Updating Redux filters');
-        console.log('🔄 AUTO-FILTER: Store value:', storeValue);
-        console.log('🔄 AUTO-FILTER: Date range string:', dateRangeString);
 
         dispatch(updateFinancialFilters({ 
           store: storeValue,
@@ -1167,130 +1128,40 @@ export function Financials() {
         prevDateRangeRef.current = selectedDateRangeForAPI ? { ...selectedDateRangeForAPI } : null;
 
         setLastUpdated(Date.now());
-        console.log('✅ AUTO-FILTER: Process completed successfully');
-        console.log('✅ AUTO-FILTER: Applied to locations:', locationNamesForApi);
-        console.log('✅ AUTO-FILTER: Applied date range:', dateRangeString);
-      } else {
-        console.log('❌ AUTO-FILTER: No data received in response');
+        console.log('✅ Auto-filtering completed successfully for locations:', locationNamesForApi);
+        console.log('✅ Redux Date range applied:', dateRangeString);
       }
     } catch (err: any) {
-      console.error('❌ AUTO-FILTER: Error occurred:', err);
-      console.error('❌ AUTO-FILTER: Error details:', {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status,
-        config: err.config
-      });
+      console.error('❌ Auto-filtering error:', err);
       
       let errorMessage = 'Auto-filtering failed';
       if (axios.isAxiosError(err)) {
         if (err.response) {
           const detail = err.response.data?.detail;
           errorMessage = detail || `Server error: ${err.response.status}`;
-          console.error('❌ AUTO-FILTER: Server error details:', err.response.data);
         } else if (err.request) {
           errorMessage = 'No response from server. Please check if the backend is running.';
-          console.error('❌ AUTO-FILTER: No response received');
         }
       } else if (err.message) {
         errorMessage = err.message;
       }
       
-      console.error('❌ AUTO-FILTER: Final error message:', errorMessage);
       setFilterError(errorMessage);
     } finally {
       setIsAutoFiltering(false);
-      console.log('🏁 AUTO-FILTER: Process finished (success or error)');
     }
   }, [selectedCompanies, selectedLocations, getSelectedDateRangeForAPI, availableLocations, financialFiles, currentFinancialLocation, hasMinimumRequirements, dispatch, startDate, endDate, hasDateRange]);
 
-  // NEW: Debug effect to track all state changes
+  // ✅ FIXED: Auto-filtering effect with proper change detection - NOW INCLUDES REDUX DATE RANGE
   useEffect(() => {
-    console.log('🐛 DEBUG: State updated:', {
-      companiesLoading,
-      companyLocations: companyLocations.length,
-      selectedCompanies,
-      selectedLocations,
-      hasDateRange,
-      startDate,
-      endDate,
-      autoFilterInitialized,
-      hasMinimumRequirements: hasMinimumRequirements(),
-      getSelectedDateRangeForAPI: getSelectedDateRangeForAPI
-    });
-  }, [companiesLoading, companyLocations.length, selectedCompanies, selectedLocations, hasDateRange, startDate, endDate, autoFilterInitialized]);
-
-  // NEW: Effect to run auto-filter immediately when persisted state is detected on page load
-  useEffect(() => {
-    console.log('🔍 INITIAL LOAD CHECK: Evaluating conditions:', {
-      companiesLoading,
-      companyLocationsLength: companyLocations.length,
-      autoFilterInitialized,
-      selectedCompaniesCount: selectedCompanies.length,
-      selectedLocationsCount: selectedLocations.length,
-      hasDateRange,
-      startDate,
-      endDate,
-      hasMinimumReqs: hasMinimumRequirements()
-    });
-
-    // Only run this check once when component mounts and data is ready
-    if (!companiesLoading && companyLocations.length > 0 && !autoFilterInitialized) {
-      console.log('✅ INITIAL LOAD: Companies loaded, checking for persisted Redux state');
-
-      // If we have persisted companies and locations, immediately run auto-filter
-      if (hasMinimumRequirements()) {
-        console.log('🚀 INITIAL LOAD: Found persisted state - running immediate auto-filter');
-        console.log('📋 INITIAL LOAD: Persisted state details:', {
-          companies: selectedCompanies,
-          locations: selectedLocations,
-          dateRange: getSelectedDateRangeForAPI,
-          availableLocations: availableLocations.length
-        });
-        
-        // Mark as initialized to prevent duplicate runs
-        setAutoFilterInitialized(true);
-        
-        // Set refs to current state
-        prevCompaniesRef.current = [...selectedCompanies];
-        prevLocationsRef.current = [...selectedLocations];
-        prevDateRangeRef.current = getSelectedDateRangeForAPI ? { ...getSelectedDateRangeForAPI } : null;
-        
-        console.log('⚡ INITIAL LOAD: Calling applyFiltersAutomatically NOW');
-        // Run auto-filter immediately - no timeout needed for initial load
-        applyFiltersAutomatically();
-      } else {
-        console.log('❌ INITIAL LOAD: Minimum requirements not met');
-        console.log('📋 INITIAL LOAD: Missing requirements:', {
-          hasCompanies: selectedCompanies.length > 0,
-          hasLocations: selectedLocations.length > 0,
-          minReqsMet: hasMinimumRequirements()
-        });
-      }
-    } else {
-      console.log('⏸️ INITIAL LOAD: Conditions not met for auto-filter:', {
-        companiesStillLoading: companiesLoading,
-        noCompanyLocations: companyLocations.length === 0,
-        alreadyInitialized: autoFilterInitialized
-      });
-    }
-  }, [
-    companiesLoading,
-    companyLocations.length,
-    autoFilterInitialized,
-    hasMinimumRequirements,
-    selectedCompanies,
-    selectedLocations,
-    hasDateRange,
-    getSelectedDateRangeForAPI,
-    applyFiltersAutomatically,
-    availableLocations.length
-  ]);
-
-  // ✅ FIXED: Auto-filtering effect for user interactions and changes after initialization
-  useEffect(() => {
-    // Skip if not initialized yet (initial load is handled above)
+    // Skip auto-filtering on initial load
     if (!autoFilterInitialized) {
+      if (selectedCompanies.length > 0 || selectedLocations.length > 0) {
+        setAutoFilterInitialized(true);
+        prevCompaniesRef.current = [...selectedCompanies]; // Create copy
+        prevLocationsRef.current = [...selectedLocations]; // Create copy
+        prevDateRangeRef.current = getSelectedDateRangeForAPI ? { ...getSelectedDateRangeForAPI } : null;
+      }
       return;
     }
 
@@ -1304,9 +1175,9 @@ export function Financials() {
       clearTimeout(debounceTimeoutRef.current);
     }
 
-    // Set new timeout for debounced auto-filtering (for user interactions)
+    // Set new timeout for debounced auto-filtering
     debounceTimeoutRef.current = setTimeout(() => {
-      console.log('🔄 Auto-filter triggered by user changes');
+      console.log('🔄 Auto-filter triggered by changes (including Redux date range)');
       applyFiltersAutomatically();
     }, 500); // 500ms debounce
 
@@ -1317,18 +1188,6 @@ export function Financials() {
       }
     };
   }, [selectedCompanies, selectedLocations, getSelectedDateRangeForAPI, autoFilterInitialized, checkForChanges, applyFiltersAutomatically]);
-
-  // NEW: Effect to handle manual user interactions when autoFilterInitialized is false
-  useEffect(() => {
-    // This handles the case where user manually selects companies/locations after initial load
-    if (!autoFilterInitialized && (selectedCompanies.length > 0 || selectedLocations.length > 0)) {
-      console.log('🔄 User interaction detected - initializing auto-filter');
-      setAutoFilterInitialized(true);
-      prevCompaniesRef.current = [...selectedCompanies];
-      prevLocationsRef.current = [...selectedLocations];
-      prevDateRangeRef.current = getSelectedDateRangeForAPI ? { ...getSelectedDateRangeForAPI } : null;
-    }
-  }, [selectedCompanies.length, selectedLocations.length, autoFilterInitialized, getSelectedDateRangeForAPI]);
 
   // ✅ FIXED: Handle company/location changes with proper array copies
   const handleCompanyChange = (newCompanies: string[]) => {
