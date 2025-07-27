@@ -1234,7 +1234,7 @@ export function Financials() {
       hasMinimumReqs: hasMinimumRequirements()
     });
 
-    // Only run this check once when component mounts and data is ready
+    // FIXED: Only run when companies are loaded AND we're not already initialized
     if (!companiesLoading && companyLocations.length > 0 && !autoFilterInitialized) {
       console.log('✅ INITIAL LOAD: Companies loaded, checking for persisted Redux state');
 
@@ -1277,14 +1277,14 @@ export function Financials() {
   }, [
     companiesLoading,
     companyLocations.length,
-    autoFilterInitialized,
-    hasMinimumRequirements,
     selectedCompanies,
     selectedLocations,
     hasDateRange,
     getSelectedDateRangeForAPI,
-    applyFiltersAutomatically,
-    availableLocations.length
+    availableLocations.length,
+    hasMinimumRequirements,
+    applyFiltersAutomatically
+    // REMOVED: autoFilterInitialized from dependencies to prevent blocking when it becomes true
   ]);
 
   // ✅ FIXED: Auto-filtering effect for user interactions and changes after initialization
@@ -1320,15 +1320,23 @@ export function Financials() {
 
   // NEW: Effect to handle manual user interactions when autoFilterInitialized is false
   useEffect(() => {
-    // This handles the case where user manually selects companies/locations after initial load
-    if (!autoFilterInitialized && (selectedCompanies.length > 0 || selectedLocations.length > 0)) {
+    // FIXED: This should only handle manual user interactions, NOT persisted state
+    // Only trigger when user manually selects companies/locations and companies are loaded
+    if (!autoFilterInitialized && companyLocations.length > 0 && (selectedCompanies.length > 0 || selectedLocations.length > 0)) {
+      // Check if this looks like a user interaction vs persisted state
+      // If we have both companies and locations already, it's likely persisted state - let the initial load effect handle it
+      if (selectedCompanies.length > 0 && selectedLocations.length > 0) {
+        console.log('🔄 Detected likely persisted state - letting initial load effect handle it');
+        return;
+      }
+      
       console.log('🔄 User interaction detected - initializing auto-filter');
       setAutoFilterInitialized(true);
       prevCompaniesRef.current = [...selectedCompanies];
       prevLocationsRef.current = [...selectedLocations];
       prevDateRangeRef.current = getSelectedDateRangeForAPI ? { ...getSelectedDateRangeForAPI } : null;
     }
-  }, [selectedCompanies.length, selectedLocations.length, autoFilterInitialized, getSelectedDateRangeForAPI]);
+  }, [selectedCompanies.length, selectedLocations.length, autoFilterInitialized, getSelectedDateRangeForAPI, companyLocations.length]);
 
   // ✅ FIXED: Handle company/location changes with proper array copies
   const handleCompanyChange = (newCompanies: string[]) => {
