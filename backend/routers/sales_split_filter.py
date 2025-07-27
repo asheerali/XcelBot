@@ -313,9 +313,9 @@ async def filter_excel_data(
         
         # ===== PROCESS THE DATA =====
         print("Processing data for dashboard...")
-        print(f"DataFrame columns: {list(df.columns)}")
+        # print(f"DataFrame columns: {list(df.columns)}")
         print(f"Sample Sent_Date values: {df['Sent_Date'].head(3).tolist() if 'Sent_Date' in df.columns else 'N/A'}")
-        print(f"Date column dtype: {df['Date'].dtype if 'Date' in df.columns else 'N/A'}")
+        # print(f"Date column dtype: {df['Date'].dtype if 'Date' in df.columns else 'N/A'}")
         
         # print("i am here in the filter_excel_data checking the df", df)
 

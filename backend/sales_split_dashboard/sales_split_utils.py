@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+pd.set_option('future.no_silent_downcasting', True)
+
 
 def create_sales_pivot_tables(df, location_filter='All', start_date=None, end_date=None, categories_filter='All'):
   
@@ -98,8 +100,10 @@ def create_sales_pivot_tables(df, location_filter='All', start_date=None, end_da
                     category_pct_of_total.loc[week, category] = (category_value / grand_total) * 100
     
     # Fill NaN values with 0
-    category_pct_of_total = category_pct_of_total.fillna(0)
+    # category_pct_of_total = category_pct_of_total.fillna(0)
+    category_pct_of_total = category_pct_of_total.fillna(0).infer_objects(copy=False)
     
+
     # Drop the Grand Total column as it will always be 100%
     if 'Grand Total' in category_pct_of_total.columns:
         category_pct_of_total = category_pct_of_total.drop('Grand Total', axis=1)
@@ -177,15 +181,15 @@ def create_sales_pivot_tables(df, location_filter='All', start_date=None, end_da
     for col in formatted_category_summary.columns:
         formatted_category_summary[col] = formatted_category_summary[col].apply(lambda x: f"{x:.2f}%")
     
-    print("-------------------------------------------------------")
-    print("i am here in sales split utils printing numeric_sales_pivot", formatted_numeric_sales_pivot)
-    print("-------------------------------------------------------")
-    print("i am here in sales split utils printing pct_change", formatted_pct_change)
-    print("-------------------------------------------------------")
-    print("i am here in sales split utils printing category_pct_of_total", formatted_category_pct_of_total)
-    print("-------------------------------------------------------")
-    print("i am here in sales split utils printing category_summary", formatted_category_summary)
-    print("-------------------------------------------------------")
+    # print("-------------------------------------------------------")
+    # print("i am here in sales split utils printing numeric_sales_pivot", formatted_numeric_sales_pivot)
+    # print("-------------------------------------------------------")
+    # print("i am here in sales split utils printing pct_change", formatted_pct_change)
+    # print("-------------------------------------------------------")
+    # print("i am here in sales split utils printing category_pct_of_total", formatted_category_pct_of_total)
+    # print("-------------------------------------------------------")
+    # print("i am here in sales split utils printing category_summary", formatted_category_summary)
+    # print("-------------------------------------------------------")
     
     # Return all tables in a dictionary with formatting applied
     return {
@@ -1039,9 +1043,9 @@ import pandas as pd
 def create_sales_by_day_table(df, location_filter='All', end_date=None, categories_filter='All', moving_avg_days=7):
     df_copy = df.copy()
 
-    print("----------------------------------------------------------")
-    print("i am here in sales_split_utils printing sales by day", end_date)
-    print("----------------------------------------------------------")
+    # print("----------------------------------------------------------")
+    # print("i am here in sales_split_utils printing sales by day", end_date)
+    # print("----------------------------------------------------------")
     
     if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
         df_copy['Date'] = pd.to_datetime(df_copy['Date'])
@@ -1110,9 +1114,9 @@ def create_sales_by_day_table(df, location_filter='All', end_date=None, categori
     final_df['Sales'] = final_df['Sales'].round(2)
     final_df['Moving_Avg'] = final_df['Moving_Avg'].round(2)
 
-    print("-------------------------------------------------------")
-    print("i am here in sales split utils printing final_df", final_df)
-    print("-------------------------------------------------------")
+    # print("-------------------------------------------------------")
+    # print("i am here in sales split utils printing final_df", final_df)
+    # print("-------------------------------------------------------")
 
     return {'sales_by_day_table': final_df}
 

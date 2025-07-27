@@ -337,7 +337,7 @@ def day_of_the_week_tables(df, store='All', start_date=None, end_date=None):
         if isinstance(end_date, str):
             end_date = pd.to_datetime(end_date)
 
-    print("i am here in the financial utils_ printing the start date and end date", start_date, end_date, "store", store, "df_copy", df_copy.columns    )
+    # print("i am here in the financial utils_ printing the start date and end date", start_date, end_date, "store", store, "df_copy", df_copy.columns    )
 
     df = df_copy.copy()
         
@@ -423,7 +423,7 @@ def day_of_the_week_tables(df, store='All', start_date=None, end_date=None):
 
     # Rename column
     sales_table = sales_table.rename(columns={'Helper 1': 'Day of the Week'})
-    print("sales_table", sales_table)
+    # print("sales_table", sales_table)
     cols_to_round = ['Tw Sales', 'Lw Sales', 'Ly Sales', 'Tw/Lw (+/-)', 'Tw/Ly (+/-)']
     sales_table[cols_to_round] = sales_table[cols_to_round].astype(float).round(2)
 
@@ -635,10 +635,11 @@ def calculate_tw_lw_bdg_comparison(df, df_budget, store='All', year='All', week_
             filtered_df = filtered_df[filtered_df['Store'].isin(store)]
         else:
             filtered_df = filtered_df[filtered_df['Store'] == store]
-            
-    print("i am here in the financials_utils.py file checking the year", year, "and the store", store, filtered_df['Store'].unique(), filtered_df.head())
-    # Filter by year
 
+    print("i am here in the financials_utils.py file checking the year", year, "and the store", store, filtered_df['Store'].unique())
+    # print( "i am here in the financials utils.py checking the filtered_df.hea()", filtered_df.head())
+
+    # Filter by year
     if year != 'All':
         if isinstance(year, list):
             filtered_df = filtered_df[filtered_df['Year'].isin(year)]

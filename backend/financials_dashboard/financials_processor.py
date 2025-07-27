@@ -160,7 +160,7 @@ def process_financials_file(df1, df2, year="All", week_range="All", location="Al
     financials_weeks, financials_years, financials_stores = financials_filters(df)
     financials_sales_table, financials_orders_table, financials_avg_ticket_table = day_of_the_week_tables(df, store=location, start_date=start_date, end_date=end_date) 
     
-    print("i am here 2 in the financials_processor.py printing the financial_sales_table_ and printing the stores",stores, financials_sales_table)
+    # print("i am here 2 in the financials_processor.py printing the financial_sales_table_ and printing the stores",stores, financials_sales_table)
     financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df,df_budget, store=location, year=year, week_range=week_range, start_date=start_date, end_date=end_date)
     
 

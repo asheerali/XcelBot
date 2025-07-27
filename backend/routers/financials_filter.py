@@ -101,7 +101,7 @@ async def filter_financials_data(
             end_date_pd = pd.to_datetime(end_date_original).date()
             print(f"Converted end_date to pandas datetime: {end_date_pd}")
         
-        print(f"Filters applied - Location: {location_filter}, Year: {year_filter}, Start: {start_date_pd}, End: {end_date_pd}")
+        # print(f"Filters applied - Location: {location_filter}, Year: {year_filter}, Start: {start_date_pd}, End: {end_date_pd}")
         
         # ===== QUERY DATABASE FOR FINANCIALS DATA =====
         print("Querying database for financials data...")
@@ -112,7 +112,7 @@ async def filter_financials_data(
         else:
             company_id = request.company_id
         
-        print(f"Using company_id: {company_id}")
+        # print(f"Using company_id: {company_id}")
         
         # Build the base query for financials
         financials_query = db.query(FinancialsCompanyWide).filter(FinancialsCompanyWide.company_id == company_id)
@@ -338,7 +338,7 @@ async def filter_financials_data(
                 if col in df_budget.columns:
                     df_budget[col] = pd.to_numeric(df_budget[col], errors='coerce').fillna(0)
 
-        print("i am here in the financials filter endpoint after converting the data types",    "\n", df_financials.head(), "\n", "df_budget","\n" ,  df_budget.head())
+        # print("i am here in the financials filter endpoint after converting the data types",    "\n", df_financials.head(), "\n", "df_budget","\n" ,  df_budget.head())
 
         print("i am checking the date afer converting the date type", start_date_original, end_date_original, type(start_date_original), type(end_date_original))
 

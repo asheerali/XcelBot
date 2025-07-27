@@ -413,6 +413,12 @@ async def filter_pmix_data(
         }
         
         print(f"Successfully processed PMIX Dashboard with {len(records)} records")
+        
+        
+        print("--------------------------------------------")
+        print(pmix_dashboard)  # Log the dashboard structure for debugging
+        print("--------------------------------------------")
+        
         return pmix_dashboard
     
     except Exception as e:
