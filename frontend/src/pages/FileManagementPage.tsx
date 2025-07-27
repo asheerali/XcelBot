@@ -1,5 +1,3 @@
-// Updated FileManagementPage.jsx - Replace fetch calls with apiClient
-
 import React, { useState, useEffect } from "react";
 import type { AlertColor } from "@mui/material";
 import {
@@ -31,7 +29,7 @@ import {
   Divider,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
-import apiClient from "../api/axiosConfig"; // ✅ Already imported
+import apiClient from "../api/axiosConfig";
 import { API_URL_Local } from "../constants";
 
 // Material-UI Icons
@@ -48,7 +46,7 @@ import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import CloseIcon from "@mui/icons-material/Close";
 
-// Styled components (keeping all existing styled components unchanged)
+// Styled components
 const StyledCard = styled(Card)(({ theme }) => ({
   borderRadius: 16,
   transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -129,7 +127,6 @@ const FileManagementPage = () => {
     severity: "success",
   });
 
-  // ✅ UPDATED: Convert endpoints to use relative paths for apiClient
   const dataTypes = [
     {
       name: "PMix Sales",
@@ -138,9 +135,9 @@ const FileManagementPage = () => {
       color: theme.palette.primary.main,
       gradient: "linear-gradient(135deg, #1976d2 0%, #1565c0 100%)",
       bgGradient: "linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)",
-      fileListEndpoint: "/salespmix/analytics/file-list", // ✅ Relative path for apiClient
-      deleteEndpoint: "/salespmix/bulk/by-filename", // ✅ Relative path for apiClient
-      locationsEndpoint: "/salespmix/analytics/locations", // ✅ Relative path for apiClient
+      fileListEndpoint: "/salespmix/analytics/file-list",
+      deleteEndpoint: "/salespmix/bulk/by-filename",
+      locationsEndpoint: "/salespmix/analytics/locations",
       locationKey: "location",
     },
     {
@@ -150,9 +147,9 @@ const FileManagementPage = () => {
       color: theme.palette.success.main,
       gradient: "linear-gradient(135deg, #388e3c 0%, #2e7d32 100%)",
       bgGradient: "linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%)",
-      fileListEndpoint: "/financialscompanywide/analytics/file-list", // ✅ Relative path
-      deleteEndpoint: "/financialscompanywide/bulk/by-filename", // ✅ Relative path
-      locationsEndpoint: "/financialscompanywide/analytics/stores", // ✅ Relative path
+      fileListEndpoint: "/financialscompanywide/analytics/file-list",
+      deleteEndpoint: "/financialscompanywide/bulk/by-filename",
+      locationsEndpoint: "/financialscompanywide/analytics/stores",
       locationKey: "store",
     },
     {
@@ -162,9 +159,9 @@ const FileManagementPage = () => {
       color: theme.palette.warning.main,
       gradient: "linear-gradient(135deg, #f57c00 0%, #ef6c00 100%)",
       bgGradient: "linear-gradient(135deg, #fff3e0 0%, #ffcc02 100%)",
-      fileListEndpoint: "/budget/analytics/file-list", // ✅ Relative path
-      deleteEndpoint: "/budget/bulk/by-filename", // ✅ Relative path
-      locationsEndpoint: "/budget/analytics/stores", // ✅ Relative path
+      fileListEndpoint: "/budget/analytics/file-list",
+      deleteEndpoint: "/budget/bulk/by-filename",
+      locationsEndpoint: "/budget/analytics/stores",
       locationKey: "store",
     },
   ];
@@ -175,48 +172,37 @@ const FileManagementPage = () => {
     fetchData();
   }, [activeTab]);
 
-  // Load data immediately when component mounts
   useEffect(() => {
     fetchData();
   }, []);
 
-  // ✅ MAIN CHANGE: Replace fetch calls with apiClient
   const fetchData = async () => {
     setLoading(true);
     try {
       console.log("🔄 Fetching data for:", currentDataType.name);
 
-      // ✅ UPDATED: Use apiClient instead of fetch for files
-      console.log("📂 Fetching files from:", currentDataType.fileListEndpoint);
+      // Fetch files
       const filesResponse = await apiClient.get(
         currentDataType.fileListEndpoint
       );
-      const filesData = filesResponse.data;
+      console.log("📂 Files response:", filesResponse.data);
+      setFiles(Array.isArray(filesResponse.data) ? filesResponse.data : []);
 
-      console.log("📥 Files response:", filesData);
-      setFiles(filesData);
-
-      // ✅ UPDATED: Use apiClient instead of fetch for locations
-      console.log(
-        "📍 Fetching locations from:",
-        currentDataType.locationsEndpoint
-      );
+      // Fetch locations
       const locationsResponse = await apiClient.get(
         currentDataType.locationsEndpoint
       );
-      const locationsData = locationsResponse.data;
-
-      console.log("📥 Locations response:", locationsData);
-      setLocations(locationsData);
+      console.log("📍 Locations response:", locationsResponse.data);
+      setLocations(
+        Array.isArray(locationsResponse.data) ? locationsResponse.data : []
+      );
     } catch (error) {
       console.error("❌ Error fetching data:", error);
 
-      // ✅ IMPROVED: Better error handling for axios
       let errorMessage = "Error fetching data";
       if (error.response) {
         if (error.response.status === 401) {
           errorMessage = "Authentication failed. Please log in again.";
-          // Auth interceptor will handle redirect to login
         } else {
           const detail = error.response.data?.detail;
           errorMessage = `Server error: ${detail || error.response.status}`;
@@ -246,7 +232,6 @@ const FileManagementPage = () => {
     setDeleteDialog({ open: true, fileName, type: currentDataType.name });
   };
 
-  // ✅ DELETE FUNCTION: Already using apiClient correctly
   const handleDeleteConfirm = async () => {
     try {
       console.log("🗑️ Deleting file:", deleteDialog.fileName);
@@ -254,7 +239,7 @@ const FileManagementPage = () => {
       const response = await apiClient.delete(currentDataType.deleteEndpoint, {
         params: {
           file_name: deleteDialog.fileName,
-          confirm: true, // must be set to avoid HTTP 400
+          confirm: true,
         },
       });
 
@@ -263,11 +248,10 @@ const FileManagementPage = () => {
         `File "${deleteDialog.fileName}" deleted successfully`,
         "success"
       );
-      fetchData(); // Refresh the data
+      fetchData();
     } catch (error) {
       console.error("❌ Error deleting file:", error);
 
-      // ✅ IMPROVED: Better error handling for delete
       let errorMessage = "Error deleting file";
       if (error.response) {
         if (error.response.status === 401) {
@@ -318,7 +302,6 @@ const FileManagementPage = () => {
     fetchData();
   };
 
-  // Rest of your component methods remain unchanged...
   const renderFileColumns = () => {
     if (currentDataType.key === "salespmix") {
       return (
@@ -367,7 +350,7 @@ const FileManagementPage = () => {
                 }}
               />
               <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {file.record_count.toLocaleString()}
+                {file.record_count?.toLocaleString() || "N/A"}
               </Typography>
             </Box>
           </TableCell>
@@ -401,7 +384,7 @@ const FileManagementPage = () => {
                 }}
               />
               <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {file.record_count.toLocaleString()}
+                {file.record_count?.toLocaleString() || "N/A"}
               </Typography>
             </Box>
           </TableCell>
@@ -415,7 +398,7 @@ const FileManagementPage = () => {
                 }}
               />
               <Typography variant="body2">
-                {file.earliest_year} - {file.latest_year}
+                {file.earliest_year || "N/A"} - {file.latest_year || "N/A"}
               </Typography>
             </Box>
           </TableCell>
@@ -424,8 +407,7 @@ const FileManagementPage = () => {
     }
   };
 
-  // Rest of your JSX return remains exactly the same...
-  if (loading && files.length === 0) {
+  if (loading && files.length === 0 && locations.length === 0) {
     return (
       <Box
         sx={{
@@ -449,7 +431,6 @@ const FileManagementPage = () => {
         background: "linear-gradient(180deg, #fafafa 0%, #ffffff 100%)",
       }}
     >
-      {/* Rest of your JSX remains unchanged - only the API calls were modified */}
       {/* Top Controls */}
       <Container maxWidth="xl" sx={{ pt: 3, pb: 1 }}>
         <Box
@@ -525,10 +506,519 @@ const FileManagementPage = () => {
         )}
       </Container>
 
-      {/* Main Content - Rest of JSX unchanged */}
-      {/* ... Rest of your existing JSX ... */}
+      {/* Main Content */}
+      <Container maxWidth="xl">
+        <StyledCard sx={{ p: 4, overflow: "visible" }}>
+          {/* Enhanced Tabs */}
+          <TabContainer>
+            <Tabs
+              value={activeTab}
+              onChange={handleTabChange}
+              aria-label="file management tabs"
+              sx={{
+                "& .MuiTabs-indicator": {
+                  height: 3,
+                  borderRadius: 1.5,
+                  background: currentDataType.gradient,
+                },
+              }}
+            >
+              {dataTypes.map((type, index) => {
+                const IconComponent = type.icon;
+                return (
+                  <Tab
+                    key={index}
+                    label={
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <IconComponent sx={{ fontSize: 20 }} />
+                        {type.name}
+                      </Box>
+                    }
+                  />
+                );
+              })}
+            </Tabs>
+          </TabContainer>
 
-      {/* Enhanced Delete Confirmation Dialog - Unchanged */}
+          {/* Summary Cards */}
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid item xs={12} sm={6} md={3}>
+              <MetricCard
+                sx={{
+                  background: currentDataType.bgGradient,
+                  border: `1px solid ${alpha(currentDataType.color, 0.2)}`,
+                  "&::before": { background: currentDataType.gradient },
+                }}
+              >
+                <Box
+                  sx={{
+                    p: 3,
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: currentDataType.color,
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      Total Files
+                    </Typography>
+                    <DescriptionIcon
+                      sx={{ color: currentDataType.color, fontSize: 24 }}
+                    />
+                  </Box>
+                  <Typography
+                    variant="h3"
+                    sx={{
+                      fontWeight: 800,
+                      color: currentDataType.color,
+                      lineHeight: 1,
+                    }}
+                  >
+                    {files.length}
+                  </Typography>
+                </Box>
+              </MetricCard>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <MetricCard
+                sx={{
+                  background:
+                    "linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%)",
+                  border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`,
+                  "&::before": {
+                    background:
+                      "linear-gradient(135deg, #388e3c 0%, #2e7d32 100%)",
+                  },
+                }}
+              >
+                <Box
+                  sx={{
+                    p: 3,
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: theme.palette.success.main,
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      Total Records
+                    </Typography>
+                    <StorageIcon
+                      sx={{ color: theme.palette.success.main, fontSize: 24 }}
+                    />
+                  </Box>
+                  <Typography
+                    variant="h3"
+                    sx={{
+                      fontWeight: 800,
+                      color: theme.palette.success.main,
+                      lineHeight: 1,
+                    }}
+                  >
+                    {files
+                      .reduce((sum, file) => sum + (file.record_count || 0), 0)
+                      .toLocaleString()}
+                  </Typography>
+                </Box>
+              </MetricCard>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <MetricCard
+                sx={{
+                  background:
+                    "linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%)",
+                  border: `1px solid ${alpha(
+                    theme.palette.secondary.main,
+                    0.2
+                  )}`,
+                  "&::before": {
+                    background:
+                      "linear-gradient(135deg, #8e24aa 0%, #7b1fa2 100%)",
+                  },
+                }}
+              >
+                <Box
+                  sx={{
+                    p: 3,
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: theme.palette.secondary.main,
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      {currentDataType.key === "salespmix"
+                        ? "Locations"
+                        : "Stores"}
+                    </Typography>
+                    <LocationOnIcon
+                      sx={{ color: theme.palette.secondary.main, fontSize: 24 }}
+                    />
+                  </Box>
+                  <Typography
+                    variant="h3"
+                    sx={{
+                      fontWeight: 800,
+                      color: theme.palette.secondary.main,
+                      lineHeight: 1,
+                    }}
+                  >
+                    {locations.length}
+                  </Typography>
+                </Box>
+              </MetricCard>
+            </Grid>
+          </Grid>
+        </StyledCard>
+      </Container>
+
+      {/* Content Cards */}
+      <Container maxWidth="xl">
+        <Grid container spacing={3}>
+          {/* Files Section */}
+          <Grid item xs={12} lg={8}>
+            <ContentCard>
+              <Box
+                sx={{
+                  p: 3,
+                  borderBottom: `1px solid ${theme.palette.divider}`,
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  <DescriptionIcon sx={{ color: currentDataType.color }} />
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      Files - {currentDataType.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Manage and delete your data files
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+
+              {loading ? (
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    py: 8,
+                  }}
+                >
+                  <CircularProgress />
+                  <Typography sx={{ ml: 2 }}>Loading files...</Typography>
+                </Box>
+              ) : (
+                <Box sx={{ maxHeight: 400, overflowY: "auto" }}>
+                  <TableContainer>
+                    <Table>
+                      <TableHead>
+                        <TableRow
+                          sx={{
+                            backgroundColor: alpha(
+                              theme.palette.primary.main,
+                              0.04
+                            ),
+                          }}
+                        >
+                          <TableCell
+                            sx={{
+                              fontWeight: 600,
+                              color: theme.palette.text.secondary,
+                            }}
+                          >
+                            File Name
+                          </TableCell>
+                          {renderFileColumns()}
+                          <TableCell
+                            align="center"
+                            sx={{
+                              fontWeight: 600,
+                              color: theme.palette.text.secondary,
+                            }}
+                          >
+                            Actions
+                          </TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {files.length > 0 ? (
+                          files.map((file, index) => (
+                            <TableRow
+                              key={index}
+                              hover
+                              sx={{
+                                "&:hover": {
+                                  backgroundColor: alpha(
+                                    currentDataType.color,
+                                    0.04
+                                  ),
+                                },
+                              }}
+                            >
+                              <TableCell>
+                                <Box
+                                  sx={{ display: "flex", alignItems: "center" }}
+                                >
+                                  <Box
+                                    sx={{
+                                      width: 40,
+                                      height: 40,
+                                      borderRadius: 2,
+                                      background: alpha(
+                                        currentDataType.color,
+                                        0.1
+                                      ),
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      mr: 2,
+                                    }}
+                                  >
+                                    <DescriptionIcon
+                                      sx={{
+                                        color: currentDataType.color,
+                                        fontSize: 20,
+                                      }}
+                                    />
+                                  </Box>
+                                  <Box>
+                                    <Typography
+                                      variant="body2"
+                                      sx={{
+                                        fontWeight: 500,
+                                        fontFamily: "monospace",
+                                        wordBreak: "break-all",
+                                        maxWidth: 300,
+                                      }}
+                                    >
+                                      {file.file_name}
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              </TableCell>
+                              {renderFileData(file)}
+                              <TableCell align="center">
+                                <Button
+                                  variant="outlined"
+                                  color="error"
+                                  size="small"
+                                  startIcon={<DeleteIcon />}
+                                  onClick={() =>
+                                    handleDeleteClick(file.file_name)
+                                  }
+                                  sx={{
+                                    textTransform: "none",
+                                    borderRadius: 2,
+                                    px: 2,
+                                    py: 1,
+                                  }}
+                                >
+                                  Delete
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell
+                              colSpan={4}
+                              align="center"
+                              sx={{ py: 8 }}
+                            >
+                              <DescriptionIcon
+                                sx={{
+                                  fontSize: 48,
+                                  color: theme.palette.text.disabled,
+                                  mb: 2,
+                                }}
+                              />
+                              <Typography
+                                variant="h6"
+                                color="text.secondary"
+                                gutterBottom
+                              >
+                                No files found
+                              </Typography>
+                              <Typography variant="body2" color="text.disabled">
+                                Upload some files to get started
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              )}
+            </ContentCard>
+          </Grid>
+
+          {/* Locations Section */}
+          <Grid item xs={12} lg={4}>
+            <ContentCard>
+              <Box
+                sx={{
+                  p: 3,
+                  borderBottom: `1px solid ${theme.palette.divider}`,
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  <LocationOnIcon sx={{ color: currentDataType.color }} />
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      {currentDataType.key === "salespmix"
+                        ? "Locations"
+                        : "Stores"}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {locations.length} locations available
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+
+              <Box sx={{ p: 3, maxHeight: 500, overflowY: "auto" }}>
+                {locations.length > 0 ? (
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                  >
+                    {locations.map((location, index) => (
+                      <StyledCard key={index} sx={{ p: 3 }}>
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", mb: 2 }}
+                        >
+                          <Box
+                            sx={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: "50%",
+                              background: currentDataType.gradient,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              mr: 2,
+                            }}
+                          >
+                            <LocationOnIcon
+                              sx={{ color: "white", fontSize: 16 }}
+                            />
+                          </Box>
+                          <Typography
+                            variant="subtitle1"
+                            sx={{
+                              fontWeight: 600,
+                              textTransform: "capitalize",
+                              color: theme.palette.text.primary,
+                            }}
+                          >
+                            {location[currentDataType.locationKey]}
+                          </Typography>
+                        </Box>
+
+                        <Grid container spacing={2}>
+                          <Grid item xs={12}>
+                            <Box sx={{ textAlign: "center" }}>
+                              <Typography
+                                variant="h6"
+                                sx={{
+                                  fontWeight: 700,
+                                  color: theme.palette.primary.main,
+                                }}
+                              >
+                                {location.record_count?.toLocaleString() ||
+                                  "N/A"}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                Records
+                              </Typography>
+                            </Box>
+                          </Grid>
+                        </Grid>
+                      </StyledCard>
+                    ))}
+                  </Box>
+                ) : (
+                  <Box sx={{ textAlign: "center", py: 6 }}>
+                    <LocationOnIcon
+                      sx={{
+                        fontSize: 48,
+                        color: theme.palette.text.disabled,
+                        mb: 2,
+                      }}
+                    />
+                    <Typography
+                      variant="h6"
+                      color="text.secondary"
+                      gutterBottom
+                    >
+                      No locations found
+                    </Typography>
+                    <Typography variant="body2" color="text.disabled">
+                      Data will appear here when available
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </ContentCard>
+          </Grid>
+        </Grid>
+      </Container>
+
+      {/* Enhanced Delete Confirmation Dialog */}
       <Dialog
         open={deleteDialog.open}
         onClose={handleDeleteCancel}
