@@ -229,6 +229,7 @@ from sqlalchemy import and_, or_, func
 from models.budget import Budget
 from schemas.budget import BudgetCreate
 from typing import List, Tuple, Optional, Dict, Any
+from utils.parse_datetime import parse_datetime_from_filename
 
 def check_and_filter_duplicates_budget(
     db: Session, 
@@ -633,8 +634,37 @@ def get_budget_summary(
         }
     }
 
+# def get_budget_uploaded_files_list(db: Session, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
+#     """Get list of all uploaded files with record counts"""
+#     query = db.query(
+#         Budget.file_name,
+#         func.count(Budget.id).label('record_count'),
+#         func.min(Budget.Year).label('earliest_year'),
+#         func.max(Budget.Year).label('latest_year'),
+#         func.sum(Budget.Net_Sales).label('total_sales')
+#     ).filter(Budget.file_name.isnot(None))
+    
+#     if company_id:
+#         query = query.filter(Budget.company_id == company_id)
+    
+#     query = query.group_by(Budget.file_name).order_by(Budget.file_name)
+    
+#     results = []
+#     for row in query.all():
+#         results.append({
+#             "file_name": row.file_name,
+#             "record_count": row.record_count,
+#             "earliest_year": row.earliest_year,
+#             "latest_year": row.latest_year,
+#             "total_sales": float(row.total_sales or 0)
+#         })
+    
+#     return results
+
+
+
 def get_budget_uploaded_files_list(db: Session, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
-    """Get list of all uploaded files with record counts"""
+    """Get list of all uploaded budget files with record counts and parsed timestamp"""
     query = db.query(
         Budget.file_name,
         func.count(Budget.id).label('record_count'),
@@ -650,8 +680,10 @@ def get_budget_uploaded_files_list(db: Session, company_id: Optional[int] = None
     
     results = []
     for row in query.all():
+        file_timestamp = parse_datetime_from_filename(row.file_name)
         results.append({
             "file_name": row.file_name,
+            "file_timestamp": file_timestamp,
             "record_count": row.record_count,
             "earliest_year": row.earliest_year,
             "latest_year": row.latest_year,
@@ -659,6 +691,8 @@ def get_budget_uploaded_files_list(db: Session, company_id: Optional[int] = None
         })
     
     return results
+
+
 
 def get_budget_stores_list(db: Session, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
     """Get list of all stores with record counts"""
@@ -684,6 +718,8 @@ def get_budget_stores_list(db: Session, company_id: Optional[int] = None) -> Lis
         })
     
     return results
+
+
 
 def get_budget_dashboards_list(db: Session, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
     """Get list of all dashboards with record counts"""

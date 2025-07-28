@@ -235,6 +235,7 @@ from sqlalchemy import and_, or_, func
 from models.financials_company_wide import FinancialsCompanyWide
 from schemas.financials_company_wide import FinancialsCompanyWideCreate
 from typing import List, Tuple, Optional, Dict, Any
+from utils.parse_datetime import parse_datetime_from_filename
 
 def check_and_filter_duplicates_financials(
     db: Session, 
@@ -643,8 +644,37 @@ def get_financials_summary(
         }
     }
 
+# def get_financials_uploaded_files_list(db: Session, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
+#     """Get list of all uploaded files with record counts"""
+#     query = db.query(
+#         FinancialsCompanyWide.file_name,
+#         func.count(FinancialsCompanyWide.id).label('record_count'),
+#         func.min(FinancialsCompanyWide.Year).label('earliest_year'),
+#         func.max(FinancialsCompanyWide.Year).label('latest_year'),
+#         func.sum(FinancialsCompanyWide.Tw_Sales).label('total_sales')
+#     ).filter(FinancialsCompanyWide.file_name.isnot(None))
+    
+#     if company_id:
+#         query = query.filter(FinancialsCompanyWide.company_id == company_id)
+    
+#     query = query.group_by(FinancialsCompanyWide.file_name).order_by(FinancialsCompanyWide.file_name)
+    
+#     results = []
+#     for row in query.all():
+#         results.append({
+#             "file_name": row.file_name,
+#             "record_count": row.record_count,
+#             "earliest_year": row.earliest_year,
+#             "latest_year": row.latest_year,
+#             "total_sales": float(row.total_sales or 0)
+#         })
+    
+#     return results
+
+
+
 def get_financials_uploaded_files_list(db: Session, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
-    """Get list of all uploaded files with record counts"""
+    """Get list of all uploaded financial files with record counts and parsed datetime"""
     query = db.query(
         FinancialsCompanyWide.file_name,
         func.count(FinancialsCompanyWide.id).label('record_count'),
@@ -660,8 +690,10 @@ def get_financials_uploaded_files_list(db: Session, company_id: Optional[int] = 
     
     results = []
     for row in query.all():
+        file_timestamp = parse_datetime_from_filename(row.file_name)
         results.append({
             "file_name": row.file_name,
+            "file_timestamp": file_timestamp,
             "record_count": row.record_count,
             "earliest_year": row.earliest_year,
             "latest_year": row.latest_year,
@@ -669,6 +701,7 @@ def get_financials_uploaded_files_list(db: Session, company_id: Optional[int] = 
         })
     
     return results
+
 
 def get_financials_stores_list(db: Session, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
     """Get list of all stores with record counts"""
