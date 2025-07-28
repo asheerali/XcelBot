@@ -19,50 +19,6 @@ import {
 
 import { API_URL_Local } from "../constants";
 
-// FIXED: Enhanced timezone-safe date conversion utilities
-const createTimezoneNeutralDate = (dateString) => {
-  if (!dateString || typeof dateString !== 'string') return null;
-  
-  // Validate YYYY-MM-DD format
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return null;
-  
-  const [year, month, day] = dateString.split('-').map(Number);
-  
-  // CRITICAL FIX: Create date at noon local time to avoid timezone shifting
-  // This ensures the date remains consistent regardless of DST changes
-  const date = new Date(year, month - 1, day, 12, 0, 0, 0);
-  
-  console.log('🕐 createTimezoneNeutralDate:', {
-    input: dateString,
-    output: date,
-    localString: date.toLocaleDateString(),
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    isDST: date.getTimezoneOffset() !== new Date(year, 0, 1).getTimezoneOffset()
-  });
-  
-  return date;
-};
-
-const formatDateToYYYYMMDD = (date) => {
-  if (!date || !(date instanceof Date) || isNaN(date.getTime())) return '';
-  
-  // CRITICAL FIX: Use local timezone methods consistently
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  
-  const formatted = `${year}-${month}-${day}`;
-  
-  console.log('📅 formatDateToYYYYMMDD:', {
-    input: date,
-    inputString: date.toLocaleDateString(),
-    formatted: formatted,
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-  });
-  
-  return formatted;
-};
-
 const SummaryFinancialDashboard = () => {
   const dispatch = useDispatch();
 
@@ -94,7 +50,7 @@ const SummaryFinancialDashboard = () => {
     endDateStr: "",
   });
 
-  // FIXED: Initialize local date range state from Redux with timezone safety
+  // NEW: Initialize local date range state from Redux on mount
   useEffect(() => {
     if (
       hasReduxDateRange &&
@@ -106,35 +62,44 @@ const SummaryFinancialDashboard = () => {
         reduxDateRange
       );
 
-      // CRITICAL FIX: Use timezone-neutral date creation
-      const startDate = createTimezoneNeutralDate(reduxDateRange.startDate);
-      const endDate = createTimezoneNeutralDate(reduxDateRange.endDate);
+      // FIXED: Convert YYYY-MM-DD format from Redux to Date objects without timezone issues
+      // Create dates at noon to avoid timezone shifting
+      const startDateParts = reduxDateRange.startDate.split("-");
+      const endDateParts = reduxDateRange.endDate.split("-");
 
-      if (startDate && endDate) {
-        console.log('💰 Converted dates successfully:', {
-          originalStart: reduxDateRange.startDate,
-          originalEnd: reduxDateRange.endDate,
-          convertedStart: startDate,
-          convertedEnd: endDate,
-          startDateLocal: startDate.toLocaleDateString(),
-          endDateLocal: endDate.toLocaleDateString(),
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-        });
+      const startDate = new Date(
+        parseInt(startDateParts[0]),
+        parseInt(startDateParts[1]) - 1,
+        parseInt(startDateParts[2]),
+        12,
+        0,
+        0 // Set to noon to avoid timezone issues
+      );
 
-        setSelectedDateRange({
-          startDate,
-          endDate,
-          startDateStr: reduxDateRange.startDate,
-          endDateStr: reduxDateRange.endDate,
-        });
-      } else {
-        console.error('💰 Failed to convert Redux dates:', {
-          reduxStart: reduxDateRange.startDate,
-          reduxEnd: reduxDateRange.endDate,
-          startDate,
-          endDate
-        });
-      }
+      const endDate = new Date(
+        parseInt(endDateParts[0]),
+        parseInt(endDateParts[1]) - 1,
+        parseInt(endDateParts[2]),
+        12,
+        0,
+        0 // Set to noon to avoid timezone issues
+      );
+
+      console.log("💰 Converted dates:", {
+        originalStart: reduxDateRange.startDate,
+        originalEnd: reduxDateRange.endDate,
+        convertedStart: startDate,
+        convertedEnd: endDate,
+        startDateLocal: startDate.toLocaleDateString(),
+        endDateLocal: endDate.toLocaleDateString(),
+      });
+
+      setSelectedDateRange({
+        startDate,
+        endDate,
+        startDateStr: reduxDateRange.startDate,
+        endDateStr: reduxDateRange.endDate,
+      });
     }
   }, [hasReduxDateRange, reduxDateRange]);
 
@@ -162,6 +127,7 @@ const SummaryFinancialDashboard = () => {
 
     fetchCompanyLocationData();
   }, []);
+
   // Check for existing Redux values and load initial data
   useEffect(() => {
     const loadInitialData = async () => {
@@ -210,6 +176,8 @@ const SummaryFinancialDashboard = () => {
   ]);
 
   // UPDATED: Fetch financial data function using Redux state with improved date handling
+  // UPDATED: Fetch financial data function using Redux state with improved date handling
+  // UPDATED: Fetch financial data function using Redux state with improved date handling
   const fetchFinancialDataFromRedux = async () => {
     const companies =
       selectedCompanies.length > 0
@@ -255,7 +223,6 @@ const SummaryFinancialDashboard = () => {
           console.log("💰 Using Redux date range for API calls:", {
             finalStartDate,
             finalEndDate,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
           });
         } else if (
           selectedDateRange.startDateStr &&
@@ -267,7 +234,6 @@ const SummaryFinancialDashboard = () => {
           console.log("📅 Using local date range for API calls:", {
             finalStartDate,
             finalEndDate,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
           });
         }
 
@@ -289,7 +255,6 @@ const SummaryFinancialDashboard = () => {
             locationIds: locationIds,
             numberOfCompanies: companies.length,
             numberOfLocations: locations.length,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
           });
         } else {
           console.log(
@@ -421,6 +386,7 @@ const SummaryFinancialDashboard = () => {
       },
     ];
   };
+
   // Get summary stats from API data
   const getSummaryStats = () => {
     if (!financialData) {
@@ -553,6 +519,28 @@ const SummaryFinancialDashboard = () => {
   // Filter configuration
   const filterFields = getFilterFields();
 
+  // const handleFilterChange = useCallback(
+  //   (fieldKey, values) => {
+  //     console.log("🔄 Filter change triggered:", {
+  //       fieldKey,
+  //       values,
+  //       timestamp: Date.now(),
+  //     });
+
+  //     if (fieldKey === "companies") {
+  //       dispatch(setSelectedCompanies(values));
+
+  //       // Clear locations when companies change
+  //       if (values.length === 0) {
+  //         dispatch(setSelectedLocations([]));
+  //       }
+  //     } else if (fieldKey === "location") {
+  //       dispatch(setSelectedLocations(values));
+  //     }
+  //   },
+  //   [dispatch]
+  // );
+
   const handleFilterChange = useCallback(
     (fieldKey, values) => {
       console.log("🔄 Filter change triggered:", {
@@ -604,6 +592,8 @@ const SummaryFinancialDashboard = () => {
     return () => clearTimeout(timeoutId);
   }, [selectedCompanies, selectedLocations, reduxDateRange]);
 
+  // REMOVED: handleApplyFilters function - no longer needed
+
   const handleClearFilters = () => {
     dispatch(setSelectedCompanies([]));
     dispatch(setSelectedLocations([]));
@@ -633,7 +623,7 @@ const SummaryFinancialDashboard = () => {
     }
   };
 
-  // FIXED: Date range utility functions with timezone safety
+  // Date range utility functions
   const formatDateRange = () => {
     // NEW: Check Redux date range first, then local state
     if (
@@ -641,21 +631,37 @@ const SummaryFinancialDashboard = () => {
       reduxDateRange.startDate &&
       reduxDateRange.endDate
     ) {
-      // CRITICAL FIX: Use timezone-neutral date creation for display
-      const startDate = createTimezoneNeutralDate(reduxDateRange.startDate);
-      const endDate = createTimezoneNeutralDate(reduxDateRange.endDate);
+      // FIXED: Use timezone-safe date conversion for display
+      const startDateParts = reduxDateRange.startDate.split("-");
+      const endDateParts = reduxDateRange.endDate.split("-");
 
-      if (startDate && endDate) {
-        const formatDate = (date) => {
-          return date.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          });
-        };
+      const startDate = new Date(
+        parseInt(startDateParts[0]),
+        parseInt(startDateParts[1]) - 1,
+        parseInt(startDateParts[2]),
+        12,
+        0,
+        0
+      );
 
-        return `${formatDate(startDate)} - ${formatDate(endDate)}`;
-      }
+      const endDate = new Date(
+        parseInt(endDateParts[0]),
+        parseInt(endDateParts[1]) - 1,
+        parseInt(endDateParts[2]),
+        12,
+        0,
+        0
+      );
+
+      const formatDate = (date) => {
+        return date.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+      };
+
+      return `${formatDate(startDate)} - ${formatDate(endDate)}`;
     }
 
     if (!selectedDateRange.startDate || !selectedDateRange.endDate) {
@@ -675,52 +681,51 @@ const SummaryFinancialDashboard = () => {
     )}`;
   };
 
-  // FIXED: Date range handlers with Redux integration and timezone safety
+  // UPDATED: Date range handlers with Redux integration
   const handleDateRangeSelect = (range) => {
     console.log("💰 SummaryFinancialDashboard: Date range selected:", range);
 
-    // CRITICAL FIX: Ensure dates are properly formatted without timezone issues
-    const startDateStr = formatDateToYYYYMMDD(range.startDate);
-    const endDateStr = formatDateToYYYYMMDD(range.endDate);
+    // FIXED: Ensure dates are properly formatted without timezone issues
+    const startDateStr =
+      range.startDate.getFullYear() +
+      "-" +
+      String(range.startDate.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(range.startDate.getDate()).padStart(2, "0");
 
-    console.log("💰 Formatted date strings:", { 
-      startDateStr, 
-      endDateStr,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    const endDateStr =
+      range.endDate.getFullYear() +
+      "-" +
+      String(range.endDate.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(range.endDate.getDate()).padStart(2, "0");
+
+    console.log("💰 Formatted date strings:", { startDateStr, endDateStr });
+
+    // Update local state
+    setSelectedDateRange({
+      startDate: range.startDate,
+      endDate: range.endDate,
+      startDateStr: startDateStr,
+      endDateStr: endDateStr,
     });
 
-    if (startDateStr && endDateStr) {
-      // Update local state
-      setSelectedDateRange({
-        startDate: range.startDate,
-        endDate: range.endDate,
-        startDateStr: startDateStr,
-        endDateStr: endDateStr,
-      });
+    // NEW: Update Redux state
+    dispatch(
+      setSummaryFinancialDashboardDateRange({
+        startDate: startDateStr,
+        endDate: endDateStr,
+      })
+    );
 
-      // NEW: Update Redux state
-      dispatch(
-        setSummaryFinancialDashboardDateRange({
-          startDate: startDateStr,
-          endDate: endDateStr,
-        })
-      );
+    setShowDateRangeModal(false);
 
-      setShowDateRangeModal(false);
-
-      // Clear current data when date range changes
-      setFinancialData(null);
-      setCompanySummaryData(null);
-      setError(null);
-    } else {
-      console.error('💰 Failed to format date strings:', {
-        startDate: range.startDate,
-        endDate: range.endDate,
-        startDateStr,
-        endDateStr
-      });
-    }
+    // Clear current data when date range changes
+    setFinancialData(null);
+    setCompanySummaryData(null);
+    setError(null);
   };
+
   // Export functions for Daily Cost Summary table
   const exportToExcel = () => {
     const dailyData = getDailyData();
@@ -881,7 +886,7 @@ const SummaryFinancialDashboard = () => {
                         (store) => `
                       <td>${
                         row.stores[store] > 0
-                          ? `<span class="cost-highlight">${row.stores[
+                          ? `<span class="cost-highlight">$${row.stores[
                               store
                             ].toFixed(2)}</span>`
                           : "$0.00"
@@ -889,7 +894,7 @@ const SummaryFinancialDashboard = () => {
                     `
                       )
                       .join("")}
-                    <td class="daily-total">${row.total.toFixed(2)}</td>
+                    <td class="daily-total">$${row.total.toFixed(2)}</td>
                   </tr>
                 `
                   )
@@ -902,12 +907,12 @@ const SummaryFinancialDashboard = () => {
                   ${storeNames
                     .map(
                       (store) =>
-                        `<td style="font-weight: 600;">${(
+                        `<td style="font-weight: 600;">$${(
                           periodTotal.stores[store] || 0
                         ).toFixed(2)}</td>`
                     )
                     .join("")}
-                  <td style="font-weight: 700; color: #1976d2; font-size: 14px;">${periodTotal.total.toFixed(
+                  <td style="font-weight: 700; color: #1976d2; font-size: 14px;">$${periodTotal.total.toFixed(
                     2
                   )}</td>
                 </tr>
@@ -1170,6 +1175,7 @@ const SummaryFinancialDashboard = () => {
       </>
     );
   };
+
   // Modal-style Multi-select filter component
   const ModalMultiSelectFilter = ({ field, currentValues, onValuesChange }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -1585,11 +1591,11 @@ const SummaryFinancialDashboard = () => {
     );
   };
 
-  // FIXED: Date Range Modal Component with timezone safety
+  // Date Range Modal Component
   const DateRangeModal = () => {
     if (!showDateRangeModal) return null;
 
-    // CRITICAL FIX: Initialize with Redux date range if available, using timezone-neutral dates
+    // UPDATED: Initialize with Redux date range if available, otherwise use local state
     let initialStartDate = new Date();
     let initialEndDate = new Date();
 
@@ -1598,23 +1604,34 @@ const SummaryFinancialDashboard = () => {
       reduxDateRange.startDate &&
       reduxDateRange.endDate
     ) {
-      // CRITICAL FIX: Use timezone-neutral date creation for date picker initialization
-      initialStartDate = createTimezoneNeutralDate(reduxDateRange.startDate);
-      initialEndDate = createTimezoneNeutralDate(reduxDateRange.endDate);
+      // FIXED: Timezone-safe date conversion for date picker initialization
+      const startDateParts = reduxDateRange.startDate.split("-");
+      const endDateParts = reduxDateRange.endDate.split("-");
 
-      if (initialStartDate && initialEndDate) {
-        console.log("💰 Modal initialized with Redux dates:", {
-          reduxStart: reduxDateRange.startDate,
-          reduxEnd: reduxDateRange.endDate,
-          convertedStart: initialStartDate,
-          convertedEnd: initialEndDate,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-        });
-      } else {
-        console.error("💰 Failed to initialize modal dates from Redux");
-        initialStartDate = new Date();
-        initialEndDate = new Date();
-      }
+      initialStartDate = new Date(
+        parseInt(startDateParts[0]),
+        parseInt(startDateParts[1]) - 1,
+        parseInt(startDateParts[2]),
+        12,
+        0,
+        0
+      );
+
+      initialEndDate = new Date(
+        parseInt(endDateParts[0]),
+        parseInt(endDateParts[1]) - 1,
+        parseInt(endDateParts[2]),
+        12,
+        0,
+        0
+      );
+
+      console.log("💰 Modal initialized with Redux dates:", {
+        reduxStart: reduxDateRange.startDate,
+        reduxEnd: reduxDateRange.endDate,
+        convertedStart: initialStartDate,
+        convertedEnd: initialEndDate,
+      });
     } else if (selectedDateRange.startDate && selectedDateRange.endDate) {
       initialStartDate = selectedDateRange.startDate;
       initialEndDate = selectedDateRange.endDate;
@@ -1683,26 +1700,32 @@ const SummaryFinancialDashboard = () => {
       console.log("📅 Applying range:", range);
 
       try {
-        // CRITICAL FIX: Use timezone-safe date formatting
-        const startDateStr = formatDateToYYYYMMDD(range.startDate);
-        const endDateStr = formatDateToYYYYMMDD(range.endDate);
+        // FIXED: Use proper date formatting without timezone issues
+        const startDateStr =
+          range.startDate.getFullYear() +
+          "-" +
+          String(range.startDate.getMonth() + 1).padStart(2, "0") +
+          "-" +
+          String(range.startDate.getDate()).padStart(2, "0");
+
+        const endDateStr =
+          range.endDate.getFullYear() +
+          "-" +
+          String(range.endDate.getMonth() + 1).padStart(2, "0") +
+          "-" +
+          String(range.endDate.getDate()).padStart(2, "0");
 
         console.log("💰 Modal applying formatted dates:", {
           startDateStr,
           endDateStr,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
         });
 
-        if (startDateStr && endDateStr) {
-          handleDateRangeSelect({
-            startDate: range.startDate,
-            endDate: range.endDate,
-            startDateStr: startDateStr,
-            endDateStr: endDateStr,
-          });
-        } else {
-          throw new Error("Failed to format dates");
-        }
+        handleDateRangeSelect({
+          startDate: range.startDate,
+          endDate: range.endDate,
+          startDateStr: startDateStr,
+          endDateStr: endDateStr,
+        });
       } catch (error) {
         console.error("❌ Error applying date range:", error);
         alert("Error applying date range. Please try again.");
@@ -1712,6 +1735,7 @@ const SummaryFinancialDashboard = () => {
     const handleCancelRange = () => {
       setShowDateRangeModal(false);
     };
+
     return (
       <div
         style={{
@@ -2101,6 +2125,17 @@ const SummaryFinancialDashboard = () => {
               Filters
             </h3>
           </div>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              flexWrap: "wrap",
+            }}
+          >
+            {/* REMOVED: Clear All button */}
+          </div>
         </div>
 
         <div
@@ -2110,6 +2145,20 @@ const SummaryFinancialDashboard = () => {
             gap: "20px",
           }}
         >
+          {/*         
+          {filterFields.map((field) => (
+            <ModalMultiSelectFilter
+              key={field.key}
+              field={field}
+              currentValues={
+                field.key === "companies"
+                  ? selectedCompanies
+                  : selectedLocations
+              }
+              onValuesChange={(values) => handleFilterChange(field.key, values)}
+            />
+          ))} */}
+
           {filterFields.map((field) =>
             field.key === "companies" ? (
               <SingleSelectFilter
@@ -2170,6 +2219,7 @@ const SummaryFinancialDashboard = () => {
                   >
                     🏢 {company?.company_name || companyValue}
                     <button
+                      // onClick={() => handleFilterChange("companies", [])}
                       onClick={() => handleFilterChange("companies", "")}
                       style={{
                         background: "none",
@@ -2385,6 +2435,7 @@ const SummaryFinancialDashboard = () => {
           />
         </div>
       )}
+
       {/* Cost Breakdown Section */}
       {(financialData || financialDataLoading) && (
         <div
@@ -2983,9 +3034,8 @@ const SummaryFinancialDashboard = () => {
         </div>
       )}
 
-    {/* Cost Breakdown Section - Continue with rest of existing JSX... */}
-    {/* Date Range Modal */}
-    <DateRangeModal />
+      {/* Date Range Modal */}
+      <DateRangeModal />
     </div>
   );
 };
