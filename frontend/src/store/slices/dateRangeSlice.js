@@ -31,23 +31,130 @@ const initialState = {
   ProductMixDashboardEnd: null,
 };
 
-// ORIGINAL: Helper function to format date as YYYY-MM-DD (date only, no time) in LOCAL timezone
+// ENHANCED: Helper function to format date as YYYY-MM-DD with timezone safety
 const formatDateOnly = (date) => {
   if (!date) return null;
+  
+  console.log('🔧 formatDateOnly called with:', {
+    date,
+    type: typeof date,
+    isDate: date instanceof Date,
+    toString: date?.toString(),
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
+  
   try {
     const dateObj = date instanceof Date ? date : new Date(date);
     if (isNaN(dateObj.getTime()) || dateObj.getFullYear() <= 1970) {
+      console.error('❌ Invalid date in formatDateOnly:', {
+        original: date,
+        parsed: dateObj,
+        isNaN: isNaN(dateObj.getTime()),
+        year: dateObj.getFullYear()
+      });
       return null;
     }
     
-    // FIXED: Use local timezone instead of UTC
+    // CRITICAL FIX: Use local timezone methods consistently
     const year = dateObj.getFullYear();
     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
     const day = String(dateObj.getDate()).padStart(2, '0');
     
-    return `${year}-${month}-${day}`;
+    const formatted = `${year}-${month}-${day}`;
+    
+    console.log('✅ formatDateOnly result:', {
+      original: date,
+      originalType: typeof date,
+      dateObj: dateObj.toString(),
+      localString: dateObj.toLocaleDateString(),
+      formatted: formatted,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      timezoneOffset: dateObj.getTimezoneOffset()
+    });
+    
+    return formatted;
   } catch (error) {
-    console.error('Error formatting date:', error);
+    console.error('❌ Error in formatDateOnly:', error, 'Input:', date);
+    return null;
+  }
+};
+
+// ENHANCED: Timezone-safe formatter specifically for Summary Financial Dashboard
+const formatDateOnlySummaryFinancial = (date) => {
+  if (!date) return null;
+  
+  console.log('💰 formatDateOnlySummaryFinancial called with:', {
+    date,
+    type: typeof date,
+    isDate: date instanceof Date,
+    toString: date?.toString(),
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
+  
+  try {
+    let dateObj;
+    
+    // Handle different input types with enhanced parsing
+    if (date instanceof Date) {
+      dateObj = date;
+    } else if (typeof date === 'string') {
+      // If it's already in YYYY-MM-DD format, validate and return
+      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        // Create a test date with noon time to avoid timezone edge cases
+        const testDate = new Date(date + 'T12:00:00');
+        if (!isNaN(testDate.getTime()) && testDate.getFullYear() > 1970) {
+          console.log('✅ formatDateOnlySummaryFinancial: Already formatted string, returning as-is:', date);
+          return date;
+        }
+      }
+      
+      // For ISO strings or other formats, be more careful
+      if (date.includes('T')) {
+        // ISO string - extract date part only
+        const datePart = date.split('T')[0];
+        if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+          return datePart;
+        }
+      }
+      // For other string formats, parse carefully
+      dateObj = new Date(date);
+    } else if (typeof date === 'number') {
+      dateObj = new Date(date);
+    } else {
+      dateObj = new Date(date);
+    }
+    
+    if (isNaN(dateObj.getTime()) || dateObj.getFullYear() <= 1970) {
+      console.error('❌ formatDateOnlySummaryFinancial: Invalid date after parsing:', {
+        original: date,
+        parsed: dateObj,
+        isNaN: isNaN(dateObj.getTime()),
+        year: dateObj.getFullYear()
+      });
+      return null;
+    }
+    
+    // CRITICAL FIX: Use local timezone methods to avoid UTC conversion issues
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    
+    const formatted = `${year}-${month}-${day}`;
+    
+    console.log('✅ formatDateOnlySummaryFinancial: Successfully formatted:', {
+      original: date,
+      originalType: typeof date,
+      dateObj: dateObj.toString(),
+      localString: dateObj.toLocaleDateString(),
+      formatted: formatted,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      timezoneOffset: dateObj.getTimezoneOffset(),
+      isDST: dateObj.getTimezoneOffset() !== new Date(dateObj.getFullYear(), 0, 1).getTimezoneOffset()
+    });
+    
+    return formatted;
+  } catch (error) {
+    console.error('❌ Error in formatDateOnlySummaryFinancial:', error, 'Input:', date);
     return null;
   }
 };
@@ -97,8 +204,8 @@ const createLocalDateFromString = (dateString) => {
   
   if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
     const [year, month, day] = dateString.split('-').map(Number);
-    // Create date in local timezone (month is 0-indexed)
-    return new Date(year, month - 1, day);
+    // Create date in local timezone (month is 0-indexed) - set to noon for timezone safety
+    return new Date(year, month - 1, day, 12, 0, 0);
   }
   
   return null;
@@ -270,19 +377,20 @@ const dateRangeSlice = createSlice({
       state.ReportsEnd = null;
     },
 
-    // Summary Financial Dashboard Date Range Actions
+    // ENHANCED: Summary Financial Dashboard Date Range Actions with timezone safety
     setSummaryFinancialDashboardDateRange: (state, action) => {
       const { startDate, endDate } = action.payload;
       console.log('💰 Redux BEFORE: setSummaryFinancialDashboardDateRange called with:', { 
         startDate, 
         endDate,
         startType: typeof startDate,
-        endType: typeof endDate 
+        endType: typeof endDate,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
       });
       
-      // Format dates to date-only strings (YYYY-MM-DD)
-      const formattedStartDate = formatDateOnly(startDate);
-      const formattedEndDate = formatDateOnly(endDate);
+      // ENHANCED: Use the improved formatting function for Summary Financial Dashboard
+      const formattedStartDate = formatDateOnlySummaryFinancial(startDate);
+      const formattedEndDate = formatDateOnlySummaryFinancial(endDate);
       
       console.log('💰 Redux AFTER formatting:', {
         formattedStartDate,
@@ -301,7 +409,8 @@ const dateRangeSlice = createSlice({
           stateAfterUpdate: {
             SummaryFinancialDashboardStart: state.SummaryFinancialDashboardStart,
             SummaryFinancialDashboardEnd: state.SummaryFinancialDashboardEnd
-          }
+          },
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
         });
       } else {
         console.error('❌ Redux: Invalid dates provided for Summary Financial Dashboard, not storing:', { 
@@ -314,7 +423,7 @@ const dateRangeSlice = createSlice({
     },
     
     setSummaryFinancialDashboardStartDate: (state, action) => {
-      const formattedDate = formatDateOnly(action.payload);
+      const formattedDate = formatDateOnlySummaryFinancial(action.payload);
       if (formattedDate) {
         state.SummaryFinancialDashboardStart = formattedDate;
         console.log('✅ Redux: Summary Financial Dashboard start date set:', formattedDate);
@@ -322,7 +431,7 @@ const dateRangeSlice = createSlice({
     },
     
     setSummaryFinancialDashboardEndDate: (state, action) => {
-      const formattedDate = formatDateOnly(action.payload);
+      const formattedDate = formatDateOnlySummaryFinancial(action.payload);
       if (formattedDate) {
         state.SummaryFinancialDashboardEnd = formattedDate;
         console.log('✅ Redux: Summary Financial Dashboard end date set:', formattedDate);
@@ -817,7 +926,7 @@ export const {
   clearAllDateRanges,
 } = dateRangeSlice.actions;
 
-// FIXED: Simple direct selectors that match the actual state structure
+// ENHANCED: Simple direct selectors with timezone safety
 export const selectAnalyticsDashboardStartDate = (state) => {
   const value = state.dateRange?.AnalyticsDashboardStart;
   console.log('🔍 selectAnalyticsDashboardStartDate:', { value, type: typeof value });
@@ -927,16 +1036,24 @@ export const selectHasReportsDateRange = (state) => {
   return hasRange;
 };
 
-// Summary Financial Dashboard Selectors with safe fallbacks
+// ENHANCED: Summary Financial Dashboard Selectors with timezone safety
 export const selectSummaryFinancialDashboardStartDate = (state) => {
   const value = state.dateRange?.SummaryFinancialDashboardStart;
-  console.log('🔍 selectSummaryFinancialDashboardStartDate:', { value, type: typeof value });
+  console.log('🔍 selectSummaryFinancialDashboardStartDate:', { 
+    value, 
+    type: typeof value,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
   return value;
 };
 
 export const selectSummaryFinancialDashboardEndDate = (state) => {
   const value = state.dateRange?.SummaryFinancialDashboardEnd;
-  console.log('🔍 selectSummaryFinancialDashboardEndDate:', { value, type: typeof value });
+  console.log('🔍 selectSummaryFinancialDashboardEndDate:', { 
+    value, 
+    type: typeof value,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
   return value;
 };
 
@@ -949,7 +1066,8 @@ export const selectSummaryFinancialDashboardDateRange = (state) => {
     startDate,
     endDate,
     startType: typeof startDate,
-    endType: typeof endDate
+    endType: typeof endDate,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
   });
   
   return {
@@ -968,7 +1086,8 @@ export const selectHasSummaryFinancialDashboardDateRange = (state) => {
     endDate,
     hasRange,
     startIsNull: startDate === null,
-    endIsNull: endDate === null
+    endIsNull: endDate === null,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
   });
   
   return hasRange;

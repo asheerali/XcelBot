@@ -1586,304 +1586,299 @@ const SummaryFinancialDashboard = () => {
   };
 
   // FIXED: Date Range Modal Component with timezone safety
-  const DateRangeModal = () => {
-    if (!showDateRangeModal) return null;
+  // REPLACE YOUR ENTIRE DateRangeModal COMPONENT WITH THIS FIXED VERSION
 
-    // CRITICAL FIX: Initialize with Redux date range if available, using timezone-neutral dates
-    let initialStartDate = new Date();
-    let initialEndDate = new Date();
+const DateRangeModal = () => {
+  if (!showDateRangeModal) return null;
 
-    if (
-      hasReduxDateRange &&
-      reduxDateRange.startDate &&
-      reduxDateRange.endDate
-    ) {
-      // CRITICAL FIX: Use timezone-neutral date creation for date picker initialization
-      initialStartDate = createTimezoneNeutralDate(reduxDateRange.startDate);
-      initialEndDate = createTimezoneNeutralDate(reduxDateRange.endDate);
+  // CRITICAL FIX: Initialize with timezone-neutral dates
+  let initialStartDate = new Date();
+  let initialEndDate = new Date();
 
-      if (initialStartDate && initialEndDate) {
-        console.log("💰 Modal initialized with Redux dates:", {
-          reduxStart: reduxDateRange.startDate,
-          reduxEnd: reduxDateRange.endDate,
-          convertedStart: initialStartDate,
-          convertedEnd: initialEndDate,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-        });
-      } else {
-        console.error("💰 Failed to initialize modal dates from Redux");
-        initialStartDate = new Date();
-        initialEndDate = new Date();
-      }
-    } else if (selectedDateRange.startDate && selectedDateRange.endDate) {
-      initialStartDate = selectedDateRange.startDate;
-      initialEndDate = selectedDateRange.endDate;
+  if (
+    hasReduxDateRange &&
+    reduxDateRange.startDate &&
+    reduxDateRange.endDate
+  ) {
+    // CRITICAL FIX: Use timezone-neutral date creation for modal initialization
+    initialStartDate = createTimezoneNeutralDate(reduxDateRange.startDate);
+    initialEndDate = createTimezoneNeutralDate(reduxDateRange.endDate);
+
+    if (initialStartDate && initialEndDate) {
+      console.log("💰 Modal initialized with Redux dates:", {
+        reduxStart: reduxDateRange.startDate,
+        reduxEnd: reduxDateRange.endDate,
+        convertedStart: initialStartDate,
+        convertedEnd: initialEndDate,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      });
+    } else {
+      console.error("💰 Failed to initialize modal dates from Redux");
+      initialStartDate = new Date();
+      initialEndDate = new Date();
+    }
+  } else if (selectedDateRange.startDate && selectedDateRange.endDate) {
+    initialStartDate = selectedDateRange.startDate;
+    initialEndDate = selectedDateRange.endDate;
+  }
+
+  const initialState = [
+    {
+      startDate: initialStartDate,
+      endDate: initialEndDate,
+      key: "selection",
+    },
+  ];
+
+  const [tempDateRange, setTempDateRange] = useState(initialState);
+
+  // FIXED: Better handling of DateRangeSelector callback
+  const handleDateRangeChange = (ranges) => {
+    console.log("📅 Date range changed - raw ranges:", ranges);
+
+    // Handle different callback formats from DateRangeSelector
+    if (ranges && ranges.selection) {
+      console.log("📅 Using ranges.selection format:", ranges.selection);
+      setTempDateRange([ranges.selection]);
+    } else if (ranges && Array.isArray(ranges) && ranges.length > 0) {
+      console.log("📅 Using array format:", ranges[0]);
+      setTempDateRange(ranges);
+    } else if (ranges && ranges.startDate && ranges.endDate) {
+      console.log("📅 Using direct object format:", ranges);
+      setTempDateRange([ranges]);
+    } else {
+      console.warn("⚠️ Unexpected date range format:", ranges);
+    }
+  };
+
+  const handleApplyRange = () => {
+    console.log("📅 Apply range clicked, tempDateRange:", tempDateRange);
+
+    if (!tempDateRange || tempDateRange.length === 0) {
+      console.error("❌ Invalid tempDateRange - empty or null:", tempDateRange);
+      alert("Please select a valid date range");
+      return;
     }
 
-    const initialState = [
-      {
-        startDate: initialStartDate,
-        endDate: initialEndDate,
-        key: "selection",
-      },
-    ];
+    const range = tempDateRange[0];
 
-    const [tempDateRange, setTempDateRange] = useState(initialState);
+    if (!range || typeof range !== "object") {
+      console.error("❌ Range is not a valid object:", range);
+      alert("Please select a valid date range");
+      return;
+    }
 
-    // FIXED: Better handling of DateRangeSelector callback
-    const handleDateRangeChange = (ranges) => {
-      console.log("📅 Date range changed - raw ranges:", ranges);
+    if (!range.startDate || !range.endDate) {
+      console.error("❌ Range missing startDate or endDate:", range);
+      alert("Please select both start and end dates");
+      return;
+    }
 
-      // Handle different callback formats from DateRangeSelector
-      if (ranges && ranges.selection) {
-        // Format: { selection: { startDate, endDate, key } }
-        console.log("📅 Using ranges.selection format:", ranges.selection);
-        setTempDateRange([ranges.selection]);
-      } else if (ranges && Array.isArray(ranges) && ranges.length > 0) {
-        // Format: [{ startDate, endDate, key }]
-        console.log("📅 Using array format:", ranges[0]);
-        setTempDateRange(ranges);
-      } else if (ranges && ranges.startDate && ranges.endDate) {
-        // Format: { startDate, endDate, key }
-        console.log("📅 Using direct object format:", ranges);
-        setTempDateRange([ranges]);
-      } else {
-        console.warn("⚠️ Unexpected date range format:", ranges);
-      }
-    };
+    console.log("📅 Applying range:", range);
 
-    const handleApplyRange = () => {
-      console.log("📅 Apply range clicked, tempDateRange:", tempDateRange);
+    try {
+      // CRITICAL FIX: Use timezone-safe date formatting
+      const startDateStr = formatDateToYYYYMMDD(range.startDate);
+      const endDateStr = formatDateToYYYYMMDD(range.endDate);
 
-      // FIXED: Better error handling and validation
-      if (!tempDateRange || tempDateRange.length === 0) {
-        console.error(
-          "❌ Invalid tempDateRange - empty or null:",
-          tempDateRange
-        );
-        alert("Please select a valid date range");
-        return;
-      }
+      console.log("💰 Modal applying formatted dates:", {
+        startDateStr,
+        endDateStr,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      });
 
-      const range = tempDateRange[0];
-
-      // FIXED: Validate that range exists and has required properties
-      if (!range || typeof range !== "object") {
-        console.error("❌ Range is not a valid object:", range);
-        alert("Please select a valid date range");
-        return;
-      }
-
-      if (!range.startDate || !range.endDate) {
-        console.error("❌ Range missing startDate or endDate:", range);
-        alert("Please select both start and end dates");
-        return;
-      }
-
-      console.log("📅 Applying range:", range);
-
-      try {
-        // CRITICAL FIX: Use timezone-safe date formatting
-        const startDateStr = formatDateToYYYYMMDD(range.startDate);
-        const endDateStr = formatDateToYYYYMMDD(range.endDate);
-
-        console.log("💰 Modal applying formatted dates:", {
-          startDateStr,
-          endDateStr,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      if (startDateStr && endDateStr) {
+        handleDateRangeSelect({
+          startDate: range.startDate,
+          endDate: range.endDate,
+          startDateStr: startDateStr,
+          endDateStr: endDateStr,
         });
-
-        if (startDateStr && endDateStr) {
-          handleDateRangeSelect({
-            startDate: range.startDate,
-            endDate: range.endDate,
-            startDateStr: startDateStr,
-            endDateStr: endDateStr,
-          });
-        } else {
-          throw new Error("Failed to format dates");
-        }
-      } catch (error) {
-        console.error("❌ Error applying date range:", error);
-        alert("Error applying date range. Please try again.");
+      } else {
+        throw new Error("Failed to format dates");
       }
-    };
+    } catch (error) {
+      console.error("❌ Error applying date range:", error);
+      alert("Error applying date range. Please try again.");
+    }
+  };
 
-    const handleCancelRange = () => {
-      setShowDateRangeModal(false);
-    };
-    return (
+  const handleCancelRange = () => {
+    setShowDateRangeModal(false);
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 2000,
+        padding: "20px",
+      }}
+      onClick={handleCancelRange}
+    >
       <div
         style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.5)",
+          backgroundColor: "white",
+          borderRadius: "12px",
+          width: "85%",
+          maxWidth: "1000px",
+          maxHeight: "90vh",
+          minHeight: "500px",
+          boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2)",
           display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 2000,
-          padding: "20px",
+          flexDirection: "column",
+          overflow: "hidden",
         }}
-        onClick={handleCancelRange}
+        onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
         <div
           style={{
-            backgroundColor: "white",
-            borderRadius: "12px",
-            width: "85%",
-            maxWidth: "1000px",
-            maxHeight: "90vh",
-            minHeight: "500px",
-            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2)",
             display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "20px 24px",
+            borderBottom: "1px solid #e0e0e0",
+            flexShrink: 0,
           }}
-          onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div
+          <h2
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding: "20px 24px",
-              borderBottom: "1px solid #e0e0e0",
-              flexShrink: 0,
+              margin: 0,
+              fontSize: "22px",
+              fontWeight: "600",
+              color: "#333",
             }}
           >
-            <h2
-              style={{
-                margin: 0,
-                fontSize: "22px",
-                fontWeight: "600",
-                color: "#333",
-              }}
-            >
-              📅 Select Date Range
-            </h2>
-            <button
-              onClick={handleCancelRange}
-              style={{
-                background: "none",
-                border: "none",
-                fontSize: "24px",
-                cursor: "pointer",
-                color: "#666",
-                padding: "0",
-                width: "32px",
-                height: "32px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "50%",
-                transition: "background-color 0.2s",
-              }}
-              onMouseOver={(e) => {
-                e.target.style.backgroundColor = "#f5f5f5";
-              }}
-              onMouseOut={(e) => {
-                e.target.style.backgroundColor = "transparent";
-              }}
-            >
-              ×
-            </button>
-          </div>
+            📅 Select Date Range
+          </h2>
+          <button
+            onClick={handleCancelRange}
+            style={{
+              background: "none",
+              border: "none",
+              fontSize: "24px",
+              cursor: "pointer",
+              color: "#666",
+              padding: "0",
+              width: "32px",
+              height: "32px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              borderRadius: "50%",
+              transition: "background-color 0.2s",
+            }}
+            onMouseOver={(e) => {
+              e.target.style.backgroundColor = "#f5f5f5";
+            }}
+            onMouseOut={(e) => {
+              e.target.style.backgroundColor = "transparent";
+            }}
+          >
+            ×
+          </button>
+        </div>
 
-          {/* Date Range Selector */}
+        {/* Date Range Selector */}
+        <div
+          style={{
+            flex: 1,
+            overflow: "hidden",
+            padding: "0",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "350px",
+          }}
+        >
           <div
             style={{
-              flex: 1,
-              overflow: "hidden",
-              padding: "0",
+              width: "100%",
+              height: "100%",
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              minHeight: "350px",
             }}
           >
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              <DateRangeSelector
-                initialState={tempDateRange}
-                onSelect={handleDateRangeChange}
-              />
-            </div>
-          </div>
-
-          {/* Footer with buttons */}
-          <div
-            style={{
-              padding: "20px 24px",
-              borderTop: "1px solid #e0e0e0",
-              display: "flex",
-              gap: "12px",
-              justifyContent: "flex-end",
-              backgroundColor: "#f8f9fa",
-              flexShrink: 0,
-            }}
-          >
-            <button
-              onClick={handleCancelRange}
-              style={{
-                backgroundColor: "white",
-                color: "#666",
-                border: "1px solid #e0e0e0",
-                padding: "10px 20px",
-                borderRadius: "6px",
-                fontSize: "14px",
-                fontWeight: "500",
-                cursor: "pointer",
-                transition: "all 0.2s",
-                minWidth: "90px",
-              }}
-              onMouseOver={(e) => {
-                e.target.style.backgroundColor = "#f5f5f5";
-              }}
-              onMouseOut={(e) => {
-                e.target.style.backgroundColor = "white";
-              }}
-            >
-              CANCEL
-            </button>
-            <button
-              onClick={handleApplyRange}
-              style={{
-                backgroundColor: "#1976d2",
-                color: "white",
-                border: "none",
-                padding: "10px 20px",
-                borderRadius: "6px",
-                fontSize: "14px",
-                fontWeight: "500",
-                cursor: "pointer",
-                transition: "all 0.2s",
-                minWidth: "110px",
-              }}
-              onMouseOver={(e) => {
-                e.target.style.backgroundColor = "#1565c0";
-              }}
-              onMouseOut={(e) => {
-                e.target.style.backgroundColor = "#1976d2";
-              }}
-            >
-              APPLY RANGE
-            </button>
+            <DateRangeSelector
+              initialState={tempDateRange}
+              onSelect={handleDateRangeChange}
+            />
           </div>
         </div>
+
+        {/* Footer with buttons */}
+        <div
+          style={{
+            padding: "20px 24px",
+            borderTop: "1px solid #e0e0e0",
+            display: "flex",
+            gap: "12px",
+            justifyContent: "flex-end",
+            backgroundColor: "#f8f9fa",
+            flexShrink: 0,
+          }}
+        >
+          <button
+            onClick={handleCancelRange}
+            style={{
+              backgroundColor: "white",
+              color: "#666",
+              border: "1px solid #e0e0e0",
+              padding: "10px 20px",
+              borderRadius: "6px",
+              fontSize: "14px",
+              fontWeight: "500",
+              cursor: "pointer",
+              transition: "all 0.2s",
+              minWidth: "90px",
+            }}
+            onMouseOver={(e) => {
+              e.target.style.backgroundColor = "#f5f5f5";
+            }}
+            onMouseOut={(e) => {
+              e.target.style.backgroundColor = "white";
+            }}
+          >
+            CANCEL
+          </button>
+          <button
+            onClick={handleApplyRange}
+            style={{
+              backgroundColor: "#1976d2",
+              color: "white",
+              border: "none",
+              padding: "10px 20px",
+              borderRadius: "6px",
+              fontSize: "14px",
+              fontWeight: "500",
+              cursor: "pointer",
+              transition: "all 0.2s",
+              minWidth: "110px",
+            }}
+            onMouseOver={(e) => {
+              e.target.style.backgroundColor = "#1565c0";
+            }}
+            onMouseOut={(e) => {
+              e.target.style.backgroundColor = "#1976d2";
+            }}
+          >
+            APPLY RANGE
+          </button>
+        </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   const StatCard = ({ icon, title, value, subtitle, color }) => (
     <div
