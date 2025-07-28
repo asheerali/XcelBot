@@ -114,6 +114,9 @@ const FileManagementPage = () => {
   const theme = useTheme();
   const [activeTab, setActiveTab] = useState(0);
   const [files, setFiles] = useState([]);
+  const [sortBy, setSortBy] = useState("file_timestamp");
+  const [sortOrder, setSortOrder] = useState("desc");
+
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState({
@@ -301,110 +304,122 @@ const FileManagementPage = () => {
   const handleRefresh = () => {
     fetchData();
   };
+  // const sortedFiles = [...files].sort((a, b) => {
+  //   const valueA = a[sortBy]?.toString().toLowerCase() || "";
+  //   const valueB = b[sortBy]?.toString().toLowerCase() || "";
+
+  //   if (sortOrder === "asc") return valueA.localeCompare(valueB);
+  //   return valueB.localeCompare(valueA);
+  // });
 
   const renderFileColumns = () => {
-    if (currentDataType.key === "salespmix") {
-      return (
-        <>
-          <TableCell
-            sx={{ fontWeight: 600, color: theme.palette.text.secondary }}
+    const handleSort = (field) => {
+      if (sortBy === field) {
+        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      } else {
+        setSortBy(field);
+        setSortOrder("asc");
+      }
+    };
+
+    const renderHeader = (label, field) => (
+      <TableCell
+        sx={{
+          fontWeight: 600,
+          color: theme.palette.text.secondary,
+          cursor: "pointer",
+          userSelect: "none",
+        }}
+        onClick={() => handleSort(field)}
+      >
+        {label}{" "}
+        <span style={{ fontSize: "0.75rem", marginLeft: 4 }}>
+          <span
+            style={{
+              opacity: sortBy === field && sortOrder === "asc" ? 1 : 0.3,
+            }}
           >
-            Records
-          </TableCell>
-          <TableCell
-            sx={{ fontWeight: 600, color: theme.palette.text.secondary }}
+            ▲
+          </span>
+          <span
+            style={{
+              opacity: sortBy === field && sortOrder === "desc" ? 1 : 0.3,
+              marginLeft: 2,
+            }}
           >
-            Date Range
-          </TableCell>
-        </>
-      );
-    } else {
-      return (
-        <>
-          <TableCell
-            sx={{ fontWeight: 600, color: theme.palette.text.secondary }}
-          >
-            Records
-          </TableCell>
-          <TableCell
-            sx={{ fontWeight: 600, color: theme.palette.text.secondary }}
-          >
-            Year Range
-          </TableCell>
-        </>
-      );
-    }
+            ▼
+          </span>
+        </span>
+      </TableCell>
+    );
+
+    return (
+      <>
+        {renderHeader("Company", "company_name")}
+        {renderHeader("Uploaded At", "file_timestamp")}
+        {renderHeader("Records", "record_count")}
+        {renderHeader(
+          currentDataType.key === "salespmix" ? "Date Range" : "Year Range",
+          currentDataType.key === "salespmix"
+            ? "earliest_date"
+            : "earliest_year"
+        )}
+      </>
+    );
   };
 
   const renderFileData = (file) => {
-    if (currentDataType.key === "salespmix") {
-      return (
-        <>
-          <TableCell>
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              <StorageIcon
-                sx={{
-                  mr: 1,
-                  color: theme.palette.text.secondary,
-                  fontSize: 16,
-                }}
-              />
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {file.record_count?.toLocaleString() || "N/A"}
-              </Typography>
-            </Box>
-          </TableCell>
-          <TableCell>
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              <CalendarTodayIcon
-                sx={{
-                  mr: 1,
-                  color: theme.palette.text.secondary,
-                  fontSize: 16,
-                }}
-              />
-              <Typography variant="body2">
-                {formatDate(file.earliest_date)} -{" "}
-                {formatDate(file.latest_date)}
-              </Typography>
-            </Box>
-          </TableCell>
-        </>
-      );
-    } else {
-      return (
-        <>
-          <TableCell>
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              <StorageIcon
-                sx={{
-                  mr: 1,
-                  color: theme.palette.text.secondary,
-                  fontSize: 16,
-                }}
-              />
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {file.record_count?.toLocaleString() || "N/A"}
-              </Typography>
-            </Box>
-          </TableCell>
-          <TableCell>
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              <CalendarTodayIcon
-                sx={{
-                  mr: 1,
-                  color: theme.palette.text.secondary,
-                  fontSize: 16,
-                }}
-              />
-              <Typography variant="body2">
-                {file.earliest_year || "N/A"} - {file.latest_year || "N/A"}
-              </Typography>
-            </Box>
-          </TableCell>
-        </>
-      );
-    }
+    return (
+      <>
+        <TableCell>
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            {file.company_name || "N/A"}
+          </Typography>
+        </TableCell>
+
+        <TableCell>
+          <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
+            {file.file_timestamp || "N/A"}
+          </Typography>
+        </TableCell>
+
+        <TableCell>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <StorageIcon
+              sx={{
+                mr: 1,
+                color: theme.palette.text.secondary,
+                fontSize: 16,
+              }}
+            />
+            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+              {file.record_count?.toLocaleString() || "N/A"}
+            </Typography>
+          </Box>
+        </TableCell>
+
+        <TableCell>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <CalendarTodayIcon
+              sx={{
+                mr: 1,
+                color: theme.palette.text.secondary,
+                fontSize: 16,
+              }}
+            />
+            <Typography variant="body2">
+              {currentDataType.key === "salespmix"
+                ? `${formatDate(file.earliest_date)} - ${formatDate(
+                    file.latest_date
+                  )}`
+                : `${file.earliest_year || "N/A"} - ${
+                    file.latest_year || "N/A"
+                  }`}
+            </Typography>
+          </Box>
+        </TableCell>
+      </>
+    );
   };
 
   if (loading && files.length === 0 && locations.length === 0) {
@@ -423,6 +438,23 @@ const FileManagementPage = () => {
       </Box>
     );
   }
+  const sortedFiles = [...files].sort((a, b) => {
+    let valA = a[sortBy];
+    let valB = b[sortBy];
+
+    if (sortBy === "file_timestamp") {
+      valA = new Date(valA);
+      valB = new Date(valB);
+      return sortOrder === "asc" ? valA - valB : valB - valA;
+    }
+
+    if (typeof valA === "string") valA = valA.toLowerCase();
+    if (typeof valB === "string") valB = valB.toLowerCase();
+
+    if (valA < valB) return sortOrder === "asc" ? -1 : 1;
+    if (valA > valB) return sortOrder === "asc" ? 1 : -1;
+    return 0;
+  });
 
   return (
     <Box
@@ -793,7 +825,8 @@ const FileManagementPage = () => {
                       </TableHead>
                       <TableBody>
                         {files.length > 0 ? (
-                          files.map((file, index) => (
+                          // files.map((file, index) => (
+                          sortedFiles.map((file, index) => (
                             <TableRow
                               key={index}
                               hover

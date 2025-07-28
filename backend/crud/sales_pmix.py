@@ -83,6 +83,10 @@ from schemas.sales_pmix import SalesPMixCreate
 import pandas as pd
 from sqlalchemy import func, and_, or_
 from typing import Optional, List, Dict, Any
+from models.companies import Company
+from utils.parse_datetime import parse_datetime_from_filename
+    
+    
 # ============================================================================
 
 
@@ -303,32 +307,66 @@ def get_sales_pmix_summary(
         }
     }
 
+# def get_uploaded_files_list(db: Session, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
+#     """Get list of all uploaded files with record counts"""
+#     query = db.query(
+#         SalesPMix.file_name,
+#         func.count(SalesPMix.id).label('record_count'),
+#         func.min(SalesPMix.Sent_Date).label('earliest_date'),
+#         func.max(SalesPMix.Sent_Date).label('latest_date'),
+#         func.sum(SalesPMix.Net_Price).label('total_sales')
+#     ).filter(SalesPMix.file_name.isnot(None))
+    
+#     if company_id:
+#         query = query.filter(SalesPMix.company_id == company_id)
+    
+#     query = query.group_by(SalesPMix.file_name).order_by(SalesPMix.file_name)
+    
+#     results = []
+#     for row in query.all():
+#         results.append({
+#             "file_name": row.file_name,
+#             "record_count": row.record_count,
+#             "earliest_date": row.earliest_date.isoformat() if row.earliest_date else None,
+#             "latest_date": row.latest_date.isoformat() if row.latest_date else None,
+#             "total_sales": float(row.total_sales or 0)
+#         })
+    
+#     return results
+
+
 def get_uploaded_files_list(db: Session, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
-    """Get list of all uploaded files with record counts"""
+    """Get list of all uploaded files with record counts and company name"""
     query = db.query(
         SalesPMix.file_name,
         func.count(SalesPMix.id).label('record_count'),
         func.min(SalesPMix.Sent_Date).label('earliest_date'),
         func.max(SalesPMix.Sent_Date).label('latest_date'),
-        func.sum(SalesPMix.Net_Price).label('total_sales')
-    ).filter(SalesPMix.file_name.isnot(None))
-    
+        func.sum(SalesPMix.Net_Price).label('total_sales'),
+        Company.name.label('company_name')
+    ).join(Company, SalesPMix.company_id == Company.id) \
+     .filter(SalesPMix.file_name.isnot(None))
+
     if company_id:
         query = query.filter(SalesPMix.company_id == company_id)
-    
-    query = query.group_by(SalesPMix.file_name).order_by(SalesPMix.file_name)
-    
+
+    query = query.group_by(SalesPMix.file_name, Company.name).order_by(SalesPMix.file_name)
+
     results = []
     for row in query.all():
+        file_timestamp = parse_datetime_from_filename(row.file_name)
         results.append({
             "file_name": row.file_name,
+            "file_timestamp": file_timestamp,  # formatted as MM-DD-YYYY - hh:mm AM/PM
+            "company_name": row.company_name,
             "record_count": row.record_count,
             "earliest_date": row.earliest_date.isoformat() if row.earliest_date else None,
             "latest_date": row.latest_date.isoformat() if row.latest_date else None,
             "total_sales": float(row.total_sales or 0)
         })
-    
+
     return results
+
 
 def get_locations_list(db: Session, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
     """Get list of all locations with record counts"""
