@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -191,7 +191,6 @@ const cleanAndParseValue = (value: any): number => {
   const parsed = parseFloat(cleanedValue);
   return isNaN(parsed) ? 0 : parsed;
 };
-
 /**
  * Specific formatter for SalesDashboard component data
  */
@@ -628,7 +627,6 @@ const enhanceDataWithFormatting = (data: any): any => {
   console.log('📊 Enhanced data with TABLE11 SUPPORT and ALL FIXES APPLIED:', enhancedData);
   return enhancedData;
 };
-
 // TabPanel Component
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -952,11 +950,40 @@ export default function ProductMixDashboard() {
   // Convert to single values for dropdowns (using new API structure)
   const selectedCompany = selectedCompanies.length > 0 ? selectedCompanies[0] : '';
   const selectedLocation = selectedLocations.length > 0 ? selectedLocations[0] : '';
+  // FIXED: Improved data selection logic - prefers filtered data over original data
+  const currentProductMixData = useMemo(() => {
+    console.log('🔍 Selecting ProductMix data for location:', currentProductMixLocation);
+    console.log('📁 Available files:', productMixFiles.map(f => ({
+      location: f.location,
+      hasData: !!f.data,
+      isFiltered: f.data?.filterApplied,
+      timestamp: f.data?.filterTimestamp,
+      company_id: f.company_id
+    })));
 
-  // Find current data for the selected location
-  const currentProductMixData = productMixFiles.find(
-    (f) => f.location === currentProductMixLocation
-  )?.data;
+    // Get all files for current location
+    const locationFiles = productMixFiles.filter(f => f.location === currentProductMixLocation);
+    
+    if (locationFiles.length === 0) {
+      console.log('❌ No files found for location:', currentProductMixLocation);
+      return null;
+    }
+
+    // Prefer filtered data over original data
+    const filteredFile = locationFiles.find(f => f.data?.filterApplied);
+    const originalFile = locationFiles.find(f => !f.data?.filterApplied);
+    
+    const selectedData = filteredFile?.data || originalFile?.data;
+    
+    console.log('✅ Selected data:', {
+      source: filteredFile ? 'filtered' : 'original',
+      hasData: !!selectedData,
+      filterTimestamp: selectedData?.filterTimestamp,
+      tablesAvailable: selectedData ? Object.keys(selectedData).filter(k => k.startsWith('table')) : []
+    });
+
+    return selectedData;
+  }, [productMixFiles, currentProductMixLocation]);
 
   // Find current file info
   const currentProductMixFile = productMixFiles.find(
@@ -980,6 +1007,9 @@ export default function ProductMixDashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [filterError, setFilterError] = useState<string>("");
   const [dataUpdated, setDataUpdated] = useState<boolean>(false);
+  
+  // ADDED: Data version tracking for force re-renders
+  const [dataVersion, setDataVersion] = useState(0);
 
   // Auto-filtering state
   const [isAutoFiltering, setIsAutoFiltering] = useState(false);
@@ -1088,6 +1118,55 @@ export default function ProductMixDashboard() {
   const [selectedMenuItems, setSelectedMenuItems] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [hasInitializedLocations, setHasInitializedLocations] = useState(false);
+  // UPDATED: Apply formatting to current data before rendering with useMemo and data version
+  const formattedCurrentData = useMemo(() => {
+    if (!currentProductMixData) {
+      console.log('⚠️ No current data to format');
+      return null;
+    }
+
+    console.log('🎨 Formatting current ProductMix data:', {
+      hasFilterApplied: currentProductMixData.filterApplied,
+      timestamp: currentProductMixData.filterTimestamp,
+      location: currentProductMixLocation
+    });
+
+    const formatted = enhanceDataWithFormatting(currentProductMixData);
+    
+    console.log('✅ Data formatted successfully:', {
+      hasTable1: !!formatted?.table1,
+      hasTable11: !!formatted?.table11,
+      hasTable12: !!formatted?.table12
+    });
+
+    return formatted;
+  }, [currentProductMixData, currentProductMixLocation, dataVersion]);
+
+  // UPDATED: Prepare data specifically for SalesDashboard component with useMemo and data version
+  const salesDashboardData = useMemo(() => {
+    const prepared = prepareSalesDashboardData(formattedCurrentData);
+    console.log('📊 Sales dashboard data prepared:', {
+      hasData: !!prepared,
+      timestamp: prepared?.filterTimestamp
+    });
+    return prepared;
+  }, [formattedCurrentData, dataVersion]);
+
+  // ADDED: Data validation before rendering
+  const isDataReady = useMemo(() => {
+    const hasValidData = !!currentProductMixData;
+    const hasRequiredTables = !!(currentProductMixData?.table1 || currentProductMixData?.table11);
+    
+    console.log('✅ ProductMix Data Readiness Check:', {
+      hasValidData,
+      hasRequiredTables,
+      filterApplied: currentProductMixData?.filterApplied,
+      location: currentProductMixLocation,
+      dataVersion
+    });
+    
+    return hasValidData && hasRequiredTables;
+  }, [currentProductMixData, currentProductMixLocation, dataVersion]);
 
   // Fetch company-locations data on component mount
   useEffect(() => {
@@ -1142,6 +1221,25 @@ export default function ProductMixDashboard() {
     setDataUpdated(false);
   }, [selectedCompany, selectedLocations, localStartDate, localEndDate, selectedServers, selectedCategories, selectedMenuItems]);
 
+  // ADDED: Data monitoring useEffect
+  useEffect(() => {
+    console.log('🔄 ProductMix Data Change Detected:', {
+      location: currentProductMixLocation,
+      hasData: !!currentProductMixData,
+      isFiltered: currentProductMixData?.filterApplied,
+      timestamp: currentProductMixData?.filterTimestamp,
+      dataVersion,
+      reduxFilesCount: productMixFiles.length,
+      availableTables: currentProductMixData ? Object.keys(currentProductMixData).filter(k => k.startsWith('table')) : []
+    });
+
+    // If we have filtered data, ensure dataUpdated is true
+    if (currentProductMixData?.filterApplied && !dataUpdated) {
+      console.log('📢 Setting dataUpdated to true - filtered data detected');
+      setDataUpdated(true);
+    }
+  }, [currentProductMixData, currentProductMixLocation, dataVersion, productMixFiles.length, dataUpdated]);
+
   // Check if filters have minimum requirements to trigger auto-filter
   const hasMinimumFilters = useCallback((company: string, locations: string[]) => {
     return company && locations.length > 0; // Company and at least one location required
@@ -1181,7 +1279,6 @@ export default function ProductMixDashboard() {
     
     return companyChanged || locationsChanged || startDateChanged || endDateChanged || categoriesChanged || serversChanged || menuItemsChanged;
   }, []);
-
   // Handle company selection change (updated for new API structure)
   const handleCompanyChange = (event: SelectChangeEvent) => {
     const companyId = event.target.value;
@@ -1346,7 +1443,6 @@ export default function ProductMixDashboard() {
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
-
   // Auto-filter function (converted from handleApplyFilters)
   const triggerAutoFilter = useCallback(async () => {
     const currentCompany = selectedCompany;
@@ -1486,8 +1582,17 @@ export default function ProductMixDashboard() {
           dateRangeType: (currentStartDate && currentEndDate) ? "Custom Date Range" : "",
         }));
 
+        // ADDED: Update data version to force re-renders
+        setDataVersion(prev => prev + 1);
         setDataUpdated(true);
+
+        // Force re-selection of current location to ensure UI updates
+        if (effectiveSelectedLocations.length > 0) {
+          dispatch(selectProductMixLocation(effectiveSelectedLocations[0]));
+        }
+
         console.log("✅ Product Mix auto-filters applied successfully for company:", selectedCompanyName, "locations:", effectiveSelectedLocations);
+        console.log("✅ Data version updated, UI should re-render");
 
         // Update previous filters reference
         previousFiltersRef.current = {
@@ -1586,7 +1691,6 @@ export default function ProductMixDashboard() {
       }
     };
   }, [selectedCompany, displaySelectedLocations, localSelectedLocations, localStartDate, localEndDate, selectedCategories, selectedServers, selectedMenuItems, debouncedAutoFilter, isInitialized]);
-
   // Calculate grid sizing based on mobile/tablet status
   const getGridSizes = () => {
     if (isMobile) {
@@ -1618,12 +1722,6 @@ export default function ProductMixDashboard() {
       document.head.removeChild(styleElement);
     };
   }, []);
-
-  // Apply formatting to current data before rendering
-  const formattedCurrentData = enhanceDataWithFormatting(currentProductMixData);
-  
-  // Prepare data specifically for SalesDashboard component
-  const salesDashboardData = prepareSalesDashboardData(formattedCurrentData);
 
   // Show Redux date range status in filters section
   const renderDateRangeFilter = () => (
@@ -1683,7 +1781,6 @@ export default function ProductMixDashboard() {
       </Box>
     </Grid>
   );
-
   return (
     <Box sx={{ 
       p: { xs: 1, sm: 2, md: 3 },
@@ -1846,7 +1943,7 @@ export default function ProductMixDashboard() {
       )}
 
       {/* Alert message when no data is available */}
-      {!currentProductMixData && (
+      {!isDataReady && (
         <Alert severity="info" sx={{ mb: 3, width: "100%" }}>
           No Product Mix data available. Please upload files with "Product Mix"
           dashboard type from the Excel Upload page.
@@ -1885,7 +1982,6 @@ export default function ProductMixDashboard() {
           </Typography>
         </Alert>
       )}
-
       {/* Filters Section with Redux Date Range Integration */}
       <Card elevation={3} sx={{ 
         mb: 3, 
@@ -2124,9 +2220,8 @@ export default function ProductMixDashboard() {
           )}
         </CardContent>
       </Card>
-
-      {/* Only render dashboard content if data is available */}
-      {currentProductMixData && (
+      {/* Only render dashboard content if data is ready */}
+      {isDataReady ? (
         <>
           {/* Tabs */}
           <Card
@@ -2181,9 +2276,9 @@ export default function ProductMixDashboard() {
                   </Box>
                 ) : (
                   <Box sx={{ width: "100%" }}>
-                    {/* Sales Dashboard Component with Redux date range support */}
+                    {/* Sales Dashboard Component with forced re-render */}
                     <MenuAnalysisDashboard 
-                      key={`performance-${currentProductMixLocation}-${salesDashboardData?.filterTimestamp || 'original'}-${hasReduxDateRange ? 'redux' : 'local'}`}
+                      key={`performance-${dataVersion}-${currentProductMixLocation}-${salesDashboardData?.filterTimestamp || 'original'}`}
                       productMixData={salesDashboardData} 
                     />
                     
@@ -2192,7 +2287,7 @@ export default function ProductMixDashboard() {
                       <Divider sx={{ borderColor: '#e0e0e0', borderWidth: 1 }} />
                     </Box>
                     
-                    {/* Menu Items Table Component with Redux date range support */}
+                    {/* Menu Items Table Component with forced re-render */}
                     <Box sx={{ 
                       mt: 4, 
                       width: "100%",
@@ -2219,7 +2314,7 @@ export default function ProductMixDashboard() {
                         )}
                       </Typography>
                       <MenuItemsTable 
-                        key={`menu-items-${currentProductMixLocation}-${formattedCurrentData?.filterTimestamp || 'original'}-${hasReduxDateRange ? 'redux' : 'local'}`}
+                        key={`menu-items-${dataVersion}-${currentProductMixLocation}-${formattedCurrentData?.filterTimestamp || 'original'}`}
                         table12={formattedCurrentData?.table12 || []} 
                       />
                     </Box>
@@ -2244,7 +2339,7 @@ export default function ProductMixDashboard() {
                   </Box>
                 ) : (
                   <MenuAnalysisDashboardtwo
-                    key={`menu-analysis-${currentProductMixLocation}-${formattedCurrentData?.filterTimestamp || 'original'}-${hasReduxDateRange ? 'redux' : 'local'}`}
+                    key={`menu-analysis-${dataVersion}-${currentProductMixLocation}-${formattedCurrentData?.filterTimestamp || 'original'}`}
                     productMixData={formattedCurrentData}
                   />
                 )}
@@ -2252,6 +2347,26 @@ export default function ProductMixDashboard() {
             </TabPanel>
           </Card>
         </>
+      ) : (
+        <Card sx={{ borderRadius: 2, mb: 3, p: 3, width: "100%" }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            {isAutoFiltering ? (
+              <>
+                <CircularProgress size={40} />
+                <Typography>Processing filters...</Typography>
+              </>
+            ) : (
+              <>
+                <Typography variant="h6">No Data Available</Typography>
+                <Typography color="text.secondary">
+                  {!selectedCompany 
+                    ? "Please select a company and location above"
+                    : "Please apply filters to see data"}
+                </Typography>
+              </>
+            )}
+          </Box>
+        </Card>
       )}
 
       {/* Show message if no data available */}
