@@ -1,4 +1,4 @@
-// ExcelImport.tsx - OPTIMIZED Version with Single API Call Logic
+// ExcelImport.tsx - OPTIMIZED Version with Timezone-Safe Date Handling
 
 import * as React from 'react';
 import axios from 'axios';
@@ -65,7 +65,7 @@ import {
   selectSelectedLocations 
 } from "../store/slices/masterFileSlice";
 
-// Date range Redux integration
+// ENHANCED: Date range Redux integration with timezone safety
 import {
   setSalesSplitDashboardDateRange,
   setSalesSplitDashboardStartDate,
@@ -91,6 +91,159 @@ interface Location {
   location_id: number;
   location_name: string;
 }
+// ✅ TIMEZONE-SAFE: Replace the formatDateForAPI function
+const formatDateForAPI = (dateString: string): string | null => {
+  if (!dateString) return null;
+  
+  console.log('📅 formatDateForAPI called with:', {
+    dateString,
+    type: typeof dateString,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
+  
+  try {
+    // TIMEZONE FIX: Handle string parsing without Date object conversion when possible
+    
+    // If already in YYYY-MM-DD format, return as-is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      console.log('✅ formatDateForAPI: Already in YYYY-MM-DD format:', dateString);
+      return dateString;
+    }
+    
+    // MM/DD/YYYY format (US) - direct string parsing to avoid timezone issues
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateString)) {
+      const [month, day, year] = dateString.split('/').map(Number);
+      const formatted = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      console.log('✅ formatDateForAPI MM/DD/YYYY direct conversion:', {
+        input: dateString,
+        parsed: { month, day, year },
+        formatted: formatted
+      });
+      return formatted;
+    }
+    
+    // DD.MM.YYYY format (German) - direct string parsing
+    if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(dateString)) {
+      const [day, month, year] = dateString.split('.').map(Number);
+      const formatted = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      console.log('✅ formatDateForAPI DD.MM.YYYY direct conversion:', {
+        input: dateString,
+        parsed: { day, month, year },
+        formatted: formatted
+      });
+      return formatted;
+    }
+    
+    // DD-MM-YYYY format (German) - direct string parsing
+    if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(dateString)) {
+      const [day, month, year] = dateString.split('-').map(Number);
+      const formatted = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      console.log('✅ formatDateForAPI DD-MM-YYYY direct conversion:', {
+        input: dateString,
+        parsed: { day, month, year },
+        formatted: formatted
+      });
+      return formatted;
+    }
+    
+    // For ISO strings, extract date part only
+    if (dateString.includes('T')) {
+      const datePart = dateString.split('T')[0];
+      if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+        console.log('✅ formatDateForAPI: Extracted date from ISO string:', datePart);
+        return datePart;
+      }
+    }
+    
+    // Last resort: try Date parsing but use timezone-safe methods
+    try {
+      const date = new Date(dateString);
+      if (!isNaN(date.getTime()) && date.getFullYear() > 1970) {
+        // Use local timezone methods to avoid UTC conversion
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const formatted = `${year}-${month}-${day}`;
+        console.log('✅ formatDateForAPI: Date object conversion (timezone-safe):', {
+          input: dateString,
+          dateObj: date.toString(),
+          formatted: formatted
+        });
+        return formatted;
+      }
+    } catch (parseError) {
+      console.warn('⚠️ formatDateForAPI: Date parsing failed:', parseError);
+    }
+    
+    console.warn('⚠️ formatDateForAPI: Unrecognized date format:', dateString);
+    return null;
+  } catch (error) {
+    console.error('❌ Error in formatDateForAPI:', error, 'Input:', dateString);
+    return null;
+  }
+};
+
+
+const formatDateForInput = (dateString: string): string => {
+  if (!dateString) return '';
+  
+  console.log('📅 formatDateForInput called with:', {
+    dateString,
+    type: typeof dateString,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
+  
+  try {
+    // If already in YYYY-MM-DD format for input, return as-is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      console.log('✅ formatDateForInput: Already in YYYY-MM-DD format:', dateString);
+      return dateString;
+    }
+    
+    // Handle MM/DD/YYYY format - convert to YYYY-MM-DD for HTML date input
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateString)) {
+      const [month, day, year] = dateString.split('/').map(Number);
+      const formatted = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      console.log('✅ formatDateForInput MM/DD/YYYY conversion:', {
+        input: dateString,
+        parsed: { month, day, year },
+        formatted: formatted
+      });
+      return formatted;
+    }
+    
+    // Handle DD.MM.YYYY format - convert to YYYY-MM-DD for HTML date input
+    if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(dateString)) {
+      const [day, month, year] = dateString.split('.').map(Number);
+      const formatted = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      console.log('✅ formatDateForInput DD.MM.YYYY conversion:', {
+        input: dateString,
+        parsed: { day, month, year },
+        formatted: formatted
+      });
+      return formatted;
+    }
+    
+    // Handle DD-MM-YYYY format - convert to YYYY-MM-DD for HTML date input
+    if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(dateString)) {
+      const [day, month, year] = dateString.split('-').map(Number);
+      const formatted = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+      console.log('✅ formatDateForInput DD-MM-YYYY conversion:', {
+        input: dateString,
+        parsed: { day, month, year },
+        formatted: formatted
+      });
+      return formatted;
+    }
+    
+    // Convert other formats to YYYY-MM-DD for date input
+    const formatted = formatDateForAPI(dateString);
+    return formatted || '';
+  } catch (error) {
+    console.error('❌ Error in formatDateForInput:', error, 'Input:', dateString);
+    return '';
+  }
+};
 
 // Styled components
 const slideIn = keyframes`
@@ -176,7 +329,7 @@ export function ExcelImport() {
   const apiCallTimeoutRef = React.useRef<NodeJS.Timeout>();
   const lastSuccessfulCallRef = React.useRef<string>(''); // Track last successful call signature
   
-  // Get date range from Redux
+  // ENHANCED: Get date range from Redux with timezone safety
   const salesSplitDateRange = useSelector(selectSalesSplitDashboardDateRange);
   const startDate = salesSplitDateRange.startDate || '';
   const endDate = salesSplitDateRange.endDate || '';
@@ -194,7 +347,8 @@ export function ExcelImport() {
     endDate,
     hasDateRange,
     isApiCallInProgress,
-    hasValidData
+    hasValidData,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
   });
 
   // Fetch company-locations data on component mount
@@ -291,7 +445,7 @@ export function ExcelImport() {
     setChartKey(prevKey => prevKey + 1);
   };
 
-  // ✅ OPTIMIZED: Single API call function with improved deduplication
+  // ✅ ENHANCED: Single API call function with timezone-safe date handling
   const handleApplyFiltersWithDates = React.useCallback((
     explicitStartDate: string, 
     explicitEndDate: string, 
@@ -313,7 +467,8 @@ export function ExcelImport() {
       categories,
       selectedFilterLocations,
       activeCompanyId,
-      callSignature
+      callSignature,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
     });
 
     // ✅ Skip if identical call is already in progress or recently completed
@@ -349,12 +504,12 @@ export function ExcelImport() {
     }
 
     try {
-      console.log('🔄 Starting SINGLE backend request');
+      console.log('🔄 Starting SINGLE backend request with timezone-safe dates');
       
       dispatch(setLoading(true));
       dispatch(setError(null));
       
-      // ✅ Store dates in Redux for persistence
+      // ✅ ENHANCED: Store dates in Redux for persistence with timezone safety
       if (explicitStartDate && explicitEndDate) {
         reduxDispatch(setSalesSplitDashboardDateRange({
           startDate: explicitStartDate,
@@ -362,70 +517,18 @@ export function ExcelImport() {
         }));
       }
       
-      // ✅ Format dates correctly for API
-      let formattedStartDate: string | null = null;
-      let formattedEndDate: string | null = null;
+      // ✅ ENHANCED: Format dates correctly for API with timezone safety
+      const formattedStartDate = formatDateForAPI(explicitStartDate || startDate);
+      const formattedEndDate = formatDateForAPI(explicitEndDate || endDate);
       
-      const dateToUse = {
-        start: explicitStartDate || startDate || '',
-        end: explicitEndDate || endDate || ''
-      };
-      
-      console.log('📅 ExcelImport: Processing dates:', {
+      console.log('📅 ExcelImport: Processing dates with timezone safety:', {
         explicitStartDate,
         explicitEndDate,
         reduxStartDate: startDate,
         reduxEndDate: endDate,
-        finalDates: dateToUse
-      });
-      
-      // Format start date
-      if (dateToUse.start) {
-        try {
-          if (dateToUse.start.includes('/')) {
-            const dateParts = dateToUse.start.split('/');
-            if (dateParts.length === 3) {
-              const [month, day, year] = dateParts;
-              formattedStartDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-            }
-          } else if (dateToUse.start.includes('-')) {
-            formattedStartDate = dateToUse.start;
-          } else {
-            const parsedDate = new Date(dateToUse.start);
-            if (!isNaN(parsedDate.getTime())) {
-              formattedStartDate = parsedDate.toISOString().split('T')[0];
-            }
-          }
-        } catch (error) {
-          console.warn('📅 ExcelImport: Error formatting start date:', error);
-        }
-      }
-      
-      // Format end date
-      if (dateToUse.end) {
-        try {
-          if (dateToUse.end.includes('/')) {
-            const dateParts = dateToUse.end.split('/');
-            if (dateParts.length === 3) {
-              const [month, day, year] = dateParts;
-              formattedEndDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-            }
-          } else if (dateToUse.end.includes('-')) {
-            formattedEndDate = dateToUse.end;
-          } else {
-            const parsedDate = new Date(dateToUse.end);
-            if (!isNaN(parsedDate.getTime())) {
-              formattedEndDate = parsedDate.toISOString().split('T')[0];
-            }
-          }
-        } catch (error) {
-          console.warn('📅 ExcelImport: Error formatting end date:', error);
-        }
-      }
-
-      console.log('📅 ExcelImport: Formatted dates for API:', {
-        original: dateToUse,
-        formatted: { start: formattedStartDate, end: formattedEndDate }
+        formattedStartDate,
+        formattedEndDate,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
       });
       
       // ✅ Prepare comprehensive filter data
@@ -442,10 +545,13 @@ export function ExcelImport() {
         locationCount: selectedFilterLocations.length,
         // ✅ Add deduplication tracking
         callSignature,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        // ✅ Add timezone information for debugging
+        clientTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        clientTimezoneOffset: new Date().getTimezoneOffset()
       };
       
-      console.log('📤 ExcelImport: Sending SINGLE optimized request:', filterData);
+      console.log('📤 ExcelImport: Sending SINGLE optimized request with timezone-safe dates:', filterData);
       
       // ✅ Make single API call
       apiClient.post('/api/salessplit/filter', filterData)
@@ -453,15 +559,16 @@ export function ExcelImport() {
           console.log('📥 ExcelImport: Received successful response:', {
             status: response.status,
             dataKeys: Object.keys(response.data || {}),
-            locations: selectedFilterLocations
+            locations: selectedFilterLocations,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
           });
-          console.log('📥 ExcelImport: Response data:', response.data);
+          
           if (response.data) {
             dispatch(setTableData(response.data));
             setHasValidData(true);
             lastSuccessfulCallRef.current = callSignature; // Store successful call signature
             
-            console.log('✅ ExcelImport: Filter applied successfully');
+            console.log('✅ ExcelImport: Filter applied successfully with timezone-safe dates');
           } else {
             throw new Error('Invalid response data');
           }
@@ -469,7 +576,8 @@ export function ExcelImport() {
         .catch(err => {
           console.error('❌ ExcelImport: Filter error:', {
             error: err,
-            requestData: filterData
+            requestData: filterData,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
           });
           
           setHasValidData(false);
@@ -549,19 +657,64 @@ export function ExcelImport() {
     );
   }, [selectedLocations, availableLocations, salesFilters, startDate, endDate, handleApplyFiltersWithDates]);
 
-  // Redux-based date handlers
+  // ENHANCED: Redux-based date handlers with timezone safety
   const handleStartDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newStartDate = event.target.value;
-    console.log('📅 Start date changed to:', newStartDate);
+  const newStartDate = event.target.value; // This is already in YYYY-MM-DD format from HTML input
+  console.log('📅 Start date changed to (HTML input format):', {
+    value: newStartDate,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
+  
+  // Convert YYYY-MM-DD to MM/DD/YYYY for internal consistency
+  if (/^\d{4}-\d{2}-\d{2}$/.test(newStartDate)) {
+    const [year, month, day] = newStartDate.split('-').map(Number);
+    const mmddyyyy = `${month}/${day}/${year}`;
+    
+    console.log('📅 Converting HTML date input to MM/DD/YYYY:', {
+      htmlInput: newStartDate,
+      converted: mmddyyyy
+    });
+    
+    // Update Sales Split Dashboard Redux state with MM/DD/YYYY format
+    reduxDispatch(setSalesSplitDashboardStartDate(mmddyyyy));
+    
+    // Update legacy Redux state for compatibility
+    dispatch(updateSalesFilters({ startDate: mmddyyyy }));
+  } else {
+    // Fallback - use the value as-is
     reduxDispatch(setSalesSplitDashboardStartDate(newStartDate));
-  };
+    dispatch(updateSalesFilters({ startDate: newStartDate }));
+  }
+};
 
-  const handleEndDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newEndDate = event.target.value;
-    console.log('📅 End date changed to:', newEndDate);
+ const handleEndDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const newEndDate = event.target.value; // This is already in YYYY-MM-DD format from HTML input
+  console.log('📅 End date changed to (HTML input format):', {
+    value: newEndDate,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
+  
+  // Convert YYYY-MM-DD to MM/DD/YYYY for internal consistency
+  if (/^\d{4}-\d{2}-\d{2}$/.test(newEndDate)) {
+    const [year, month, day] = newEndDate.split('-').map(Number);
+    const mmddyyyy = `${month}/${day}/${year}`;
+    
+    console.log('📅 Converting HTML date input to MM/DD/YYYY:', {
+      htmlInput: newEndDate,
+      converted: mmddyyyy
+    });
+    
+    // Update Sales Split Dashboard Redux state with MM/DD/YYYY format
+    reduxDispatch(setSalesSplitDashboardEndDate(mmddyyyy));
+    
+    // Update legacy Redux state for compatibility
+    dispatch(updateSalesFilters({ endDate: mmddyyyy }));
+  } else {
+    // Fallback - use the value as-is
     reduxDispatch(setSalesSplitDashboardEndDate(newEndDate));
-  };
-
+    dispatch(updateSalesFilters({ endDate: newEndDate }));
+  }
+};
   // Helper function to clear date range
   const handleClearDateRange = () => {
     console.log('🧹 Clearing Sales Split Dashboard date range');
@@ -628,7 +781,7 @@ export function ExcelImport() {
               </Box>
             )}
 
-            {/* Date Range Status Display */}
+            {/* ENHANCED: Date Range Status Display with timezone info */}
             {hasDateRange && (
               <Box sx={{ 
                 display: 'flex', 
@@ -638,7 +791,7 @@ export function ExcelImport() {
               }}>
                 <CompanyInfoChip
                   icon={<AnalyticsIcon />}
-                  label={`Date Range: ${startDate} to ${endDate}`}
+                  label={`Date Range: ${startDate} to ${endDate} (${Intl.DateTimeFormat().resolvedOptions().timeZone})`}
                   variant="outlined"
                   sx={{ 
                     backgroundColor: alpha('#4caf50', 0.1),
@@ -711,11 +864,11 @@ export function ExcelImport() {
                   variant="outlined"
                   sx={{ fontWeight: 500 }}
                 />
-                {/* Date Range Management */}
+                {/* ENHANCED: Date Range Management with timezone info */}
                 {hasDateRange && (
                   <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                     <Chip
-                      label={`📅 ${startDate} to ${endDate}`}
+                      label={`📅 ${startDate} to ${endDate} (${Intl.DateTimeFormat().resolvedOptions().timeZone})`}
                       color="success"
                       variant="outlined"
                       size="small"
@@ -737,7 +890,7 @@ export function ExcelImport() {
               <Typography variant="body2">
                 <strong>Processing filter request...</strong>
                 <br />
-                <small>Single optimized API call in progress</small>
+                <small>Single optimized API call in progress (Timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone})</small>
               </Typography>
             </Box>
           </Alert>
@@ -752,8 +905,8 @@ export function ExcelImport() {
               availableDateRanges={availableDateRanges}
               onDateRangeChange={handleDateRangeChange}
               customDateRange={true}
-              startDate={startDate}
-              endDate={endDate}
+              startDate={formatDateForInput(startDate)} // Convert for HTML date input
+              endDate={formatDateForInput(endDate)} // Convert for HTML date input
               onStartDateChange={handleStartDateChange}
               onEndDateChange={handleEndDateChange}
               locations={[]} // Legacy fallback
@@ -821,7 +974,7 @@ export function ExcelImport() {
               Fetching data with optimized single API call.
               <br />
               <small>
-                Company: {selectedCompanyName} | Locations: {selectedLocations.length} selected
+                Company: {selectedCompanyName} | Locations: {selectedLocations.length} selected | Timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
               </small>
             </Alert>
           </Fade>
@@ -868,6 +1021,9 @@ export function ExcelImport() {
                     <Typography variant="body2" color="text.secondary">
                       Company: {selectedCompanyName}
                     </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
+                    </Typography>
                   </Box>
                 ) : (
                   <Box sx={{ textAlign: 'center', py: 6 }}>
@@ -888,6 +1044,12 @@ export function ExcelImport() {
                         label={selectedLocations.length > 0 ? `Locations: ${selectedLocations.length} selected` : 'No Locations Selected'}
                         color={selectedLocations.length > 0 ? 'success' : 'default'}
                         variant="outlined"
+                      />
+                      <Chip
+                        label={`Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`}
+                        color="info"
+                        variant="outlined"
+                        size="small"
                       />
                     </Box>
                   </Box>
@@ -927,6 +1089,15 @@ export function ExcelImport() {
                                 size="small"
                               />
                             )}
+                            <CompanyInfoChip
+                              label={`${Intl.DateTimeFormat().resolvedOptions().timeZone}`}
+                              size="small"
+                              sx={{ 
+                                backgroundColor: alpha('#ff9800', 0.1),
+                                borderColor: alpha('#ff9800', 0.2),
+                                '& .MuiChip-label': { color: '#ff9800' }
+                              }}
+                            />
                           </Box>
                         )}
                       </Box>
@@ -1069,6 +1240,9 @@ export function ExcelImport() {
                     <Typography variant="body2" color="text.secondary">
                       Company: {selectedCompanyName}
                     </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
+                    </Typography>
                   </Box>
                 ) : (
                   <Box sx={{ textAlign: 'center', py: 6 }}>
@@ -1098,6 +1272,12 @@ export function ExcelImport() {
                         variant="outlined"
                         size="small"
                       />
+                      <Chip
+                        label={`Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`}
+                        color="info"
+                        variant="outlined"
+                        size="small"
+                      />
                     </Box>
                   </Box>
                 )}
@@ -1106,11 +1286,11 @@ export function ExcelImport() {
           </div>
         </CleanCard>
 
-        {/* ✅ OPTIMIZED DEBUG: Single API call tracking
+        {/* ENHANCED: Debug info with timezone details */}
         {process.env.NODE_ENV === 'development' && (
           <Alert severity="info" sx={{ mt: 2 }}>
             <Typography variant="body2">
-              <strong>Debug - Optimized API State:</strong><br />
+              <strong>Debug - Timezone-Safe API State:</strong><br />
               API Call In Progress: {isApiCallInProgress ? 'Yes' : 'No'}<br />
               Has Valid Data: {hasValidData ? 'Yes' : 'No'}<br />
               Last Successful Call: {lastSuccessfulCallRef.current ? 'Yes' : 'None'}<br />
@@ -1120,10 +1300,14 @@ export function ExcelImport() {
               Active Company ID: {activeCompanyId || 'None'}<br />
               Selected Locations: [{selectedLocations.join(', ')}]<br />
               Available Locations: {availableLocations.length} locations<br />
-              Chart Key: {chartKey}
+              Chart Key: {chartKey}<br />
+              Client Timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}<br />
+              Timezone Offset: {new Date().getTimezoneOffset()} minutes<br />
+              Formatted Start (API): {formatDateForAPI(startDate) || 'None'}<br />
+              Formatted End (API): {formatDateForAPI(endDate) || 'None'}
             </Typography>
           </Alert>
-        )} */}
+        )}
       </Box>
 
       {/* Success notification */}
@@ -1146,7 +1330,9 @@ export function ExcelImport() {
           <Typography variant="subtitle2" fontWeight={600}>
             Success!
           </Typography>
-          Data loaded with single optimized API call.
+          Data loaded with timezone-safe single optimized API call.
+          <br />
+          <small>Timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}</small>
         </Alert>
       </Snackbar>
     </>

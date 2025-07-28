@@ -1,4 +1,4 @@
-// FilterSection.tsx - COMPLETE FIXED Version with Proper Date Range Integration
+// FilterSection.tsx - TIMEZONE-SAFE FIXED Version with Proper Date Range Integration
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
@@ -27,7 +27,6 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material';
-import { format } from 'date-fns';
 
 // Import icons
 import FilterListIcon from '@mui/icons-material/FilterList';
@@ -518,9 +517,40 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     endDate: currentEndDate ? new Date(currentEndDate) : new Date(),
   });
 
-  // ✅ FIX: Update selected range when Redux dates change
+  // ✅ TIMEZONE-SAFE: Helper function to create Date objects from date strings
+  const createDateSafely = (dateStr: string): Date => {
+    if (!dateStr) return new Date();
+    
+    try {
+      // Handle MM/DD/YYYY format safely
+      if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
+        const [month, day, year] = dateStr.split('/').map(Number);
+        // Create date in local timezone at noon to avoid DST issues
+        return new Date(year, month - 1, day, 12, 0, 0);
+      }
+      
+      // Handle YYYY-MM-DD format safely
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        return new Date(year, month - 1, day, 12, 0, 0);
+      }
+      
+      // Fallback - try to parse and set to noon
+      const date = new Date(dateStr);
+      if (!isNaN(date.getTime())) {
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0);
+      }
+      
+      return new Date();
+    } catch (error) {
+      console.warn('⚠️ FilterSection: Error creating date safely:', error, 'Input:', dateStr);
+      return new Date();
+    }
+  };
+
+  // ✅ FIX: Update selected range when Redux dates change (TIMEZONE-SAFE)
   useEffect(() => {
-    console.log('📅 FilterSection: Updating selectedRange from Redux dates:', {
+    console.log('📅 FilterSection: Updating selectedRange from Redux dates (TIMEZONE-SAFE):', {
       reduxStartDate,
       reduxEndDate,
       currentStartDate,
@@ -529,16 +559,13 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     
     if (currentStartDate && currentEndDate) {
       try {
-        const newStartDate = new Date(currentStartDate);
-        const newEndDate = new Date(currentEndDate);
+        const newStartDate = createDateSafely(currentStartDate);
+        const newEndDate = createDateSafely(currentEndDate);
         
-        // Only update if dates are valid
-        if (!isNaN(newStartDate.getTime()) && !isNaN(newEndDate.getTime())) {
-          setSelectedRange({
-            startDate: newStartDate,
-            endDate: newEndDate,
-          });
-        }
+        setSelectedRange({
+          startDate: newStartDate,
+          endDate: newEndDate,
+        });
       } catch (error) {
         console.warn('📅 FilterSection: Invalid dates from Redux:', { currentStartDate, currentEndDate, error });
       }
@@ -645,14 +672,30 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     setSelectedRange(range);
   };
 
-  // ✅ ENHANCED: Apply date range with comprehensive blocking and Redux integration
-  const applyDateRange = useCallback(() => {
-    const formattedStartDate = format(selectedRange.startDate, 'MM/dd/yyyy');
-    const formattedEndDate = format(selectedRange.endDate, 'MM/dd/yyyy');
+  // ✅ TIMEZONE-SAFE: Helper function to format dates without timezone conversion
+  const formatDateSafe = (date: Date): string => {
+    if (!date || !(date instanceof Date)) return '';
     
-    console.log('📅 FilterSection: Applying date range MANUALLY - blocking ALL auto-filters:', {
-      startDate: formattedStartDate,
-      endDate: formattedEndDate
+    // Use local timezone methods to avoid UTC conversion
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    
+    return `${month}/${day}/${year}`;
+  };
+
+  // ✅ ENHANCED: Apply date range with comprehensive blocking and Redux integration (TIMEZONE-SAFE)
+  const applyDateRange = useCallback(() => {
+    // TIMEZONE-SAFE: Use manual formatting instead of date-fns format()
+    const formattedStartDate = formatDateSafe(selectedRange.startDate);
+    const formattedEndDate = formatDateSafe(selectedRange.endDate);
+    
+    console.log('📅 FilterSection: Applying date range MANUALLY - blocking ALL auto-filters (TIMEZONE-SAFE):', {
+      originalStartDate: selectedRange.startDate,
+      originalEndDate: selectedRange.endDate,
+      formattedStartDate: formattedStartDate,
+      formattedEndDate: formattedEndDate,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
     });
     
     // ✅ CRITICAL: Set ALL manual flags to prevent any auto-filtering
@@ -711,12 +754,32 @@ const FilterSection: React.FC<FilterSectionProps> = ({
     
   }, [selectedRange, dispatch, reduxDispatch, onApplyFiltersWithDates, selectedLocations, selectedCategories, getLocationNamesForApi, timeoutRef]);
 
-  // Format display date
+  // ✅ TIMEZONE-SAFE: Format display date without timezone conversion
   const formatDisplayDate = (dateStr: string) => {
     if (!dateStr) return '';
     try {
+      // Parse MM/DD/YYYY format safely
+      if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
+        const [month, day, year] = dateStr.split('/').map(Number);
+        // Create date in local timezone
+        const date = new Date(year, month - 1, day);
+        
+        // Format manually to avoid timezone issues
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        
+        return `${monthNames[date.getMonth()]} ${date.getDate().toString().padStart(2, '0')}, ${date.getFullYear()}`;
+      }
+      
+      // Fallback to original formatting for other formats
       const date = new Date(dateStr);
-      return format(date, 'MMM dd, yyyy');
+      if (!isNaN(date.getTime())) {
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${monthNames[date.getMonth()]} ${date.getDate().toString().padStart(2, '0')}, ${date.getFullYear()}`;
+      }
+      
+      return dateStr;
     } catch (e) {
       return dateStr;
     }
@@ -1279,37 +1342,6 @@ const FilterSection: React.FC<FilterSectionProps> = ({
         </Box>
       )}
 
-      {/* ✅ ENHANCED DEBUG: Development mode information with comprehensive tracking
-      {process.env.NODE_ENV === 'development' && (
-        <Alert severity="info" sx={{ mt: 2 }}>
-          <Typography variant="body2">
-            <strong>Debug - Filter State:</strong><br />
-            Manual Triggering: {isManuallyTriggering ? 'Yes' : 'No'}<br />
-            Applying Date Range: {isApplyingDateRange ? 'Yes' : 'No'}<br />
-            Manual Date Range Apply: {isManualDateRangeApply ? 'Yes' : 'No'}<br />
-            Auto Filtering: {isAutoFiltering ? 'Yes' : 'No'}<br />
-            Date Change Source: {dateChangeSource || 'None'}<br />
-            Initialized: {isInitialized ? 'Yes' : 'No'}<br />
-            Redux Mode: {onReduxLocationChange ? 'Yes' : 'No'}<br />
-            Selected Locations: [{displaySelectedLocations.join(', ')}]<br />
-            Available Locations: [{displayLocations.join(', ')}]<br />
-            Current Start Date: {currentStartDate || 'None'}<br />
-            Current End Date: {currentEndDate || 'None'}<br />
-            Redux Start Date: {reduxStartDate || 'None'}<br />
-            Redux End Date: {reduxEndDate || 'None'}<br />
-            Props Start Date: {startDate || 'None'}<br />
-            Props End Date: {endDate || 'None'}<br />
-            Selected Categories: {selectedCategories.length} items<br />
-            Has Pending Timeout: {timeoutRef.current ? 'Yes' : 'No'}<br />
-            Minimum Filters Met: {hasMinimumFilters(selectedLocations, currentStartDate, currentEndDate, selectedCategories) ? 'Yes' : 'No'}<br />
-            <strong>Last Filter State:</strong><br />
-            Previous Locations: [{previousFiltersRef.current.locations.join(', ')}]<br />
-            Previous Start Date: {previousFiltersRef.current.startDate || 'None'}<br />
-            Previous End Date: {previousFiltersRef.current.endDate || 'None'}
-          </Typography>
-        </Alert>
-      )} */}
-
       {/* Date Range Picker Dialog */}
       <Dialog
         open={isDateRangeOpen}
@@ -1322,8 +1354,22 @@ const FilterSection: React.FC<FilterSectionProps> = ({
           <DateRangeSelector
             initialState={[
               {
-                startDate: currentStartDate ? new Date(currentStartDate) : new Date(),
-                endDate: currentEndDate ? new Date(currentEndDate) : new Date(),
+                startDate: currentStartDate ? (() => {
+                  // TIMEZONE-SAFE: Parse MM/DD/YYYY safely to avoid timezone issues
+                  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(currentStartDate)) {
+                    const [month, day, year] = currentStartDate.split('/').map(Number);
+                    return new Date(year, month - 1, day, 12, 0, 0); // Set to noon to avoid timezone edge cases
+                  }
+                  return createDateSafely(currentStartDate);
+                })() : new Date(),
+                endDate: currentEndDate ? (() => {
+                  // TIMEZONE-SAFE: Parse MM/DD/YYYY safely to avoid timezone issues  
+                  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(currentEndDate)) {
+                    const [month, day, year] = currentEndDate.split('/').map(Number);
+                    return new Date(year, month - 1, day, 12, 0, 0); // Set to noon to avoid timezone edge cases
+                  }
+                  return createDateSafely(currentEndDate);
+                })() : new Date(),
                 key: 'selection'
               }
             ]}

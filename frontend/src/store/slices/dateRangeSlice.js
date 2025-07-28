@@ -32,6 +32,7 @@ const initialState = {
 };
 
 // ENHANCED: Helper function to format date as YYYY-MM-DD with timezone safety
+// ENHANCED: Helper function to format date as YYYY-MM-DD with timezone safety
 const formatDateOnly = (date) => {
   if (!date) return null;
   
@@ -44,7 +45,70 @@ const formatDateOnly = (date) => {
   });
   
   try {
-    const dateObj = date instanceof Date ? date : new Date(date);
+    // TIMEZONE FIX: Handle string inputs more carefully to avoid timezone conversion
+    if (typeof date === 'string') {
+      // If it's already in YYYY-MM-DD format, return as-is (no conversion needed)
+      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        console.log('✅ formatDateOnly: Already formatted string, returning as-is:', date);
+        return date;
+      }
+      
+      // Handle MM/DD/YYYY format (common in US) - parse components directly
+      if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(date)) {
+        const [month, day, year] = date.split('/').map(Number);
+        const formatted = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        console.log('✅ formatDateOnly MM/DD/YYYY direct conversion:', {
+          input: date,
+          parsed: { month, day, year },
+          formatted: formatted
+        });
+        return formatted;
+      }
+      
+      // Handle DD.MM.YYYY format (common in German) - parse components directly
+      if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(date)) {
+        const [day, month, year] = date.split('.').map(Number);
+        const formatted = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        console.log('✅ formatDateOnly DD.MM.YYYY direct conversion:', {
+          input: date,
+          parsed: { day, month, year },
+          formatted: formatted
+        });
+        return formatted;
+      }
+      
+      // Handle DD-MM-YYYY format (common in German) - parse components directly
+      if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(date)) {
+        const [day, month, year] = date.split('-').map(Number);
+        const formatted = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        console.log('✅ formatDateOnly DD-MM-YYYY direct conversion:', {
+          input: date,
+          parsed: { day, month, year },
+          formatted: formatted
+        });
+        return formatted;
+      }
+      
+      // For ISO strings, extract date part only
+      if (date.includes('T')) {
+        const datePart = date.split('T')[0];
+        if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+          return datePart;
+        }
+      }
+    }
+    
+    // For Date objects or other formats, use timezone-safe conversion
+    let dateObj;
+    if (date instanceof Date) {
+      dateObj = date;
+    } else if (typeof date === 'number') {
+      dateObj = new Date(date);
+    } else {
+      // Last resort: try to parse as Date, but use local methods
+      dateObj = new Date(date);
+    }
+    
     if (isNaN(dateObj.getTime()) || dateObj.getFullYear() <= 1970) {
       console.error('❌ Invalid date in formatDateOnly:', {
         original: date,
@@ -79,6 +143,122 @@ const formatDateOnly = (date) => {
   }
 };
 
+const formatDateOnlySalesSplit = (date) => {
+  if (!date) return null;
+  
+  console.log('📈 formatDateOnlySalesSplit called with:', {
+    date,
+    type: typeof date,
+    isDate: date instanceof Date,
+    toString: date?.toString(),
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
+  
+  try {
+    // TIMEZONE FIX: Handle string inputs more carefully to avoid timezone conversion
+    if (typeof date === 'string') {
+      // If it's already in MM/DD/YYYY format, return as-is (this is our internal format)
+      if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(date)) {
+        console.log('✅ formatDateOnlySalesSplit: Already in MM/DD/YYYY format, returning as-is:', date);
+        return date;
+      }
+      
+      // If it's in YYYY-MM-DD format, convert to MM/DD/YYYY for consistency
+      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        const [year, month, day] = date.split('-').map(Number);
+        const formatted = `${month}/${day}/${year}`;
+        console.log('✅ formatDateOnlySalesSplit YYYY-MM-DD to MM/DD/YYYY conversion:', {
+          input: date,
+          parsed: { year, month, day },
+          formatted: formatted
+        });
+        return formatted;
+      }
+      
+      // Handle DD.MM.YYYY format (German) - convert to MM/DD/YYYY
+      if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(date)) {
+        const [day, month, year] = date.split('.').map(Number);
+        const formatted = `${month}/${day}/${year}`;
+        console.log('✅ formatDateOnlySalesSplit DD.MM.YYYY to MM/DD/YYYY conversion:', {
+          input: date,
+          parsed: { day, month, year },
+          formatted: formatted
+        });
+        return formatted;
+      }
+      
+      // Handle DD-MM-YYYY format (German) - convert to MM/DD/YYYY
+      if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(date)) {
+        const [day, month, year] = date.split('-').map(Number);
+        const formatted = `${month}/${day}/${year}`;
+        console.log('✅ formatDateOnlySalesSplit DD-MM-YYYY to MM/DD/YYYY conversion:', {
+          input: date,
+          parsed: { day, month, year },
+          formatted: formatted
+        });
+        return formatted;
+      }
+      
+      // For ISO strings, extract date part and convert
+      if (date.includes('T')) {
+        const datePart = date.split('T')[0];
+        if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+          const [year, month, day] = datePart.split('-').map(Number);
+          const formatted = `${month}/${day}/${year}`;
+          console.log('✅ formatDateOnlySalesSplit ISO to MM/DD/YYYY conversion:', {
+            input: date,
+            datePart: datePart,
+            formatted: formatted
+          });
+          return formatted;
+        }
+      }
+    }
+    
+    // For Date objects or other formats, use timezone-safe conversion to MM/DD/YYYY
+    let dateObj;
+    if (date instanceof Date) {
+      dateObj = date;
+    } else if (typeof date === 'number') {
+      dateObj = new Date(date);
+    } else {
+      // Last resort: try to parse as Date, but use local methods
+      dateObj = new Date(date);
+    }
+    
+    if (isNaN(dateObj.getTime()) || dateObj.getFullYear() <= 1970) {
+      console.error('❌ Invalid date in formatDateOnlySalesSplit:', {
+        original: date,
+        parsed: dateObj,
+        isNaN: isNaN(dateObj.getTime()),
+        year: dateObj.getFullYear()
+      });
+      return null;
+    }
+    
+    // CRITICAL FIX: Use local timezone methods and format as MM/DD/YYYY
+    const year = dateObj.getFullYear();
+    const month = dateObj.getMonth() + 1; // getMonth() returns 0-11
+    const day = dateObj.getDate();
+    
+    const formatted = `${month}/${day}/${year}`;
+    
+    console.log('✅ formatDateOnlySalesSplit Date object result:', {
+      original: date,
+      originalType: typeof date,
+      dateObj: dateObj.toString(),
+      localString: dateObj.toLocaleDateString(),
+      formatted: formatted,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      timezoneOffset: dateObj.getTimezoneOffset()
+    });
+    
+    return formatted;
+  } catch (error) {
+    console.error('❌ Error in formatDateOnlySalesSplit:', error, 'Input:', date);
+    return null;
+  }
+};
 // ENHANCED: Timezone-safe formatter specifically for Summary Financial Dashboard
 const formatDateOnlySummaryFinancial = (date) => {
   if (!date) return null;
@@ -198,16 +378,69 @@ const formatDateOnlyOrderIQ = (date) => {
   }
 };
 
-// NEW: Helper function to create Date object from YYYY-MM-DD string in local timezone
+// NEW: Helper function to create Date object from date string in local timezone
 const createLocalDateFromString = (dateString) => {
   if (!dateString) return null;
   
-  if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-    const [year, month, day] = dateString.split('-').map(Number);
-    // Create date in local timezone (month is 0-indexed) - set to noon for timezone safety
-    return new Date(year, month - 1, day, 12, 0, 0);
+  console.log('📅 createLocalDateFromString called with:', {
+    dateString,
+    type: typeof dateString,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
+  
+  if (typeof dateString === 'string') {
+    // Handle YYYY-MM-DD format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      const [year, month, day] = dateString.split('-').map(Number);
+      // Create date in local timezone at noon to avoid DST issues
+      const localDate = new Date(year, month - 1, day, 12, 0, 0);
+      console.log('✅ createLocalDateFromString YYYY-MM-DD:', {
+        input: dateString,
+        parsed: { year, month, day },
+        result: localDate.toString(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      });
+      return localDate;
+    }
+    
+    // Handle MM/DD/YYYY format
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateString)) {
+      const [month, day, year] = dateString.split('/').map(Number);
+      const localDate = new Date(year, month - 1, day, 12, 0, 0);
+      console.log('✅ createLocalDateFromString MM/DD/YYYY:', {
+        input: dateString,
+        parsed: { month, day, year },
+        result: localDate.toString()
+      });
+      return localDate;
+    }
+    
+    // Handle DD.MM.YYYY format (German style)
+    if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(dateString)) {
+      const [day, month, year] = dateString.split('.').map(Number);
+      const localDate = new Date(year, month - 1, day, 12, 0, 0);
+      console.log('✅ createLocalDateFromString DD.MM.YYYY:', {
+        input: dateString,
+        parsed: { day, month, year },
+        result: localDate.toString()
+      });
+      return localDate;
+    }
+    
+    // Handle DD-MM-YYYY format (German style)
+    if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(dateString)) {
+      const [day, month, year] = dateString.split('-').map(Number);
+      const localDate = new Date(year, month - 1, day, 12, 0, 0);
+      console.log('✅ createLocalDateFromString DD-MM-YYYY:', {
+        input: dateString,
+        parsed: { day, month, year },
+        result: localDate.toString()
+      });
+      return localDate;
+    }
   }
   
+  console.warn('⚠️ createLocalDateFromString: Unrecognized format:', dateString);
   return null;
 };
 
@@ -574,48 +807,67 @@ const dateRangeSlice = createSlice({
       state.OrderIQDashboardEnd = null;
     },
 
-    // Sales Split Dashboard Date Range Actions (for ExcelImport component)
-    setSalesSplitDashboardDateRange: (state, action) => {
-      const { startDate, endDate } = action.payload;
-      console.log('📈 Redux BEFORE: setSalesSplitDashboardDateRange called with:', { 
-        startDate, 
-        endDate,
-        startType: typeof startDate,
-        endType: typeof endDate 
-      });
-      
-      // Format dates to date-only strings (YYYY-MM-DD)
-      const formattedStartDate = formatDateOnly(startDate);
-      const formattedEndDate = formatDateOnly(endDate);
-      
-      console.log('📈 Redux AFTER formatting:', {
-        formattedStartDate,
-        formattedEndDate,
-        formattedStartType: typeof formattedStartDate,
-        formattedEndType: typeof formattedEndDate
-      });
-      
-      if (formattedStartDate && formattedEndDate) {
-        state.SalesSplitDashboardStart = formattedStartDate;
-        state.SalesSplitDashboardEnd = formattedEndDate;
-        
-        console.log('✅ Redux: Sales Split Dashboard date range stored successfully:', {
-          storedStart: state.SalesSplitDashboardStart,
-          storedEnd: state.SalesSplitDashboardEnd,
-          stateAfterUpdate: {
-            SalesSplitDashboardStart: state.SalesSplitDashboardStart,
-            SalesSplitDashboardEnd: state.SalesSplitDashboardEnd
-          }
-        });
-      } else {
-        console.error('❌ Redux: Invalid dates provided for Sales Split Dashboard, not storing:', { 
-          originalStart: startDate, 
-          originalEnd: endDate,
-          formattedStart: formattedStartDate,
-          formattedEnd: formattedEndDate
-        });
-      }
-    },
+   // Sales Split Dashboard Date Range Actions (for ExcelImport component)
+setSalesSplitDashboardDateRange: (state, action) => {
+  const { startDate, endDate } = action.payload;
+  console.log('📈 Redux BEFORE: setSalesSplitDashboardDateRange called with:', { 
+    startDate, 
+    endDate,
+    startType: typeof startDate,
+    endType: typeof endDate,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
+  
+  // ENHANCED: Use the improved formatting function for Sales Split Dashboard
+  const formattedStartDate = formatDateOnlySalesSplit(startDate);
+  const formattedEndDate = formatDateOnlySalesSplit(endDate);
+  
+  console.log('📈 Redux AFTER formatting:', {
+    formattedStartDate,
+    formattedEndDate,
+    formattedStartType: typeof formattedStartDate,
+    formattedEndType: typeof formattedEndDate,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  });
+  
+  if (formattedStartDate && formattedEndDate) {
+    state.SalesSplitDashboardStart = formattedStartDate;
+    state.SalesSplitDashboardEnd = formattedEndDate;
+    
+    console.log('✅ Redux: Sales Split Dashboard date range stored successfully:', {
+      storedStart: state.SalesSplitDashboardStart,
+      storedEnd: state.SalesSplitDashboardEnd,
+      stateAfterUpdate: {
+        SalesSplitDashboardStart: state.SalesSplitDashboardStart,
+        SalesSplitDashboardEnd: state.SalesSplitDashboardEnd
+      },
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    });
+  } else {
+    console.error('❌ Redux: Invalid dates provided for Sales Split Dashboard, not storing:', { 
+      originalStart: startDate, 
+      originalEnd: endDate,
+      formattedStart: formattedStartDate,
+      formattedEnd: formattedEndDate
+    });
+  }
+},
+
+setSalesSplitDashboardStartDate: (state, action) => {
+  const formattedDate = formatDateOnlySalesSplit(action.payload);
+  if (formattedDate) {
+    state.SalesSplitDashboardStart = formattedDate;
+    console.log('✅ Redux: Sales Split Dashboard start date set:', formattedDate);
+  }
+},
+
+setSalesSplitDashboardEndDate: (state, action) => {
+  const formattedDate = formatDateOnly(action.payload);
+  if (formattedDate) {
+    state.SalesSplitDashboardEnd = formattedDate;
+    console.log('✅ Redux: Sales Split Dashboard end date set:', formattedDate);
+  }
+},
     
     setSalesSplitDashboardStartDate: (state, action) => {
       const formattedDate = formatDateOnly(action.payload);
@@ -625,13 +877,13 @@ const dateRangeSlice = createSlice({
       }
     },
     
-    setSalesSplitDashboardEndDate: (state, action) => {
-      const formattedDate = formatDateOnly(action.payload);
-      if (formattedDate) {
-        state.SalesSplitDashboardEnd = formattedDate;
-        console.log('✅ Redux: Sales Split Dashboard end date set:', formattedDate);
-      }
-    },
+   setSalesSplitDashboardEndDate: (state, action) => {
+  const formattedDate = formatDateOnlySalesSplit(action.payload);
+  if (formattedDate) {
+    state.SalesSplitDashboardEnd = formattedDate;
+      console.log('✅ Redux: Sales Split Dashboard end date set:', formattedDate);
+    }
+  },
     
     clearSalesSplitDashboardDateRange: (state) => {
       console.log('🧹 Redux: Clearing Sales Split Dashboard date range');
