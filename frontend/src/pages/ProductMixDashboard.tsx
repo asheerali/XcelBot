@@ -1974,7 +1974,7 @@ export default function ProductMixDashboard() {
           <Typography variant="body2">
             <strong>✅ Filters Applied Successfully!</strong>
             {hasReduxDateRange && (
-              <span> | <strong>Redux Date Range:</strong> {formatDisplayDate(localStartDate)} - {formatDisplayDate(localEndDate)}</span>
+              <span> | <strong>Date Range:</strong> {formatDisplayDate(localStartDate)} - {formatDisplayDate(localEndDate)}</span>
             )}
             {selectedCompany && (
               <span> | <strong>Company:</strong> {selectedCompanyName}</span>
@@ -2127,7 +2127,7 @@ export default function ProductMixDashboard() {
                 {hasReduxDateRange && (
                   <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <Typography variant="caption" color="secondary">
-                      Redux Date Range Active
+                     Date Range Active
                     </Typography>
                   </Box>
                 )}
@@ -2271,7 +2271,7 @@ export default function ProductMixDashboard() {
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                     <CircularProgress size={40} />
                     <Typography sx={{ ml: 2 }}>
-                      Auto-filtering data with Redux date range integration...
+                      Auto-filtering data...
                     </Typography>
                   </Box>
                 ) : (
@@ -2334,7 +2334,7 @@ export default function ProductMixDashboard() {
                   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
                     <CircularProgress size={40} />
                     <Typography sx={{ ml: 2 }}>
-                      Auto-filtering data with Redux date range integration...
+                      Auto-filtering data ...
                     </Typography>
                   </Box>
                 ) : (
@@ -2417,7 +2417,7 @@ export default function ProductMixDashboard() {
         <DialogActions>
           <Button onClick={() => setIsDateRangeOpen(false)}>Cancel</Button>
           <Button onClick={applyDateRange} variant="contained" color="primary">
-            Set Date Range (Redux)
+            Set Date Range 
           </Button>
         </DialogActions>
       </Dialog>
