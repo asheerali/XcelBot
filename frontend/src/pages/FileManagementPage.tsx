@@ -142,6 +142,7 @@ const FileManagementPage = () => {
       deleteEndpoint: "/salespmix/bulk/by-filename",
       locationsEndpoint: "/salespmix/analytics/locations",
       locationKey: "location",
+      hasSales: true, // Fixed typo: was "hasSeales"
     },
     {
       name: "Financials Companywide",
@@ -154,6 +155,7 @@ const FileManagementPage = () => {
       deleteEndpoint: "/financialscompanywide/bulk/by-filename",
       locationsEndpoint: "/financialscompanywide/analytics/stores",
       locationKey: "store",
+      hasSales: true, // Changed from false to true to show sales
     },
     {
       name: "Budget",
@@ -166,6 +168,7 @@ const FileManagementPage = () => {
       deleteEndpoint: "/budget/bulk/by-filename",
       locationsEndpoint: "/budget/analytics/stores",
       locationKey: "store",
+      hasSales: true, // Changed to true to show sales data
     },
   ];
 
@@ -293,6 +296,21 @@ const FileManagementPage = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
+  const formatDateTime = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const year = date.getFullYear();
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    hours = hours ? hours : 12; // the hour '0' should be '12'
+
+    return `${month}-${day}-${year} - ${hours}:${minutes} ${ampm}`;
+  };
+
   const formatCurrency = (amount) => {
     if (amount === undefined || amount === null) return "N/A";
     return new Intl.NumberFormat("en-US", {
@@ -304,13 +322,19 @@ const FileManagementPage = () => {
   const handleRefresh = () => {
     fetchData();
   };
-  // const sortedFiles = [...files].sort((a, b) => {
-  //   const valueA = a[sortBy]?.toString().toLowerCase() || "";
-  //   const valueB = b[sortBy]?.toString().toLowerCase() || "";
 
-  //   if (sortOrder === "asc") return valueA.localeCompare(valueB);
-  //   return valueB.localeCompare(valueA);
-  // });
+  // Calculate total sales for data types that have sales
+  const getTotalSales = () => {
+    if (currentDataType.hasSales && locations.length > 0) {
+      return locations.reduce((sum, location) => {
+        // Handle different property names for sales data
+        const salesAmount =
+          location.total_sales || location.sales || location.amount || 0;
+        return sum + salesAmount;
+      }, 0);
+    }
+    return 0;
+  };
 
   const renderFileColumns = () => {
     const handleSort = (field) => {
@@ -322,6 +346,38 @@ const FileManagementPage = () => {
       }
     };
 
+    const getSortIcon = (field) => {
+      if (sortBy !== field) {
+        return (
+          <Box component="span" sx={{ ml: 1, opacity: 0.3 }}>
+            <Box component="span" sx={{ fontSize: "0.75rem" }}>
+              ↕
+            </Box>
+          </Box>
+        );
+      }
+
+      return (
+        <Box component="span" sx={{ ml: 1 }}>
+          {sortOrder === "asc" ? (
+            <Box
+              component="span"
+              sx={{ fontSize: "0.75rem", color: theme.palette.primary.main }}
+            >
+              ↑
+            </Box>
+          ) : (
+            <Box
+              component="span"
+              sx={{ fontSize: "0.75rem", color: theme.palette.primary.main }}
+            >
+              ↓
+            </Box>
+          )}
+        </Box>
+      );
+    };
+
     const renderHeader = (label, field) => (
       <TableCell
         sx={{
@@ -329,27 +385,24 @@ const FileManagementPage = () => {
           color: theme.palette.text.secondary,
           cursor: "pointer",
           userSelect: "none",
+          position: "relative",
+          "&:hover": {
+            backgroundColor: alpha(theme.palette.primary.main, 0.04),
+          },
+          transition: "background-color 0.2s ease",
         }}
         onClick={() => handleSort(field)}
       >
-        {label}{" "}
-        <span style={{ fontSize: "0.75rem", marginLeft: 4 }}>
-          <span
-            style={{
-              opacity: sortBy === field && sortOrder === "asc" ? 1 : 0.3,
-            }}
-          >
-            ▲
-          </span>
-          <span
-            style={{
-              opacity: sortBy === field && sortOrder === "desc" ? 1 : 0.3,
-              marginLeft: 2,
-            }}
-          >
-            ▼
-          </span>
-        </span>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <span>{label}</span>
+          {getSortIcon(field)}
+        </Box>
       </TableCell>
     );
 
@@ -379,7 +432,7 @@ const FileManagementPage = () => {
 
         <TableCell>
           <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
-            {file.file_timestamp || "N/A"}
+            {formatDateTime(file.file_timestamp)}
           </Typography>
         </TableCell>
 
@@ -438,6 +491,7 @@ const FileManagementPage = () => {
       </Box>
     );
   }
+
   const sortedFiles = [...files].sort((a, b) => {
     let valA = a[sortBy];
     let valB = b[sortBy];
@@ -576,7 +630,7 @@ const FileManagementPage = () => {
 
           {/* Summary Cards */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={currentDataType.hasSales ? 3 : 4}>
               <MetricCard
                 sx={{
                   background: currentDataType.bgGradient,
@@ -629,7 +683,7 @@ const FileManagementPage = () => {
               </MetricCard>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={currentDataType.hasSales ? 3 : 4}>
               <MetricCard
                 sx={{
                   background:
@@ -688,7 +742,7 @@ const FileManagementPage = () => {
               </MetricCard>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={currentDataType.hasSales ? 3 : 4}>
               <MetricCard
                 sx={{
                   background:
@@ -749,6 +803,70 @@ const FileManagementPage = () => {
                 </Box>
               </MetricCard>
             </Grid>
+
+            {/* Total Sales Card - Show for data types that have sales */}
+            {currentDataType.hasSales && (
+              <Grid item xs={12} sm={6} md={3}>
+                <MetricCard
+                  sx={{
+                    background:
+                      "linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%)",
+                    border: `1px solid ${alpha(
+                      theme.palette.warning.main,
+                      0.2
+                    )}`,
+                    "&::before": {
+                      background:
+                        "linear-gradient(135deg, #ff8f00 0%, #ff6f00 100%)",
+                    },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      p: 3,
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: theme.palette.warning.main,
+                          fontWeight: 600,
+                          textTransform: "uppercase",
+                          letterSpacing: 0.5,
+                        }}
+                      >
+                        Total Sales
+                      </Typography>
+                      <AttachMoneyIcon
+                        sx={{ color: theme.palette.warning.main, fontSize: 24 }}
+                      />
+                    </Box>
+                    <Typography
+                      variant="h3"
+                      sx={{
+                        fontWeight: 800,
+                        color: theme.palette.warning.main,
+                        lineHeight: 1,
+                        fontSize: "1.5rem", // Smaller font for currency
+                      }}
+                    >
+                      {formatCurrency(getTotalSales())}
+                    </Typography>
+                  </Box>
+                </MetricCard>
+              </Grid>
+            )}
           </Grid>
         </StyledCard>
       </Container>
@@ -825,7 +943,6 @@ const FileManagementPage = () => {
                       </TableHead>
                       <TableBody>
                         {files.length > 0 ? (
-                          // files.map((file, index) => (
                           sortedFiles.map((file, index) => (
                             <TableRow
                               key={index}
@@ -905,7 +1022,7 @@ const FileManagementPage = () => {
                         ) : (
                           <TableRow>
                             <TableCell
-                              colSpan={4}
+                              colSpan={6}
                               align="center"
                               sx={{ py: 8 }}
                             >
@@ -1000,7 +1117,8 @@ const FileManagementPage = () => {
                         </Box>
 
                         <Grid container spacing={2}>
-                          <Grid item xs={12}>
+                          {/* Records Count */}
+                          <Grid item xs={currentDataType.hasSales ? 6 : 12}>
                             <Box sx={{ textAlign: "center" }}>
                               <Typography
                                 variant="h6"
@@ -1020,6 +1138,35 @@ const FileManagementPage = () => {
                               </Typography>
                             </Box>
                           </Grid>
+
+                          {/* Total Sales - Show for data types that have sales */}
+                          {currentDataType.hasSales && (
+                            <Grid item xs={6}>
+                              <Box sx={{ textAlign: "center" }}>
+                                <Typography
+                                  variant="h6"
+                                  sx={{
+                                    fontWeight: 700,
+                                    color: theme.palette.success.main,
+                                    fontSize: "1rem", // Smaller for currency
+                                  }}
+                                >
+                                  {formatCurrency(
+                                    location.total_sales ||
+                                      location.sales ||
+                                      location.amount ||
+                                      0
+                                  )}
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  Total Sales
+                                </Typography>
+                              </Box>
+                            </Grid>
+                          )}
                         </Grid>
                       </StyledCard>
                     ))}

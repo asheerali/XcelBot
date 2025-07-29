@@ -12,7 +12,8 @@ def parse_datetime_from_filename(filename: str) -> Optional[str]:
         date_part = parts[0]  # e.g., 20250725
         time_part = parts[1]  # e.g., 013228
         dt = datetime.strptime(date_part + time_part, "%Y%m%d%H%M%S")
-        return dt.strftime("%m-%d-%Y - %I:%M %p")
+        return dt
+        # return dt.strftime("%m-%d-%Y - %I:%M %p")
     except Exception:
         return None
     

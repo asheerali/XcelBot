@@ -230,6 +230,9 @@ from models.budget import Budget
 from schemas.budget import BudgetCreate
 from typing import List, Tuple, Optional, Dict, Any
 from utils.parse_datetime import parse_datetime_from_filename
+from models.companies import Company
+
+
 
 def check_and_filter_duplicates_budget(
     db: Session, 
@@ -662,21 +665,22 @@ def get_budget_summary(
 #     return results
 
 
-
 def get_budget_uploaded_files_list(db: Session, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
-    """Get list of all uploaded budget files with record counts and parsed timestamp"""
+    """Get list of all uploaded budget files with record counts, parsed timestamp, and company name"""
     query = db.query(
         Budget.file_name,
         func.count(Budget.id).label('record_count'),
         func.min(Budget.Year).label('earliest_year'),
         func.max(Budget.Year).label('latest_year'),
-        func.sum(Budget.Net_Sales).label('total_sales')
-    ).filter(Budget.file_name.isnot(None))
+        func.sum(Budget.Net_Sales).label('total_sales'),
+        Company.name.label('company_name')
+    ).join(Company, Budget.company_id == Company.id) \
+     .filter(Budget.file_name.isnot(None))
     
     if company_id:
         query = query.filter(Budget.company_id == company_id)
     
-    query = query.group_by(Budget.file_name).order_by(Budget.file_name)
+    query = query.group_by(Budget.file_name, Company.name).order_by(Budget.file_name)
     
     results = []
     for row in query.all():
@@ -684,6 +688,7 @@ def get_budget_uploaded_files_list(db: Session, company_id: Optional[int] = None
         results.append({
             "file_name": row.file_name,
             "file_timestamp": file_timestamp,
+            "company_name": row.company_name,
             "record_count": row.record_count,
             "earliest_year": row.earliest_year,
             "latest_year": row.latest_year,
@@ -691,8 +696,6 @@ def get_budget_uploaded_files_list(db: Session, company_id: Optional[int] = None
         })
     
     return results
-
-
 
 def get_budget_stores_list(db: Session, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
     """Get list of all stores with record counts"""
