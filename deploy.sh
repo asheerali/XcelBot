@@ -23,6 +23,16 @@ echo "Building frontend..."
 cd frontend
 npm run build || { echo "Build failed"; exit 1; }
 
+echo "Deleting folders on AWS server first..."
+ssh -i "$PEM_PATH" "$SERVER_USER@$SERVER_DOMAIN" << EOF
+
+  echo "Removing old files..."
+  sudo rm -rf $REMOTE_BUILD_DIR/
+
+  echo "Removing old Nginx HTML files..."
+  sudo rm -rf $NGINX_HTML_DIR/*
+
+EOF
 
 # 3. Copy build to server
 echo "Copying build to AWS server..."
@@ -56,51 +66,5 @@ cd ..
 sed -i 's|^// export const API_URL_Local = "http://localhost:8000";|export const API_URL_Local = "http://localhost:8000";|' $CONSTANTS_FILE
 sed -i 's|^export const API_URL_Local = "http://3.149.94.190:8000";|// export const API_URL_Local = "http://3.149.94.190:8000";|' $CONSTANTS_FILE
 
+
 echo "All done."
-
-
-
-# cd frontend
-# # Variables
-# PEM_PATH="../../SecretiQ.pem"
-# SERVER_USER="admin"
-# SERVER_DOMAIN="ec2-3-149-94-190.us-east-2.compute.amazonaws.com"
-# BACKEND_DIR="XcelBot/backend"
-# DOCKER_IMAGE_NAME="xcelbol_be"
-# DOCKER_TAG="v1"
-# PORT="8000"
-# BRANCH_NAME="integrations_v18"
-
-
-# echo "Deploying backend to AWS server..."
-
-# ssh -i "$PEM_PATH" "$SERVER_USER@$SERVER_DOMAIN" << EOF
-#   echo "Navigating to backend directory..."
-#   cd $BACKEND_DIR
-
-#   echo i am lsing
-#   ls ~/
-#   echo "Pulling latest changes from Git..."
-#   echo "Checking out branch $BRANCH_NAME..."
-#   git fetch origin
-#   git checkout $BRANCH_NAME
-#   git pull origin $BRANCH_NAME
-
-#   echo "Getting running Docker container..."
-#   CONTAINER_ID=\$(sudo docker ps -q --filter "ancestor=$DOCKER_IMAGE_NAME:$DOCKER_TAG")
-
-#   if [ ! -z "\$CONTAINER_ID" ]; then
-#     echo "Stopping existing container: \$CONTAINER_ID"
-#     sudo docker stop \$CONTAINER_ID
-#   else
-#     echo "No running container found for $DOCKER_IMAGE_NAME:$DOCKER_TAG"
-#   fi
-
-#   echo "Building new Docker image..."
-#   sudo docker build -t $DOCKER_IMAGE_NAME:$DOCKER_TAG .
-
-#   echo "Running new Docker container..."
-#   sudo docker run -d -p $PORT:$PORT $DOCKER_IMAGE_NAME:$DOCKER_TAG
-
-#   echo "Backend deployment complete."
-# EOF
