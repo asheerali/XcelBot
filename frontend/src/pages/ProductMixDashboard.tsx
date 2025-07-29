@@ -2257,7 +2257,7 @@ export default function ProductMixDashboard() {
               }}
             >
               <Tab label="Performance" />
-              <Tab label="Menu Analysis" />
+              {/* <Tab label="Menu Analysis" /> */}
             </Tabs>
 
             {/* Server Performance Tab */}
