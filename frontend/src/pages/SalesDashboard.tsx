@@ -2300,6 +2300,7 @@ export default function SalesDashboard() {
           </TabPanel>
         </Card>
       </>
+      
     </Box>
   );
 }
