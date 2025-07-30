@@ -31,9 +31,9 @@ class SalesSplitPmixUploadRequest(BaseModel):
     categories: Optional[Union[str, List[str]]] = None
 
 class FinancialCompanyWideUploadRequest(BaseModel):
-    fileName: str
+    fileName: Optional[str] = None
     dashboardName: Optional[str] = None
-    company_id: Optional[int] = None  # Optional company ID filter
+    company_id:  Optional[Union[int, str]] = None
     dashboard: Optional[str] = None
     location: Optional[Union[str, List[str]]] = None
     locations: Optional[List[str]] = None
@@ -81,7 +81,7 @@ class DashboardResponse(BaseModel):
     columnNames: Optional[List[str]] = None
     columnsData: Optional[List[Dict[str, Any]]] = None
     dashboardName: str
-    fileName: str
+    fileName: Optional[str] = None
     data: str
 
     # Financials specific fields
