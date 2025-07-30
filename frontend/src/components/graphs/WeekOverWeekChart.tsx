@@ -89,7 +89,7 @@ const WeekOverWeekChart = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
                 dataKey="name" 
-                angle={-45}
+                // angle={-45}
                 textAnchor="end"
                 height={100}
                 interval={0}

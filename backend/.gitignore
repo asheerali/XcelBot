@@ -10,5 +10,7 @@ test
 
 # Additional Python environments
 .venv
+downloads/
 env/
 ENV/
+app.db

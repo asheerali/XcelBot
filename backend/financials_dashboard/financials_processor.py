@@ -2,88 +2,171 @@ import pandas as pd
 import io
 import os
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Union
 import pandas as pd
 import numpy as np
 from financials_dashboard.financials_utils import financials_filters, day_of_the_week_tables, calculate_tw_lw_bdg_comparison
 
 
-
-def process_financials_file(file_data: io.BytesIO, start_date=None, end_date=None, location=None):
+def process_financials_file(df1, df2, year="All", week_range="All", location="All", start_date=None, end_date=None):
     """
     Process the uploaded Excel file and transform the data.
     Returns data tables for the frontend including the 1P column.
     
     Parameters:
-    - file_data: Excel file as BytesIO object
+    - file_data: Excel file as BytesIO object, file path string, DataFrame, or bytes
     - start_date: Optional start date for filtering (str format: 'YYYY-MM-DD')
     - end_date: Optional end date for filtering (str format: 'YYYY-MM-DD')
     - location: Optional location name for filtering
     """
-    # Read the Excel file
-    # df = pd.read_excel(file_data)
-    file_data.seek(0)
-    print("Type of file_data:", type(file_data))
+    
+    
+    try:
+            if isinstance(df1, pd.DataFrame):
+                print("Received DataFrame directly.")
+                df = df1
+
+            if df.empty:
+                raise ValueError("The table is empty or missing in this date range.")
+    except ValueError as e:
+        raise ValueError("unable to read the table from the database.")
 
     try:
-        # print("i am here 1")
-        df = pd.read_excel(file_data, sheet_name="Database")
+        if isinstance(df2, pd.DataFrame):
+            print("Received Budget DataFrame directly.")
+            df_budget = df2
+
+        if df_budget.empty:
+            raise ValueError("The budget table is empty or missing.")
     except ValueError as e:
-        raise ValueError("Sheet named 'Database' not found in the uploaded Excel file.")
+        raise ValueError("budget table is not found.")
+
+
+    # # Strip whitespace from column names
+    # df.columns = df.columns.str.strip()
+    
+    # # ===== ADD HELPER COLUMN CHECK HERE =====
+    # # Check if Helper 1 and Helper 4 exist, create them if they don't
+    # if 'Helper 1' not in df.columns:
+    #     print("Helper 1 column not found. Creating Helper 1 column...")
+    #     # Find the position after Year column or at the end
+    #     if 'Year' in df.columns:
+    #         year_idx = df.columns.get_loc('Year')
+    #         df.insert(year_idx + 1, 'Helper 1', '')
+    #     else:
+    #         df['Helper 1'] = ''
+    # else:
+    #     print("Helper 1 column already exists.")
+    
+    # if 'Helper 4' not in df.columns:
+    #     print("Helper 4 column not found. Creating Helper 4 column...")
+    #     # Find the position after Helper columns
+    #     helper_cols = [col for col in df.columns if col.startswith('Helper')]
+    #     if helper_cols:
+    #         # Insert after the last existing Helper column
+    #         last_helper_col = max(helper_cols, key=lambda x: int(x.split()[-1]) if x.split()[-1].isdigit() else 0)
+    #         last_helper_idx = df.columns.get_loc(last_helper_col)
+    #         df.insert(last_helper_idx + 1, 'Helper 4', '')
+    #     else:
+    #         df['Helper 4'] = ''
+    # else:
+    #     print("Helper 4 column already exists.")
+    # # ===== END HELPER COLUMN CHECK =====
+
+    # # Define columns to exclude from filling
+    # exclude_cols = ['Store', 'Ly Date', 'Date', 'Day', 'Week', 'Month', 'Quarter', 'Year',
+    #                 'Helper 1', 'Helper 2', 'Helper 3', 'Helper 4']
+
+    # # Get all columns that should be filled with 0
+    # fill_cols = [col for col in df.columns if col not in exclude_cols]
+
+    # # Replace NaN with 0 only in selected columns
+    # df[fill_cols] = df[fill_cols].fillna(0)
+
+    # # Fill excluded (metadata/helper) columns with empty string
+    # df[exclude_cols] = df[exclude_cols].fillna('')
+    # df["Store"] = df["Store"].str.replace(r'^\d{4}:\s*', '', regex=True)
+
+
+    # # Strip whitespace from column names for budget dataframe
+    # df_budget.columns = df_budget.columns.str.strip()
+    
+    # # ===== ADD HELPER COLUMN CHECK FOR BUDGET DF TOO =====
+    # # Check if Helper 1 and Helper 4 exist in budget dataframe, create them if they don't
+    # if 'Helper 1' not in df_budget.columns:
+    #     print("Helper 1 column not found in budget data. Creating Helper 1 column...")
+    #     if 'Year' in df_budget.columns:
+    #         year_idx = df_budget.columns.get_loc('Year')
+    #         df_budget.insert(year_idx + 1, 'Helper 1', '')
+    #     else:
+    #         df_budget['Helper 1'] = ''
+    
+    # if 'Helper 4' not in df_budget.columns:
+    #     print("Helper 4 column not found in budget data. Creating Helper 4 column...")
+    #     helper_cols = [col for col in df_budget.columns if col.startswith('Helper')]
+    #     if helper_cols:
+    #         last_helper_col = max(helper_cols, key=lambda x: int(x.split()[-1]) if x.split()[-1].isdigit() else 0)
+    #         last_helper_idx = df_budget.columns.get_loc(last_helper_col)
+    #         df_budget.insert(last_helper_idx + 1, 'Helper 4', '')
+    #     else:
+    #         df_budget['Helper 4'] = ''
+    # # ===== END HELPER COLUMN CHECK FOR BUDGET DF =====
+
+    # # Identify all column names
+    # cols = list(df_budget.columns)
+
+    # # Replace only the first occurrence of "Net Sales" with "Net Sales 1"
+    # found = False
+    # for i, col in enumerate(cols):
+    #     if col.strip() == "Net Sales" and not found:
+    #         cols[i] = "Net Sales 1"
+    #         found = True
+
+    # # Assign the modified column names back
+    # df_budget.columns = cols
 
     
-    # Reset the file pointer for further operations
-    file_data.seek(0)
+    # # Define columns to exclude from numeric NaN filling
+    # exclude_cols = [
+    #     'Store', 'Ly Date', 'Date', 'Day', 'Week', 'Month', 'Quarter', 'Year',
+    #     'Helper 1', 'Helper 2', 'Helper 3', 'Helper 4', 'Helper'  # Include any actual column names in your sheet
+    # ]
 
-    # Strip whitespace from column names
-    df.columns = df.columns.str.strip()
-    # print("i am here 2")
+    # # Ensure all exclude columns that are present in df_budget
+    # exclude_cols = [col for col in exclude_cols if col in df_budget.columns]
 
-    # Define columns to exclude from filling
-    exclude_cols = ['Store', 'Ly Date', 'Date', 'Day', 'Week', 'Month', 'Quarter', 'Year',
-                    'Helper 1', 'Helper 2', 'Helper 3', 'Helper 4']
+    # # Get all columns that should be filled with 0
+    # fill_cols = [col for col in df_budget.columns if col not in exclude_cols]
 
-    # Get all columns that should be filled with 0
-    fill_cols = [col for col in df.columns if col not in exclude_cols]
+    # # Replace NaN with 0 only in selected columns
+    # df_budget[fill_cols] = df_budget[fill_cols].fillna(0)
 
-    # Replace NaN with 0 only in selected columns
-    df[fill_cols] = df[fill_cols].fillna(0)
+    # # Fill excluded (metadata/helper) columns with empty string
+    # df_budget[exclude_cols] = df_budget[exclude_cols].fillna('')
 
-    # Fill excluded (metadata/helper) columns with empty string
-    df[exclude_cols] = df[exclude_cols].fillna('')
+    # df_budget["Store"] = df_budget["Store"].str.replace(r'^\d{4}:\s*', '', regex=True)
+    # df_budget["Store"].unique()  # Display unique values in the 'stores' column
+
+    # years = df["Year"].unique().tolist()  # Display unique values in the 'Year' column
+    # dates = df["Helper 4"].unique().tolist()  # Display unique values in the 'Helper 4' column
+    # stores = df["Store"].unique().tolist()  # Display unique values in the 'stores' column
+    # df["Date"] = df["Date"].dt.date
+    # df_budget["Date"] = df_budget["Date"].dt.date
+
+    years = df["Year"].unique().tolist()  # Display unique values in the 'Year' column
+    dates = df["Helper_4"].unique().tolist()  # Display unique values in the 'Helper 4' column
+    stores = df["Store"].unique().tolist()  # Display unique values in the 'stores' column
 
     financials_weeks, financials_years, financials_stores = financials_filters(df)
+    financials_sales_table, financials_orders_table, financials_avg_ticket_table = day_of_the_week_tables(df, store=location, start_date=start_date, end_date=end_date) 
     
-    financials_sales_table, financials_orders_table, financials_avg_ticket_table = day_of_the_week_tables(df)
+    print("i am here 2 in the financials_processor.py printing the financial_sales_table_ and printing the stores",stores, financials_sales_table)
+    financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df,df_budget, store=location, year=year, week_range=week_range, start_date=start_date, end_date=end_date)
     
-    if location == "0001: Midtown East":
-        financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df, store="0001: Midtown East", year=2025, week_range="1 | 12/30/2024 - 01/05/2025")
-    else:
-        financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df, store="0001: Midtown East", year=2025, week_range="1 | 12/30/2024 - 01/05/2025")
-    # print("i am here 3")
-    # print(financials_tw_lw_bdg_table)
-    
-    # result = {
-    #         "table1": [financials_weeks, financials_years, financials_stores],    # Raw data table
-    #         "table2": financials_years,    # Percentage table
-    #         "table3": financials_sales_table,    # In-House percentages
-    #         "table4": financials_orders_table,    # Week-over-Week table
-    #         "table5": financials_avg_ticket_table,    # Category summary
-    #         "locations": "locations",   # List of all locations (not just filtered ones)
-    #         "dateRanges": "" # List of available date ranges
-    #     }
-    # return result
 
-    return financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table
-    
-    # except Exception as e:
-    #     # Log the error
-    #     print(f"Error processing Excel file: {str(e)}")
-    #     import traceback
-    #     print(traceback.format_exc())
-    #     # Re-raise to be caught by the endpoint handler
-    #     raise
-    
+    return financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table, years, dates, stores
+
+
 
 
 

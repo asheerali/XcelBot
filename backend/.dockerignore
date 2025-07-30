@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Additional environment files
 .env.local
 .env.development
@@ -24,10 +25,48 @@ __pycache__/
 docker 
 *.xlsx
 # Additional environment files
+=======
+# Python environments
+.venv/
+env/
+ENV/
+downloads/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Node
+node_modules/
+yarn.lock
+
+# VS Code / IDE
+.vscode/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Excel / temp files (optional)
+*.xlsx
+
+# Ignore docker and Git files if needed
+docker/
+.git/
+.gitignore
+.dockerignore
+
+# Environment files (only exclude if mounted manually at runtime)
+>>>>>>> integrations_v41
 .env.local
 .env.development
 .env.test
 .env.production
+<<<<<<< HEAD
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -36,3 +75,5 @@ docker
 .venv
 env/
 ENV/
+=======
+>>>>>>> integrations_v41

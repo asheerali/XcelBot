@@ -26,10 +26,20 @@ import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
+<<<<<<< HEAD
 
 // API base URLs - update to match your backend URL
 const API_URL = 'http://13.60.27.209:8000/api/excel/upload';
 const FILTER_API_URL = 'http://13.60.27.209::8000/api/excel/filter';
+=======
+import { API_URL_Local } from '../constants';
+
+// API base URLs - update to match your backend URL
+// const API_URL = 'http://localhost:8000/api/excel/upload';
+
+// const FILTER_API_URL = 'http://localhost:8000/api/excel/filter';
+const FILTER_API_URL = `${API_URL_Local}/api/excel/filter`;
+>>>>>>> integrations_v41
 
 // Main Component
 export function ExcelImport() {

@@ -34,7 +34,50 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
   // Use provided initialState or default
   const [state, setState] = useState(initialState || defaultState);
 
+<<<<<<< HEAD
   // Define static ranges
+=======
+  // Helper function to get the start of the current week (Monday)
+  const getCurrentWeekStart = (date: Date): Date => {
+    return startOfWeek(date, { weekStartsOn: 1 }); // Monday = 1
+  };
+
+  // Helper function to get the previous complete week (Monday to Sunday)
+  const getPreviousWeek = () => {
+    const today = new Date();
+    const currentWeekStart = getCurrentWeekStart(today);
+    
+    // Get the start of last week (7 days before current week start)
+    const lastWeekStart = addDays(currentWeekStart, -7);
+    // Get the end of last week (6 days after last week start = Sunday)
+    const lastWeekEnd = addDays(lastWeekStart, 6);
+    
+    return {
+      startDate: lastWeekStart,
+      endDate: lastWeekEnd
+    };
+  };
+
+  // Helper function to get X complete weeks before the current week
+  const getPreviousXWeeks = (numWeeks: number) => {
+    return () => {
+      const today = new Date();
+      const currentWeekStart = getCurrentWeekStart(today);
+      
+      // Start from X weeks before the current week
+      const startDate = addDays(currentWeekStart, -(numWeeks * 7));
+      // End at the day before the current week starts (last Sunday)
+      const endDate = addDays(currentWeekStart, -1);
+      
+      return {
+        startDate,
+        endDate
+      };
+    };
+  };
+
+  // Define static ranges - UPDATED with proper week logic
+>>>>>>> integrations_v41
   const staticRanges = createStaticRanges([
     {
       label: 'Today',
@@ -53,18 +96,49 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
     {
       label: 'Last 7 Days',
       range: () => ({
+<<<<<<< HEAD
         startDate: addDays(new Date(), -6),
+=======
+        startDate: addDays(new Date(), -6), // 6 days ago + today = 7 days
+>>>>>>> integrations_v41
         endDate: new Date()
       })
     },
     {
       label: 'Last 30 Days',
       range: () => ({
+<<<<<<< HEAD
         startDate: addDays(new Date(), -29),
+=======
+        startDate: addDays(new Date(), -29), // 29 days ago + today = 30 days
+>>>>>>> integrations_v41
         endDate: new Date()
       })
     },
     {
+<<<<<<< HEAD
+=======
+      label: 'Last Week',
+      range: getPreviousWeek
+    },
+    {
+      label: 'Last 2 Weeks',
+      range: getPreviousXWeeks(2)
+    },
+    {
+      label: 'Last 4 Weeks',
+      range: getPreviousXWeeks(4)
+    },
+    {
+      label: 'Last 8 Weeks',
+      range: getPreviousXWeeks(8)
+    },
+    {
+      label: 'Last 13 Weeks',
+      range: getPreviousXWeeks(13)
+    },
+    {
+>>>>>>> integrations_v41
       label: 'This Month',
       range: () => ({
         startDate: startOfMonth(new Date()),
@@ -81,7 +155,18 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
           endDate: endOfMonth(lastMonth)
         };
       }
+<<<<<<< HEAD
     }
+=======
+    },
+    {
+      label: 'This Week',
+      range: () => ({
+        startDate: startOfWeek(new Date(), { weekStartsOn: 1 }), // Start on Monday
+        endDate: endOfWeek(new Date(), { weekStartsOn: 1 })     // End on Sunday
+      })
+    },
+>>>>>>> integrations_v41
   ]);
 
   // Handle date range selection
@@ -104,6 +189,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
   };
 
   return (
+<<<<<<< HEAD
     <DateRangePicker
       onChange={handleSelect}
       showSelectionPreview={true}
@@ -114,6 +200,40 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
       staticRanges={staticRanges}
       inputRanges={[]}
     />
+=======
+    <Box sx={{ 
+      '& .rdrCalendarWrapper': {
+        fontSize: '14px'
+      },
+      '& .rdrStaticRange': {
+        padding: '8px 16px',
+        '&:hover': {
+          backgroundColor: '#f5f5f5'
+        }
+      },
+      '& .rdrStaticRangeSelected': {
+        backgroundColor: '#1976d2',
+        color: 'white'
+      },
+      '& .rdrStaticRangeLabel': {
+        fontSize: '14px'
+      }
+    }}>
+      <DateRangePicker
+        onChange={handleSelect}
+        showSelectionPreview={true}
+        moveRangeOnFirstSelection={false}
+        months={2}
+        ranges={state}
+        direction="horizontal"
+        staticRanges={staticRanges}
+        inputRanges={[]}
+        showDateDisplay={false}
+        showMonthAndYearPickers={true}
+        weekStartsOn={1}
+      />
+    </Box>
+>>>>>>> integrations_v41
   );
 };
 

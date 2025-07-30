@@ -6,8 +6,12 @@ import {
   RouterProvider,
   Navigate,
 } from "react-router-dom";
+import FileManagementPage from "./pages/FileManagementPage";
+
 import { Provider } from "react-redux";
-import { store } from "./store";
+// import { store } from "./store";
+import { store, persistor } from "./store"; // UPDATED
+import { PersistGate } from "redux-persist/integration/react"; // NEW
 import App from "./App";
 import Layout from "./layouts/Dashboard";
 import ManageReports from "./pages/ManageReports";
@@ -28,7 +32,44 @@ import SalesDashboard from "./pages/SalesDashboard";
 import ProductMixDashboard from "./pages/ProductMixDashboard";
 import DateRangeSelector from "./components/DateRangeSelector";
 import SalesSplitDashboard from "./components/SalesSplitDashboard";
+<<<<<<< HEAD
+=======
+import ComprehensiveFinancialDashboard from "./components/ComprehensiveFinancialDashboard";
+import HomePage from "./pages/HomePage";
+import SignInView from "./pages/SignInView";
+import SignUpView from "./pages/SignUpView";
+import ForgotPasswordView from "./pages/ForgotPasswordView";
+import ResetPasswordView from "./pages/ResetPasswordView";
+import CompanyLocationManager from "./pages/CompanyLocationManager";
+import AnalyticsDashboard from "./pages/AnalyticsDashboard"; // Import the AnalyticsDashboard component
+import MasterFile from "./pages/MasterFile";
+import FiltersOrderIQ from "./components/FiltersOrderIQ";
+import SummaryFinancialDashboard from "./pages/SummaryFinancialDashboard";
+import OrderIQDashboard from "./pages/OrderIQDashboard"; // Import the OrderIQDashboard component
+import StoreSummaryProduction from "./pages/StoreSummaryProduction"; // Import the StoreSummaryProduction component
+import Reports from "./pages/Reports";
+>>>>>>> integrations_v41
 const router = createBrowserRouter([
+  {
+    path: "/sign-in",
+    Component: SignInView,
+  },
+  {
+    path: "/sign-up",
+    Component: SignUpView,
+  },
+  {
+    path: "/forgot-password",
+    Component: ForgotPasswordView,
+  },
+  {
+    path: "/reset-password",
+    Component: ResetPasswordView,
+  },
+  {
+    path: "HomePage",
+    Component: HomePage,
+  },
   {
     Component: App,
     children: [
@@ -38,7 +79,6 @@ const router = createBrowserRouter([
         children: [
           {
             path: "",
-            // Component: OverviewAnalyticsView,
             Component: () => <Navigate to="/manage-reports" replace />,
           },
           {
@@ -53,6 +93,7 @@ const router = createBrowserRouter([
             path: "Saleswide",
             Component: SalesDashboard,
           },
+<<<<<<< HEAD
            {
             path: "Productmix",
             Component: ProductMixDashboard,
@@ -68,7 +109,48 @@ const router = createBrowserRouter([
           
           {
             path: "upload-excel", // New route for the excel upload page
+=======
+          {
+            path: "Productmix",
+            Component: ProductMixDashboard,
+          },
+          {
+            path: "SalesSplitDashboard",
+            Component: SalesSplitDashboard,
+          },
+          {
+            path: "AnalyticsDashboard",
+            Component: AnalyticsDashboard,
+          },
+          {
+            path: "MasterFile",
+            Component: MasterFile,
+          },
+          {
+            path: "StoreSummaryProduction",
+            Component: StoreSummaryProduction,
+          },
+          {
+            path: "Reports",
+            Component: Reports,
+          },
+
+          {
+            path: "daterange",
+            Component: DateRangeSelector,
+          },
+          {
+            path: "ComprehensiveFinancialDashboard",
+            Component: ComprehensiveFinancialDashboard,
+          },
+          {
+            path: "upload-excel",
+>>>>>>> integrations_v41
             Component: ExcelUploadPage,
+          },
+          {
+            path: "FileManagement",
+            Component: FileManagementPage,
           },
           {
             path: "HelpCenter",
@@ -87,6 +169,10 @@ const router = createBrowserRouter([
             Component: ContactTeam,
           },
           {
+            path: "CompanyLocationManager",
+            Component: CompanyLocationManager,
+          },
+          {
             path: "Payments",
             Component: PaymentPage,
           },
@@ -94,6 +180,19 @@ const router = createBrowserRouter([
             path: "UserPermissions",
             Component: UserPermissions,
           },
+          {
+            path: "FiltersOrderIQ",
+            Component: FiltersOrderIQ,
+          },
+          {
+            path: "SummaryFinancialDashboard",
+            Component: SummaryFinancialDashboard,
+          },
+          {
+            path: "OrderIQDashboard",
+            Component: OrderIQDashboard, // Assuming you have this component
+          },
+
           {
             path: "ComingSoon",
             Component: ComingSoon,
@@ -104,10 +203,6 @@ const router = createBrowserRouter([
           },
         ],
       },
-      {
-        path: "*",
-        Component: NotFoundView,
-      },
     ],
   },
 ]);
@@ -115,9 +210,13 @@ const router = createBrowserRouter([
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Provider store={store}>
-      <HelmetProvider>
-        <RouterProvider router={router} />
-      </HelmetProvider>
+      <PersistGate loading={null} persistor={persistor}>
+        {" "}
+        {/* NEW */}
+        <HelmetProvider>
+          <RouterProvider router={router} />
+        </HelmetProvider>
+      </PersistGate>
     </Provider>
   </React.StrictMode>
 );

@@ -197,7 +197,7 @@ const CateringPercentageChart: React.FC<CateringPercentageChartProps> = ({ table
           Catering
         </Typography>
         
-        <Box sx={{ width: '100%', height: 400 }}>
+        <Box sx={{ width: '100%', height: 300 }}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
               data={dataWithTrendLine}
@@ -208,12 +208,12 @@ const CateringPercentageChart: React.FC<CateringPercentageChartProps> = ({ table
               <YAxis 
                 tickFormatter={formatYAxis}
                 domain={[yAxisMin, yAxisMax]}
-                label={{ 
-                  value: 'Percentage of Total Sales', 
-                  angle: -90, 
-                  position: 'insideLeft',
-                  style: { textAnchor: 'middle' }
-                }}
+                // label={{ 
+                //   value: 'Percentage of Total Sales', 
+                //   angle: -90, 
+                //   position: 'insideLeft',
+                //   style: { textAnchor: 'middle' }
+                // }}
               />
               <Tooltip content={<CustomTooltip />} />
               <Bar 

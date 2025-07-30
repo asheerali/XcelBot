@@ -1,397 +1,652 @@
-import React, { useEffect } from 'react';
-import Box from '@mui/material/Box';
-import Paper from '@mui/material/Paper';
-import Tabs from '@mui/material/Tabs';
-import Tab from '@mui/material/Tab';
-import Typography from '@mui/material/Typography';
-import Grid from '@mui/material/Grid';
-import Card from '@mui/material/Card';
-import Table from '@mui/material/Table';
-import TableRow from '@mui/material/TableRow';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import IconButton from '@mui/material/IconButton';
-import InfoIcon from '@mui/icons-material/Info';
-import Tooltip from '@mui/material/Tooltip';
-import { alpha } from '@mui/material/styles';
+// Enhanced TableDisplay.tsx - Color-coded percentage cells with comprehensive comma formatting
+import React, { useState, useCallback, useMemo } from "react";
+import {
+  Box,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+  Tabs,
+  Tab,
+  Card,
+  Divider,
+  useTheme,
+  alpha,
+} from "@mui/material";
+import { styled } from "@mui/material/styles";
 
-interface TableData {
-  [key: string]: any[];
-}
+// Icons
+import TableChartIcon from "@mui/icons-material/TableChart";
+import PercentIcon from "@mui/icons-material/Percent";
+import HomeIcon from "@mui/icons-material/Home";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import CategoryIcon from "@mui/icons-material/Category";
 
-interface TableDisplayProps {
-  tableData: TableData;
-  viewMode: string;
-  activeTab: number;
-  onTabChange: (event: React.SyntheticEvent, newValue: number) => void;
-}
+// Clean styled components
+const CleanTab = styled(Tab)(({ theme }) => ({
+  textTransform: "none",
+  fontWeight: 500,
+  fontSize: "0.95rem",
+  minHeight: 48,
+  padding: "12px 16px",
+  margin: "0 2px",
+  color: "#6B7280",
+  transition: "all 0.2s ease",
+  "&.Mui-selected": {
+    color: "#3B82F6",
+    fontWeight: 600,
+  },
+  "&:hover": {
+    color: "#3B82F6",
+    backgroundColor: alpha("#3B82F6", 0.04),
+  },
+}));
 
-interface TableInfo {
-  index: number;
-  label: string;
-  description: string;
-  columns: string[];
-  key: string;
-}
+const CleanTabs = styled(Tabs)(({ theme }) => ({
+  "& .MuiTabs-indicator": {
+    backgroundColor: "#3B82F6",
+    height: 2,
+    borderRadius: 1,
+  },
+  "& .MuiTabs-flexContainer": {
+    borderBottom: "1px solid #E5E7EB",
+    gap: 4,
+  },
+  minHeight: 48,
+}));
 
-/**
- * Fixed Table Display Component
- * Renders data tables in different view modes
- */
-const TableDisplay: React.FC<TableDisplayProps> = ({ 
-  tableData, 
-  viewMode, 
-  activeTab, 
-  onTabChange 
-}) => {
-  // Define table properties
-  const tableProps: TableInfo[] = [
-    {
-      index: 0,
-      label: "Percentage Table",
-      description: "Shows week-over-week percentage changes for each category. Positive values are good!",
-      columns: ['Week', '1P', 'Catering', 'DD', 'GH', 'In-House', 'UB', 'Grand Total'],
-      key: 'table1'
-    },
-    {
-      index: 1,
-      label: "In-House Table",
-      description: "Shows each category as a percentage of In-House sales.",
-      columns: ['Week', '1P', 'In-House', 'Catering', 'DD', 'GH', 'UB'],
-      key: 'table2'
-    },
-    {
-      index: 2,
-      label: "Week-over-Week (WOW)",
-      description: "Week-over-Week data with 3P (Third-Party) totals and 1P to 3P ratio.",
-      columns: ['Week', '1P', 'In-House', 'Catering', 'DD', 'GH', 'UB', '3P', '1P/3P'],
-      key: 'table3'
-    },
-    {
-      index: 3,
-      label: "Category Summary",
-      description: "Summarizes sales by category with totals and percentages.",
-      columns: ['Sales_Category', 'Amount', 'Transactions', '% of Total', 'Avg Transaction'],
-      key: 'table5'
+// Color-coded TableCell component
+const ColorCodedTableCell = styled(TableCell)<{
+  isPercentage?: boolean;
+  value?: number;
+  align?: "left" | "center" | "right";
+}>(({ theme, isPercentage, value, align }) => {
+  let backgroundColor = "transparent";
+  let color = theme.palette.text.primary;
+
+  if (isPercentage && typeof value === "number") {
+    if (value > 0) {
+      backgroundColor = "#d4edda"; // Light green background
+      color = "#155724"; // Dark green text
+    } else if (value < 0) {
+      backgroundColor = "#f8d7da"; // Light red background
+      color = "#721c24"; // Dark red text
     }
+  }
+
+  return {
+    backgroundColor,
+    color,
+    fontWeight: isPercentage ? 600 : "normal",
+    textAlign: align || "center",
+    whiteSpace: "nowrap",
+    fontSize: "0.875rem",
+    padding: "8px 16px",
+    borderRadius: isPercentage ? "4px" : "none",
+    margin: isPercentage ? "2px" : "0",
+  };
+});
+
+// Enhanced utility function to detect if a value is a currency
+const isCurrencyValue = (value: any): boolean => {
+  if (typeof value === "string") {
+    // Check for dollar signs, currency symbols, or decimal patterns
+    return /^\$/.test(value.trim()) || /^\d+\.\d{2}$/.test(value.trim());
+  }
+  return false;
+};
+
+// Enhanced utility function to detect if a value is numeric
+const isNumericValue = (value: any): boolean => {
+  if (typeof value === "number") return true;
+  if (typeof value === "string") {
+    // Remove common formatting characters and check if it's a number
+    const cleanValue = value.replace(/[$,\s%]/g, "");
+    return !isNaN(parseFloat(cleanValue)) && isFinite(parseFloat(cleanValue));
+  }
+  return false;
+};
+
+// Enhanced number formatting with comprehensive comma support and optional dollar sign
+const formatNumber = (value: any, forceDollarSign: boolean = false): string => {
+  if (value === null || value === undefined || value === "") return "N/A";
+
+  // Handle string values
+  if (typeof value === "string") {
+    const trimmedValue = value.trim();
+
+    // If it's already formatted or non-numeric text, return as-is
+    if (!isNumericValue(trimmedValue)) {
+      return trimmedValue;
+    }
+
+    // Extract numeric value from string (remove $, commas, etc.)
+    const cleanValue = trimmedValue.replace(/[$,\s]/g, "");
+    const numValue = parseFloat(cleanValue);
+
+    if (isNaN(numValue)) return trimmedValue;
+
+    // Check if it was a currency or if we should force dollar sign
+    const wasCurrency = trimmedValue.includes("$");
+    const shouldAddDollarSign = wasCurrency || forceDollarSign;
+
+    // For dollar amounts, show .00 for zero values, otherwise follow normal rules
+    const minimumDecimals =
+      shouldAddDollarSign && numValue === 0 ? 2 : numValue % 1 === 0 ? 0 : 2;
+
+    // Format with commas
+    const formatted = numValue.toLocaleString("en-US", {
+      minimumFractionDigits: minimumDecimals,
+      maximumFractionDigits: 2,
+    });
+
+    return shouldAddDollarSign ? `$${formatted}` : formatted;
+  }
+
+  // Handle numeric values
+  const numValue = typeof value === "number" ? value : parseFloat(value);
+
+  if (isNaN(numValue)) return String(value);
+
+  // For dollar amounts, show .00 for zero values, otherwise follow normal rules
+  const minimumDecimals =
+    forceDollarSign && numValue === 0 ? 2 : numValue % 1 === 0 ? 0 : 2;
+
+  // Format with commas
+  const formatted = numValue.toLocaleString("en-US", {
+    minimumFractionDigits: minimumDecimals,
+    maximumFractionDigits: 2,
+  });
+
+  return forceDollarSign ? `$${formatted}` : formatted;
+};
+
+// Enhanced percentage formatting with comma support for large percentages
+const formatPercentage = (
+  value: any
+): { formatted: string; numValue: number | null } => {
+  if (value === null || value === undefined || value === "") {
+    return { formatted: "N/A", numValue: null };
+  }
+
+  let numValue: number;
+
+  if (typeof value === "string") {
+    // Remove percentage sign, commas, and any extra characters
+    const cleanValue = value.replace(/[%,\s]/g, "");
+    numValue = parseFloat(cleanValue);
+  } else {
+    numValue = parseFloat(value);
+  }
+
+  if (isNaN(numValue)) {
+    return { formatted: String(value), numValue: null };
+  }
+
+  const sign = numValue >= 0 ? "↑" : "↓";
+
+  // Format the percentage value with commas if it's large
+  const absValue = Math.abs(numValue);
+  const formattedNumber = absValue.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  const formatted = `${sign} ${formattedNumber}%`;
+
+  return { formatted, numValue };
+};
+
+// Enhanced function to detect currency columns
+const isCurrencyColumn = (header: string, values: any[]): boolean => {
+  const currencyHeaders = [
+    "sales",
+    "revenue",
+    "cost",
+    "price",
+    "amount",
+    "total",
+    "value",
+    "pay",
+    "salary",
+    "wage",
+    "budget",
+    "profit",
+    "loss",
+    "$",
+    "dollar",
+    "usd",
+    "money",
+    "fee",
+    "charge",
   ];
 
-  // Effect to reset activeTab if it's out of bounds
-  useEffect(() => {
-    if (activeTab >= tableProps.length) {
-      // Reset to the first tab if the active tab is out of bounds
-      onTabChange({} as React.SyntheticEvent, 0);
-    }
-  }, [activeTab, onTabChange]);
+  const headerLower = header.toLowerCase();
+  const hasCurrencyHeader = currencyHeaders.some((keyword) =>
+    headerLower.includes(keyword)
+  );
 
-  // Ensure activeTab is valid
-  const safeActiveTab = Math.min(activeTab, tableProps.length - 1);
+  // Check if most values in the column look like currency
+  const currencyValueCount = values
+    .slice(0, 5) // Check first 5 values for performance
+    .filter((val) => isCurrencyValue(val)).length;
 
-  // Custom render function for percentage values
-  const renderPercentValue = (value: any): JSX.Element | string => {
-    if (value === null || value === undefined || value === '####') {
-      return <span>####</span>;
-    }
-    
-    // Convert to number if it's a string with % already
-    let numValue = typeof value === 'string' && value.includes('%') 
-      ? parseFloat(value.replace('%', '')) 
-      : parseFloat(value);
-    
-    if (isNaN(numValue)) {
-      return value;
-    }
-    
-    // Determine color based on value
-    let color = 'inherit';
-    if (numValue > 0) {
-      color = 'green';
-    } else if (numValue < 0) {
-      color = 'red';
-    }
-    
+  return hasCurrencyHeader || currencyValueCount >= 2;
+};
+
+const isPercentageColumn = (header: string, value: any): boolean => {
+  // Check if header suggests percentage
+  const percentageHeaders = [
+    "percentage",
+    "percent",
+    "%",
+    "change",
+    "growth",
+    "wow",
+    "week over week",
+    "monthly",
+    "yearly",
+    "variance",
+    "delta",
+    "rate",
+  ];
+
+  const headerLower = header.toLowerCase();
+  const isPercentageHeader = percentageHeaders.some((keyword) =>
+    headerLower.includes(keyword)
+  );
+
+  // Check if value looks like a percentage
+  const isPercentageValue =
+    typeof value === "string" &&
+    (value.includes("%") || /^[+-]?\d+(\.\d+)?$/.test(value.trim()));
+
+  return isPercentageHeader || isPercentageValue;
+};
+
+// Tab Panel Component - Using forceRender approach
+interface TabPanelProps {
+  children?: React.ReactNode;
+  value: number;
+  index: number;
+  forceRender?: boolean;
+}
+
+const TabPanel: React.FC<TabPanelProps> = ({
+  children,
+  value,
+  index,
+  forceRender = true,
+  ...other
+}) => {
+  const isActive = value === index;
+
+  if (forceRender) {
+    // Always render but hide inactive panels
     return (
-      <Typography component="span" style={{ color, fontWeight: 'bold' }}>
-        {typeof value === 'string' && value.includes('%') ? value : `${numValue.toFixed(2)}%`}
-      </Typography>
+      <div
+        role="tabpanel"
+        id={`table-tabpanel-${index}`}
+        aria-labelledby={`table-tab-${index}`}
+        style={{ display: isActive ? "block" : "none" }}
+        {...other}
+      >
+        <Box sx={{ pt: 2 }}>{children}</Box>
+      </div>
     );
-  };
-
-  // Custom render function for currency values
-  const renderCurrencyValue = (value: any): string => {
-    if (value === null || value === undefined || value === '####') {
-      return '####';
-    }
-    
-    // If value is already a formatted currency string with $ and commas
-    if (typeof value === 'string' && value.includes('$')) {
-      return value;
-    }
-    
-    // Try to convert to number
-    const numValue = parseFloat(value);
-    if (isNaN(numValue)) {
-      return value;
-    }
-    
-    // Format as currency
-    return `$${numValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
-  // Determine if a value should be rendered as percentage
-  const isPercentageColumn = (columnName: string, tableIndex: number): boolean => {
-    // Week column is never a percentage
-    if (columnName === 'Week' || columnName === 'Sales_Category' || 
-        columnName === 'Amount' || columnName === 'Transactions' || 
-        columnName === 'Avg Transaction') {
-      return false;
-    }
-    
-    // For specific tables
-    if (tableIndex === 0 || tableIndex === 1 || tableIndex === 2) {
-      return true; // All columns except Week are percentages in these tables
-    }
-    
-    // For category summary table
-    if (tableIndex === 3 && columnName === '% of Total') {
-      return true;
-    }
-    
-    return false;
-  };
-
-  // Determine if a value should be rendered as currency
-  const isCurrencyColumn = (columnName: string, tableIndex: number): boolean => {
-    if (tableIndex === 3) { // Category summary table
-      return columnName === 'Amount' || columnName === 'Avg Transaction';
-    }
-    
-    return false;
-  };
-
-  // Get background color for header cells based on table type
-  const getHeaderColor = (column: string, tableIndex: number): string => {
-    // First column (Week or Sales_Category) is always light gray
-    if (column === 'Week' || column === 'Sales_Category') return '#f5f5f5';
-    
-    switch (tableIndex) {
-      case 0: // Percentage Table - orange/red headers
-        return '#ffddcc';
-      case 1: // In-House Table - blue headers
-        return '#ccddff';
-      case 2: // WOW Table - orange headers
-        return '#ffeecc';
-      case 3: // Category Summary - green headers
-        return '#ccffdd';
-      default:
-        return '#e0e0e0';
-    }
-  };
-  
-  // Helper function to render cell value correctly
-  const renderCellValue = (columnName: string, value: any, tableIndex: number): JSX.Element | string => {
-    // Special handling for specific columns
-    if (columnName === 'Week' || columnName === 'Sales_Category') {
-      return value; // Just display as is
-    }
-    
-    if (isPercentageColumn(columnName, tableIndex)) {
-      return renderPercentValue(value);
-    } else if (isCurrencyColumn(columnName, tableIndex)) {
-      return renderCurrencyValue(value);
-    } else if (columnName === 'Grand Total') {
-      return value; // Display as is, it's already formatted
-    } else if (columnName === 'Transactions') {
-      return value; // Display as is
-    } else {
-      return value;
-    }
-  };
-
-  interface RenderDataTableProps {
-    tableIndex: number;
-    data: any[];
-    columns: string[];
-    label: string;
-    description: string;
-    compact?: boolean;
   }
 
-  // Component to render a single data table
-  const RenderDataTable: React.FC<RenderDataTableProps> = ({ 
-    tableIndex, 
-    data, 
-    columns, 
-    label, 
-    description, 
-    compact = false
-  }) => {
+  // Standard implementation (causes unmounting)
+  return (
+    <div
+      role="tabpanel"
+      hidden={!isActive}
+      id={`table-tabpanel-${index}`}
+      aria-labelledby={`table-tab-${index}`}
+      {...other}
+    >
+      {isActive && <Box sx={{ pt: 2 }}>{children}</Box>}
+    </div>
+  );
+};
+
+// Helper function for tab accessibility
+function a11yProps(index: number) {
+  return {
+    id: `table-tab-${index}`,
+    "aria-controls": `table-tabpanel-${index}`,
+  };
+}
+
+// Enhanced Table component with comprehensive formatting
+interface DataTableProps {
+  title: string;
+  data: any[];
+  icon?: React.ReactNode;
+  excludePercentageFormatting?: boolean;
+}
+
+const DataTable: React.FC<DataTableProps> = ({
+  title,
+  data,
+  icon,
+  excludePercentageFormatting = false,
+}) => {
+  const theme = useTheme();
+
+  if (!data || data.length === 0) {
     return (
-      <Card sx={{ 
-        width: '100%', 
-        overflow: 'auto',
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-      }}>
-        <Box
-          p={compact ? 1 : 2}
-          bgcolor="#f5f5f5" 
-          borderBottom="1px solid #ddd"
-          display="flex"
-          alignItems="center"
-          justifyContent="space-between"
-        >
-          <Typography variant={compact ? "subtitle1" : "h6"}>
-            {label}
-          </Typography>
-          
-          <Box display="flex" alignItems="center">
-            <Tooltip title={description}>
-              <IconButton size="small">
-                <InfoIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        </Box>
-        <TableContainer sx={{ 
-          maxHeight: compact ? 400 : 600,
-          flex: 1
-        }}>
-          <Table 
-            size={compact ? "small" : "medium"} 
-            stickyHeader
-          >
-            <TableHead>
-              <TableRow>
-                {columns.map((column) => (
-                  <TableCell 
-                    key={column} 
-                    align="center"
-                    sx={{ 
-                      fontWeight: 'bold',
-                      padding: compact ? '4px' : '8px',
-                      backgroundColor: getHeaderColor(column, tableIndex),
-                      color: 'black',
-                      border: '1px solid #ddd'
-                    }}
-                  >
-                    {column}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data.length === 0 ? (
-                // Show empty rows when no data
-                Array(tableIndex === 3 ? 7 : 17).fill(0).map((_, rowIndex) => (
-                  <TableRow key={rowIndex}>
-                    {columns.map((column, colIndex) => (
-                      <TableCell 
-                        key={`${rowIndex}-${colIndex}`}
-                        align="center"
-                        sx={{ 
-                          padding: compact ? '4px' : '8px',
-                          border: '1px solid #ddd',
-                          backgroundColor: rowIndex % 2 === 0 ? '#fff' : '#f9f9f9'
-                        }}
-                      >
-                        {column === 'Week' ? (rowIndex + 1) : 
-                         column === 'Sales_Category' ? 'Category' : '####'}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                // Show actual data
-                data.map((row, index) => (
-                  <TableRow 
-                    key={index} 
-                    sx={{ 
-                      '&:nth-of-type(odd)': { backgroundColor: '#fff' },
-                      '&:nth-of-type(even)': { backgroundColor: '#f9f9f9' },
-                      '&:hover': { backgroundColor: '#f0f0f0' }
-                    }}
-                  >
-                    {columns.map((column) => {
-                      // Get the value, but handle cases where the column might not exist in the data
-                      const value = row[column] !== undefined ? row[column] : '####';
-                      
-                      return (
-                        <TableCell 
-                          key={`${index}-${column}`}
-                          align="center"
-                          sx={{ 
-                            padding: compact ? '4px' : '8px', 
-                            border: '1px solid #ddd' 
-                          }}
-                        >
-                          {renderCellValue(column, value, tableIndex)}
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+      <Card sx={{ p: 3, textAlign: "center" }}>
+        <Typography variant="h6" color="text.secondary" gutterBottom>
+          {title}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          No data available
+        </Typography>
       </Card>
     );
-  };
+  }
 
-  // Render content based on view mode
-  if (viewMode === 'tabs') {
-    // Tabbed view
+  // Get table headers from the first row
+  const headers = Object.keys(data[0]);
+
+  // Analyze columns to determine formatting types
+  const columnTypes = useMemo(() => {
+    const types: {
+      [key: string]: {
+        isPercentage: boolean;
+        isCurrency: boolean;
+        isNumeric: boolean;
+      };
+    } = {};
+
+    headers.forEach((header) => {
+      const values = data.map((row) => row[header]);
+
+      types[header] = {
+        isPercentage:
+          !excludePercentageFormatting &&
+          values.some((val) => isPercentageColumn(header, val)),
+        isCurrency: isCurrencyColumn(header, values),
+        isNumeric: values.some((val) => isNumericValue(val)),
+      };
+    });
+
+    return types;
+  }, [data, headers, excludePercentageFormatting]);
+
+  return (
+    <Card elevation={2} sx={{ borderRadius: 2, overflow: "hidden" }}>
+      {/* Table Header */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          backgroundColor: "#f8f9fa",
+          px: 3,
+          py: 2,
+          borderBottom: "1px solid #e0e0e0",
+        }}
+      >
+        {icon && <Box sx={{ mr: 2, color: "primary.main" }}>{icon}</Box>}
+        <Typography variant="h6" fontWeight={600}>
+          {title}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+          ({data.length} rows)
+        </Typography>
+      </Box>
+
+      {/* Table Content */}
+      <TableContainer>
+        <Table size="small">
+          <TableHead sx={{ backgroundColor: alpha("#f8f9fa", 0.5) }}>
+            <TableRow>
+              {headers.map((header, index) => (
+                <TableCell
+                  key={header}
+                  align={index === 0 ? "left" : "center"}
+                  sx={{
+                    fontWeight: 600,
+                    whiteSpace: "nowrap",
+                    textTransform: "capitalize",
+                    borderBottom: "2px solid #e0e0e0",
+                    padding: "12px 16px",
+                  }}
+                >
+                  {header.replace(/([A-Z])/g, " $1").trim()}
+                </TableCell>
+              ))}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {data.map((row, rowIndex) => (
+              <TableRow
+                key={rowIndex}
+                sx={{
+                  "&:nth-of-type(odd)": {
+                    backgroundColor: alpha("#f8f9fa", 0.25),
+                  },
+                  "&:hover": {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                  },
+                }}
+              >
+                {headers.map((header, cellIndex) => {
+                  const cellValue = row[header];
+                  const isFirstColumn = cellIndex === 0;
+                  const columnType = columnTypes[header];
+
+                  let displayValue: string;
+                  let numericValue: number | null = null;
+
+                  // Apply formatting based on column type and content
+                  if (columnType.isPercentage && !isFirstColumn) {
+                    const { formatted, numValue } = formatPercentage(cellValue);
+                    displayValue = formatted;
+                    numericValue = numValue;
+                  } else if (columnType.isCurrency || columnType.isNumeric) {
+                    // When excludePercentageFormatting is true, force dollar sign for numeric values
+                    const shouldForceDollarSign =
+                      excludePercentageFormatting &&
+                      !isFirstColumn &&
+                      isNumericValue(cellValue);
+                    displayValue = formatNumber(
+                      cellValue,
+                      shouldForceDollarSign
+                    );
+                  } else {
+                    // For non-numeric columns, still check if individual values are numeric
+                    if (isNumericValue(cellValue) && !isFirstColumn) {
+                      // When excludePercentageFormatting is true, force dollar sign for numeric values
+                      const shouldForceDollarSign = excludePercentageFormatting;
+                      displayValue = formatNumber(
+                        cellValue,
+                        shouldForceDollarSign
+                      );
+                    } else {
+                      displayValue =
+                        cellValue !== undefined ? String(cellValue) : "N/A";
+                    }
+                  }
+
+                  return (
+                    <ColorCodedTableCell
+                      key={`${rowIndex}-${header}`}
+                      align={isFirstColumn ? "left" : "center"}
+                      isPercentage={columnType.isPercentage && !isFirstColumn}
+                      value={numericValue}
+                    >
+                      {displayValue}
+                    </ColorCodedTableCell>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Card>
+  );
+};
+
+// Main TableDisplay Component
+interface TableDisplayProps {
+  tableData: {
+    table1?: any[];
+    table2?: any[];
+    table3?: any[];
+    table4?: any[];
+    table5?: any[];
+  };
+  viewMode?: string;
+  activeTab?: number;
+  onTabChange?: (event: React.SyntheticEvent, newValue: number) => void;
+}
+
+const TableDisplay: React.FC<TableDisplayProps> = ({
+  tableData,
+  viewMode = "tabs",
+  activeTab,
+  onTabChange,
+}) => {
+  // Internal tab state - isolated from parent state
+  const [internalTabValue, setInternalTabValue] = useState(3);
+
+  // Use internal state to prevent external state changes from causing restarts
+  const currentTabValue =
+    activeTab !== undefined ? activeTab : internalTabValue;
+
+  // Memoize the tab change handler to prevent recreation on every render
+  const handleTabChange = useCallback(
+    (event: React.SyntheticEvent, newValue: number) => {
+      // Prevent default behavior that might cause issues
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Update internal state
+      setInternalTabValue(newValue);
+
+      // Call parent handler if provided
+      if (onTabChange) {
+        onTabChange(event, newValue);
+      }
+    },
+    [onTabChange]
+  );
+
+  // Memoize table data to prevent unnecessary re-renders
+  const memoizedTableData = useMemo(
+    () => ({
+      table1: tableData?.table1 || [],
+      table2: tableData?.table2 || [],
+      table3: tableData?.table3 || [],
+      table4: tableData?.table4 || [],
+      table5: tableData?.table5 || [],
+    }),
+    [tableData]
+  );
+
+  // If no data, show empty state
+  if (!tableData || Object.keys(tableData).length === 0) {
     return (
-      <Paper sx={{ width: '100%' }}>
-        <Tabs
-          value={safeActiveTab}
-          onChange={onTabChange}
-          variant="scrollable"
-          scrollButtons="auto"
-        >
-          {tableProps.map(table => (
-            <Tab key={table.index} label={table.label} />
-          ))}
-        </Tabs>
-        
-        <Box p={2}>
-          <RenderDataTable 
-            tableIndex={safeActiveTab}
-            data={tableData[tableProps[safeActiveTab].key] || []}
-            columns={tableProps[safeActiveTab].columns}
-            label={tableProps[safeActiveTab].label}
-            description={tableProps[safeActiveTab].description}
-          />
-        </Box>
-      </Paper>
-    );
-  } else if (viewMode === 'combined') {
-    // Combined view - all tables in vertical stack
-    return (
-      <Paper sx={{ width: '100%', p: 2 }}>
-        <Typography variant="h5" mb={2}>Stacked Tables View</Typography>
-        
-        <Grid container spacing={2}>
-          {tableProps.map(table => (
-            <Grid item xs={12} key={table.index}>
-              <RenderDataTable 
-                tableIndex={table.index}
-                data={tableData[table.key] || []}
-                columns={table.columns}
-                label={table.label}
-                description={table.description}
-                compact={true}
-              />
-            </Grid>
-          ))}
-        </Grid>
-      </Paper>
+      <Card sx={{ p: 4, textAlign: "center" }}>
+        <TableChartIcon sx={{ fontSize: 48, color: "text.secondary", mb: 2 }} />
+        <Typography variant="h6" color="text.secondary" gutterBottom>
+          No Table Data Available
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Upload and process Excel files to view data tables
+        </Typography>
+      </Card>
     );
   }
+
+  return (
+    <Box sx={{ width: "100%" }}>
+      {/* Tabs Navigation */}
+      <Paper sx={{ borderRadius: 2, overflow: "hidden", mb: 2 }}>
+        <CleanTabs
+          value={currentTabValue}
+          onChange={handleTabChange}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+        >
+          <CleanTab
+            label="Pivot"
+            icon={<CategoryIcon />}
+            iconPosition="start"
+            {...a11yProps(0)}
+          />
+
+          <CleanTab
+            label="Percentage Table"
+            icon={<PercentIcon />}
+            iconPosition="start"
+            {...a11yProps(1)}
+          />
+          <CleanTab
+            label="In-House Table"
+            icon={<HomeIcon />}
+            iconPosition="start"
+            {...a11yProps(2)}
+          />
+          <CleanTab
+            label="Week-over-Week (WOW)"
+            icon={<TrendingUpIcon />}
+            iconPosition="start"
+            {...a11yProps(3)}
+          />
+        </CleanTabs>
+      </Paper>
+
+      {/* Tab Panels - All rendered but hidden when not active */}
+      <Box sx={{ mt: 2 }}>
+        {/* Pivot Table */}
+        <TabPanel value={currentTabValue} index={0} forceRender>
+          <DataTable
+            title="Category Summary"
+            data={memoizedTableData.table1}
+            icon={<CategoryIcon />}
+            excludePercentageFormatting={true}
+          />
+        </TabPanel>
+        {/* Percentage Table */}
+        <TabPanel value={currentTabValue} index={1} forceRender>
+          <DataTable
+            title="Percentage Table - Week over Week Changes"
+            data={memoizedTableData.table2}
+            icon={<PercentIcon />}
+          />
+        </TabPanel>
+
+        {/* In-House Table */}
+        <TabPanel value={currentTabValue} index={2} forceRender>
+          <DataTable
+            title="In-House Table - Category Percentages"
+            data={memoizedTableData.table3}
+            icon={<HomeIcon />}
+          />
+        </TabPanel>
+
+        {/* WOW Table */}
+        <TabPanel value={currentTabValue} index={3} forceRender>
+          <DataTable
+            title="Week-over-Week Analysis"
+            data={memoizedTableData.table4}
+            icon={<TrendingUpIcon />}
+          />
+        </TabPanel>
+
+        {/* Category Summary */}
+      </Box>
+    </Box>
+  );
 };
 
 export default TableDisplay;

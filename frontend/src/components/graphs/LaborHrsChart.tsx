@@ -71,7 +71,11 @@ const LaborHrsChart: React.FC = () => {
           axisBottom={{
             tickSize: 5,
             tickPadding: 5,
+<<<<<<< HEAD
             tickRotation: -45,
+=======
+            // tickRotation: -45,
+>>>>>>> integrations_v41
             legendPosition: 'middle',
             legendOffset: 32
           }}
