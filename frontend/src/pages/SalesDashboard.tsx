@@ -83,6 +83,16 @@ import {
   selectSelectedLocations,
 } from "../store/slices/masterFileSlice";
 
+// ADDED: Import date range Redux actions and selectors
+import {
+  setSalesDashboardDateRange,
+  selectSalesDashboardStartDate,
+  selectSalesDashboardEndDate,
+  selectSalesDashboardDateRange,
+  selectHasSalesDashboardDateRange,
+  clearSalesDashboardDateRange,
+} from "../store/slices/dateRangeSlice";
+
 import { API_URL_Local } from "../constants";
 
 // Company interface with nested locations
@@ -350,7 +360,7 @@ const MultiSelectFilter: React.FC<MultiSelectFilterProps> = ({
       ? placeholder
       : value.length === 1
       ? value[0]
-      : `Multiple Loc... (${value.length})`;
+      : `${value.length} locations selected`;
 
   return (
     <Box sx={{ position: "relative", width: "100%" }}>
@@ -572,6 +582,7 @@ const DateRangeSelectorComponent: React.FC<DateRangeSelectorComponentProps> = ({
   const handleClear = (event: React.MouseEvent) => {
     event.stopPropagation();
     setSelectedRange("");
+    // FIXED: Use Redux action to clear date range
     onDateRangeSelect(null);
   };
 
@@ -861,6 +872,12 @@ export default function SalesDashboard() {
   const selectedCompanies = useSelector(selectSelectedCompanies);
   const selectedLocations = useSelector(selectSelectedLocations);
 
+  // ADDED: Redux state for date range
+  const salesDashboardStartDate = useSelector(selectSalesDashboardStartDate);
+  const salesDashboardEndDate = useSelector(selectSalesDashboardEndDate);
+  const hasSalesDashboardDateRange = useSelector(selectHasSalesDashboardDateRange);
+  const salesDashboardDateRange = useSelector(selectSalesDashboardDateRange);
+
   // Convert to single values for dropdown compatibility
   const selectedCompany =
     selectedCompanies.length > 0 ? selectedCompanies[0] : "";
@@ -889,8 +906,8 @@ export default function SalesDashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [filterError, setFilterError] = useState<string>("");
 
-  // Filter states - Only date range (company/location use Redux)
-  const [selectedDateRange, setSelectedDateRange] = useState<any>(null);
+  // REMOVED: Local selectedDateRange state - now using Redux
+  // const [selectedDateRange, setSelectedDateRange] = useState<any>(null);
 
   // Current table data from local state that gets updated from API calls
   const [currentTableData, setCurrentTableData] = useState<any>({
@@ -987,12 +1004,13 @@ export default function SalesDashboard() {
     }
   }, [currentSalesWideData]);
 
-  // NEW: Auto-fetch data when company/location changes (debounced) - FIXED: Add error handling
+  // FIXED: Auto-fetch data when company changes and on initial load
   useEffect(() => {
     const fetchInitialData = async () => {
-      if (selectedCompany && !isLoading) {
+      // FIXED: Fetch data when company is selected, regardless of loading state
+      if (selectedCompany) {
         try {
-          console.log("🔄 Auto-fetching data for company/location change");
+          console.log("🔄 Auto-fetching data for company:", selectedCompany);
           await handleApplyFilters();
         } catch (error) {
           // Silently handle auto-fetch errors to prevent breaking the UI
@@ -1001,10 +1019,71 @@ export default function SalesDashboard() {
       }
     };
 
-    // Debounce the fetch to avoid too many API calls
-    const timeoutId = setTimeout(fetchInitialData, 500);
+    // FIXED: Immediate fetch on company change
+    if (selectedCompany) {
+      fetchInitialData();
+    }
+  }, [selectedCompany]); // Only trigger on company change
+
+  // FIXED: Auto-fetch when locations change
+  useEffect(() => {
+    const fetchLocationData = async () => {
+      if (selectedCompany && selectedLocations.length > 0) {
+        try {
+          console.log("🔄 Auto-fetching data for location change:", selectedLocations);
+          await handleApplyFilters();
+        } catch (error) {
+          console.warn("⚠️ Location auto-fetch failed:", error);
+        }
+      }
+    };
+
+    // Debounce location changes slightly to avoid too many API calls
+    const timeoutId = setTimeout(fetchLocationData, 300);
     return () => clearTimeout(timeoutId);
-  }, [selectedCompany, selectedLocation]);
+  }, [selectedLocations]); // Changed from selectedLocation to selectedLocations
+
+  // FIXED: Simple auto-fetch when date range state changes (including clearing)
+  useEffect(() => {
+    const fetchDataOnDateChange = async () => {
+      if (selectedCompany) {
+        try {
+          console.log("🔄 Auto-fetching data due to date range change:", {
+            hasDates: hasSalesDashboardDateRange,
+            startDate: salesDashboardStartDate,
+            endDate: salesDashboardEndDate
+          });
+          await handleApplyFilters();
+        } catch (error) {
+          console.warn("⚠️ Date range change auto-fetch failed:", error);
+        }
+      }
+    };
+
+    // Debounce to avoid too many API calls
+    const timeoutId = setTimeout(fetchDataOnDateChange, 300);
+    return () => clearTimeout(timeoutId);
+  }, [hasSalesDashboardDateRange]); // SIMPLIFIED: Only watch the boolean state change
+
+  // Separate effect for actual date value changes (when dates exist)
+  useEffect(() => {
+    const fetchDataOnDateValueChange = async () => {
+      if (selectedCompany && hasSalesDashboardDateRange) {
+        try {
+          console.log("🔄 Auto-fetching data due to date value change:", {
+            startDate: salesDashboardStartDate,
+            endDate: salesDashboardEndDate
+          });
+          await handleApplyFilters();
+        } catch (error) {
+          console.warn("⚠️ Date value change auto-fetch failed:", error);
+        }
+      }
+    };
+
+    const timeoutId = setTimeout(fetchDataOnDateValueChange, 500);
+    return () => clearTimeout(timeoutId);
+  }, [salesDashboardStartDate, salesDashboardEndDate]); // Watch actual date values
 
   // Redux-based change handlers
   const handleCompanyChange = (event: SelectChangeEvent) => {
@@ -1017,23 +1096,42 @@ export default function SalesDashboard() {
   };
 
   const handleLocationFilterChange = (newLocationNames: string[]) => {
-    // Convert location names back to location IDs and update Redux
-    if (newLocationNames.length === 1 && selectedCompany) {
-      const selectedLocationData = availableLocations.find(
-        (loc) => loc.location_name === newLocationNames[0]
-      );
-      if (selectedLocationData) {
-        reduxDispatch(
-          setSelectedLocations([selectedLocationData.location_id.toString()])
+    // FIXED: Handle multiple locations properly
+    if (newLocationNames.length > 0 && selectedCompany) {
+      const selectedLocationIds = newLocationNames.map(locationName => {
+        const locationData = availableLocations.find(
+          (loc) => loc.location_name === locationName
         );
-      }
+        return locationData ? locationData.location_id.toString() : null;
+      }).filter(id => id !== null);
+      
+      reduxDispatch(setSelectedLocations(selectedLocationIds));
+      console.log("🏢 Multiple locations selected:", newLocationNames, "IDs:", selectedLocationIds);
     } else {
       reduxDispatch(setSelectedLocations([]));
+      console.log("🏢 Locations cleared");
     }
   };
 
   const handleDateRangeSelect = (dateRange: any) => {
-    setSelectedDateRange(dateRange);
+    // UPDATED: Use Redux action to set date range
+    if (dateRange && dateRange.startDate && dateRange.endDate) {
+      console.log("📅 SalesDashboard: Setting date range in Redux:", {
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+        startDateStr: dateRange.startDateStr,
+        endDateStr: dateRange.endDateStr
+      });
+      
+      reduxDispatch(setSalesDashboardDateRange({
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate
+      }));
+    } else {
+      // Clear date range
+      console.log("📅 SalesDashboard: Clearing date range in Redux");
+      reduxDispatch(clearSalesDashboardDateRange());
+    }
   };
 
   // Get selected company and location names for display
@@ -1086,15 +1184,21 @@ export default function SalesDashboard() {
         useFileData = !!currentFile;
       }
 
-      // Prepare the request payload - FIXED: Don't require uploaded files
+      // Prepare the request payload - FIXED: Support multiple locations and Redux date range
+      const selectedLocationNames = selectedLocations.map(locId => {
+        const loc = availableLocations.find(l => l.location_id.toString() === locId);
+        return loc ? loc.location_name : null;
+      }).filter(Boolean);
+
       const payload: any = {
-        locations: selectedLocation ? [selectedLocationName] : [],
-        location: selectedLocation ? selectedLocationName : null,
-        startDate: selectedDateRange?.startDateStr || null,
-        endDate: selectedDateRange?.endDateStr || null,
+        locations: selectedLocationNames, // FIXED: Send array of location names
+        location: selectedLocationNames.length === 1 ? selectedLocationNames[0] : null, // Single location for backwards compatibility
+        startDate: salesDashboardStartDate || null, // UPDATED: Use Redux date range
+        endDate: salesDashboardEndDate || null, // UPDATED: Use Redux date range
         dashboard: "Sales Wide",
         company_id: activeCompanyId,
-        location_id: selectedLocation || null,
+        location_id: selectedLocations.length === 1 ? selectedLocations[0] : null, // Single location ID for backwards compatibility
+        location_ids: selectedLocations, // FIXED: Send array of location IDs
       };
 
       // Include file data only if available
@@ -1132,12 +1236,12 @@ export default function SalesDashboard() {
         // Update Redux filters
         dispatch(
           updateSalesWideFilters({
-            location: selectedLocation ? selectedLocationName : "",
-            dateRange: selectedDateRange
-              ? `${selectedDateRange.startDateStr} - ${selectedDateRange.endDateStr}`
+            location: selectedLocationNames.length === 1 ? selectedLocationNames[0] : "",
+            dateRange: hasSalesDashboardDateRange
+              ? `${salesDashboardStartDate} - ${salesDashboardEndDate}`
               : "",
             company_id: activeCompanyId,
-            location_id: selectedLocation,
+            location_id: selectedLocations.length === 1 ? selectedLocations[0] : null,
           })
         );
 
@@ -1468,7 +1572,15 @@ export default function SalesDashboard() {
               </svg>
             </span>
             Companywide Sales Dashboard
-            {(activeCompanyId || selectedLocation) && (
+            {(isLoading || loading) && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, ml: 2 }}>
+                <CircularProgress size={20} />
+                <Typography variant="body2" color="text.secondary">
+                  Updating...
+                </Typography>
+              </Box>
+            )}
+            {(activeCompanyId || selectedLocations.length > 0) && !(isLoading || loading) && (
               <Box sx={{ display: "flex", gap: 1, ml: 2 }}>
                 {activeCompanyId && (
                   <CompanyInfoChip
@@ -1478,10 +1590,13 @@ export default function SalesDashboard() {
                     sx={{ fontSize: "0.75rem" }}
                   />
                 )}
-                {selectedLocation && (
+                {selectedLocations.length > 0 && (
                   <CompanyInfoChip
                     icon={<PlaceIcon />}
-                    label={selectedLocationName}
+                    label={selectedLocations.length === 1 ? 
+                      (availableLocations.find(l => l.location_id.toString() === selectedLocations[0])?.location_name || `Location ${selectedLocations[0]}`) :
+                      `${selectedLocations.length} Locations`
+                    }
                     size="small"
                     sx={{ fontSize: "0.75rem" }}
                   />
@@ -1614,17 +1729,25 @@ export default function SalesDashboard() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
             <FilterListIcon color="primary" />
             <Typography variant="h6" sx={{ fontWeight: 500 }}>
-              Sales Data Filters
+              Data Filters
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+              (Auto-updates on selection)
             </Typography>
           </Box>
 
           <Grid container spacing={3}>
-            {/* Location filter - Uses company-location API data */}
+            {/* Location filter - FIXED: Support multiple locations */}
             <Grid item xs={12} sm={6}>
               <MultiSelectFilter
                 id="location-filter"
                 label="Location"
-                value={selectedLocation ? [selectedLocationName] : []}
+                value={selectedLocations.length > 0 ? 
+                  selectedLocations.map(locId => {
+                    const loc = availableLocations.find(l => l.location_id.toString() === locId);
+                    return loc ? loc.location_name : locId;
+                  }).filter(Boolean) : []
+                }
                 options={
                   selectedCompany
                     ? availableLocations.map((loc) => loc.location_name)
@@ -1634,7 +1757,7 @@ export default function SalesDashboard() {
                 placeholder={
                   !selectedCompany
                     ? "Select Company First"
-                    : "Select Location..."
+                    : "Select Locations..."
                 }
                 icon={<PlaceIcon />}
               />
@@ -1657,19 +1780,17 @@ export default function SalesDashboard() {
             </Grid>
           </Grid>
 
-          {/* Active filters and Apply button */}
-          <Box sx={{ mt: 3, display: "flex", flexDirection: "column", gap: 2 }}>
-            {/* Active filter chips */}
-            {(activeCompanyId || selectedLocation || selectedDateRange) && (
-              <>
+            {/* Active filters display - REMOVED Apply button */}
+            {(activeCompanyId || selectedLocations.length > 0 || hasSalesDashboardDateRange) && (
+              <Box sx={{ mt: 3 }}>
                 <Typography
                   variant="body2"
                   color="text.secondary"
-                  sx={{ mb: 1 }}
+                  sx={{ mb: 2 }}
                 >
                   Active Filters:
                 </Typography>
-                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                   {/* Company filter chip */}
                   {activeCompanyId && (
                     <Chip
@@ -1687,34 +1808,48 @@ export default function SalesDashboard() {
                     />
                   )}
 
-                  {/* Single Location filter chip from Redux */}
-                  {selectedLocation && (
-                    <Chip
-                      label={`Location: ${selectedLocationName}`}
-                      onDelete={() => reduxDispatch(setSelectedLocations([]))}
-                      sx={{
-                        backgroundColor: "#f3e5f5",
-                        color: "#7b1fa2",
-                        border: "1px solid #ce93d8",
-                        borderRadius: "20px",
-                        height: "32px",
-                        fontSize: "0.875rem",
-                        fontWeight: 600,
-                        "& .MuiChip-deleteIcon": {
-                          color: "#7b1fa2",
-                          fontSize: "18px",
-                        },
-                      }}
-                      icon={<PlaceIcon />}
-                      deleteIcon={<CloseIcon />}
-                    />
-                  )}
+                  {/* FIXED: Multiple Location filter chips */}
+                  {selectedLocations.length > 0 && 
+                    selectedLocations.map((locId, index) => {
+                      const locationData = availableLocations.find(l => l.location_id.toString() === locId);
+                      const locationName = locationData ? locationData.location_name : `Location ID: ${locId}`;
+                      
+                      return (
+                        <Chip
+                          key={locId}
+                          label={selectedLocations.length === 1 ? 
+                            `Location: ${locationName}` : 
+                            `${locationName}`
+                          }
+                          onDelete={() => {
+                            const newLocations = selectedLocations.filter(id => id !== locId);
+                            reduxDispatch(setSelectedLocations(newLocations));
+                          }}
+                          sx={{
+                            backgroundColor: "#f3e5f5",
+                            color: "#7b1fa2",
+                            border: "1px solid #ce93d8",
+                            borderRadius: "20px",
+                            height: "32px",
+                            fontSize: "0.875rem",
+                            fontWeight: 600,
+                            "& .MuiChip-deleteIcon": {
+                              color: "#7b1fa2",
+                              fontSize: "18px",
+                            },
+                          }}
+                          icon={<PlaceIcon />}
+                          deleteIcon={<CloseIcon />}
+                        />
+                      );
+                    })
+                  }
 
-                  {/* Date range chip */}
-                  {selectedDateRange && (
+                  {/* UPDATED: Date range chip using Redux */}
+                  {hasSalesDashboardDateRange && (
                     <Chip
-                      label={`Date Range: ${selectedDateRange.startDate.toLocaleDateString()} - ${selectedDateRange.endDate.toLocaleDateString()}`}
-                      onDelete={() => setSelectedDateRange(null)}
+                      label={`Date Range: ${salesDashboardStartDate} - ${salesDashboardEndDate}`}
+                      onDelete={() => reduxDispatch(clearSalesDashboardDateRange())}
                       sx={{
                         backgroundColor: "#fff3e0",
                         color: "#f57c00",
@@ -1731,52 +1866,18 @@ export default function SalesDashboard() {
                     />
                   )}
                 </Box>
-              </>
-            )}
 
-            {/* Apply Filters Button - FIXED: Removed requirement for uploaded files */}
-            <Box sx={{ display: "flex", justifyContent: "flex-start" }}>
-              <Button
-                variant="contained"
-                onClick={handleApplyFilters}
-                disabled={isLoading || loading}
-                startIcon={
-                  isLoading || loading ? (
-                    <CircularProgress size={16} color="inherit" />
-                  ) : null
-                }
-                sx={{
-                  backgroundColor: "#1976d2",
-                  color: "white",
-                  fontWeight: 600,
-                  py: 1.5,
-                  px: 4,
-                  borderRadius: "8px",
-                  textTransform: "uppercase",
-                  fontSize: "0.875rem",
-                  minWidth: "160px",
-                  "&:hover": {
-                    backgroundColor: "#1565c0",
-                  },
-                  "&:disabled": {
-                    backgroundColor: "#ccc",
-                    color: "#666",
-                  },
-                }}
-              >
-                {isLoading || loading ? "Loading..." : "APPLY FILTERS"}
-              </Button>
-              {!selectedCompany && (
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ ml: 2, alignSelf: "center", fontSize: "0.75rem" }}
-                >
-                  Select a company to enable filtering
-                </Typography>
-              )}
-            </Box>
-          </Box>
+                {/* ADDED: Loading indicator when data is being fetched */}
+                {(isLoading || loading) && (
+                  <Box sx={{ mt: 2, display: "flex", alignItems: "center", gap: 1 }}>
+                    <CircularProgress size={16} />
+                    <Typography variant="body2" color="text.secondary">
+                      Loading data...
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            )}
         </CardContent>
       </Card>
 
@@ -1826,7 +1927,7 @@ export default function SalesDashboard() {
           <TabPanel value={tabValue} index={0}>
             <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
               {/* Show company/location context in tables */}
-              {(activeCompanyId || selectedLocation) && (
+              {(activeCompanyId || selectedLocations.length > 0) && (
                 <Box
                   sx={{
                     mb: 3,
@@ -1843,10 +1944,13 @@ export default function SalesDashboard() {
                       variant="outlined"
                     />
                   )}
-                  {selectedLocation && (
+                  {selectedLocations.length > 0 && (
                     <CompanyInfoChip
                       icon={<PlaceIcon />}
-                      label={`Location: ${selectedLocationName}`}
+                      label={selectedLocations.length === 1 ? 
+                        `Location: ${availableLocations.find(l => l.location_id.toString() === selectedLocations[0])?.location_name || selectedLocations[0]}` :
+                        `Locations: ${selectedLocations.length} selected`
+                      }
                       variant="outlined"
                     />
                   )}
@@ -1862,7 +1966,7 @@ export default function SalesDashboard() {
           <TabPanel value={tabValue} index={1}>
             <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
               {/* Show company/location context in graphs */}
-              {(activeCompanyId || selectedLocation) && (
+              {(activeCompanyId || selectedLocations.length > 0) && (
                 <Box
                   sx={{
                     mb: 3,
@@ -1879,10 +1983,13 @@ export default function SalesDashboard() {
                       variant="outlined"
                     />
                   )}
-                  {selectedLocation && (
+                  {selectedLocations.length > 0 && (
                     <CompanyInfoChip
                       icon={<PlaceIcon />}
-                      label={`Location: ${selectedLocationName}`}
+                      label={selectedLocations.length === 1 ? 
+                        `Location: ${availableLocations.find(l => l.location_id.toString() === selectedLocations[0])?.location_name || selectedLocations[0]}` :
+                        `Locations: ${selectedLocations.length} selected`
+                      }
                       variant="outlined"
                     />
                   )}
