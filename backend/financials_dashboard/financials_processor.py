@@ -5,7 +5,11 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional, Union
 import pandas as pd
 import numpy as np
-from financials_dashboard.financials_utils import financials_filters, day_of_the_week_tables, calculate_tw_lw_bdg_comparison
+from financials_dashboard.financials_utils import (financials_filters, 
+                                                   day_of_the_week_tables, 
+                                                   calculate_tw_lw_bdg_comparison,
+                                                   weekly_sales_trend, avg_ticket_by_day,
+                                                   kpi_vs_budget)
 
 
 def process_financials_file(df1, df2, year="All", week_range="All", location="All", start_date=None, end_date=None):
@@ -20,7 +24,6 @@ def process_financials_file(df1, df2, year="All", week_range="All", location="Al
     - location: Optional location name for filtering
     """
     
-    
     try:
             if isinstance(df1, pd.DataFrame):
                 print("Received DataFrame directly.")
@@ -33,7 +36,7 @@ def process_financials_file(df1, df2, year="All", week_range="All", location="Al
 
     try:
         if isinstance(df2, pd.DataFrame):
-            print("Received Budget DataFrame directly.")
+            # print("Received Budget DataFrame directly.")
             df_budget = df2
 
         if df_budget.empty:
@@ -160,11 +163,27 @@ def process_financials_file(df1, df2, year="All", week_range="All", location="Al
     financials_weeks, financials_years, financials_stores = financials_filters(df)
     financials_sales_table, financials_orders_table, financials_avg_ticket_table = day_of_the_week_tables(df, store=location, start_date=start_date, end_date=end_date) 
     
-    print("i am here 2 in the financials_processor.py printing the financial_sales_table_ and printing the stores",stores, financials_sales_table)
+    # print("i am here 2 in the financials_processor.py printing the financial_sales_table_ and printing the stores",stores, financials_sales_table)
     financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df,df_budget, store=location, year=year, week_range=week_range, start_date=start_date, end_date=end_date)
     
 
-    return financials_weeks, financials_years, financials_stores, financials_sales_table, financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table, years, dates, stores
+    weekly_sales_trends = weekly_sales_trend(df, df_budget=df_budget, store=location, start_date=start_date, end_date=end_date)
+
+    # print("i am here in the financials processot printing the weekly_sales_trends", weekly_sales_trends)
+    
+    avg_ticket_by_day_df = avg_ticket_by_day(df,df_budget=df_budget,  store=location, start_date=start_date, end_date=end_date)
+    
+    # print("i am here in the financials processor printing the avg_ticket_by_day_df", avg_ticket_by_day_df)
+    
+    
+    kpi_vs_budget_df = kpi_vs_budget(df, df_budget, store=location, start_date=start_date, end_date=end_date)
+    
+    
+    return (financials_weeks, financials_years, financials_stores, 
+            financials_sales_table, financials_orders_table, 
+            financials_avg_ticket_table, financials_tw_lw_bdg_table, 
+            years, dates, stores, weekly_sales_trends, avg_ticket_by_day_df,
+            kpi_vs_budget_df)
 
 
 

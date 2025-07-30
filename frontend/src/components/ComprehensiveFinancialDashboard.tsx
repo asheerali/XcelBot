@@ -287,14 +287,14 @@ const ModernBarChart = ({
   const [hoverTimeout, setHoverTimeout] = React.useState<NodeJS.Timeout | null>(
     null
   );
-  
+
   // Calculate processed data with simple moving average
   const processedData = data.map((d: any, index: number) => {
     const total = dataKeys.reduce(
       (sum: number, key: string) => sum + (d[key] || 0),
       0
     );
-    
+
     return {
       ...d,
       total,
@@ -309,8 +309,7 @@ const ModernBarChart = ({
           padding: "16px", // Reduced padding
           background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
           borderRadius: "16px", // Reduced border radius
-          boxShadow:
-            "0 8px 20px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.03)", // Reduced shadow
+          boxShadow: "0 8px 20px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.03)", // Reduced shadow
           border: "1px solid #e2e8f0",
           display: "flex",
           alignItems: "center",
@@ -406,10 +405,11 @@ const ModernBarChart = ({
               data[hoveredBar.index].label}
           </div>
           <div style={{ marginBottom: "4px" }}>
-            Total: {processedData[hoveredBar.index].total.toFixed(2) }
+            Total: {processedData[hoveredBar.index].total.toFixed(2)}
           </div>
           <div style={{ marginBottom: "4px" }}>
-            Moving Avg: {processedData[hoveredBar.index].movingAverage.toFixed(2) }
+            Moving Avg:{" "}
+            {processedData[hoveredBar.index].movingAverage.toFixed(2)}
           </div>
           {dataKeys.map((key: string, idx: number) => (
             <div
@@ -429,14 +429,15 @@ const ModernBarChart = ({
                   borderRadius: "2px",
                 }}
               ></div>
-              {labels[idx] || key}:{" "}
-              {(data[hoveredBar.index][key] || 0) }
+              {labels[idx] || key}: {data[hoveredBar.index][key] || 0}
             </div>
           ))}
         </div>
       )}
 
-      <div style={{ overflow: "hidden", width: "100%" }}> {/* Changed from "auto" to "hidden" */}
+      <div style={{ overflow: "hidden", width: "100%" }}>
+        {" "}
+        {/* Changed from "auto" to "hidden" */}
         <svg
           width="100%"
           height={height}
@@ -482,7 +483,7 @@ const ModernBarChart = ({
               })}
             </g>
           ))}
-          
+
           {/* Moving average smooth line */}
           <polyline
             fill="none"
@@ -497,10 +498,10 @@ const ModernBarChart = ({
               .join(" ")}
             style={{
               filter: "drop-shadow(0 3px 6px rgba(255,107,53,0.4))",
-              opacity: 0.95
+              opacity: 0.95,
             }}
           />
-          
+
           {/* Moving average points with glow effect */}
           {processedData.map((d: any, i: number) => (
             <g key={`ma-${i}`}>
@@ -526,7 +527,7 @@ const ModernBarChart = ({
               />
             </g>
           ))}
-          
+
           {/* X-axis labels */}
           {data.map((d: any, i: number) => (
             <text
@@ -553,7 +554,7 @@ const ModernBarChart = ({
               fill="#64748b"
               fontWeight="600"
             >
-              {value }
+              {value}
             </text>
           ))}
         </svg>
@@ -639,16 +640,16 @@ const ModernSingleBarChart = ({
     }
   };
 
-
   // Calculate total for each day
-    const processedData = data.map((d: any) => {
+  const processedData = data.map((d: any) => {
     const total = dataKeys.reduce((sum: number, key: string) => {
       const value = d[key] || 0;
       // Ensure we're working with clean numbers
-      const cleanValue = typeof value === 'string' ? parseFloat(value) || 0 : Number(value) || 0;
+      const cleanValue =
+        typeof value === "string" ? parseFloat(value) || 0 : Number(value) || 0;
       return sum + cleanValue;
     }, 0);
-    
+
     return {
       ...d,
       total: Number(total.toFixed(0)), // Clean the total
@@ -750,7 +751,7 @@ const ModernSingleBarChart = ({
                   borderRadius: "2px",
                 }}
               ></div>
-              {labels[idx] || key}: {(data[hoveredBar][key] || 0)}
+              {labels[idx] || key}: {data[hoveredBar][key] || 0}
             </div>
           ))}
         </div>
@@ -1367,14 +1368,28 @@ const ComprehensiveFinancialDashboard: React.FC<FinancialDashboardProps> = ({
   const kpiData = financialData?.table16 || [];
 
   // Main values from table1 (dynamic) - with fallbacks
-  const mainSalesValue = `$${(table1Data.financials_sales || 0).toLocaleString()}`;
-const mainPrimeCostValue = formatPercentage(table1Data.financials_prime_cost || 0);
-  const mainFoodCostValue = formatPercentage(table1Data.financials_food_cost || 0); 
-  
-const mainLaborCostValue = `$${(table1Data.financials_labor_cost || 0).toLocaleString()}`;
-const mainAvgTicketValue = `$${(table1Data.financials_avg_ticket || 0).toLocaleString()}`;
-const mainSpmhValue = `$${(table1Data.financials_spmh || 0).toLocaleString()}`;
-const mainLpmhValue = `$${(table1Data.financials_lmph || 0).toLocaleString()}`;
+  const mainSalesValue = `$${(
+    table1Data.financials_sales || 0
+  ).toLocaleString()}`;
+  const mainPrimeCostValue = formatPercentage(
+    table1Data.financials_prime_cost || 0
+  );
+  const mainFoodCostValue = formatPercentage(
+    table1Data.financials_food_cost || 0
+  );
+
+  const mainLaborCostValue = `$${(
+    table1Data.financials_labor_cost || 0
+  ).toLocaleString()}`;
+  const mainAvgTicketValue = `$${(
+    table1Data.financials_avg_ticket || 0
+  ).toLocaleString()}`;
+  const mainSpmhValue = `$${(
+    table1Data.financials_spmh || 0
+  ).toLocaleString()}`;
+  const mainLpmhValue = `$${(
+    table1Data.financials_lmph || 0
+  ).toLocaleString()}`;
 
   console.log("💰 Formatted main values:", {
     sales: mainSalesValue,
@@ -1583,9 +1598,9 @@ const mainLpmhValue = `$${(table1Data.financials_lmph || 0).toLocaleString()}`;
       </div>
 
       {/* Orders Chart - Single Row as requested */}
-      <div style={singleRowGrid}>
-        <ModernBarChart data={ordersByDayData} title="Orders by Day of Week" />
-      </div>
+      {/* <div style={singleRowGrid}>
+        <ModernBarChart data={ordersByDayData} title="Orders by Day of Week1" />
+      </div> */}
 
       {/* Bottom Row - KPI vs Budget Table */}
       <div style={singleColumnGrid}>
@@ -1749,7 +1764,7 @@ const mainLpmhValue = `$${(table1Data.financials_lmph || 0).toLocaleString()}`;
                             >
                               {row["Tw/Bdg (+/-)"]}
                             </span>
-                            <span
+                            {/* <span
                               style={{
                                 background:
                                   "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)",
@@ -1763,7 +1778,7 @@ const mainLpmhValue = `$${(table1Data.financials_lmph || 0).toLocaleString()}`;
                               }}
                             >
                               {row["Percent Change"]}
-                            </span>
+                            </span> */}
                           </div>
                         </td>
                       </tr>
