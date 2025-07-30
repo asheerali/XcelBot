@@ -1064,250 +1064,233 @@ export function ExcelImport() {
             hidden={salesSplitTab !== 1}
           >
             {salesSplitTab === 1 && (
-              <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
-                {shouldShowData() && reduxTableData.table1 && reduxTableData.table1.length > 0 ? (
-                  <Fade in timeout={600}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                        <InsightsIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
-                        <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                          Detailed Analysis
-                        </Typography>
-                        {(activeCompanyId || selectedLocations.length > 0) && (
-                          <Box sx={{ ml: 2, display: 'flex', gap: 1 }}>
-                            {activeCompanyId && (
-                              <CompanyInfoChip
-                                icon={<BusinessIcon />}
-                                label={`${selectedCompanyName}`}
-                                size="small"
-                              />
-                            )}
-                            {selectedLocations.length > 0 && (
-                              <CompanyInfoChip
-                                icon={<BusinessIcon />}
-                                label={`${selectedLocations.length} Locations`}
-                                size="small"
-                              />
-                            )}
-                            <CompanyInfoChip
-                              label={`${Intl.DateTimeFormat().resolvedOptions().timeZone}`}
-                              size="small"
-                              sx={{ 
-                                backgroundColor: alpha('#ff9800', 0.1),
-                                borderColor: alpha('#ff9800', 0.2),
-                                '& .MuiChip-label': { color: '#ff9800' }
-                              }}
-                            />
-                          </Box>
-                        )}
-                      </Box>
+             <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+  {shouldShowData() && reduxTableData.table1 && reduxTableData.table1.length > 0 ? (
+    <Fade in timeout={600}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <InsightsIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+            Detailed Analysis
+          </Typography>
+          {(activeCompanyId || selectedLocations.length > 0) && (
+            <Box sx={{ ml: 2, display: 'flex', gap: 1 }}>
+              {activeCompanyId && (
+                <CompanyInfoChip
+                  icon={<BusinessIcon />}
+                  label={`${selectedCompanyName}`}
+                  size="small"
+                />
+              )}
+              {selectedLocations.length > 0 && (
+                <CompanyInfoChip
+                  icon={<BusinessIcon />}
+                  label={`${selectedLocations.length} Locations`}
+                  size="small"
+                />
+              )}
+              <CompanyInfoChip
+                label={`${Intl.DateTimeFormat().resolvedOptions().timeZone}`}
+                size="small"
+                sx={{ 
+                  backgroundColor: alpha('#ff9800', 0.1),
+                  borderColor: alpha('#ff9800', 0.2),
+                  '& .MuiChip-label': { color: '#ff9800' }
+                }}
+              />
+            </Box>
+          )}
+        </Box>
 
-                      {/* Analytics Charts Section */}
-                      <CleanCard sx={{ p: 3, mb: 3 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                          <AnalyticsIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
-                          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                            Sales Analytics 
-                          </Typography>
-                        </Box>
-                        
-                        <div key={`sales-chart-${chartKey}`}>
-                          <SalesCharts 
-                            tableData={reduxTableData}
-                            dateRangeType={dateRangeType}
-                            selectedLocation={selectedLocation}
-                            height={250}
-                          />
-                        </div>
-                      </CleanCard>
+        {/* Analytics Charts Section */}
+        <CleanCard sx={{ p: 3, mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <AnalyticsIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Sales Analytics 
+            </Typography>
+          </Box>
+          
+          <div key={`sales-chart-${chartKey}`}>
+            <SalesCharts 
+              tableData={reduxTableData}
+              dateRangeType={dateRangeType}
+              selectedLocation={selectedLocation}
+              height={250}
+            />
+          </div>
+        </CleanCard>
 
-                      {/* Additional Analytics Sections */}
-                      <Grid container spacing={3}>
-                        {/* Table Display Section */}
-                        <Grid item xs={12}>
-                          <CleanCard sx={{ p: 3 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                              <TableChartIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
-                              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                Data Tables
-                              </Typography>
-                            </Box>
-                            
-                            <TableDisplay 
-                              tableData={reduxTableData}
-                              selectedLocation={selectedLocation}
-                            />
-                          </CleanCard>
-                        </Grid>
-
-                        {/* Additional Chart Sections */}
-                        {reduxTableData.table2 && reduxTableData.table2.length > 0 && (
-                          <Grid item xs={12} md={6}>
-                            <CleanCard sx={{ p: 3 }}>
-                              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                                Delivery Percentage
-                              </Typography>
-                              <DeliveryPercentageChart 
-                                tableData={reduxTableData}
-                                selectedLocation={selectedLocation}
-                                height={300}
-                              />
-                            </CleanCard>
-                          </Grid>
-                        )}
-
-                        {reduxTableData.table3 && reduxTableData.table3.length > 0 && (
-                          <Grid item xs={12} md={6}>
-                            <CleanCard sx={{ p: 3 }}>
-                              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                                In-House Percentage
-                              </Typography>
-                              <InHousePercentageChart 
-                                tableData={reduxTableData}
-                                selectedLocation={selectedLocation}
-                                height={300}
-                              />
-                            </CleanCard>
-                          </Grid>
-                        )}
-
-                        {reduxTableData.table4 && reduxTableData.table4.length > 0 && (
-                          <Grid item xs={12} md={6}>
-                            <CleanCard sx={{ p: 3 }}>
-                              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                                Catering Percentage
-                              </Typography>
-                              <CateringPercentageChart 
-                                tableData={reduxTableData}
-                                selectedLocation={selectedLocation}
-                                height={300}
-                              />
-                            </CleanCard>
-                          </Grid>
-                        )}
-
-                        {reduxTableData.table5 && reduxTableData.table5.length > 0 && (
-                          <Grid item xs={12} md={6}>
-                            <CleanCard sx={{ p: 3 }}>
-                              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                                First vs Third Party
-                              </Typography>
-                              <PercentageFirstThirdPartyChart 
-                                tableData={reduxTableData}
-                                selectedLocation={selectedLocation}
-                                height={300}
-                              />
-                            </CleanCard>
-                          </Grid>
-                        )}
-
-                        {/* Total Sales Trend */}
-                        <Grid item xs={12}>
-                          <CleanCard sx={{ p: 3 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                              Total Sales Trend
-                            </Typography>
-                            <TotalSalesChart 
-                              tableData={reduxTableData}
-                              selectedLocation={selectedLocation}
-                              height={400}
-                            />
-                          </CleanCard>
-                        </Grid>
-
-                        {/* Week-over-Week Trends */}
-                        <Grid item xs={12}>
-                          <CleanCard sx={{ p: 3 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                              Week-over-Week Trends
-                            </Typography>
-                            <WowTrendsChart 
-                              tableData={reduxTableData}
-                              selectedLocation={selectedLocation}
-                              height={400}
-                            />
-                          </CleanCard>
-                        </Grid>
-                      </Grid>
-                    </Box>
-                  </Fade>
-                ) : isApiCallInProgress ? (
-                  <Box sx={{ textAlign: 'center', py: 6 }}>
-                    <CircularProgress size={40} sx={{ mb: 2 }} />
-                    <Typography variant="h6" color="text.secondary" gutterBottom>
-                      Loading detailed analysis...
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Company: {selectedCompanyName}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Box sx={{ textAlign: 'center', py: 6 }}>
-                    <TableChartIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
-                    <Typography variant="h6" color="text.secondary" gutterBottom>
-                      No detailed data available
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Apply filters to see detailed analysis
-                    </Typography>
-                    <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 1, mt: 2 }}>
-                      <Chip
-                        label={selectedCompany ? `✓ Company Selected` : '! Select Company'}
-                        color={selectedCompany ? 'success' : 'warning'}
-                        variant="outlined"
-                        size="small"
-                      />
-                      <Chip
-                        label={selectedLocations.length > 0 ? `✓ Locations Selected` : '! Select Locations'}
-                        color={selectedLocations.length > 0 ? 'success' : 'warning'}
-                        variant="outlined"
-                        size="small"
-                      />
-                      <Chip
-                        label={startDate && endDate ? `✓ Dates Set` : '! Set Date Range'}
-                        color={startDate && endDate ? 'success' : 'warning'}
-                        variant="outlined"
-                        size="small"
-                      />
-                      <Chip
-                        label={`Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`}
-                        color="info"
-                        variant="outlined"
-                        size="small"
-                      />
-                    </Box>
-                  </Box>
-                )}
+        {/* Additional Analytics Sections */}
+        <Grid container spacing={3}>
+          {/* Table Display Section - Full Width */}
+          <Grid item xs={12}>
+            <CleanCard sx={{ p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <TableChartIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Data Tables
+                </Typography>
               </Box>
+              
+              <TableDisplay 
+                tableData={reduxTableData}
+                selectedLocation={selectedLocation}
+              />
+            </CleanCard>
+          </Grid>
+
+          {/* Delivery Percentage Chart - Single Row on Tablet+ */}
+          {reduxTableData.table2 && reduxTableData.table2.length > 0 && (
+            <Grid item xs={12} sm={12} md={12}>
+              <CleanCard sx={{ p: 3 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                  Delivery Percentage
+                </Typography>
+                <DeliveryPercentageChart 
+                  tableData={reduxTableData}
+                  selectedLocation={selectedLocation}
+                  height={300}
+                />
+              </CleanCard>
+            </Grid>
+          )}
+
+          {/* In-House Percentage Chart - Single Row on Tablet+ */}
+          {reduxTableData.table3 && reduxTableData.table3.length > 0 && (
+            <Grid item xs={12} sm={12} md={12}>
+              <CleanCard sx={{ p: 3 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                  In-House Percentage
+                </Typography>
+                <InHousePercentageChart 
+                  tableData={reduxTableData}
+                  selectedLocation={selectedLocation}
+                  height={300}
+                />
+              </CleanCard>
+            </Grid>
+          )}
+
+          {/* Catering Percentage Chart - Single Row on Tablet+ */}
+          {reduxTableData.table4 && reduxTableData.table4.length > 0 && (
+            <Grid item xs={12} sm={12} md={12}>
+              <CleanCard sx={{ p: 3 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                  Catering Percentage
+                </Typography>
+                <CateringPercentageChart 
+                  tableData={reduxTableData}
+                  selectedLocation={selectedLocation}
+                  height={300}
+                />
+              </CleanCard>
+            </Grid>
+          )}
+
+          {/* First vs Third Party Chart - Single Row on Tablet+ */}
+          {reduxTableData.table5 && reduxTableData.table5.length > 0 && (
+            <Grid item xs={12} sm={12} md={12}>
+              <CleanCard sx={{ p: 3 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                  First vs Third Party
+                </Typography>
+                <PercentageFirstThirdPartyChart 
+                  tableData={reduxTableData}
+                  selectedLocation={selectedLocation}
+                  height={300}
+                />
+              </CleanCard>
+            </Grid>
+          )}
+
+          {/* Total Sales Trend - Full Width */}
+          <Grid item xs={12}>
+            <CleanCard sx={{ p: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                Total Sales Trend
+              </Typography>
+              <TotalSalesChart 
+                tableData={reduxTableData}
+                selectedLocation={selectedLocation}
+                height={400}
+              />
+            </CleanCard>
+          </Grid>
+
+          {/* Week-over-Week Trends - Full Width */}
+          <Grid item xs={12}>
+            <CleanCard sx={{ p: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                Week-over-Week Trends
+              </Typography>
+              <WowTrendsChart 
+                tableData={reduxTableData}
+                selectedLocation={selectedLocation}
+                height={400}
+              />
+            </CleanCard>
+          </Grid>
+        </Grid>
+      </Box>
+    </Fade>
+  ) : isApiCallInProgress ? (
+    <Box sx={{ textAlign: 'center', py: 6 }}>
+      <CircularProgress size={40} sx={{ mb: 2 }} />
+      <Typography variant="h6" color="text.secondary" gutterBottom>
+        Loading detailed analysis...
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        Company: {selectedCompanyName}
+      </Typography>
+      <Typography variant="caption" color="text.secondary">
+        Timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
+      </Typography>
+    </Box>
+  ) : (
+    <Box sx={{ textAlign: 'center', py: 6 }}>
+      <TableChartIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+      <Typography variant="h6" color="text.secondary" gutterBottom>
+        No detailed data available
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        Apply filters to see detailed analysis
+      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 1, mt: 2 }}>
+        <Chip
+          label={selectedCompany ? `✓ Company Selected` : '! Select Company'}
+          color={selectedCompany ? 'success' : 'warning'}
+          variant="outlined"
+          size="small"
+        />
+        <Chip
+          label={selectedLocations.length > 0 ? `✓ Locations Selected` : '! Select Locations'}
+          color={selectedLocations.length > 0 ? 'success' : 'warning'}
+          variant="outlined"
+          size="small"
+        />
+        <Chip
+          label={startDate && endDate ? `✓ Dates Set` : '! Set Date Range'}
+          color={startDate && endDate ? 'success' : 'warning'}
+          variant="outlined"
+          size="small"
+        />
+        <Chip
+          label={`Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`}
+          color="info"
+          variant="outlined"
+          size="small"
+        />
+      </Box>
+    </Box>
+  )}
+</Box>
             )}
           </div>
         </CleanCard>
 
         {/* ENHANCED: Debug info with timezone details */}
-        {process.env.NODE_ENV === 'development' && (
-          <Alert severity="info" sx={{ mt: 2 }}>
-            <Typography variant="body2">
-              <strong>Debug - Timezone-Safe API State:</strong><br />
-              API Call In Progress: {isApiCallInProgress ? 'Yes' : 'No'}<br />
-              Has Valid Data: {hasValidData ? 'Yes' : 'No'}<br />
-              Last Successful Call: {lastSuccessfulCallRef.current ? 'Yes' : 'None'}<br />
-              Redux Start Date: {startDate || 'None'}<br />
-              Redux End Date: {endDate || 'None'}<br />
-              Has Date Range: {hasDateRange ? 'Yes' : 'No'}<br />
-              Active Company ID: {activeCompanyId || 'None'}<br />
-              Selected Locations: [{selectedLocations.join(', ')}]<br />
-              Available Locations: {availableLocations.length} locations<br />
-              Chart Key: {chartKey}<br />
-              Client Timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}<br />
-              Timezone Offset: {new Date().getTimezoneOffset()} minutes<br />
-              Formatted Start (API): {formatDateForAPI(startDate) || 'None'}<br />
-              Formatted End (API): {formatDateForAPI(endDate) || 'None'}
-            </Typography>
-          </Alert>
-        )}
+      
       </Box>
 
       {/* Success notification */}

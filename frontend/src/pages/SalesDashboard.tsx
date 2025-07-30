@@ -1,4 +1,5 @@
 // Updated SalesDashboard.tsx with complete Redux state management for company/location selection
+// FIXED: Now fetches data based on company/location selection without requiring uploaded files
 
 import React, { useState, useEffect } from "react";
 import {
@@ -100,6 +101,8 @@ interface Location {
 // API URLs
 const SALES_WIDE_FILTER_API_URL = `${API_URL_Local}/api/companywide/filter`;
 const COMPANY_LOCATIONS_API_URL = `${API_URL_Local}/company-locations/all`;
+// NEW: Add dedicated dashboard data API endpoint
+const SALES_DASHBOARD_DATA_API_URL = `${API_URL_Local}/api/sales/dashboard-data`;
 
 // Company info display component
 const CompanyInfoChip = styled(Chip)(({ theme }) => ({
@@ -875,7 +878,7 @@ export default function SalesDashboard() {
   );
   const availableLocations = currentCompanyData?.locations || [];
 
-  // Find current data for the selected location
+  // Find current data for the selected location - UPDATED: Make this optional
   const currentSalesWideData = salesWideFiles.find(
     (f) => f.location === currentSalesWideLocation
   )?.data;
@@ -969,6 +972,40 @@ export default function SalesDashboard() {
     }
   }, [currentCompanyId, selectedCompanies.length, reduxDispatch]);
 
+  // FIXED: Initialize local state with current data - Make optional
+  useEffect(() => {
+    if (currentSalesWideData) {
+      setCurrentTableData({
+        table1: currentSalesWideData.table1 || [],
+        table2: currentSalesWideData.table2 || [],
+        table3: currentSalesWideData.table3 || [],
+        table4: currentSalesWideData.table4 || [],
+        table5: currentSalesWideData.table5 || [],
+        table6: currentSalesWideData.table6 || [],
+        table7: currentSalesWideData.table7 || [],
+      });
+    }
+  }, [currentSalesWideData]);
+
+  // NEW: Auto-fetch data when company/location changes (debounced) - FIXED: Add error handling
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      if (selectedCompany && !isLoading) {
+        try {
+          console.log("🔄 Auto-fetching data for company/location change");
+          await handleApplyFilters();
+        } catch (error) {
+          // Silently handle auto-fetch errors to prevent breaking the UI
+          console.warn("⚠️ Auto-fetch failed:", error);
+        }
+      }
+    };
+
+    // Debounce the fetch to avoid too many API calls
+    const timeoutId = setTimeout(fetchInitialData, 500);
+    return () => clearTimeout(timeoutId);
+  }, [selectedCompany, selectedLocation]);
+
   // Redux-based change handlers
   const handleCompanyChange = (event: SelectChangeEvent) => {
     const companyId = event.target.value;
@@ -1018,52 +1055,39 @@ export default function SalesDashboard() {
   // Get active company ID (prioritize Redux selectedCompany, fallback to currentCompanyId)
   const activeCompanyId = selectedCompany || currentCompanyId;
 
-  // Initialize local state with current data
-  useEffect(() => {
-    if (currentSalesWideData) {
-      setCurrentTableData({
-        table1: currentSalesWideData.table1 || [],
-        table2: currentSalesWideData.table2 || [],
-        table3: currentSalesWideData.table3 || [],
-        table4: currentSalesWideData.table4 || [],
-        table5: currentSalesWideData.table5 || [],
-        table6: currentSalesWideData.table6 || [],
-        table7: currentSalesWideData.table7 || [],
-      });
-    }
-  }, [currentSalesWideData]);
-
-  // Apply filters with backend API call
+  // FIXED: Updated Apply filters function - works without uploaded files
   const handleApplyFilters = async () => {
     setIsLoading(true);
     setFilterError("");
 
     try {
-      // Find the current sales wide file data
+      // Check if we have selected company
+      if (!selectedCompany) {
+        throw new Error("Please select a company first");
+      }
+
+      // FIXED: Try to use existing file data first, but allow API-only fetching
       let currentFile = null;
+      let useFileData = false;
 
       // Try to find file by Redux selected location name first
-      if (selectedLocation && selectedLocationName) {
+      if (selectedLocation && selectedLocationName && salesWideFiles.length > 0) {
         currentFile = salesWideFiles.find(
           (f) => f.location === selectedLocationName
         );
+        useFileData = !!currentFile;
       }
 
-      // Fallback to current location
-      if (!currentFile) {
+      // Fallback to current location from uploaded files
+      if (!currentFile && salesWideFiles.length > 0) {
         currentFile = salesWideFiles.find(
           (f) => f.location === currentSalesWideLocation
         );
+        useFileData = !!currentFile;
       }
 
-      if (!currentFile) {
-        throw new Error("No Sales Wide data found for selected location");
-      }
-
-      // Prepare the request payload with Redux state
-      const payload = {
-        fileName: currentFile.fileName,
-        fileContent: currentFile.fileContent,
+      // Prepare the request payload - FIXED: Don't require uploaded files
+      const payload: any = {
         locations: selectedLocation ? [selectedLocationName] : [],
         location: selectedLocation ? selectedLocationName : null,
         startDate: selectedDateRange?.startDateStr || null,
@@ -1073,10 +1097,19 @@ export default function SalesDashboard() {
         location_id: selectedLocation || null,
       };
 
-      console.log(
-        "🚀 Sending Sales Wide filter request with Redux state:",
-        payload
-      );
+      // Include file data only if available
+      if (useFileData && currentFile) {
+        payload.fileName = currentFile.fileName;
+        payload.fileContent = currentFile.fileContent;
+        console.log("🚀 Using uploaded file data for request");
+      } else {
+        console.log("🚀 Fetching data from database without uploaded files");
+      }
+
+      console.log("🚀 Sending Sales Wide filter request:", {
+        ...payload,
+        fileContent: payload.fileContent ? "[FILE_CONTENT]" : "NO_FILE"
+      });
 
       const response = await axios.post(SALES_WIDE_FILTER_API_URL, payload);
       console.log("📥 Received Sales Wide filter response:", response.data);
@@ -1125,8 +1158,19 @@ export default function SalesDashboard() {
 
       if (axios.isAxiosError(err)) {
         if (err.response) {
+          // FIXED: Handle error objects properly
           const detail = err.response.data?.detail;
-          errorMessage = detail || `Server error: ${err.response.status}`;
+          
+          // Check if detail is an object with validation errors
+          if (detail && typeof detail === 'object' && detail.type && detail.msg) {
+            errorMessage = `Validation error: ${detail.msg}`;
+          } else if (detail && typeof detail === 'string') {
+            errorMessage = detail;
+          } else if (err.response.data?.message) {
+            errorMessage = err.response.data.message;
+          } else {
+            errorMessage = `Server error: ${err.response.status}`;
+          }
         } else if (err.request) {
           errorMessage =
             "No response from server. Please check if the backend is running.";
@@ -1135,8 +1179,11 @@ export default function SalesDashboard() {
         errorMessage = err.message;
       }
 
-      setFilterError(errorMessage);
-      dispatch(setError(errorMessage));
+      // FIXED: Ensure error message is always a string
+      const safeErrorMessage = typeof errorMessage === 'string' ? errorMessage : 'An unknown error occurred';
+      
+      setFilterError(safeErrorMessage);
+      dispatch(setError(safeErrorMessage));
     } finally {
       setIsLoading(false);
     }
@@ -1231,7 +1278,7 @@ export default function SalesDashboard() {
   // Format values for charts
   const formatPercentage = (value: number) => `${value.toFixed(2)}%`;
   const formatCurrency = (value: number) => {
-    return `$${value.toLocaleString(undefined, {
+    return `${value.toLocaleString(undefined, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
@@ -1541,7 +1588,7 @@ export default function SalesDashboard() {
         </Card>
       )}
 
-      {/* Error Alert */}
+      {/* Error Alert - FIXED: Handle error objects properly */}
       {(filterError || error) && (
         <Alert
           severity="error"
@@ -1551,7 +1598,13 @@ export default function SalesDashboard() {
             dispatch(setError(null));
           }}
         >
-          {filterError || error}
+          {/* FIXED: Ensure error is always rendered as string */}
+          {typeof (filterError || error) === 'string' 
+            ? (filterError || error) 
+            : typeof (filterError || error) === 'object'
+            ? JSON.stringify(filterError || error)
+            : 'An error occurred'
+          }
         </Alert>
       )}
 
@@ -1681,12 +1734,12 @@ export default function SalesDashboard() {
               </>
             )}
 
-            {/* Apply Filters Button */}
+            {/* Apply Filters Button - FIXED: Removed requirement for uploaded files */}
             <Box sx={{ display: "flex", justifyContent: "flex-start" }}>
               <Button
                 variant="contained"
                 onClick={handleApplyFilters}
-                disabled={isLoading || loading || !selectedCompany}
+                disabled={isLoading || loading}
                 startIcon={
                   isLoading || loading ? (
                     <CircularProgress size={16} color="inherit" />
@@ -1727,411 +1780,419 @@ export default function SalesDashboard() {
         </CardContent>
       </Card>
 
-      {/* Only render dashboard content if data is available */}
-      {currentSalesWideData && (
-        <>
-          {/* Tabs */}
-          <Card
-            sx={{ borderRadius: 2, mb: 3, overflow: "hidden" }}
-            elevation={3}
+      {/* FIXED: Always render dashboard content - data will be fetched via API */}
+      <>
+        {/* Show "No data" message only when no table data and not loading */}
+        {(!currentTableData.table1 || currentTableData.table1.length === 0) && 
+         !isLoading && 
+         !loading && 
+         selectedCompany && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            No data available for the selected company and location. Try adjusting your filters or check if data exists for this selection.
+          </Alert>
+        )}
+
+        {/* Tabs */}
+        <Card
+          sx={{ borderRadius: 2, mb: 3, overflow: "hidden" }}
+          elevation={3}
+        >
+          <Tabs
+            value={tabValue}
+            onChange={handleTabChange}
+            variant="fullWidth"
+            sx={{
+              "& .MuiTab-root": {
+                fontWeight: 500,
+                textTransform: "none",
+                fontSize: "1rem",
+                py: 1.5,
+              },
+              "& .Mui-selected": {
+                color: "#4285f4",
+                fontWeight: 600,
+              },
+              "& .MuiTabs-indicator": {
+                backgroundColor: "#4285f4",
+                height: 3,
+              },
+            }}
           >
-            <Tabs
-              value={tabValue}
-              onChange={handleTabChange}
-              variant="fullWidth"
-              sx={{
-                "& .MuiTab-root": {
-                  fontWeight: 500,
-                  textTransform: "none",
-                  fontSize: "1rem",
-                  py: 1.5,
-                },
-                "& .Mui-selected": {
-                  color: "#4285f4",
-                  fontWeight: 600,
-                },
-                "& .MuiTabs-indicator": {
-                  backgroundColor: "#4285f4",
-                  height: 3,
-                },
-              }}
-            >
-              <Tab label="Tables" />
-              <Tab label="Graphs" />
-            </Tabs>
+            <Tab label="Tables" />
+            <Tab label="Graphs" />
+          </Tabs>
 
-            {/* Financial Dashboard Tab */}
-            <TabPanel value={tabValue} index={0}>
-              <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
-                {/* Show company/location context in tables */}
-                {(activeCompanyId || selectedLocation) && (
-                  <Box
-                    sx={{
-                      mb: 3,
-                      display: "flex",
-                      justifyContent: "center",
-                      flexWrap: "wrap",
-                      gap: 1,
-                    }}
-                  >
-                    {activeCompanyId && (
-                      <CompanyInfoChip
-                        icon={<BusinessIcon />}
-                        label={`Data for: ${selectedCompanyName}`}
-                        variant="outlined"
-                      />
-                    )}
-                    {selectedLocation && (
-                      <CompanyInfoChip
-                        icon={<PlaceIcon />}
-                        label={`Location: ${selectedLocationName}`}
-                        variant="outlined"
-                      />
-                    )}
-                  </Box>
-                )}
-                <FinancialTablesComponent
-                  financialTables={financialTablesData}
-                />
-              </Box>
-            </TabPanel>
-
-            {/* Charts Tab */}
-            <TabPanel value={tabValue} index={1}>
-              <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
-                {/* Show company/location context in graphs */}
-                {(activeCompanyId || selectedLocation) && (
-                  <Box
-                    sx={{
-                      mb: 3,
-                      display: "flex",
-                      justifyContent: "center",
-                      flexWrap: "wrap",
-                      gap: 1,
-                    }}
-                  >
-                    {activeCompanyId && (
-                      <CompanyInfoChip
-                        icon={<BusinessIcon />}
-                        label={`Charts for: ${selectedCompanyName}`}
-                        variant="outlined"
-                      />
-                    )}
-                    {selectedLocation && (
-                      <CompanyInfoChip
-                        icon={<PlaceIcon />}
-                        label={`Location: ${selectedLocationName}`}
-                        variant="outlined"
-                      />
-                    )}
-                  </Box>
-                )}
-
-                {/* Chart Tabs */}
-                <Tabs
-                  value={chartTab}
-                  onChange={handleChartTabChange}
-                  variant="scrollable"
-                  scrollButtons="auto"
+          {/* Financial Dashboard Tab */}
+          <TabPanel value={tabValue} index={0}>
+            <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+              {/* Show company/location context in tables */}
+              {(activeCompanyId || selectedLocation) && (
+                <Box
                   sx={{
-                    mb: 2,
-                    "& .MuiTab-root": {
-                      textTransform: "none",
-                      minWidth: "unset",
-                      fontWeight: 500,
-                      fontSize: "0.9rem",
-                      px: 3,
-                      "&.Mui-selected": {
-                        color: theme.palette.primary.main,
-                        fontWeight: 600,
-                      },
-                    },
+                    mb: 3,
+                    display: "flex",
+                    justifyContent: "center",
+                    flexWrap: "wrap",
+                    gap: 1,
                   }}
                 >
-                  <Tab label="All Charts" />
-                  <Tab label="Sales" />
-                  <Tab label="Orders" />
-                  <Tab label="Avg Ticket" />
-                  <Tab label="Labor" />
-                  <Tab label="COGS" />
-                </Tabs>
+                  {activeCompanyId && (
+                    <CompanyInfoChip
+                      icon={<BusinessIcon />}
+                      label={`Data for: ${selectedCompanyName}`}
+                      variant="outlined"
+                    />
+                  )}
+                  {selectedLocation && (
+                    <CompanyInfoChip
+                      icon={<PlaceIcon />}
+                      label={`Location: ${selectedLocationName}`}
+                      variant="outlined"
+                    />
+                  )}
+                </Box>
+              )}
+              <FinancialTablesComponent
+                financialTables={financialTablesData}
+              />
+            </Box>
+          </TabPanel>
 
-                {/* All Charts Panel */}
-                <TabPanel value={chartTab} index={0}>
-                  <Grid container spacing={3}>
-                    <Grid item xs={12}>
-                      <BaseChart title="Sales">
-                        {createNivoBarChart(
-                          salesData,
-                          ["Tw vs. Lw", "Tw vs. Ly"],
-                          ["#4285f4", "#ea4335"],
-                          "salesPercentage",
-                          formatPercentage,
-                          false
-                        )}
-                      </BaseChart>
-                    </Grid>
+          {/* Charts Tab */}
+          <TabPanel value={tabValue} index={1}>
+            <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+              {/* Show company/location context in graphs */}
+              {(activeCompanyId || selectedLocation) && (
+                <Box
+                  sx={{
+                    mb: 3,
+                    display: "flex",
+                    justifyContent: "center",
+                    flexWrap: "wrap",
+                    gap: 1,
+                  }}
+                >
+                  {activeCompanyId && (
+                    <CompanyInfoChip
+                      icon={<BusinessIcon />}
+                      label={`Charts for: ${selectedCompanyName}`}
+                      variant="outlined"
+                    />
+                  )}
+                  {selectedLocation && (
+                    <CompanyInfoChip
+                      icon={<PlaceIcon />}
+                      label={`Location: ${selectedLocationName}`}
+                      variant="outlined"
+                    />
+                  )}
+                </Box>
+              )}
 
-                    <Grid item xs={12}>
-                      <BaseChart title="Orders">
-                        {createNivoBarChart(
-                          ordersData,
-                          ["Tw vs. Lw", "Tw vs. Ly"],
-                          ["#4285f4", "#ea4335"],
-                          "ordersPercentage",
-                          formatPercentage,
-                          false
-                        )}
-                      </BaseChart>
-                    </Grid>
+              {/* Chart Tabs */}
+              <Tabs
+                value={chartTab}
+                onChange={handleChartTabChange}
+                variant="scrollable"
+                scrollButtons="auto"
+                sx={{
+                  mb: 2,
+                  "& .MuiTab-root": {
+                    textTransform: "none",
+                    minWidth: "unset",
+                    fontWeight: 500,
+                    fontSize: "0.9rem",
+                    px: 3,
+                    "&.Mui-selected": {
+                      color: theme.palette.primary.main,
+                      fontWeight: 600,
+                    },
+                  },
+                }}
+              >
+                <Tab label="All Charts" />
+                <Tab label="Sales" />
+                <Tab label="Orders" />
+                <Tab label="Avg Ticket" />
+                <Tab label="Labor" />
+                <Tab label="COGS" />
+              </Tabs>
 
-                    <Grid item xs={12}>
-                      <BaseChart title="Avg Ticket">
-                        {createNivoBarChart(
-                          avgTicketData,
-                          ["Tw vs. Lw", "Tw vs. Ly"],
-                          ["#4285f4", "#ea4335"],
-                          "avgTicket",
-                          formatPercentage,
-                          false
-                        )}
-                      </BaseChart>
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <BaseChart title="Labor Hrs">
-                        {createNivoBarChart(
-                          laborHrsData,
-                          ["Tw Lb Hrs", "Lw Lb Hrs"],
-                          ["#000000", "#8bc34a"],
-                          "laborHrs",
-                          (value) => value.toFixed(2),
-                          true,
-                          (d) => d.data[`${d.id}`].toFixed(2)
-                        )}
-                      </BaseChart>
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <BaseChart title="SPMH">
-                        {createNivoBarChart(
-                          spmhData,
-                          ["Tw SPMH", "Lw SPMH"],
-                          ["#000000", "#8bc34a"],
-                          "spmh",
-                          (value) => value.toFixed(2),
-                          true,
-                          (d) => d.data[`${d.id}`].toFixed(2)
-                        )}
-                      </BaseChart>
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <BaseChart title="Labor $ Spent">
-                        {createNivoBarChart(
-                          laborCostData,
-                          ["Tw Reg Pay", "Lw Reg Pay"],
-                          ["#4285f4", "#ea4335"],
-                          "laborCost",
-                          formatCurrency,
-                          true,
-                          (d) => `${Math.floor(d.value / 1000)}k`
-                        )}
-                      </BaseChart>
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <BaseChart title="Labor %">
-                        {createNivoBarChart(
-                          laborPercentageData,
-                          ["Tw Lc %", "Lw Lc %"],
-                          ["#4285f4", "#ea4335"],
-                          "laborPercentage",
-                          formatPercentage,
-                          true,
-                          (d) => `${d.value.toFixed(2)}%`
-                        )}
-                      </BaseChart>
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <BaseChart title="COGS $">
-                        {createNivoBarChart(
-                          cogsData,
-                          ["Tw COGS", "Lw COGS"],
-                          ["#9c27b0", "#e57373"],
-                          "cogs",
-                          formatCurrency,
-                          true,
-                          (d) => `${Math.floor(d.value / 1000)}k`
-                        )}
-                      </BaseChart>
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <BaseChart title="COGS %">
-                        {createNivoBarChart(
-                          cogsPercentageData,
-                          ["Tw Fc %", "Lw Fc %"],
-                          ["#9c27b0", "#e57373"],
-                          "cogsPercentage",
-                          formatPercentage,
-                          true,
-                          (d) => `${d.value.toFixed(2)}%`
-                        )}
-                      </BaseChart>
-                    </Grid>
+              {/* All Charts Panel */}
+              <TabPanel value={chartTab} index={0}>
+                <Grid container spacing={3}>
+                  <Grid item xs={12}>
+                    <BaseChart title="Sales">
+                      {createNivoBarChart(
+                        salesData,
+                        ["Tw vs. Lw", "Tw vs. Ly"],
+                        ["#4285f4", "#ea4335"],
+                        "salesPercentage",
+                        formatPercentage,
+                        false
+                      )}
+                    </BaseChart>
                   </Grid>
-                </TabPanel>
 
-                {/* Individual Chart Panels */}
-                <TabPanel value={chartTab} index={1}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12}>
-                      <BaseChart title="Sales">
-                        {createNivoBarChart(
-                          salesData,
-                          ["Tw vs. Lw", "Tw vs. Ly"],
-                          ["#4285f4", "#ea4335"],
-                          "salesPercentage",
-                          formatPercentage,
-                          false
-                        )}
-                      </BaseChart>
-                    </Grid>
+                  <Grid item xs={12}>
+                    <BaseChart title="Orders">
+                      {createNivoBarChart(
+                        ordersData,
+                        ["Tw vs. Lw", "Tw vs. Ly"],
+                        ["#4285f4", "#ea4335"],
+                        "ordersPercentage",
+                        formatPercentage,
+                        false
+                      )}
+                    </BaseChart>
                   </Grid>
-                </TabPanel>
 
-                <TabPanel value={chartTab} index={2}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12}>
-                      <BaseChart title="Orders">
-                        {createNivoBarChart(
-                          ordersData,
-                          ["Tw vs. Lw", "Tw vs. Ly"],
-                          ["#4285f4", "#ea4335"],
-                          "ordersPercentage",
-                          formatPercentage,
-                          false
-                        )}
-                      </BaseChart>
-                    </Grid>
+                  <Grid item xs={12}>
+                    <BaseChart title="Avg Ticket">
+                      {createNivoBarChart(
+                        avgTicketData,
+                        ["Tw vs. Lw", "Tw vs. Ly"],
+                        ["#4285f4", "#ea4335"],
+                        "avgTicket",
+                        formatPercentage,
+                        false
+                      )}
+                    </BaseChart>
                   </Grid>
-                </TabPanel>
 
-                <TabPanel value={chartTab} index={3}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12}>
-                      <BaseChart title="Avg Ticket">
-                        {createNivoBarChart(
-                          avgTicketData,
-                          ["Tw vs. Lw", "Tw vs. Ly"],
-                          ["#4285f4", "#ea4335"],
-                          "avgTicket",
-                          formatPercentage,
-                          false
-                        )}
-                      </BaseChart>
-                    </Grid>
+                  <Grid item xs={12}>
+                    <BaseChart title="Labor Hrs">
+                      {createNivoBarChart(
+                        laborHrsData,
+                        ["Tw Lb Hrs", "Lw Lb Hrs"],
+                        ["#000000", "#8bc34a"],
+                        "laborHrs",
+                        (value) => value.toFixed(2),
+                        true,
+                        (d) => d.data[`${d.id}`].toFixed(2)
+                      )}
+                    </BaseChart>
                   </Grid>
-                </TabPanel>
 
-                <TabPanel value={chartTab} index={4}>
-                  <Grid container spacing={3}>
-                    <Grid item xs={12}>
-                      <BaseChart title="Labor Hrs">
-                        {createNivoBarChart(
-                          laborHrsData,
-                          ["Tw Lb Hrs", "Lw Lb Hrs"],
-                          ["#000000", "#8bc34a"],
-                          "laborHrs",
-                          (value) => value.toFixed(2),
-                          true,
-                          (d) => d.data[`${d.id}`].toFixed(2)
-                        )}
-                      </BaseChart>
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <BaseChart title="SPMH">
-                        {createNivoBarChart(
-                          spmhData,
-                          ["Tw SPMH", "Lw SPMH"],
-                          ["#000000", "#8bc34a"],
-                          "spmh",
-                          (value) => value.toFixed(2),
-                          true,
-                          (d) => d.data[`${d.id}`].toFixed(2)
-                        )}
-                      </BaseChart>
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <BaseChart title="Labor $ Spent">
-                        {createNivoBarChart(
-                          laborCostData,
-                          ["Tw Reg Pay", "Lw Reg Pay"],
-                          ["#4285f4", "#ea4335"],
-                          "laborCost",
-                          formatCurrency,
-                          true,
-                          (d) => `${Math.floor(d.value / 1000)}k`
-                        )}
-                      </BaseChart>
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <BaseChart title="Labor %">
-                        {createNivoBarChart(
-                          laborPercentageData,
-                          ["Tw Lc %", "Lw Lc %"],
-                          ["#4285f4", "#ea4335"],
-                          "laborPercentage",
-                          formatPercentage,
-                          true,
-                          (d) => `${d.value.toFixed(2)}%`
-                        )}
-                      </BaseChart>
-                    </Grid>
+                  <Grid item xs={12}>
+                    <BaseChart title="SPMH">
+                      {createNivoBarChart(
+                        spmhData,
+                        ["Tw SPMH", "Lw SPMH"],
+                        ["#000000", "#8bc34a"],
+                        "spmh",
+                        (value) => value.toFixed(2),
+                        true,
+                        (d) => d.data[`${d.id}`].toFixed(2)
+                      )}
+                    </BaseChart>
                   </Grid>
-                </TabPanel>
 
-                <TabPanel value={chartTab} index={5}>
-                  <Grid container spacing={3}>
-                    <Grid item xs={12}>
-                      <BaseChart title="COGS $">
-                        {createNivoBarChart(
-                          cogsData,
-                          ["Tw COGS", "Lw COGS"],
-                          ["#9c27b0", "#e57373"],
-                          "cogs",
-                          formatCurrency,
-                          true,
-                          (d) => `${Math.floor(d.value / 1000)}k`
-                        )}
-                      </BaseChart>
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <BaseChart title="COGS %">
-                        {createNivoBarChart(
-                          cogsPercentageData,
-                          ["Tw Fc %", "Lw Fc %"],
-                          ["#9c27b0", "#e57373"],
-                          "cogsPercentage",
-                          formatPercentage,
-                          true,
-                          (d) => `${d.value.toFixed(2)}%`
-                        )}
-                      </BaseChart>
-                    </Grid>
+                  <Grid item xs={12}>
+                    <BaseChart title="Labor $ Spent">
+                      {createNivoBarChart(
+                        laborCostData,
+                        ["Tw Reg Pay", "Lw Reg Pay"],
+                        ["#4285f4", "#ea4335"],
+                        "laborCost",
+                        formatCurrency,
+                        true,
+                        (d) => `${Math.floor(d.value / 1000)}k`
+                      )}
+                    </BaseChart>
                   </Grid>
-                </TabPanel>
-              </Box>
-            </TabPanel>
-          </Card>
-        </>
-      )}
+
+                  <Grid item xs={12}>
+                    <BaseChart title="Labor %">
+                      {createNivoBarChart(
+                        laborPercentageData,
+                        ["Tw Lc %", "Lw Lc %"],
+                        ["#4285f4", "#ea4335"],
+                        "laborPercentage",
+                        formatPercentage,
+                        true,
+                        (d) => `${d.value.toFixed(2)}%`
+                      )}
+                    </BaseChart>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <BaseChart title="COGS $">
+                      {createNivoBarChart(
+                        cogsData,
+                        ["Tw COGS", "Lw COGS"],
+                        ["#9c27b0", "#e57373"],
+                        "cogs",
+                        formatCurrency,
+                        true,
+                        (d) => `${Math.floor(d.value / 1000)}k`
+                      )}
+                    </BaseChart>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <BaseChart title="COGS %">
+                      {createNivoBarChart(
+                        cogsPercentageData,
+                        ["Tw Fc %", "Lw Fc %"],
+                        ["#9c27b0", "#e57373"],
+                        "cogsPercentage",
+                        formatPercentage,
+                        true,
+                        (d) => `${d.value.toFixed(2)}%`
+                      )}
+                    </BaseChart>
+                  </Grid>
+                </Grid>
+              </TabPanel>
+
+              {/* Individual Chart Panels */}
+              <TabPanel value={chartTab} index={1}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <BaseChart title="Sales">
+                      {createNivoBarChart(
+                        salesData,
+                        ["Tw vs. Lw", "Tw vs. Ly"],
+                        ["#4285f4", "#ea4335"],
+                        "salesPercentage",
+                        formatPercentage,
+                        false
+                      )}
+                    </BaseChart>
+                  </Grid>
+                </Grid>
+              </TabPanel>
+
+              <TabPanel value={chartTab} index={2}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <BaseChart title="Orders">
+                      {createNivoBarChart(
+                        ordersData,
+                        ["Tw vs. Lw", "Tw vs. Ly"],
+                        ["#4285f4", "#ea4335"],
+                        "ordersPercentage",
+                        formatPercentage,
+                        false
+                      )}
+                    </BaseChart>
+                  </Grid>
+                </Grid>
+              </TabPanel>
+
+              <TabPanel value={chartTab} index={3}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <BaseChart title="Avg Ticket">
+                      {createNivoBarChart(
+                        avgTicketData,
+                        ["Tw vs. Lw", "Tw vs. Ly"],
+                        ["#4285f4", "#ea4335"],
+                        "avgTicket",
+                        formatPercentage,
+                        false
+                      )}
+                    </BaseChart>
+                  </Grid>
+                </Grid>
+              </TabPanel>
+
+              <TabPanel value={chartTab} index={4}>
+                <Grid container spacing={3}>
+                  <Grid item xs={12}>
+                    <BaseChart title="Labor Hrs">
+                      {createNivoBarChart(
+                        laborHrsData,
+                        ["Tw Lb Hrs", "Lw Lb Hrs"],
+                        ["#000000", "#8bc34a"],
+                        "laborHrs",
+                        (value) => value.toFixed(2),
+                        true,
+                        (d) => d.data[`${d.id}`].toFixed(2)
+                      )}
+                    </BaseChart>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <BaseChart title="SPMH">
+                      {createNivoBarChart(
+                        spmhData,
+                        ["Tw SPMH", "Lw SPMH"],
+                        ["#000000", "#8bc34a"],
+                        "spmh",
+                        (value) => value.toFixed(2),
+                        true,
+                        (d) => d.data[`${d.id}`].toFixed(2)
+                      )}
+                    </BaseChart>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <BaseChart title="Labor $ Spent">
+                      {createNivoBarChart(
+                        laborCostData,
+                        ["Tw Reg Pay", "Lw Reg Pay"],
+                        ["#4285f4", "#ea4335"],
+                        "laborCost",
+                        formatCurrency,
+                        true,
+                        (d) => `${Math.floor(d.value / 1000)}k`
+                      )}
+                    </BaseChart>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <BaseChart title="Labor %">
+                      {createNivoBarChart(
+                        laborPercentageData,
+                        ["Tw Lc %", "Lw Lc %"],
+                        ["#4285f4", "#ea4335"],
+                        "laborPercentage",
+                        formatPercentage,
+                        true,
+                        (d) => `${d.value.toFixed(2)}%`
+                      )}
+                    </BaseChart>
+                  </Grid>
+                </Grid>
+              </TabPanel>
+
+              <TabPanel value={chartTab} index={5}>
+                <Grid container spacing={3}>
+                  <Grid item xs={12}>
+                    <BaseChart title="COGS $">
+                      {createNivoBarChart(
+                        cogsData,
+                        ["Tw COGS", "Lw COGS"],
+                        ["#9c27b0", "#e57373"],
+                        "cogs",
+                        formatCurrency,
+                        true,
+                        (d) => `${Math.floor(d.value / 1000)}k`
+                      )}
+                    </BaseChart>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <BaseChart title="COGS %">
+                      {createNivoBarChart(
+                        cogsPercentageData,
+                        ["Tw Fc %", "Lw Fc %"],
+                        ["#9c27b0", "#e57373"],
+                        "cogsPercentage",
+                        formatPercentage,
+                        true,
+                        (d) => `${d.value.toFixed(2)}%`
+                      )}
+                    </BaseChart>
+                  </Grid>
+                </Grid>
+              </TabPanel>
+            </Box>
+          </TabPanel>
+        </Card>
+      </>
     </Box>
   );
 }
