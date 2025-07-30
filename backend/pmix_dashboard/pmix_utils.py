@@ -137,8 +137,12 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     # -------------------------------------------------------
     net_sales = round(filtered_df['Net_Price'].sum(), 2)  # Updated column name
     net_sales_change =  (round(change_filtered_df['Net_Price'].sum(), 2) - net_sales)/  net_sales  if net_sales != 0 else 0  # Updated column name
-    unique_orders = filtered_df['Order_number'].nunique()  # Updated column name
-    orders_change = round(change_filtered_df['Order_number'].nunique(), 2) - unique_orders / unique_orders  if unique_orders != 0 else 0  # Updated column name
+    # unique_orders = filtered_df['Order_number'].nunique()  # Updated column name
+    # orders_change = round(change_filtered_df['Order_number'].nunique(), 2) - unique_orders / unique_orders  if unique_orders != 0 else 0  # Updated column name
+    unique_orders = filtered_df['Order_Id'].nunique()  # Updated column name
+    orders_change = round(change_filtered_df['Order_Id'].nunique(), 2) - unique_orders / unique_orders  if unique_orders != 0 else 0  # Updated column name
+    
+    
     qty_sold = filtered_df['Qty'].sum() 
     qty_sold_change = round(change_filtered_df['Qty'].sum(), 2) - qty_sold / qty_sold  if qty_sold != 0 else 0
     
