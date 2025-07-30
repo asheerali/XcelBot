@@ -591,7 +591,7 @@ const TableDisplay: React.FC<TableDisplayProps> = ({
             {...a11yProps(1)}
           />
           <CleanTab
-            label="In-House Table"
+            label="Category Sales Percentage"
             icon={<HomeIcon />}
             iconPosition="start"
             {...a11yProps(2)}
@@ -628,7 +628,7 @@ const TableDisplay: React.FC<TableDisplayProps> = ({
         {/* In-House Table */}
         <TabPanel value={currentTabValue} index={2} forceRender>
           <DataTable
-            title="In-House Table - Category Percentages"
+            title="Category Sales Percentage"
             data={memoizedTableData.table3}
             icon={<HomeIcon />}
           />
