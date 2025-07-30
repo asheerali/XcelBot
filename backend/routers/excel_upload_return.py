@@ -62,7 +62,9 @@ def process_financials_and_sales_wide(request, df1, df2, file_name, company_id=N
     # Process financials data
     (financials_weeks, financials_years, financials_stores, financials_sales_table, 
      financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table, 
-     years, dates, stores) = process_financials_file(
+     years, dates, stores, weekly_sales_trends, 
+         avg_ticket_by_day_df,
+         kpi_vs_budget_df) = process_financials_file(
         df1,
         df2,  
         year="All", 
@@ -93,10 +95,10 @@ def process_financials_and_sales_wide(request, df1, df2, file_name, company_id=N
         "table10": financials_food_cost_df.to_dict(orient='records'),
         "table11": financials_spmh_df.to_dict(orient='records'),
         "table12": financials_lpmh_df.to_dict(orient='records'),
-        "table13": financials_weekly_sales_df.to_dict(orient='records'),
+        "table13": weekly_sales_trends.to_dict(orient='records'),
         "table14": financials_orders_by_day_df.to_dict(orient='records'),
-        "table15": financials_average_ticket_df.to_dict(orient='records'),
-        "table16": financials_kpi_vs_budget_df.to_dict(orient='records'),
+        "table15": avg_ticket_by_day_df.to_dict(orient='records'),
+       "table16": kpi_vs_budget_df.to_dict(orient='records'),
         "company_id": company_id,
         "fileName": file_name,
         "locations": stores,
@@ -105,7 +107,7 @@ def process_financials_and_sales_wide(request, df1, df2, file_name, company_id=N
         "dashboardName": "Financials",
         "data": "Financial Dashboard is not yet implemented."
     }
-    print("Result for the financials:", financials_result)
+    # print("Result for the financials:", financials_result)
     
     startDate='2025-03-17' 
     endDate='2025-06-15'
@@ -140,7 +142,7 @@ def process_financials_and_sales_wide(request, df1, df2, file_name, company_id=N
         "data": "Sales Wide Dashboard data."
     }
     
-    print("Result for the sales wide:", financials_result)
+    # print("Result for the sales wide:", financials_result)
 
     # Return appropriate result based on dashboard type
     if request.dashboard == "Financials and Sales Wide":

@@ -838,7 +838,7 @@ async def upload_excel(
                 print("\nSample Helper 1 values:")
                 print(df['Helper 1'].head(10).to_string())
                 
-            print("i am here __ checking the helper1", df.columns, "\n", df['Helper 1'], "\n", df.head())
+            # print("i am here __ checking the helper1", df.columns, "\n", df['Helper 1'], "\n", df.head())
             
             if 'Helper 4' not in df.columns:
                 print("Helper 4 column not found. Creating Helper 4 column...")
@@ -975,7 +975,7 @@ async def upload_excel(
             df_budget["Store"].unique()  # Display unique values in the 'stores' column
 
             df_budget["Store"] = df_budget["Store"].str.lower()
-            print("i am here printing the store df_budget columns:", df_budget["Store"])
+            # print("i am here printing the store df_budget columns:", df_budget["Store"])
 
             years = df["Year"].unique().tolist()  # Display unique values in the 'Year' column
             dates = df["Helper 4"].unique().tolist()  # Display unique values in the 'Helper 4' column
