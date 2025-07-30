@@ -139,6 +139,7 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     net_sales_change =  (round(change_filtered_df['Net_Price'].sum(), 2) - net_sales)/  net_sales  if net_sales != 0 else 0  # Updated column name
     # unique_orders = filtered_df['Order_number'].nunique()  # Updated column name
     # orders_change = round(change_filtered_df['Order_number'].nunique(), 2) - unique_orders / unique_orders  if unique_orders != 0 else 0  # Updated column name
+   
     unique_orders = filtered_df['Order_Id'].nunique()  # Updated column name
     orders_change = round(change_filtered_df['Order_Id'].nunique(), 2) - unique_orders / unique_orders  if unique_orders != 0 else 0  # Updated column name
     
@@ -240,10 +241,11 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     # Sort by Sales descending and get only top 5 items
     top_selling_items = top_selling_items.sort_values('Sales', ascending=False).head(5).reset_index(drop=True)
     
+    net_sales_round =  round(net_sales, 2)
     # Return all tables in a dictionary
     return {
         # 'net_sales': net_sales,
-        'net_sales': round(net_sales, 2),
+        'net_sales': net_sales_round,
         'orders': unique_orders,
         'qty_sold': qty_sold,
         'sales_by_category': sales_by_category,
@@ -255,8 +257,9 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
         "orders_change": orders_change,
         'orders_change': round(orders_change, 2),
         # "qty_sold_change": qty_sold_change
-        'qty_sold_change': round(qty_sold_change, 2)
-
+        'qty_sold_change': round(qty_sold_change, 2),
+        "avg_orders_value_correct": net_sales_round / unique_orders,
+        "avg_orders_value_change_correct" : net_sales_change / orders_change
     }
 
 

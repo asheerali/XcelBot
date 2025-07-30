@@ -190,7 +190,7 @@ def process_sales_split_and_product_mix(request, df, file_name, company_id=None)
      qty_sold_change, average_order_value_change, average_items_per_order_change,
      unique_orders_change, total_quantity_change, sales_by_category_tables_df, 
      category_comparison_table_df, sales_by_category_by_day_table_df,
-     top_vs_bottom_comparison_df) = process_pmix_file(
+     top_vs_bottom_comparison_df, avg_orders_value_correct, avg_orders_value_change_correct) = process_pmix_file(
         # excel_data_copy,
         df, 
         start_date=start_date, 
@@ -205,14 +205,14 @@ def process_sales_split_and_product_mix(request, df, file_name, company_id=None)
             "net_sales": [float(net_sales)],
             "orders": [int(orders)],
             "qty_sold": [int(qty_sold)],
-            "average_order_value": [float(average_order_value)],
+            "average_order_value": [float(avg_orders_value_correct)],
             "average_items_per_order": [float(average_items_per_order)],
             "unique_orders": [int(unique_orders)],
             "total_quantity": [int(total_quantity)],
             "net_sales_change": [float(net_sales_change)],
             "orders_change": [int(orders_change)],
             "qty_sold_change": [int(qty_sold_change)],
-            "average_order_value_change": [float(average_order_value_change)],
+            "average_order_value_change": [float(avg_orders_value_change_correct)],
             "average_items_per_order_change": [float(average_items_per_order_change)],
             "unique_orders_change": [int(unique_orders_change)],
             "total_quantity_change": [int(total_quantity_change)]

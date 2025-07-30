@@ -52,6 +52,8 @@ def process_pmix_file(file_data: Union[io.BytesIO, str],start_date=None, end_dat
     net_sales_change = p1['net_sales_change'] #value
     orders_change = p1['orders_change'] #value
     qty_sold_change = p1['qty_sold_change'] #value
+    avg_orders_value_correct = p1['avg_orders_value_correct'] #value
+    avg_orders_value_change_correct = p1['avg_orders_value_change_correct'] #value
     
     # p2 = detailed_analysis_tables(df, location_filter=location_filter, menu_item_filter=menu_item_filter)
     p2 = detailed_analysis_tables(df, location_filter=location_filter ,category_filter=category_filter, start_date=start_date, end_date=end_date)
@@ -92,4 +94,17 @@ def process_pmix_file(file_data: Union[io.BytesIO, str],start_date=None, end_dat
 
     print("i am here in pmix_processor.py printing the sales_by_category_by_day_table_df", sales_by_category_by_day_table_df)
     
-    return net_sales, orders, qty_sold, sales_by_category_df, sales_by_menu_group_df, sales_by_server_df, top_selling_items_df, sales_by_location_df, average_price_by_item_df, average_order_value, average_items_per_order, price_changes_df, top_items_df, unique_orders, total_quantity, locations, server, category, net_sales_change, orders_change, qty_sold_change, average_order_value_change, average_items_per_order_change, unique_orders_change, total_quantity_change, sales_by_category_tables_df, category_comparison_table_df, sales_by_category_by_day_table_df, top_vs_bottom_comparison_df
+    return (net_sales, orders, qty_sold, sales_by_category_df, 
+            sales_by_menu_group_df, sales_by_server_df, 
+            top_selling_items_df, sales_by_location_df, 
+            average_price_by_item_df, average_order_value, 
+            average_items_per_order, price_changes_df, top_items_df,
+            unique_orders, total_quantity, locations, server, 
+            category, net_sales_change, orders_change, 
+            qty_sold_change, average_order_value_change,
+            average_items_per_order_change, unique_orders_change, 
+            total_quantity_change, sales_by_category_tables_df, 
+            category_comparison_table_df, sales_by_category_by_day_table_df, 
+            top_vs_bottom_comparison_df,
+            avg_orders_value_correct, avg_orders_value_change_correct)
+    
