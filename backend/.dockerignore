@@ -1,31 +1,3 @@
-<<<<<<< HEAD
-# Additional environment files
-.env.local
-.env.development
-.env.test
-.env.production
-
-# Jupyter Notebook
-.ipynb_checkpoints
-test
-
-# Additional Python environments
-.venv
-env/
-ENV/
-xcelbot/
-
-.env
-data/
-xcelbot/
-venv/
-node_modules/
-yarn.lock
-__pycache__/
-docker 
-*.xlsx
-# Additional environment files
-=======
 # Python environments
 .venv/
 env/
@@ -61,19 +33,7 @@ docker/
 .dockerignore
 
 # Environment files (only exclude if mounted manually at runtime)
->>>>>>> integrations_v41
 .env.local
 .env.development
 .env.test
 .env.production
-<<<<<<< HEAD
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# Additional Python environments
-.venv
-env/
-ENV/
-=======
->>>>>>> integrations_v41

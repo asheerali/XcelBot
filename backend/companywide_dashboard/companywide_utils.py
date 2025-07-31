@@ -1023,7 +1023,7 @@ def companywide_tables(df, store_filter='All', year_filter=None, quarter_filter=
     # Clean column names for spmh_df
     spmh_df = clean_column_names(spmh_df)
 
-    print("i am here printing the sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df", sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df)
+    # print("i am here printing the sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df", sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df)
     
     return sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df
 

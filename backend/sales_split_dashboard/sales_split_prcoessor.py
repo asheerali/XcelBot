@@ -20,11 +20,11 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str, pd.DataFrame],loc
     # Read the Excel file
     # df = pd.read_excel(file_data)
     
-    print("Type of file_data: i am here", type(file_data))
+    # print("Type of file_data: i am here", type(file_data))
     
     try:
             if isinstance(file_data, pd.DataFrame):
-                print("Received DataFrame directly.")
+                # print("Received DataFrame directly.")
                 df = file_data
         
             if df.empty:
@@ -34,7 +34,7 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str, pd.DataFrame],loc
 
 
     # print("df i am here in sales_split_processor_file----", "\n", df)
-    print( " i am here in sales_split_processor_file printing the dates", start_date, end_date, "start date_type", type(start_date), "end date type", type(end_date) ,  "and the location", location, "and the category_filter", category_filter)
+    # print( " i am here in sales_split_processor_file printing the dates", start_date, end_date, "start date_type", type(start_date), "end date type", type(end_date) ,  "and the location", location, "and the category_filter", category_filter)
 
     categories = df["Category"].unique().tolist()
     locations = df["Location"].unique().tolist()
@@ -46,13 +46,13 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str, pd.DataFrame],loc
     pivot = create_sales_pivot_tables(df, location_filter=location, start_date=start_date, end_date=end_date, categories_filter=category_filter)
     
     
-    print("i am here in sales split processor pivot", "\n", pivot)
+    # print("i am here in sales split processor pivot", "\n", pivot)
     pivot_table = pivot['pivot_table'] #value
     in_house_table = pivot['in_house_table'] #value
     week_over_week_table = pivot['week_over_week_table'] #value
     category_summary_table = pivot['category_summary_table']
    
-    print("pivot_table i am here in sales split processor", "\n", pivot_table.head())
+    # print("pivot_table i am here in sales split processor", "\n", pivot_table.head())
     # p2 = detailed_analysis_tables(df, location_filter=location_filter, order_date_filter=order_date_filter, dining_option_filter=dining_option_filter, menu_item_filter=menu_item_filter)
     
 
@@ -92,7 +92,7 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str, pd.DataFrame],loc
     sales_by_day = create_sales_by_day_table(df, location_filter=location, end_date=end_date, categories_filter=category_filter)
     sales_by_day_table = sales_by_day['sales_by_day_table']
 
-    print("sales_by_day_table i am here in sales split processor", "\n", sales_by_day_table.head())
+    # print("sales_by_day_table i am here in sales split processor", "\n", sales_by_day_table.head())
     
     salesByWeek = analysis['sales_by_week']
     salesByDayOfWeek = analysis['sales_by_day']
@@ -104,7 +104,7 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str, pd.DataFrame],loc
     # thirteen_week_category_table = sales_overview_analysis['thirteen_week_category_table']
     
     
-    print("i am here in sales split processor printing sales by category", "\n", )
+    # print("i am here in sales split processor printing sales by category", "\n", )
     
     thirteen_week_category_df = thirteen_week_category(df, location_filter=location, end_date=end_date, category_filter=category_filter)
     thirteen_week_category_table = thirteen_week_category_df['thirteen_week_category_table']

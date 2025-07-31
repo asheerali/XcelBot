@@ -23,35 +23,6 @@ UPLOAD_DIR = "./uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
-# # Upload endpoint
-# @router.post("/financials/filter", response_model=DashboardResponse)
-# async def upload_excel(request: FinancialCompanyWideUploadRequest = Body(...)):
-#     """
-#     Endpoint to upload and process an Excel file.
-#     Supports optional date range and location filtering.
-#     """
-#     try:
-#         # print(f"Received file upload: {request.fileName}")
-        
-#         fileName = request.fileName
-#         print("i am here in the financials filter endpoint", request)
-#         # fileName = "20250514_200147_midtown_east_dashboard2_template1.xlsx"
-#         file_location = os.path.join(UPLOAD_DIR, fileName)
-#         print("i am here checking the startdate and end date 1", request, request.startDate, request.endDate)
-#         year = request.year if request.year else "All"
-#         # week_range = request.weekRange if request.weekRange else "All"
-#         if request.locations == "Multiple Locations":
-#             location_filter = "All"
-#         else:
-#             location_filter = request.locations if request.locations else 'All'
-#         # location = request.location if request.location else "All"
-#         start_date = request.startDate if request.startDate else None
-#         end_date = request.endDate if request.endDate else None
-#         print("i am here checking the startdate and end date 2 ", start_date, end_date,"locations filter", location_filter, "and the request", request)
-
-#         print("this is the year", year)
-
-
 @router.post("/financials/filter", response_model=DashboardResponse)
 async def filter_financials_data(
     request: FinancialCompanyWideUploadRequest = Body(...),
@@ -82,8 +53,8 @@ async def filter_financials_data(
         # Handle year filter
         year_filter = request.year if request.year else None
         
-        print("-----------------------------------------------------------")
-        print("i am here in the financials filter endpoint print startDate", request.startDate, " endDate", request.endDate, "location", request.locations)
+        # print("-----------------------------------------------------------")
+        # print("i am here in the financials filter endpoint print startDate", request.startDate, " endDate", request.endDate, "location", request.locations)
         # Convert dates to pandas datetime objects for consistent handling
         start_date_original = request.startDate if request.startDate else None
         end_date_original = request.endDate if request.endDate else None
@@ -338,7 +309,7 @@ async def filter_financials_data(
                 if col in df_budget.columns:
                     df_budget[col] = pd.to_numeric(df_budget[col], errors='coerce').fillna(0)
 
-        print("i am here in the financials filter endpoint after converting the data types",    "\n", df_financials.head(), "\n", "df_budget","\n" ,  df_budget.head())
+        # print("i am here in the financials filter endpoint after converting the data types",    "\n", df_financials.head(), "\n", "df_budget","\n" ,  df_budget.head())
 
         print("i am checking the date afer converting the date type", start_date_original, end_date_original, type(start_date_original), type(end_date_original))
 
@@ -346,6 +317,8 @@ async def filter_financials_data(
         # end_month = pd.to_datetime(end_date_original).day()
 
         # print("i am here in the financials filter endpoint after converting the data types",    "\n", start_month, end_month, type(start_month), type(end_month))
+
+        print( " i am here in the financials filter financials_sales_df1", financials_sales_df1.head() )      
 
         (financials_weeks, 
          financials_years, 
@@ -356,7 +329,12 @@ async def filter_financials_data(
          financials_tw_lw_bdg_table, 
          years, 
          dates, 
-         stores)  = process_financials_file(
+         stores, 
+        #  weekly_sales_trends, 
+        #  avg_ticket_by_day_df,
+         kpi_vs_budget_df,
+         financial_sales_table_df
+         )  = process_financials_file(
                 df1 = df_financials,
                 df2 = df_budget,  
                 location=location_filter, 
@@ -381,17 +359,20 @@ async def filter_financials_data(
             "table3": financials_orders_table.to_dict(orient='records'),
             "table4": financials_avg_ticket_table.to_dict(orient='records'),
             "table5": financials_tw_lw_bdg_table.to_dict(orient='records'),
-            "table6": financials_sales_df1.to_dict(orient='records'),  
+            "table6": financial_sales_table_df.to_dict(orient='records'),  
             "table7": financials_labor_df.to_dict(orient='records'),
             "table8": financials_avg_ticker_df.to_dict(orient='records'),
             "table9": financials_prime_cost_df.to_dict(orient='records'),
             "table10": financials_food_cost_df.to_dict(orient='records'),
             "table11": financials_spmh_df.to_dict(orient='records'),
             "table12": financials_lpmh_df.to_dict(orient='records'),
-            "table13": financials_weekly_sales_df.to_dict(orient='records'),
+            # "table13": financials_weekly_sales_df.to_dict(orient='records'),
+            # "table13": weekly_sales_trends.to_dict(orient='records'),
             "table14": financials_orders_by_day_df.to_dict(orient='records'),
-            "table15": financials_average_ticket_df.to_dict(orient='records'),
-            "table16": financials_kpi_vs_budget_df.to_dict(orient='records'),
+            # "table15": financials_average_ticket_df.to_dict(orient='records'),
+            # "table15": avg_ticket_by_day_df.to_dict(orient='records'),
+            # "table16": financials_kpi_vs_budget_df.to_dict(orient='records'),
+            "table16": kpi_vs_budget_df.to_dict(orient='records'),
             "fileName": request.fileName, #the full names of the file saved in the uploads folder
             "locations": stores,
             # "years": years,

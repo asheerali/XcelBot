@@ -27,11 +27,17 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     Dict[str, pd.DataFrame]
         Dictionary containing all tables needed for the dashboard
     """
+    
+
     # Make a copy of the dataframe
     filtered_df = df.copy()
     
-    
-
+    print("----------------------------------------------------")
+    print("----------------------------------------------------")
+    print( "i am her in the pmix_utils.py printing the filtered_df columns ", filtered_df.columns, 
+           "and the filtered_df shape is ", filtered_df.shape, "filtered df order_Id ", filtered_df['Order_Id'].head(5))
+    print("----------------------------------------------------")
+    print("----------------------------------------------------")
     
     if not pd.api.types.is_datetime64_any_dtype(filtered_df['Date']):
         filtered_df['Date'] = pd.to_datetime(filtered_df['Date'])
@@ -137,8 +143,18 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     # -------------------------------------------------------
     net_sales = round(filtered_df['Net_Price'].sum(), 2)  # Updated column name
     net_sales_change =  (round(change_filtered_df['Net_Price'].sum(), 2) - net_sales)/  net_sales  if net_sales != 0 else 0  # Updated column name
-    unique_orders = filtered_df['Order_number'].nunique()  # Updated column name
-    orders_change = round(change_filtered_df['Order_number'].nunique(), 2) - unique_orders / unique_orders  if unique_orders != 0 else 0  # Updated column name
+    # unique_orders = filtered_df['Order_number'].nunique()  # Updated column name
+    # orders_change = round(change_filtered_df['Order_number'].nunique(), 2) - unique_orders / unique_orders  if unique_orders != 0 else 0  # Updated column name
+   
+    unique_orders = filtered_df['Order_Id'].nunique()  # Updated column name
+    orders_change = round(change_filtered_df['Order_Id'].nunique(), 2) - unique_orders / unique_orders  if unique_orders != 0 else 0  # Updated column name
+    
+    print("----------------------------------------------------")
+    print("----------------------------------------------------")
+    print("\n", "i am here in the pmix utils printing the unique orders", unique_orders,"filtered_df['Order_Id'].nunique()", filtered_df['Order_Id'].nunique())
+    print("----------------------------------------------------")
+    print("----------------------------------------------------")
+    
     qty_sold = filtered_df['Qty'].sum() 
     qty_sold_change = round(change_filtered_df['Qty'].sum(), 2) - qty_sold / qty_sold  if qty_sold != 0 else 0
     
@@ -236,10 +252,11 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     # Sort by Sales descending and get only top 5 items
     top_selling_items = top_selling_items.sort_values('Sales', ascending=False).head(5).reset_index(drop=True)
     
+    net_sales_round =  round(net_sales, 2)
     # Return all tables in a dictionary
     return {
         # 'net_sales': net_sales,
-        'net_sales': round(net_sales, 2),
+        'net_sales': net_sales_round,
         'orders': unique_orders,
         'qty_sold': qty_sold,
         'sales_by_category': sales_by_category,
@@ -251,8 +268,12 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
         "orders_change": orders_change,
         'orders_change': round(orders_change, 2),
         # "qty_sold_change": qty_sold_change
-        'qty_sold_change': round(qty_sold_change, 2)
-
+        'qty_sold_change': round(qty_sold_change, 2),
+        "avg_orders_value_correct": net_sales_round / unique_orders,
+        "avg_orders_value_change_correct" : (
+    0 if pd.isna(net_sales_change) or pd.isna(orders_change) or orders_change == 0
+    else net_sales_change / orders_change
+)
     }
 
 
@@ -689,8 +710,15 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
             'Direction': direction,
             'Category': 'PRICE'
         }
-        price_changes = pd.concat([price_changes, pd.DataFrame([price_change_row])], ignore_index=True)
+        # price_changes = pd.concat([price_changes, pd.DataFrame([price_change_row])], ignore_index=True)
     
+        price_changes = pd.DataFrame({
+            'Item': pd.Series(dtype='str'),
+            'Change': pd.Series(dtype='float'),
+            'Direction': pd.Series(dtype='str'),
+            'Category': pd.Series(dtype='str')
+        })
+
     # Get top menu items for price change display
     if not filtered_df.empty:
         top_items_by_sales = filtered_df.groupby('Menu_Item')['Net_Price'].sum().nlargest(3).index.tolist()
@@ -1120,7 +1148,8 @@ def create_sales_by_category_tables(df, location_filter='All', start_date=None, 
         aggfunc='sum',
         fill_value=0,
         margins=True,
-        margins_name='Grand Total'
+        margins_name='Grand Total',
+        observed=False
     )
 
     # Reset index and round values

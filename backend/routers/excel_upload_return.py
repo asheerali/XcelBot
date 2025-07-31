@@ -61,8 +61,13 @@ def process_financials_and_sales_wide(request, df1, df2, file_name, company_id=N
 
     # Process financials data
     (financials_weeks, financials_years, financials_stores, financials_sales_table, 
-     financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table, 
-     years, dates, stores) = process_financials_file(
+    financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table, 
+    years, dates, stores, 
+    # weekly_sales_trends, 
+    # avg_ticket_by_day_df,
+    kpi_vs_budget_df,   
+    financial_sales_table_df
+         ) = process_financials_file(
         df1,
         df2,  
         year="All", 
@@ -86,17 +91,17 @@ def process_financials_and_sales_wide(request, df1, df2, file_name, company_id=N
         "table3": financials_orders_table.to_dict(orient='records'),
         "table4": financials_avg_ticket_table.to_dict(orient='records'),
         "table5": financials_tw_lw_bdg_table.to_dict(orient='records'),
-        "table6": financials_sales_df.to_dict(orient='records'),  
+        "table6": financial_sales_table_df.to_dict(orient='records'),  
         "table7": financials_labor_df.to_dict(orient='records'),
         "table8": financials_avg_ticker_df.to_dict(orient='records'),
         "table9": financials_prime_cost_df.to_dict(orient='records'),
         "table10": financials_food_cost_df.to_dict(orient='records'),
         "table11": financials_spmh_df.to_dict(orient='records'),
         "table12": financials_lpmh_df.to_dict(orient='records'),
-        "table13": financials_weekly_sales_df.to_dict(orient='records'),
+        # "table13": weekly_sales_trends.to_dict(orient='records'),
         "table14": financials_orders_by_day_df.to_dict(orient='records'),
-        "table15": financials_average_ticket_df.to_dict(orient='records'),
-        "table16": financials_kpi_vs_budget_df.to_dict(orient='records'),
+        # "table15": avg_ticket_by_day_df.to_dict(orient='records'),
+       "table16": kpi_vs_budget_df.to_dict(orient='records'),
         "company_id": company_id,
         "fileName": file_name,
         "locations": stores,
@@ -105,7 +110,7 @@ def process_financials_and_sales_wide(request, df1, df2, file_name, company_id=N
         "dashboardName": "Financials",
         "data": "Financial Dashboard is not yet implemented."
     }
-    print("Result for the financials:", financials_result)
+    # print("Result for the financials:", financials_result)
     
     startDate='2025-03-17' 
     endDate='2025-06-15'
@@ -140,7 +145,7 @@ def process_financials_and_sales_wide(request, df1, df2, file_name, company_id=N
         "data": "Sales Wide Dashboard data."
     }
     
-    print("Result for the sales wide:", financials_result)
+    # print("Result for the sales wide:", financials_result)
 
     # Return appropriate result based on dashboard type
     if request.dashboard == "Financials and Sales Wide":
@@ -188,7 +193,7 @@ def process_sales_split_and_product_mix(request, df, file_name, company_id=None)
      qty_sold_change, average_order_value_change, average_items_per_order_change,
      unique_orders_change, total_quantity_change, sales_by_category_tables_df, 
      category_comparison_table_df, sales_by_category_by_day_table_df,
-     top_vs_bottom_comparison_df) = process_pmix_file(
+     top_vs_bottom_comparison_df, avg_orders_value_correct, avg_orders_value_change_correct) = process_pmix_file(
         # excel_data_copy,
         df, 
         start_date=start_date, 
@@ -203,14 +208,14 @@ def process_sales_split_and_product_mix(request, df, file_name, company_id=None)
             "net_sales": [float(net_sales)],
             "orders": [int(orders)],
             "qty_sold": [int(qty_sold)],
-            "average_order_value": [float(average_order_value)],
+            "average_order_value": [float(avg_orders_value_correct)],
             "average_items_per_order": [float(average_items_per_order)],
             "unique_orders": [int(unique_orders)],
             "total_quantity": [int(total_quantity)],
             "net_sales_change": [float(net_sales_change)],
             "orders_change": [int(orders_change)],
             "qty_sold_change": [int(qty_sold_change)],
-            "average_order_value_change": [float(average_order_value_change)],
+            "average_order_value_change": [float(avg_orders_value_change_correct)],
             "average_items_per_order_change": [float(average_items_per_order_change)],
             "unique_orders_change": [int(unique_orders_change)],
             "total_quantity_change": [int(total_quantity_change)]
