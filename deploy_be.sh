@@ -17,11 +17,37 @@ cd backend
 
 echo "creating a folder on AWS backend first..."
 ssh -i "$PEM_PATH" "$SERVER_USER@$SERVER_DOMAIN" 'bash -s' << EOF
+
+
   cd "$BACKEND_DIR"
   echo "Checking out branch: $BRANCH_NAME"
   git fetch origin
   git checkout $BRANCH_NAME || git checkout -b $BRANCH_NAME origin/$BRANCH_NAME
   git pull origin $BRANCH_NAME
+
+  echo "removing old containers and images..."
+  CONTAINER_ID=\$(docker ps -q)
+
+  echo "i am here printing the container id: \$CONTAINER_ID"
+  CONTAINER_NAME=\$(docker ps --format "{{.Names}}")
+
+  echo "i am here printing the container name: \$CONTAINER_NAME"
+  
+  # this will be removed after the docker build is done
+  IMAGE_ID=\$(docker inspect --format='{{.Image}}' \$CONTAINER_ID | cut -c8-19)
+  echo "i am here printing the image id: \$IMAGE_ID"
+
+ 
+  sudo docker stop \$CONTAINER_ID
+  sudo docker rm \$CONTAINER_NAME
+
+
+  echo "running docker build and running the container with name myapp-container..."
+  docker build -t xcelbol_be:v1 .
+  docker run -d   --name myapp-container   -p 8000:8000   -v /home/admin/XcelBot/backend:/app   -v /home/admin/XcelBot/backend/data:/app/backend/data   xcelbol_be:v1
+  
+  docker rmi \$IMAGE_ID
+
   echo "Adding a directory..."
   sudo mkdir -p demo
   
