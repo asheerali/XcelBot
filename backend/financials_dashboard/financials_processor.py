@@ -9,7 +9,7 @@ from financials_dashboard.financials_utils import (financials_filters,
                                                    day_of_the_week_tables, 
                                                    calculate_tw_lw_bdg_comparison,
                                                    weekly_sales_trend, avg_ticket_by_day,
-                                                   kpi_vs_budget)
+                                                   kpi_vs_budget, financial_sales_df)
 
 
 def process_financials_file(df1, df2, year="All", week_range="All", location="All", start_date=None, end_date=None):
@@ -45,117 +45,6 @@ def process_financials_file(df1, df2, year="All", week_range="All", location="Al
         raise ValueError("budget table is not found.")
 
 
-    # # Strip whitespace from column names
-    # df.columns = df.columns.str.strip()
-    
-    # # ===== ADD HELPER COLUMN CHECK HERE =====
-    # # Check if Helper 1 and Helper 4 exist, create them if they don't
-    # if 'Helper 1' not in df.columns:
-    #     print("Helper 1 column not found. Creating Helper 1 column...")
-    #     # Find the position after Year column or at the end
-    #     if 'Year' in df.columns:
-    #         year_idx = df.columns.get_loc('Year')
-    #         df.insert(year_idx + 1, 'Helper 1', '')
-    #     else:
-    #         df['Helper 1'] = ''
-    # else:
-    #     print("Helper 1 column already exists.")
-    
-    # if 'Helper 4' not in df.columns:
-    #     print("Helper 4 column not found. Creating Helper 4 column...")
-    #     # Find the position after Helper columns
-    #     helper_cols = [col for col in df.columns if col.startswith('Helper')]
-    #     if helper_cols:
-    #         # Insert after the last existing Helper column
-    #         last_helper_col = max(helper_cols, key=lambda x: int(x.split()[-1]) if x.split()[-1].isdigit() else 0)
-    #         last_helper_idx = df.columns.get_loc(last_helper_col)
-    #         df.insert(last_helper_idx + 1, 'Helper 4', '')
-    #     else:
-    #         df['Helper 4'] = ''
-    # else:
-    #     print("Helper 4 column already exists.")
-    # # ===== END HELPER COLUMN CHECK =====
-
-    # # Define columns to exclude from filling
-    # exclude_cols = ['Store', 'Ly Date', 'Date', 'Day', 'Week', 'Month', 'Quarter', 'Year',
-    #                 'Helper 1', 'Helper 2', 'Helper 3', 'Helper 4']
-
-    # # Get all columns that should be filled with 0
-    # fill_cols = [col for col in df.columns if col not in exclude_cols]
-
-    # # Replace NaN with 0 only in selected columns
-    # df[fill_cols] = df[fill_cols].fillna(0)
-
-    # # Fill excluded (metadata/helper) columns with empty string
-    # df[exclude_cols] = df[exclude_cols].fillna('')
-    # df["Store"] = df["Store"].str.replace(r'^\d{4}:\s*', '', regex=True)
-
-
-    # # Strip whitespace from column names for budget dataframe
-    # df_budget.columns = df_budget.columns.str.strip()
-    
-    # # ===== ADD HELPER COLUMN CHECK FOR BUDGET DF TOO =====
-    # # Check if Helper 1 and Helper 4 exist in budget dataframe, create them if they don't
-    # if 'Helper 1' not in df_budget.columns:
-    #     print("Helper 1 column not found in budget data. Creating Helper 1 column...")
-    #     if 'Year' in df_budget.columns:
-    #         year_idx = df_budget.columns.get_loc('Year')
-    #         df_budget.insert(year_idx + 1, 'Helper 1', '')
-    #     else:
-    #         df_budget['Helper 1'] = ''
-    
-    # if 'Helper 4' not in df_budget.columns:
-    #     print("Helper 4 column not found in budget data. Creating Helper 4 column...")
-    #     helper_cols = [col for col in df_budget.columns if col.startswith('Helper')]
-    #     if helper_cols:
-    #         last_helper_col = max(helper_cols, key=lambda x: int(x.split()[-1]) if x.split()[-1].isdigit() else 0)
-    #         last_helper_idx = df_budget.columns.get_loc(last_helper_col)
-    #         df_budget.insert(last_helper_idx + 1, 'Helper 4', '')
-    #     else:
-    #         df_budget['Helper 4'] = ''
-    # # ===== END HELPER COLUMN CHECK FOR BUDGET DF =====
-
-    # # Identify all column names
-    # cols = list(df_budget.columns)
-
-    # # Replace only the first occurrence of "Net Sales" with "Net Sales 1"
-    # found = False
-    # for i, col in enumerate(cols):
-    #     if col.strip() == "Net Sales" and not found:
-    #         cols[i] = "Net Sales 1"
-    #         found = True
-
-    # # Assign the modified column names back
-    # df_budget.columns = cols
-
-    
-    # # Define columns to exclude from numeric NaN filling
-    # exclude_cols = [
-    #     'Store', 'Ly Date', 'Date', 'Day', 'Week', 'Month', 'Quarter', 'Year',
-    #     'Helper 1', 'Helper 2', 'Helper 3', 'Helper 4', 'Helper'  # Include any actual column names in your sheet
-    # ]
-
-    # # Ensure all exclude columns that are present in df_budget
-    # exclude_cols = [col for col in exclude_cols if col in df_budget.columns]
-
-    # # Get all columns that should be filled with 0
-    # fill_cols = [col for col in df_budget.columns if col not in exclude_cols]
-
-    # # Replace NaN with 0 only in selected columns
-    # df_budget[fill_cols] = df_budget[fill_cols].fillna(0)
-
-    # # Fill excluded (metadata/helper) columns with empty string
-    # df_budget[exclude_cols] = df_budget[exclude_cols].fillna('')
-
-    # df_budget["Store"] = df_budget["Store"].str.replace(r'^\d{4}:\s*', '', regex=True)
-    # df_budget["Store"].unique()  # Display unique values in the 'stores' column
-
-    # years = df["Year"].unique().tolist()  # Display unique values in the 'Year' column
-    # dates = df["Helper 4"].unique().tolist()  # Display unique values in the 'Helper 4' column
-    # stores = df["Store"].unique().tolist()  # Display unique values in the 'stores' column
-    # df["Date"] = df["Date"].dt.date
-    # df_budget["Date"] = df_budget["Date"].dt.date
-
     years = df["Year"].unique().tolist()  # Display unique values in the 'Year' column
     dates = df["Helper_4"].unique().tolist()  # Display unique values in the 'Helper 4' column
     stores = df["Store"].unique().tolist()  # Display unique values in the 'stores' column
@@ -167,11 +56,11 @@ def process_financials_file(df1, df2, year="All", week_range="All", location="Al
     financials_tw_lw_bdg_table =  calculate_tw_lw_bdg_comparison(df,df_budget, store=location, year=year, week_range=week_range, start_date=start_date, end_date=end_date)
     
 
-    weekly_sales_trends = weekly_sales_trend(df, df_budget=df_budget, store=location, start_date=start_date, end_date=end_date)
+    # weekly_sales_trends = weekly_sales_trend(df, df_budget=df_budget, store=location, start_date=start_date, end_date=end_date)
 
     # print("i am here in the financials processot printing the weekly_sales_trends", weekly_sales_trends)
     
-    avg_ticket_by_day_df = avg_ticket_by_day(df,df_budget=df_budget,  store=location, start_date=start_date, end_date=end_date)
+    # avg_ticket_by_day_df = avg_ticket_by_day(df,df_budget=df_budget,  store=location, start_date=start_date, end_date=end_date)
     
     # print("i am here in the financials processor printing the avg_ticket_by_day_df", avg_ticket_by_day_df)
     
@@ -179,11 +68,14 @@ def process_financials_file(df1, df2, year="All", week_range="All", location="Al
     kpi_vs_budget_df = kpi_vs_budget(df, df_budget, store=location, start_date=start_date, end_date=end_date)
     
     
+    financial_sales_table_df = financial_sales_df(df, df_budget, store=location, start_date=start_date, end_date=end_date)
+    
     return (financials_weeks, financials_years, financials_stores, 
             financials_sales_table, financials_orders_table, 
             financials_avg_ticket_table, financials_tw_lw_bdg_table, 
-            years, dates, stores, weekly_sales_trends, avg_ticket_by_day_df,
-            kpi_vs_budget_df)
+            years, dates, stores, 
+            # weekly_sales_trends, avg_ticket_by_day_df,
+            kpi_vs_budget_df, financial_sales_table_df)
 
 
 

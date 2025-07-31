@@ -27,11 +27,14 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     Dict[str, pd.DataFrame]
         Dictionary containing all tables needed for the dashboard
     """
+    
+
     # Make a copy of the dataframe
     filtered_df = df.copy()
     
     
-
+    print( "i am her in the pmix_utils.py printing the filtered_df columns ", filtered_df.columns, 
+           "and the filtered_df shape is ", filtered_df.shape, "filtered df order_Id ", filtered_df['Order_Id'].head(5))
     
     if not pd.api.types.is_datetime64_any_dtype(filtered_df['Date']):
         filtered_df['Date'] = pd.to_datetime(filtered_df['Date'])
@@ -259,7 +262,10 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
         # "qty_sold_change": qty_sold_change
         'qty_sold_change': round(qty_sold_change, 2),
         "avg_orders_value_correct": net_sales_round / unique_orders,
-        "avg_orders_value_change_correct" : net_sales_change / orders_change
+        "avg_orders_value_change_correct" : (
+    0 if pd.isna(net_sales_change) or pd.isna(orders_change) or orders_change == 0
+    else net_sales_change / orders_change
+)
     }
 
 
@@ -1127,7 +1133,8 @@ def create_sales_by_category_tables(df, location_filter='All', start_date=None, 
         aggfunc='sum',
         fill_value=0,
         margins=True,
-        margins_name='Grand Total'
+        margins_name='Grand Total',
+        observed=False
     )
 
     # Reset index and round values

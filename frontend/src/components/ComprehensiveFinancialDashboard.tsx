@@ -1584,7 +1584,7 @@ const ComprehensiveFinancialDashboard: React.FC<FinancialDashboardProps> = ({
       </div>
 
       {/* Charts Section - Weekly Sales and Average Ticket */}
-      <div style={chartsGrid}>
+      {/* <div style={chartsGrid}>
         <ModernSingleBarChart
           data={weeklySalesData}
           title="Weekly Sales Trends"
@@ -1595,7 +1595,7 @@ const ComprehensiveFinancialDashboard: React.FC<FinancialDashboardProps> = ({
           title="Average Ticket by Day"
           dataKeys={["This Week", "Last Week", "Last Year", "L4wt", "Bdg"]}
         />
-      </div>
+      </div> */}
 
       {/* Orders Chart - Single Row as requested */}
       {/* <div style={singleRowGrid}>

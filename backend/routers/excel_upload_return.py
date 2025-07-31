@@ -61,10 +61,13 @@ def process_financials_and_sales_wide(request, df1, df2, file_name, company_id=N
 
     # Process financials data
     (financials_weeks, financials_years, financials_stores, financials_sales_table, 
-     financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table, 
-     years, dates, stores, weekly_sales_trends, 
-         avg_ticket_by_day_df,
-         kpi_vs_budget_df) = process_financials_file(
+    financials_orders_table, financials_avg_ticket_table, financials_tw_lw_bdg_table, 
+    years, dates, stores, 
+    # weekly_sales_trends, 
+    # avg_ticket_by_day_df,
+    kpi_vs_budget_df,   
+    financial_sales_table_df
+         ) = process_financials_file(
         df1,
         df2,  
         year="All", 
@@ -88,16 +91,16 @@ def process_financials_and_sales_wide(request, df1, df2, file_name, company_id=N
         "table3": financials_orders_table.to_dict(orient='records'),
         "table4": financials_avg_ticket_table.to_dict(orient='records'),
         "table5": financials_tw_lw_bdg_table.to_dict(orient='records'),
-        "table6": financials_sales_df.to_dict(orient='records'),  
+        "table6": financial_sales_table_df.to_dict(orient='records'),  
         "table7": financials_labor_df.to_dict(orient='records'),
         "table8": financials_avg_ticker_df.to_dict(orient='records'),
         "table9": financials_prime_cost_df.to_dict(orient='records'),
         "table10": financials_food_cost_df.to_dict(orient='records'),
         "table11": financials_spmh_df.to_dict(orient='records'),
         "table12": financials_lpmh_df.to_dict(orient='records'),
-        "table13": weekly_sales_trends.to_dict(orient='records'),
+        # "table13": weekly_sales_trends.to_dict(orient='records'),
         "table14": financials_orders_by_day_df.to_dict(orient='records'),
-        "table15": avg_ticket_by_day_df.to_dict(orient='records'),
+        # "table15": avg_ticket_by_day_df.to_dict(orient='records'),
        "table16": kpi_vs_budget_df.to_dict(orient='records'),
         "company_id": company_id,
         "fileName": file_name,

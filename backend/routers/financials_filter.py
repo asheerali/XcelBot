@@ -318,11 +318,8 @@ async def filter_financials_data(
 
         # print("i am here in the financials filter endpoint after converting the data types",    "\n", start_month, end_month, type(start_month), type(end_month))
 
-        # print("i am here in the financials filters printing the table 13 ", financials_weekly_sales_df)
-        # print("i am here in the financials filter endpoint printing financials_average_ticket_df", financials_average_ticket_df)
-        # print("i am here in the financials filter endpoint printing table 16, financials_kpi_vs_budget_df", financials_kpi_vs_budget_df)
-              
-              
+        print( " i am here in the financials filter financials_sales_df1", financials_sales_df1.head() )      
+
         (financials_weeks, 
          financials_years, 
          financials_stores, 
@@ -333,9 +330,11 @@ async def filter_financials_data(
          years, 
          dates, 
          stores, 
-         weekly_sales_trends, 
-         avg_ticket_by_day_df,
-         kpi_vs_budget_df)  = process_financials_file(
+        #  weekly_sales_trends, 
+        #  avg_ticket_by_day_df,
+         kpi_vs_budget_df,
+         financial_sales_table_df
+         )  = process_financials_file(
                 df1 = df_financials,
                 df2 = df_budget,  
                 location=location_filter, 
@@ -360,7 +359,7 @@ async def filter_financials_data(
             "table3": financials_orders_table.to_dict(orient='records'),
             "table4": financials_avg_ticket_table.to_dict(orient='records'),
             "table5": financials_tw_lw_bdg_table.to_dict(orient='records'),
-            "table6": financials_sales_df1.to_dict(orient='records'),  
+            "table6": financial_sales_table_df.to_dict(orient='records'),  
             "table7": financials_labor_df.to_dict(orient='records'),
             "table8": financials_avg_ticker_df.to_dict(orient='records'),
             "table9": financials_prime_cost_df.to_dict(orient='records'),
@@ -368,10 +367,10 @@ async def filter_financials_data(
             "table11": financials_spmh_df.to_dict(orient='records'),
             "table12": financials_lpmh_df.to_dict(orient='records'),
             # "table13": financials_weekly_sales_df.to_dict(orient='records'),
-            "table13": weekly_sales_trends.to_dict(orient='records'),
+            # "table13": weekly_sales_trends.to_dict(orient='records'),
             "table14": financials_orders_by_day_df.to_dict(orient='records'),
             # "table15": financials_average_ticket_df.to_dict(orient='records'),
-            "table15": avg_ticket_by_day_df.to_dict(orient='records'),
+            # "table15": avg_ticket_by_day_df.to_dict(orient='records'),
             # "table16": financials_kpi_vs_budget_df.to_dict(orient='records'),
             "table16": kpi_vs_budget_df.to_dict(orient='records'),
             "fileName": request.fileName, #the full names of the file saved in the uploads folder

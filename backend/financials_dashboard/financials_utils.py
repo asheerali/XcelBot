@@ -1850,4 +1850,301 @@ def kpi_vs_budget(df, df_budget, store='All', start_date=None, end_date=None):
     return result_df
 
 
+def financial_sales_df(df, df_budget, store='All', start_date=None, end_date=None):
+    """
+    Generate a financial sales analysis table showing sales by service type
+    comparing This Week (Tw), Last Week (Lw), Last 4 weeks trend (L4wt), Last Year (Ly), and Budget (Bdg)
+    
+    Parameters:
+    df: Main dataframe with sales data
+    df_budget: Budget dataframe
+    store: Store filter ('All' or specific store(s))
+    start_date: Start date filter
+    end_date: End date filter
+    
+    Returns:
+    DataFrame with columns: Time Period, % Change, In-House, % (+/-)_In-House, 1p, % (+/-)_1p, 
+                           3p, % (+/-)_3p, Catering, % (+/-)_Catering, TTL
+    """
+    
+    # Make copies and clean column names
+    df_copy = df.copy()
+    budget_copy = df_budget.copy()
+    
+    df_copy.columns = df_copy.columns.str.strip()
+    budget_copy.columns = budget_copy.columns.str.strip()
+    
+    # Rename columns for consistency - looking for service type columns
+    service_type_mapping = {
+        'Tw_In_House': 'Tw_In_House',
+        'Lw_In_House': 'Lw_In_House', 
+        'Ly_In_House': 'Ly_In_House',
+        'Tw_1p': 'Tw_1p',
+        'Lw_1p': 'Lw_1p',
+        'Ly_1p': 'Ly_1p',
+        'Tw_3p': 'Tw_3p',
+        'Lw_3p': 'Lw_3p',
+        'Ly_3p': 'Ly_3p',
+        'Tw_Catering': 'Tw_Catering',
+        'Lw_Catering': 'Lw_Catering',
+        'Ly_Catering': 'Ly_Catering',
+        'Tw_Sales': 'Tw_Sales',
+        'Lw_Sales': 'Lw_Sales',
+        'Ly_Sales': 'Ly_Sales'
+    }
+    
+    # Ensure Date column is datetime type
+    if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
+        df_copy['Date'] = pd.to_datetime(df_copy['Date'])
+    
+    if not pd.api.types.is_datetime64_any_dtype(budget_copy['Date']):
+        budget_copy['Date'] = pd.to_datetime(budget_copy['Date'])
+    
+    # Convert date filters to pandas datetime
+    if start_date is not None:
+        if isinstance(start_date, str):
+            start_date = pd.to_datetime(start_date)
+    
+    if end_date is not None:
+        if isinstance(end_date, str):
+            end_date = pd.to_datetime(end_date)
+    
+    # Apply date filters
+    if start_date is not None:
+        df_copy = df_copy[df_copy['Date'] >= start_date]
+        budget_copy = budget_copy[budget_copy['Date'] >= start_date]
+    
+    if end_date is not None:
+        df_copy = df_copy[df_copy['Date'] <= end_date]
+        budget_copy = budget_copy[budget_copy['Date'] <= end_date]
+    
+    # Apply store filter
+    if store != 'All':
+        if isinstance(store, list):
+            df_copy = df_copy[df_copy['Store'].isin(store)]
+            budget_copy = budget_copy[budget_copy['Store'].isin(store)]
+        else:
+            df_copy = df_copy[df_copy['Store'] == store]
+            budget_copy = budget_copy[budget_copy['Store'] == store]
+    
+    # Helper function to clean currency values
+    def clean_currency(series):
+        return pd.to_numeric(
+            series.astype(str).str.replace(r'[\$,]', '', regex=True),
+            errors='coerce'
+        ).fillna(0)
+    
+    # Service types to analyze
+    service_types = ['In_House', '1p', '3p', 'Catering']
+    
+    # Clean service type columns
+    for service in service_types:
+        for period in ['Tw', 'Lw', 'Ly']:
+            col_name = f'{period}_{service}'
+            if col_name in df_copy.columns:
+                df_copy[col_name] = clean_currency(df_copy[col_name])
+    
+    # Clean total sales columns
+    for col in ['Tw_Sales', 'Lw_Sales', 'Ly_Sales']:
+        if col in df_copy.columns:
+            df_copy[col] = clean_currency(df_copy[col])
+    
+    # Clean budget columns
+    budget_service_mapping = {
+        'In_House': ['In House', 'In_House', 'InHouse', 'In-House'],
+        '1p': ['1p', '1P', 'First Party', 'FirstParty'],
+        '3p': ['3p', '3P', 'Third Party', 'ThirdParty'],
+        'Catering': ['Catering', 'catering']
+    }
+    
+    budget_cols = {}
+    for service, possible_names in budget_service_mapping.items():
+        for name in possible_names:
+            if name in budget_copy.columns:
+                budget_copy[name] = clean_currency(budget_copy[name])
+                budget_cols[service] = name
+                break
+    
+    # Find budget total sales column
+    budget_total_col = None
+    for col in ['Net Sales', 'Sales', 'Net_Sales', 'Total_Sales']:
+        if col in budget_copy.columns:
+            budget_copy[col] = clean_currency(budget_copy[col])
+            budget_total_col = col
+            break
+    
+    # Calculate L4wt (Last 4 weeks trend)
+    if end_date is not None:
+        l4wt_reference_date = end_date
+    else:
+        l4wt_reference_date = pd.Timestamp.now().normalize()
+    
+    l4wt_four_weeks_ago = l4wt_reference_date - timedelta(weeks=4)
+    
+    # For L4wt, use original dataframe
+    df_l4wt = df.copy()
+    df_l4wt.columns = df_l4wt.columns.str.strip()
+    
+    if not pd.api.types.is_datetime64_any_dtype(df_l4wt['Date']):
+        df_l4wt['Date'] = pd.to_datetime(df_l4wt['Date'])
+    
+    # Apply store filter to L4wt data
+    if store != 'All':
+        if isinstance(store, list):
+            df_l4wt = df_l4wt[df_l4wt['Store'].isin(store)]
+        else:
+            df_l4wt = df_l4wt[df_l4wt['Store'] == store]
+    
+    # Clean L4wt columns
+    for service in service_types:
+        col_name = f'Tw_{service}'
+        if col_name in df_l4wt.columns:
+            df_l4wt[col_name] = clean_currency(df_l4wt[col_name])
+    
+    if 'Tw_Sales' in df_l4wt.columns:
+        df_l4wt['Tw_Sales'] = clean_currency(df_l4wt['Tw_Sales'])
+    
+    # Filter L4wt data for the 4-week window
+    l4wt_filtered = df_l4wt[(df_l4wt['Date'] >= l4wt_four_weeks_ago) & (df_l4wt['Date'] <= l4wt_reference_date)]
+    
+    # Calculate values for each time period and service type
+    results = {}
+    
+    # This Week (Tw) values
+    tw_total = df_copy['Tw_Sales'].sum() if 'Tw_Sales' in df_copy.columns else 0
+    tw_services = {}
+    for service in service_types:
+        col_name = f'Tw_{service}'
+        tw_services[service] = df_copy[col_name].sum() if col_name in df_copy.columns else 0
+    
+    # Last Week (Lw) values
+    lw_total = df_copy['Lw_Sales'].sum() if 'Lw_Sales' in df_copy.columns else 0
+    lw_services = {}
+    for service in service_types:
+        col_name = f'Lw_{service}'
+        lw_services[service] = df_copy[col_name].sum() if col_name in df_copy.columns else 0
+    
+    # Last Year (Ly) values
+    ly_total = df_copy['Ly_Sales'].sum() if 'Ly_Sales' in df_copy.columns else 0
+    ly_services = {}
+    for service in service_types:
+        col_name = f'Ly_{service}'
+        ly_services[service] = df_copy[col_name].sum() if col_name in df_copy.columns else 0
+    
+    # L4wt values (average over 4 weeks)
+    l4wt_total = (l4wt_filtered['Tw_Sales'].sum() / 4) if not l4wt_filtered.empty and 'Tw_Sales' in l4wt_filtered.columns else 0
+    l4wt_services = {}
+    for service in service_types:
+        col_name = f'Tw_{service}'
+        l4wt_services[service] = (l4wt_filtered[col_name].sum() / 4) if not l4wt_filtered.empty and col_name in l4wt_filtered.columns else 0
+    
+    # Budget values
+    bdg_total = budget_copy[budget_total_col].sum() if budget_total_col else 0
+    bdg_services = {}
+    for service in service_types:
+        if service in budget_cols:
+            bdg_services[service] = budget_copy[budget_cols[service]].sum()
+        else:
+            bdg_services[service] = 0
+    
+    # Helper function to calculate percentage change
+    def calc_percentage_change(current, previous):
+        if previous == 0:
+            return "0.00%"
+        change = ((current - previous) / previous) * 100
+        sign = "+" if change >= 0 else ""
+        return f"{sign}{change:.2f}%"
+    
+    # Helper function to format currency values (convert to thousands if needed)
+    def format_currency(value):
+        if abs(value) >= 1000:
+            return f"{value/1000:.2f}k"
+        else:
+            return f"{value:.2f}"
+    
+    # Build the result rows
+    result_rows = []
+    
+    # This Week row
+    tw_row = {
+        "Time Period": "Tw",
+        "% Change": calc_percentage_change(tw_total, lw_total),
+        "TTL": format_currency(tw_total)
+    }
+    
+    for service in service_types:
+        service_display = service.replace('_', '-')  # Convert In_House to In-House for display
+        tw_row[service_display] = format_currency(tw_services[service])
+        tw_row[f"% (+/-)_{service_display}"] = calc_percentage_change(tw_services[service], lw_services[service])
+    
+    result_rows.append(tw_row)
+    
+    # Last Week row
+    lw_row = {
+        "Time Period": "Lw", 
+        "% Change": "0.00%",  # Base comparison
+        "TTL": format_currency(lw_total)
+    }
+    
+    for service in service_types:
+        service_display = service.replace('_', '-')
+        lw_row[service_display] = format_currency(lw_services[service])
+        lw_row[f"% (+/-)_{service_display}"] = "0.00%"  # Base comparison
+    
+    result_rows.append(lw_row)
+    
+    # L4wt row
+    l4wt_row = {
+        "Time Period": "L4wt",
+        "% Change": calc_percentage_change(l4wt_total, lw_total),
+        "TTL": format_currency(l4wt_total)
+    }
+    
+    for service in service_types:
+        service_display = service.replace('_', '-')
+        l4wt_row[service_display] = format_currency(l4wt_services[service])
+        l4wt_row[f"% (+/-)_{service_display}"] = calc_percentage_change(l4wt_services[service], lw_services[service])
+    
+    result_rows.append(l4wt_row)
+    
+    # Last Year row
+    ly_row = {
+        "Time Period": "Ly",
+        "% Change": calc_percentage_change(ly_total, lw_total),
+        "TTL": format_currency(ly_total)
+    }
+    
+    for service in service_types:
+        service_display = service.replace('_', '-')
+        ly_row[service_display] = format_currency(ly_services[service])
+        ly_row[f"% (+/-)_{service_display}"] = calc_percentage_change(ly_services[service], lw_services[service])
+    
+    result_rows.append(ly_row)
+    
+    # Budget row
+    bdg_row = {
+        "Time Period": "Bdg",
+        "% Change": calc_percentage_change(bdg_total, lw_total),
+        "TTL": format_currency(bdg_total)
+    }
+    
+    for service in service_types:
+        service_display = service.replace('_', '-')
+        bdg_row[service_display] = format_currency(bdg_services[service])
+        bdg_row[f"% (+/-)_{service_display}"] = calc_percentage_change(bdg_services[service], lw_services[service])
+    
+    result_rows.append(bdg_row)
+    
+    # Create DataFrame with proper column order
+    columns = ["Time Period", "% Change"]
+    for service in service_types:
+        service_display = service.replace('_', '-')
+        columns.extend([service_display, f"% (+/-)_{service_display}"])
+    columns.append("TTL")
+    
+    result_df = pd.DataFrame(result_rows, columns=columns)
+    
+    return result_df
+
+
 

@@ -92,7 +92,7 @@ def process_pmix_file(file_data: Union[io.BytesIO, str],start_date=None, end_dat
 
     top_vs_bottom_comparison_df  = create_top_vs_bottom_comparison(df, location_filter=location_filter, start_date=start_date, end_date=end_date, category_filter=category_filter , server_filter=server_filter)
 
-    print("i am here in pmix_processor.py printing the sales_by_category_by_day_table_df", sales_by_category_by_day_table_df)
+    # print("i am here in pmix_processor.py printing the sales_by_category_by_day_table_df", sales_by_category_by_day_table_df)
     
     return (net_sales, orders, qty_sold, sales_by_category_df, 
             sales_by_menu_group_df, sales_by_server_df, 
