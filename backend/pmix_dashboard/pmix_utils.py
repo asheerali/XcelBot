@@ -32,9 +32,12 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     # Make a copy of the dataframe
     filtered_df = df.copy()
     
-    
+    print("----------------------------------------------------")
+    print("----------------------------------------------------")
     print( "i am her in the pmix_utils.py printing the filtered_df columns ", filtered_df.columns, 
            "and the filtered_df shape is ", filtered_df.shape, "filtered df order_Id ", filtered_df['Order_Id'].head(5))
+    print("----------------------------------------------------")
+    print("----------------------------------------------------")
     
     if not pd.api.types.is_datetime64_any_dtype(filtered_df['Date']):
         filtered_df['Date'] = pd.to_datetime(filtered_df['Date'])
@@ -146,6 +149,11 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     unique_orders = filtered_df['Order_Id'].nunique()  # Updated column name
     orders_change = round(change_filtered_df['Order_Id'].nunique(), 2) - unique_orders / unique_orders  if unique_orders != 0 else 0  # Updated column name
     
+    print("----------------------------------------------------")
+    print("----------------------------------------------------")
+    print("\n", "i am here in the pmix utils printing the unique orders", unique_orders,"filtered_df['Order_Id'].nunique()", filtered_df['Order_Id'].nunique())
+    print("----------------------------------------------------")
+    print("----------------------------------------------------")
     
     qty_sold = filtered_df['Qty'].sum() 
     qty_sold_change = round(change_filtered_df['Qty'].sum(), 2) - qty_sold / qty_sold  if qty_sold != 0 else 0
@@ -702,8 +710,15 @@ def detailed_analysis_tables(df, location_filter='All', dining_option_filter='Al
             'Direction': direction,
             'Category': 'PRICE'
         }
-        price_changes = pd.concat([price_changes, pd.DataFrame([price_change_row])], ignore_index=True)
+        # price_changes = pd.concat([price_changes, pd.DataFrame([price_change_row])], ignore_index=True)
     
+        price_changes = pd.DataFrame({
+            'Item': pd.Series(dtype='str'),
+            'Change': pd.Series(dtype='float'),
+            'Direction': pd.Series(dtype='str'),
+            'Category': pd.Series(dtype='str')
+        })
+
     # Get top menu items for price change display
     if not filtered_df.empty:
         top_items_by_sales = filtered_df.groupby('Menu_Item')['Net_Price'].sum().nlargest(3).index.tolist()
