@@ -318,7 +318,7 @@ async def filter_financials_data(
 
         # print("i am here in the financials filter endpoint after converting the data types",    "\n", start_month, end_month, type(start_month), type(end_month))
 
-        print( " i am here in the financials filter financials_sales_df1", financials_sales_df1.head() )      
+        # print( " i am here in the financials filter financials_sales_df1", financials_sales_df1.head() )      
 
         (financials_weeks, 
          financials_years, 
