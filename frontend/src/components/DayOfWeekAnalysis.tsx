@@ -158,36 +158,6 @@ const DayOfWeekAnalysis: React.FC<DayOfWeekAnalysisProps> = ({
               >
                 {metrics.lyLabel}
               </TableCell>
-<<<<<<< HEAD
-{/* 
- <TableCell
-                align="center"
-                sx={{
-                  fontWeight: "bold",
-                  border: "1px solid #ddd",
-                  backgroundColor: "#ffeb3b",
-                  color: "#000",
-                  fontSize: "1rem",
-                }}
-              >
-                Ty Trends 
-              </TableCell>
-
-              <TableCell
-                align="center"
-                sx={{
-                  fontWeight: "bold",
-                  border: "1px solid #ddd",
-                  backgroundColor: "#ffeb3b",
-                  color: "#000",
-                  fontSize: "1rem",
-                }}
-              >
-                Ly Trends
-              </TableCell> */}
-
-=======
->>>>>>> integrations_v41
               <TableCell
                 align="center"
                 sx={{

@@ -32,8 +32,6 @@ import SalesDashboard from "./pages/SalesDashboard";
 import ProductMixDashboard from "./pages/ProductMixDashboard";
 import DateRangeSelector from "./components/DateRangeSelector";
 import SalesSplitDashboard from "./components/SalesSplitDashboard";
-<<<<<<< HEAD
-=======
 import ComprehensiveFinancialDashboard from "./components/ComprehensiveFinancialDashboard";
 import HomePage from "./pages/HomePage";
 import SignInView from "./pages/SignInView";
@@ -48,7 +46,6 @@ import SummaryFinancialDashboard from "./pages/SummaryFinancialDashboard";
 import OrderIQDashboard from "./pages/OrderIQDashboard"; // Import the OrderIQDashboard component
 import StoreSummaryProduction from "./pages/StoreSummaryProduction"; // Import the StoreSummaryProduction component
 import Reports from "./pages/Reports";
->>>>>>> integrations_v41
 const router = createBrowserRouter([
   {
     path: "/sign-in",
@@ -93,23 +90,6 @@ const router = createBrowserRouter([
             path: "Saleswide",
             Component: SalesDashboard,
           },
-<<<<<<< HEAD
-           {
-            path: "Productmix",
-            Component: ProductMixDashboard,
-          },
-           {
-            path: "SalesSplitDashboard",
-            Component: SalesSplitDashboard,
-          },
-           {
-            path: "daterange",
-            Component: DateRangeSelector,
-          },
-          
-          {
-            path: "upload-excel", // New route for the excel upload page
-=======
           {
             path: "Productmix",
             Component: ProductMixDashboard,
@@ -145,7 +125,6 @@ const router = createBrowserRouter([
           },
           {
             path: "upload-excel",
->>>>>>> integrations_v41
             Component: ExcelUploadPage,
           },
           {

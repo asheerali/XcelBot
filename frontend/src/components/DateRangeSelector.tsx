@@ -34,9 +34,6 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
   // Use provided initialState or default
   const [state, setState] = useState(initialState || defaultState);
 
-<<<<<<< HEAD
-  // Define static ranges
-=======
   // Helper function to get the start of the current week (Monday)
   const getCurrentWeekStart = (date: Date): Date => {
     return startOfWeek(date, { weekStartsOn: 1 }); // Monday = 1
@@ -77,7 +74,6 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
   };
 
   // Define static ranges - UPDATED with proper week logic
->>>>>>> integrations_v41
   const staticRanges = createStaticRanges([
     {
       label: 'Today',
@@ -96,28 +92,18 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
     {
       label: 'Last 7 Days',
       range: () => ({
-<<<<<<< HEAD
-        startDate: addDays(new Date(), -6),
-=======
         startDate: addDays(new Date(), -6), // 6 days ago + today = 7 days
->>>>>>> integrations_v41
         endDate: new Date()
       })
     },
     {
       label: 'Last 30 Days',
       range: () => ({
-<<<<<<< HEAD
-        startDate: addDays(new Date(), -29),
-=======
         startDate: addDays(new Date(), -29), // 29 days ago + today = 30 days
->>>>>>> integrations_v41
         endDate: new Date()
       })
     },
     {
-<<<<<<< HEAD
-=======
       label: 'Last Week',
       range: getPreviousWeek
     },
@@ -138,7 +124,6 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
       range: getPreviousXWeeks(13)
     },
     {
->>>>>>> integrations_v41
       label: 'This Month',
       range: () => ({
         startDate: startOfMonth(new Date()),
@@ -155,9 +140,6 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
           endDate: endOfMonth(lastMonth)
         };
       }
-<<<<<<< HEAD
-    }
-=======
     },
     {
       label: 'This Week',
@@ -166,7 +148,6 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
         endDate: endOfWeek(new Date(), { weekStartsOn: 1 })     // End on Sunday
       })
     },
->>>>>>> integrations_v41
   ]);
 
   // Handle date range selection
@@ -189,18 +170,6 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
   };
 
   return (
-<<<<<<< HEAD
-    <DateRangePicker
-      onChange={handleSelect}
-      showSelectionPreview={true}
-      moveRangeOnFirstSelection={false}
-      months={2}
-      ranges={state}
-      direction="horizontal"
-      staticRanges={staticRanges}
-      inputRanges={[]}
-    />
-=======
     <Box sx={{ 
       '& .rdrCalendarWrapper': {
         fontSize: '14px'
@@ -233,7 +202,6 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
         weekStartsOn={1}
       />
     </Box>
->>>>>>> integrations_v41
   );
 };
 

@@ -18,9 +18,6 @@ import Typography from "@mui/material/Typography";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 
-<<<<<<< HEAD
-const API_URL = 'http://13.60.27.209:8000/api/excel/analytics';
-=======
 // Interface for props
 interface SalesChartsProps {
   tableData?: {
@@ -32,7 +29,6 @@ interface SalesChartsProps {
   dateRangeType?: string;
   height?: number;
 }
->>>>>>> integrations_v41
 
 const SalesCharts: React.FC<SalesChartsProps> = ({
   tableData,
@@ -276,47 +272,6 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
   // Render the charts with data
   return (
     <Box sx={chartContainerStyle} className="sales-charts-root">
-<<<<<<< HEAD
-      {/* Sales by Week Chart */}
-      <Card sx={chartCardStyle}>
-        <Box sx={chartHeaderStyle}>
-          <Typography variant="h6" fontWeight={600} color="#333">
-            {getChartTitle()}
-          </Typography>
-          <Button 
-            size="small" 
-            onClick={fetchAnalyticsData}
-            startIcon={<RefreshIcon />}
-          >
-            Refresh
-          </Button>
-        </Box>
-        <CardContent sx={chartContentStyle}>
-          {analyticsData.salesByWeek.length > 0 ? (
-            renderBarChart(analyticsData.salesByWeek, 'week', 'value', 'Sales', 300)
-          ) : (
-            <Typography color="text.secondary">No weekly data available</Typography>
-          )}
-        </CardContent>
-      </Card>
-      
-      {/* Stacked Categories Chart */}
-      {/* <Card sx={chartCardStyle}>
-        <Box sx={chartHeaderStyle}>
-          <Typography variant="h6" fontWeight={600} color="#333">
-            Sales by Category
-          </Typography>
-        </Box>
-        <CardContent sx={chartContentStyle}>
-          {analyticsData.salesByCategory.length > 0 ? (
-            renderStackedBarChart(analyticsData.salesByCategory, 350)
-          ) : (
-            <Typography color="text.secondary">No category data available</Typography>
-          )}
-        </CardContent>
-      </Card> */}
-      
-=======
       {/* Sales by Week Chart with Backend Moving Average */}
       {hasWeeklyData && (
         <Card sx={chartCardStyle}>
@@ -331,7 +286,6 @@ const SalesCharts: React.FC<SalesChartsProps> = ({
         </Card>
       )}
 
->>>>>>> integrations_v41
       {/* Two-column layout for day of week and time of day */}
       <Box sx={chartRowStyle}>
         {/* Day of Week Chart with Backend Moving Average */}

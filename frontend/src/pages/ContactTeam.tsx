@@ -212,12 +212,6 @@ export function ContactTeam() {
       twitter: "https://twitter.com/asheer_ali",
     },
     {
-<<<<<<< HEAD
-      name: "Sarah Johnson",
-      role: "Frontend Developer",
-      email: "musawar.soomro@kpi360.ai",
-      phone: "+1 (555) 234-5678",
-=======
       name: "Musawar Soomro",
       role: "Lead Software Engineer",
       email: "musawar.soomro@kpi360.ai",
@@ -226,7 +220,6 @@ export function ContactTeam() {
         "Lead Software Engineer with over 5 years of experience building scalable systems and cloud-based solutions, focused on performance, reliability, and seamless user experiences.",
       linkedin: "https://linkedin.com/in/musawar-soomro",
       twitter: "https://twitter.com/musawar_soomro",
->>>>>>> integrations_v41
     },
   ];
 

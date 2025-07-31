@@ -176,27 +176,6 @@ export function HelpCenter() {
   ];
 
   return (
-<<<<<<< HEAD
-    <>
-      <Box sx={{ mb: 5, textAlign: 'center' }}>
-        {/* <Typography variant="h4" gutterBottom> */}
-         <Typography 
-                            variant="h4" 
-                            component="h1" 
-                            sx={{ 
-                              fontWeight: 600,
-                              color: '#1a237e',
-                              fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }
-                            }}
-                          >
-          Help Center
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          
-          Welcome to our Help Center. How can we assist you today?
-        </Typography>
-      </Box>
-=======
     <Box sx={{ minHeight: '100vh', background: 'linear-gradient(180deg, #fafafa 0%, #ffffff 100%)' }}>
       {/* Floating decorative elements */}
       <FloatingElement sx={{ top: '20%', left: '10%', animationDelay: '0s' }} />
@@ -240,7 +219,6 @@ export function HelpCenter() {
           </Box>
         </Container>
       </HeroSection>
->>>>>>> integrations_v41
 
       {/* Main Content */}
       <Container maxWidth="lg" sx={{ mt: 6, mb: 8 }}>

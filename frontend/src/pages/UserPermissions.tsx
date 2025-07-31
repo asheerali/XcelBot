@@ -11,20 +11,6 @@ const PermissionsTable = () => {
     3: "Cashier",
     4: "Kitchen Staff",
   });
-<<<<<<< HEAD
-  const [loading, setLoading] = useState<boolean>(false);
-  const [success, setSuccess] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
-  const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [allPermissions, setAllPermissions] = useState<any>(MOCK_PERMISSIONS);
-  const [showPermissionTable, setShowPermissionTable] = useState<boolean>(false);
-  const [selectedStore, setSelectedStore] = useState<string>('');
-
-  // Handle store selection change
-  const handleStoreChange = (event: SelectChangeEvent<string>) => {
-    setSelectedStore(event.target.value);
-  };
-=======
   const [permissions, setPermissions] = useState({
     "Excel Upload": { allow: true },
     "Sales Split": { allow: true },
@@ -34,7 +20,6 @@ const PermissionsTable = () => {
   });
   const [isEditing, setIsEditing] = useState(false);
   const [success, setSuccess] = useState(false);
->>>>>>> integrations_v41
 
   const stores = [
     {
@@ -101,139 +86,6 @@ const PermissionsTable = () => {
   };
 
   return (
-<<<<<<< HEAD
-    <Box sx={{ p: 3 }}>
-      {/* <Typography variant="h4"gutterBottom> */}
-                 <Typography 
-                          variant="h4" 
-                          component="h1" 
-                          sx={{ 
-                            fontWeight: 600,
-                            color: '#1a237e',
-                            fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }
-                          }}
-                        >
-        Excel Upload Permissions
-      </Typography>
-      <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-        Manage which users can upload Excel files 
-      </Typography>
-      
-      <Box display="flex" justifyContent="space-between" mb={3}>
-        <Button 
-          variant="outlined" 
-          onClick={togglePermissionTable}
-          startIcon={showPermissionTable ? <ArrowBackIcon /> : undefined}
-        >
-          {showPermissionTable ? 'Back to Permission Editor' : 'View All Permissions'}
-        </Button>
-      </Box>
-      
-      {/* All Permissions Table View */}
-      {showPermissionTable && renderPermissionsTable()}
-      
-      {/* Permission Editor View */}
-      {!showPermissionTable && (
-        <Card sx={{ mb: 4 }}>
-          <CardContent>
-            <Grid container spacing={3}>
-                 {/* Stores Selection */}
-      <Grid item xs={12} md={6}>
-        <FormControl fullWidth>
-          <InputLabel id="store-select-label">Select Store</InputLabel>
-          <Select
-            labelId="store-select-label"
-            id="store-select"
-            value={selectedStore}
-            label="Select Store"
-            onChange={handleStoreChange}
-          >
-            <MenuItem value="midtown-east">Midtown East</MenuItem>
-            <MenuItem value="hells-kitchen">Hell's Kitchen</MenuItem>
-            <MenuItem value="lenox-hill">Lenox Hill</MenuItem>
-          </Select>
-        </FormControl>
-      </Grid>
-
-
-
-              {/* User Selection */}
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel id="user-select-label">Select User</InputLabel>
-                  <Select
-                    labelId="user-select-label"
-                    id="user-select"
-                    value={selectedUserId}
-                    label="Select User"
-                    onChange={handleUserChange}
-                  >
-                    {MOCK_USERS.map((user) => (
-                      <MenuItem key={user.id} value={user.id}>
-                        {user.name} ({user.role})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              {/* Edit/Save Controls */}
-              <Grid item xs={12} md={6} display="flex" alignItems="center" justifyContent="flex-end">
-                {selectedUserId && (
-                  <>
-                    {isEditing ? (
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-                        onClick={handleSavePermissions}
-                        disabled={loading}
-                      >
-                        {loading ? 'Saving...' : 'Save Permission'}
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outlined"
-                        startIcon={<EditIcon />}
-                        onClick={handleEditToggle}
-                      >
-                        Edit Permission
-                      </Button>
-                    )}
-                  </>
-                )}
-              </Grid>
-              
-              {/* User Details */}
-              <Grid item xs={12}>
-                {renderUserDetail()}
-              </Grid>
-              
-              {/* Error Display */}
-              {error && (
-                <Grid item xs={12}>
-                  <Alert severity="error">{error}</Alert>
-                </Grid>
-              )}
-              
-              {/* Permission Toggle */}
-              <Grid item xs={12}>
-                <Divider sx={{ mb: 2 }} />
-                <Typography variant="h6" gutterBottom>
-                  Excel Upload Permission
-                </Typography>
-                
-                <Grid container justifyContent="center">
-                  <Grid item xs={12} sm={6}>
-                    <Paper 
-                      elevation={3} 
-                      sx={{ 
-                        p: 3, 
-                        textAlign: 'center',
-                        backgroundColor: permissions.canUploadExcel ? '#e3f2fd' : '#ffebee',
-                        borderLeft: permissions.canUploadExcel ? '6px solid #2196f3' : '6px solid #f44336',
-                        transition: 'all 0.3s ease-in-out'
-=======
     <div
       style={{
         padding: "20px",
@@ -351,7 +203,6 @@ const PermissionsTable = () => {
                         borderRadius: "4px",
                         cursor: "pointer",
                         fontSize: "14px",
->>>>>>> integrations_v41
                       }}
                     >
                      Edit

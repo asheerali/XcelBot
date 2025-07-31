@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-# docker for the frontend
-# ✅ Use a slimmer official Node.js image for Alpine-based builds
-# FROM node:13.12.0-alpine
-FROM node:20-alpine
-=======
 # # Use Node.js as base image - using a specific version known to work well with Vite
 # FROM node:16-alpine
 
@@ -162,32 +156,13 @@ FROM node:20-alpine
 # part 3
 # Use Node.js 18+ instead of 16
 FROM node:18-alpine
->>>>>>> integrations_v41
 
-# ✅ Set the working directory in the container
+# Set working directory
 WORKDIR /app
 
-# ✅ Add node_modules/.bin to PATH for using local binaries
-ENV PATH /app/node_modules/.bin:$PATH
+# Copy package files
+COPY package*.json ./
 
-<<<<<<< HEAD
-# ✅ Copy only the files needed for installing dependencies first (optimizes caching)
-COPY package.json ./
-COPY package-lock.json ./
-
-# ✅ Install dependencies silently
-RUN npm install --silent
-
-# ✅ Now copy everything else (so Docker rebuilds only if src changes)
-COPY . ./   
-VOLUME /app
-
-# ✅ Expose the port React dev server runs on
-EXPOSE 5173
-
-# ✅ Start the app using the npm script
-CMD ["npm", "run", "dev"]
-=======
 # Install dependencies
 RUN npm install --legacy-peer-deps
 
@@ -231,4 +206,3 @@ EXPOSE 5173
 # Serve the build directory
 CMD ["serve", "-s", "dist", "-l", "5173"]
 
->>>>>>> integrations_v41
