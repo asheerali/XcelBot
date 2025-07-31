@@ -35,7 +35,9 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     print("----------------------------------------------------")
     print("----------------------------------------------------")
     print( "i am her in the pmix_utils.py printing the filtered_df columns ", filtered_df.columns, 
-           "and the filtered_df shape is ", filtered_df.shape, "filtered df order_Id ", filtered_df['Order_Id'].head(5))
+           "and the filtered_df shape is ", filtered_df.shape, "filtered df order_Id ", filtered_df['Order_Id'])
+    
+    
     print("----------------------------------------------------")
     print("----------------------------------------------------")
     
