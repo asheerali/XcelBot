@@ -4263,59 +4263,365 @@ def financial_sales_df_modified(df, df_budget, store='All', start_date=None, end
 #     return result_df
 
 
+# def financials_food_cost_modified(df, df_budget, store='All', start_date=None, end_date=None):
+#     """
+#     Generate a food cost analysis table showing food costs by supplier
+#     comparing This Week (Tw), Last Week (Lw), Last 4 weeks trend (L4wt), Last Year (Ly), and Budget (Bdg)
+    
+#     Parameters:
+#     df: Main dataframe with sales data
+#     df_budget: Budget dataframe
+#     store: Store filter ('All' or specific store(s))
+#     start_date: Start date filter
+#     end_date: End date filter
+    
+#     Returns:
+#     DataFrame with columns: Time Period, % Change, Johns, % (+/-)_Johns, Terra, % (+/-)_Terra, Metro, % (+/-)_Metro, Victory, % (+/-)_Victory, Ck, % (+/-)_Ck
+#     """
+    
+#     import pandas as pd
+#     import numpy as np
+#     from datetime import datetime, timedelta
+    
+#     # Make copies and clean column names
+#     df_copy = df.copy()
+#     budget_copy = df_budget.copy()
+    
+#     df_copy.columns = df_copy.columns.str.strip()
+#     budget_copy.columns = budget_copy.columns.str.strip()
+    
+#     # Ensure Date column is datetime type
+#     if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
+#         df_copy['Date'] = pd.to_datetime(df_copy['Date'])
+    
+#     if not pd.api.types.is_datetime64_any_dtype(budget_copy['Date']):
+#         budget_copy['Date'] = pd.to_datetime(budget_copy['Date'])
+    
+#     # Convert date filters to pandas datetime
+#     if start_date is not None:
+#         if isinstance(start_date, str):
+#             start_date = pd.to_datetime(start_date)
+    
+#     if end_date is not None:
+#         if isinstance(end_date, str):
+#             end_date = pd.to_datetime(end_date)
+    
+#     # Apply date filters
+#     if start_date is not None:
+#         df_copy = df_copy[df_copy['Date'] >= start_date]
+#         budget_copy = budget_copy[budget_copy['Date'] >= start_date]
+    
+#     if end_date is not None:
+#         df_copy = df_copy[df_copy['Date'] <= end_date]
+#         budget_copy = budget_copy[budget_copy['Date'] <= end_date]
+    
+#     # Apply store filter
+#     if store != 'All':
+#         if isinstance(store, list):
+#             df_copy = df_copy[df_copy['Store'].isin(store)]
+#             budget_copy = budget_copy[budget_copy['Store'].isin(store)]
+#         else:
+#             df_copy = df_copy[df_copy['Store'] == store]
+#             budget_copy = budget_copy[budget_copy['Store'] == store]
+    
+#     # Helper function to clean currency values
+#     def clean_currency(series):
+#         return pd.to_numeric(
+#             series.astype(str).str.replace(r'[\$,]', '', regex=True),
+#             errors='coerce'
+#         ).fillna(0)
+    
+#     # Define food cost columns for This Week and Last Week
+#     food_suppliers = ['Johns', 'Terra', 'Metro', 'Victory', 'Central_Kitchen']
+    
+#     # Map column names (TW_Central_Kitchen -> Central_Kitchen for easier processing)
+#     food_cols_tw = ['TW_Johns', 'TW_Terra', 'TW_Metro', 'TW_Victory', 'TW_Central_Kitchen']
+#     food_cols_lw = ['LW_Johns', 'LW_Terra', 'LW_Metro', 'LW_Victory', 'LW_Central_Kitchen']
+    
+#     # Clean food cost columns
+#     for col in food_cols_tw + food_cols_lw:
+#         if col in df_copy.columns:
+#             df_copy[col] = clean_currency(df_copy[col])
+    
+#     # Get total sales for percentage calculations
+#     tw_total = df_copy['Tw_Sales'].sum() if 'Tw_Sales' in df_copy.columns else 0
+#     lw_total = df_copy['Lw_Sales'].sum() if 'Lw_Sales' in df_copy.columns else 0
+    
+#     if 'Tw_Sales' in df_copy.columns:
+#         df_copy['Tw_Sales'] = clean_currency(df_copy['Tw_Sales'])
+#         tw_total = df_copy['Tw_Sales'].sum()
+    
+#     if 'Lw_Sales' in df_copy.columns:
+#         df_copy['Lw_Sales'] = clean_currency(df_copy['Lw_Sales'])
+#         lw_total = df_copy['Lw_Sales'].sum()
+    
+#     # Calculate food costs for each supplier
+#     # This Week values
+#     tw_johns = df_copy['TW_Johns'].sum() if 'TW_Johns' in df_copy.columns else 0
+#     tw_terra = df_copy['TW_Terra'].sum() if 'TW_Terra' in df_copy.columns else 0
+#     tw_metro = df_copy['TW_Metro'].sum() if 'TW_Metro' in df_copy.columns else 0
+#     tw_victory = df_copy['TW_Victory'].sum() if 'TW_Victory' in df_copy.columns else 0
+#     tw_ck = df_copy['TW_Central_Kitchen'].sum() if 'TW_Central_Kitchen' in df_copy.columns else 0
+    
+#     # Last Week values
+#     lw_johns = df_copy['LW_Johns'].sum() if 'LW_Johns' in df_copy.columns else 0
+#     lw_terra = df_copy['LW_Terra'].sum() if 'LW_Terra' in df_copy.columns else 0
+#     lw_metro = df_copy['LW_Metro'].sum() if 'LW_Metro' in df_copy.columns else 0
+#     lw_victory = df_copy['LW_Victory'].sum() if 'LW_Victory' in df_copy.columns else 0
+#     lw_ck = df_copy['LW_Central_Kitchen'].sum() if 'LW_Central_Kitchen' in df_copy.columns else 0
+    
+#     # L4wt (Last 4 weeks) - calculate from current data
+#     # If end_date is not provided, use the latest date in the data
+#     if end_date is None:
+#         end_date = df_copy['Date'].max()
+    
+#     # Calculate start date for last 4 weeks (28 days)
+#     l4w_start_date = end_date - timedelta(days=28)
+    
+#     # Filter data for last 4 weeks
+#     l4w_data = df_copy[(df_copy['Date'] >= l4w_start_date) & (df_copy['Date'] <= end_date)]
+    
+#     # Calculate L4wt food costs using TW prefix columns
+#     l4wt_johns = l4w_data['TW_Johns'].sum() if 'TW_Johns' in l4w_data.columns else 0
+#     l4wt_terra = l4w_data['TW_Terra'].sum() if 'TW_Terra' in l4w_data.columns else 0
+#     l4wt_metro = l4w_data['TW_Metro'].sum() if 'TW_Metro' in l4w_data.columns else 0
+#     l4wt_victory = l4w_data['TW_Victory'].sum() if 'TW_Victory' in l4w_data.columns else 0
+#     l4wt_ck = l4w_data['TW_Central_Kitchen'].sum() if 'TW_Central_Kitchen' in l4w_data.columns else 0
+    
+#     # Get L4wt total sales for percentage calculations
+#     l4wt_total = l4w_data['Tw_Sales'].sum() if 'Tw_Sales' in l4w_data.columns else 1
+#     if l4wt_total == 0:
+#         l4wt_total = 1  # Avoid division by zero
+    
+#     # Ly values (set to 0 as requested)
+#     ly_johns = ly_terra = ly_metro = ly_victory = ly_ck = 0
+    
+#     # Budget values - check if budget has food cost breakdown
+#     budget_johns = 0
+#     budget_terra = 0
+#     budget_metro = 0
+#     budget_victory = 0
+#     budget_ck = 0
+    
+#     # Try to find budget columns (check various possible names)
+#     budget_mapping = {
+#         'Johns': ['Johns', 'johns', 'JOHNS'],
+#         'Terra': ['Terra', 'terra', 'TERRA'],
+#         'Metro': ['Metro', 'metro', 'METRO'],
+#         'Victory': ['Victory', 'victory', 'VICTORY'],
+#         'Central_Kitchen': ['Central Kitchen', 'Central_Kitchen', 'CK', 'ck']
+#     }
+    
+#     for supplier, possible_names in budget_mapping.items():
+#         for name in possible_names:
+#             if name in budget_copy.columns:
+#                 budget_copy[name] = clean_currency(budget_copy[name])
+#                 if supplier == 'Johns':
+#                     budget_johns = budget_copy[name].sum()
+#                 elif supplier == 'Terra':
+#                     budget_terra = budget_copy[name].sum()
+#                 elif supplier == 'Metro':
+#                     budget_metro = budget_copy[name].sum()
+#                 elif supplier == 'Victory':
+#                     budget_victory = budget_copy[name].sum()
+#                 elif supplier == 'Central_Kitchen':
+#                     budget_ck = budget_copy[name].sum()
+#                 break
+    
+#     # Helper function to calculate percentage of sales
+#     def calc_percentage_of_sales(cost, total_sales):
+#         if total_sales == 0:
+#             return "0.00%"
+#         percentage = (cost / total_sales) * 100
+#         return f"{percentage:.2f}%"
+    
+#     # Helper function to calculate delta between current and previous period
+#     def calc_delta(current_pct_str, lw_pct_str):
+#         # Extract numeric values from percentage strings
+#         # Formula: (current - lw_baseline) / lw_baseline (without * 100)
+#         try:
+#             current_val = float(current_pct_str.replace('%', ''))
+#             lw_val = float(lw_pct_str.replace('%', ''))
+#             if lw_val == 0:
+#                 return "0.00%"
+#             delta = (current_val - lw_val) / lw_val
+#             sign = "+" if delta > 0 else ""
+#             return f"{sign}{delta:.2f}%"
+#         except:
+#             return "0.00%"
+    
+#     # Build the result rows
+#     result_rows = []
+    
+#     # This Week row
+#     tw_johns_pct = calc_percentage_of_sales(tw_johns, tw_total)
+#     tw_terra_pct = calc_percentage_of_sales(tw_terra, tw_total)
+#     tw_metro_pct = calc_percentage_of_sales(tw_metro, tw_total)
+#     tw_victory_pct = calc_percentage_of_sales(tw_victory, tw_total)
+#     tw_ck_pct = calc_percentage_of_sales(tw_ck, tw_total)
+    
+#     # Last Week row
+#     lw_johns_pct = calc_percentage_of_sales(lw_johns, lw_total)
+#     lw_terra_pct = calc_percentage_of_sales(lw_terra, lw_total)
+#     lw_metro_pct = calc_percentage_of_sales(lw_metro, lw_total)
+#     lw_victory_pct = calc_percentage_of_sales(lw_victory, lw_total)
+#     lw_ck_pct = calc_percentage_of_sales(lw_ck, lw_total)
+    
+#     # L4wt row (calculate from actual last 4 weeks data)
+#     l4wt_johns_pct = calc_percentage_of_sales(l4wt_johns, l4wt_total)
+#     l4wt_terra_pct = calc_percentage_of_sales(l4wt_terra, l4wt_total)
+#     l4wt_metro_pct = calc_percentage_of_sales(l4wt_metro, l4wt_total)
+#     l4wt_victory_pct = calc_percentage_of_sales(l4wt_victory, l4wt_total)
+#     l4wt_ck_pct = calc_percentage_of_sales(l4wt_ck, l4wt_total)
+    
+#     # Ly row (set to 0 as requested)
+#     ly_johns_pct = ly_terra_pct = ly_metro_pct = ly_victory_pct = ly_ck_pct = "0.00%"
+    
+#     # Budget row
+#     bdg_total = budget_copy['Net_Sales'].sum() if 'Net_Sales' in budget_copy.columns else (
+#         budget_copy['Sales'].sum() if 'Sales' in budget_copy.columns else 1)  # Avoid division by zero
+    
+#     if bdg_total == 0:
+#         bdg_total = 1  # Avoid division by zero
+        
+#     bdg_johns_pct = calc_percentage_of_sales(budget_johns, bdg_total)
+#     bdg_terra_pct = calc_percentage_of_sales(budget_terra, bdg_total)
+#     bdg_metro_pct = calc_percentage_of_sales(budget_metro, bdg_total)
+#     bdg_victory_pct = calc_percentage_of_sales(budget_victory, bdg_total)
+#     bdg_ck_pct = calc_percentage_of_sales(budget_ck, bdg_total)
+    
+#     # This Week row
+#     tw_row = {
+#         "Time Period": "Tw",
+#         "% Change": "-",
+#         "Johns": tw_johns_pct,
+#         "% (+/-)_Johns": calc_delta(tw_johns_pct, lw_johns_pct),
+#         "Terra": tw_terra_pct,
+#         "% (+/-)_Terra": calc_delta(tw_terra_pct, lw_terra_pct),
+#         "Metro": tw_metro_pct,
+#         "% (+/-)_Metro": calc_delta(tw_metro_pct, lw_metro_pct),
+#         "Victory": tw_victory_pct,
+#         "% (+/-)_Victory": calc_delta(tw_victory_pct, lw_victory_pct),
+#         "Ck": tw_ck_pct,
+#         "% (+/-)_Ck": calc_delta(tw_ck_pct, lw_ck_pct)
+#     }
+#     result_rows.append(tw_row)
+    
+#     # Last Week row (baseline - all deltas are 0)
+#     lw_row = {
+#         "Time Period": "Lw",
+#         "% Change": "0.00%",
+#         "Johns": lw_johns_pct,
+#         "% (+/-)_Johns": "0.00%",  # Base comparison
+#         "Terra": lw_terra_pct,
+#         "% (+/-)_Terra": "0.00%",
+#         "Metro": lw_metro_pct,
+#         "% (+/-)_Metro": "0.00%",
+#         "Victory": lw_victory_pct,
+#         "% (+/-)_Victory": "0.00%",
+#         "Ck": lw_ck_pct,
+#         "% (+/-)_Ck": "0.00%"
+#     }
+#     result_rows.append(lw_row)
+    
+#     # L4wt row (set to 0 as requested)
+#     l4wt_row = {
+#         "Time Period": "L4wt",
+#         "% Change": calc_delta(l4wt_johns_pct, lw_johns_pct),
+#         "Johns": l4wt_johns_pct,
+#         "% (+/-)_Johns": calc_delta(l4wt_johns_pct, lw_johns_pct),
+#         "Terra": l4wt_terra_pct,
+#         "% (+/-)_Terra": calc_delta(l4wt_terra_pct, lw_terra_pct),
+#         "Metro": l4wt_metro_pct,
+#         "% (+/-)_Metro": calc_delta(l4wt_metro_pct, lw_metro_pct),
+#         "Victory": l4wt_victory_pct,
+#         "% (+/-)_Victory": calc_delta(l4wt_victory_pct, lw_victory_pct),
+#         "Ck": l4wt_ck_pct,
+#         "% (+/-)_Ck": calc_delta(l4wt_ck_pct, lw_ck_pct)
+#     }
+#     result_rows.append(l4wt_row)
+    
+#     # Last Year row (set to 0 as requested)
+#     ly_row = {
+#         "Time Period": "Ly",
+#         "% Change": calc_delta(ly_johns_pct, lw_johns_pct),
+#         "Johns": ly_johns_pct,
+#         "% (+/-)_Johns": calc_delta(ly_johns_pct, lw_johns_pct),
+#         "Terra": ly_terra_pct,
+#         "% (+/-)_Terra": calc_delta(ly_terra_pct, lw_terra_pct),
+#         "Metro": ly_metro_pct,
+#         "% (+/-)_Metro": calc_delta(ly_metro_pct, lw_metro_pct),
+#         "Victory": ly_victory_pct,
+#         "% (+/-)_Victory": calc_delta(ly_victory_pct, lw_victory_pct),
+#         "Ck": ly_ck_pct,
+#         "% (+/-)_Ck": calc_delta(ly_ck_pct, lw_ck_pct)
+#     }
+#     result_rows.append(ly_row)
+    
+#     # Budget row
+#     bdg_row = {
+#         "Time Period": "Bdg",
+#         "% Change": calc_delta(bdg_johns_pct, lw_johns_pct),
+#         "Johns": bdg_johns_pct,
+#         "% (+/-)_Johns": calc_delta(bdg_johns_pct, lw_johns_pct),
+#         "Terra": bdg_terra_pct,
+#         "% (+/-)_Terra": calc_delta(bdg_terra_pct, lw_terra_pct),
+#         "Metro": bdg_metro_pct,
+#         "% (+/-)_Metro": calc_delta(bdg_metro_pct, lw_metro_pct),
+#         "Victory": bdg_victory_pct,
+#         "% (+/-)_Victory": calc_delta(bdg_victory_pct, lw_victory_pct),
+#         "Ck": bdg_ck_pct,
+#         "% (+/-)_Ck": calc_delta(bdg_ck_pct, lw_ck_pct)
+#     }
+#     result_rows.append(bdg_row)
+    
+#     # Create DataFrame with proper column order matching dummy data
+#     columns = [
+#         "Time Period",
+#         "% Change",
+#         "Johns", "% (+/-)_Johns",
+#         "Terra", "% (+/-)_Terra", 
+#         "Metro", "% (+/-)_Metro",
+#         "Victory", "% (+/-)_Victory",
+#         "Ck", "% (+/-)_Ck"
+#     ]
+    
+#     result_df = pd.DataFrame(result_rows, columns=columns)
+    
+#     return result_df
+
+
 def financials_food_cost_modified(df, df_budget, store='All', start_date=None, end_date=None):
-    """
-    Generate a food cost analysis table showing food costs by supplier
-    comparing This Week (Tw), Last Week (Lw), Last 4 weeks trend (L4wt), Last Year (Ly), and Budget (Bdg)
-    
-    Parameters:
-    df: Main dataframe with sales data
-    df_budget: Budget dataframe
-    store: Store filter ('All' or specific store(s))
-    start_date: Start date filter
-    end_date: End date filter
-    
-    Returns:
-    DataFrame with columns: Time Period, % Change, Johns, % (+/-)_Johns, Terra, % (+/-)_Terra, Metro, % (+/-)_Metro, Victory, % (+/-)_Victory, Ck, % (+/-)_Ck
-    """
-    
     import pandas as pd
     import numpy as np
     from datetime import datetime, timedelta
-    
-    # Make copies and clean column names
+
     df_copy = df.copy()
     budget_copy = df_budget.copy()
-    
+
     df_copy.columns = df_copy.columns.str.strip()
     budget_copy.columns = budget_copy.columns.str.strip()
-    
-    # Ensure Date column is datetime type
+
     if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
         df_copy['Date'] = pd.to_datetime(df_copy['Date'])
-    
+
     if not pd.api.types.is_datetime64_any_dtype(budget_copy['Date']):
         budget_copy['Date'] = pd.to_datetime(budget_copy['Date'])
-    
-    # Convert date filters to pandas datetime
+
     if start_date is not None:
         if isinstance(start_date, str):
             start_date = pd.to_datetime(start_date)
-    
     if end_date is not None:
         if isinstance(end_date, str):
             end_date = pd.to_datetime(end_date)
-    
-    # Apply date filters
+
     if start_date is not None:
         df_copy = df_copy[df_copy['Date'] >= start_date]
         budget_copy = budget_copy[budget_copy['Date'] >= start_date]
-    
     if end_date is not None:
         df_copy = df_copy[df_copy['Date'] <= end_date]
         budget_copy = budget_copy[budget_copy['Date'] <= end_date]
-    
-    # Apply store filter
+
     if store != 'All':
         if isinstance(store, list):
             df_copy = df_copy[df_copy['Store'].isin(store)]
@@ -4323,87 +4629,68 @@ def financials_food_cost_modified(df, df_budget, store='All', start_date=None, e
         else:
             df_copy = df_copy[df_copy['Store'] == store]
             budget_copy = budget_copy[budget_copy['Store'] == store]
-    
-    # Helper function to clean currency values
+
     def clean_currency(series):
         return pd.to_numeric(
             series.astype(str).str.replace(r'[\$,]', '', regex=True),
             errors='coerce'
         ).fillna(0)
-    
-    # Define food cost columns for This Week and Last Week
-    food_suppliers = ['Johns', 'Terra', 'Metro', 'Victory', 'Central_Kitchen']
-    
-    # Map column names (TW_Central_Kitchen -> Central_Kitchen for easier processing)
+
     food_cols_tw = ['TW_Johns', 'TW_Terra', 'TW_Metro', 'TW_Victory', 'TW_Central_Kitchen']
     food_cols_lw = ['LW_Johns', 'LW_Terra', 'LW_Metro', 'LW_Victory', 'LW_Central_Kitchen']
-    
-    # Clean food cost columns
+
     for col in food_cols_tw + food_cols_lw:
         if col in df_copy.columns:
             df_copy[col] = clean_currency(df_copy[col])
-    
-    # Get total sales for percentage calculations
-    tw_total = df_copy['Tw_Sales'].sum() if 'Tw_Sales' in df_copy.columns else 0
-    lw_total = df_copy['Lw_Sales'].sum() if 'Lw_Sales' in df_copy.columns else 0
-    
+
     if 'Tw_Sales' in df_copy.columns:
         df_copy['Tw_Sales'] = clean_currency(df_copy['Tw_Sales'])
         tw_total = df_copy['Tw_Sales'].sum()
-    
+    else:
+        tw_total = 0
+
     if 'Lw_Sales' in df_copy.columns:
         df_copy['Lw_Sales'] = clean_currency(df_copy['Lw_Sales'])
         lw_total = df_copy['Lw_Sales'].sum()
-    
-    # Calculate food costs for each supplier
-    # This Week values
-    tw_johns = df_copy['TW_Johns'].sum() if 'TW_Johns' in df_copy.columns else 0
-    tw_terra = df_copy['TW_Terra'].sum() if 'TW_Terra' in df_copy.columns else 0
-    tw_metro = df_copy['TW_Metro'].sum() if 'TW_Metro' in df_copy.columns else 0
-    tw_victory = df_copy['TW_Victory'].sum() if 'TW_Victory' in df_copy.columns else 0
-    tw_ck = df_copy['TW_Central_Kitchen'].sum() if 'TW_Central_Kitchen' in df_copy.columns else 0
-    
-    # Last Week values
-    lw_johns = df_copy['LW_Johns'].sum() if 'LW_Johns' in df_copy.columns else 0
-    lw_terra = df_copy['LW_Terra'].sum() if 'LW_Terra' in df_copy.columns else 0
-    lw_metro = df_copy['LW_Metro'].sum() if 'LW_Metro' in df_copy.columns else 0
-    lw_victory = df_copy['LW_Victory'].sum() if 'LW_Victory' in df_copy.columns else 0
-    lw_ck = df_copy['LW_Central_Kitchen'].sum() if 'LW_Central_Kitchen' in df_copy.columns else 0
-    
-    # L4wt (Last 4 weeks) - calculate from current data
-    # If end_date is not provided, use the latest date in the data
+    else:
+        lw_total = 0
+
+    tw_johns = 100 * df_copy['TW_Johns'].sum() if 'TW_Johns' in df_copy.columns else 0
+    tw_terra = 100 * df_copy['TW_Terra'].sum() if 'TW_Terra' in df_copy.columns else 0
+    tw_metro = 100 * df_copy['TW_Metro'].sum() if 'TW_Metro' in df_copy.columns else 0
+    tw_victory = 100 * df_copy['TW_Victory'].sum() if 'TW_Victory' in df_copy.columns else 0
+    tw_ck = 100 * df_copy['TW_Central_Kitchen'].sum() if 'TW_Central_Kitchen' in df_copy.columns else 0
+
+    lw_johns = 100 * df_copy['LW_Johns'].sum() if 'LW_Johns' in df_copy.columns else 0
+    lw_terra = 100 * df_copy['LW_Terra'].sum() if 'LW_Terra' in df_copy.columns else 0
+    lw_metro = 100 * df_copy['LW_Metro'].sum() if 'LW_Metro' in df_copy.columns else 0
+    lw_victory = 100 * df_copy['LW_Victory'].sum() if 'LW_Victory' in df_copy.columns else 0
+    lw_ck = 100 * df_copy['LW_Central_Kitchen'].sum() if 'LW_Central_Kitchen' in df_copy.columns else 0
+
     if end_date is None:
         end_date = df_copy['Date'].max()
-    
-    # Calculate start date for last 4 weeks (28 days)
+
     l4w_start_date = end_date - timedelta(days=28)
-    
-    # Filter data for last 4 weeks
     l4w_data = df_copy[(df_copy['Date'] >= l4w_start_date) & (df_copy['Date'] <= end_date)]
-    
-    # Calculate L4wt food costs using TW prefix columns
-    l4wt_johns = l4w_data['TW_Johns'].sum() if 'TW_Johns' in l4w_data.columns else 0
-    l4wt_terra = l4w_data['TW_Terra'].sum() if 'TW_Terra' in l4w_data.columns else 0
-    l4wt_metro = l4w_data['TW_Metro'].sum() if 'TW_Metro' in l4w_data.columns else 0
-    l4wt_victory = l4w_data['TW_Victory'].sum() if 'TW_Victory' in l4w_data.columns else 0
-    l4wt_ck = l4w_data['TW_Central_Kitchen'].sum() if 'TW_Central_Kitchen' in l4w_data.columns else 0
-    
-    # Get L4wt total sales for percentage calculations
+
+    l4wt_johns = 100 * l4w_data['TW_Johns'].sum() if 'TW_Johns' in l4w_data.columns else 0
+    l4wt_terra = 100 * l4w_data['TW_Terra'].sum() if 'TW_Terra' in l4w_data.columns else 0
+    l4wt_metro = 100 * l4w_data['TW_Metro'].sum() if 'TW_Metro' in l4w_data.columns else 0
+    l4wt_victory = 100 * l4w_data['TW_Victory'].sum() if 'TW_Victory' in l4w_data.columns else 0
+    l4wt_ck = 100 * l4w_data['TW_Central_Kitchen'].sum() if 'TW_Central_Kitchen' in l4w_data.columns else 0
+
     l4wt_total = l4w_data['Tw_Sales'].sum() if 'Tw_Sales' in l4w_data.columns else 1
     if l4wt_total == 0:
-        l4wt_total = 1  # Avoid division by zero
-    
-    # Ly values (set to 0 as requested)
+        l4wt_total = 1
+
     ly_johns = ly_terra = ly_metro = ly_victory = ly_ck = 0
-    
-    # Budget values - check if budget has food cost breakdown
+
     budget_johns = 0
     budget_terra = 0
     budget_metro = 0
     budget_victory = 0
     budget_ck = 0
-    
-    # Try to find budget columns (check various possible names)
+
     budget_mapping = {
         'Johns': ['Johns', 'johns', 'JOHNS'],
         'Terra': ['Terra', 'terra', 'TERRA'],
@@ -4411,34 +4698,30 @@ def financials_food_cost_modified(df, df_budget, store='All', start_date=None, e
         'Victory': ['Victory', 'victory', 'VICTORY'],
         'Central_Kitchen': ['Central Kitchen', 'Central_Kitchen', 'CK', 'ck']
     }
-    
+
     for supplier, possible_names in budget_mapping.items():
         for name in possible_names:
             if name in budget_copy.columns:
                 budget_copy[name] = clean_currency(budget_copy[name])
                 if supplier == 'Johns':
-                    budget_johns = budget_copy[name].sum()
+                    budget_johns = 100 * budget_copy[name].sum()
                 elif supplier == 'Terra':
-                    budget_terra = budget_copy[name].sum()
+                    budget_terra = 100 * budget_copy[name].sum()
                 elif supplier == 'Metro':
-                    budget_metro = budget_copy[name].sum()
+                    budget_metro = 100 * budget_copy[name].sum()
                 elif supplier == 'Victory':
-                    budget_victory = budget_copy[name].sum()
+                    budget_victory = 100 * budget_copy[name].sum()
                 elif supplier == 'Central_Kitchen':
-                    budget_ck = budget_copy[name].sum()
+                    budget_ck = 100 * budget_copy[name].sum()
                 break
-    
-    # Helper function to calculate percentage of sales
+
     def calc_percentage_of_sales(cost, total_sales):
         if total_sales == 0:
             return "0.00%"
         percentage = (cost / total_sales) * 100
         return f"{percentage:.2f}%"
-    
-    # Helper function to calculate delta between current and previous period
+
     def calc_delta(current_pct_str, lw_pct_str):
-        # Extract numeric values from percentage strings
-        # Formula: (current - lw_baseline) / lw_baseline (without * 100)
         try:
             current_val = float(current_pct_str.replace('%', ''))
             lw_val = float(lw_pct_str.replace('%', ''))
@@ -4449,48 +4732,41 @@ def financials_food_cost_modified(df, df_budget, store='All', start_date=None, e
             return f"{sign}{delta:.2f}%"
         except:
             return "0.00%"
-    
-    # Build the result rows
-    result_rows = []
-    
-    # This Week row
+
     tw_johns_pct = calc_percentage_of_sales(tw_johns, tw_total)
     tw_terra_pct = calc_percentage_of_sales(tw_terra, tw_total)
     tw_metro_pct = calc_percentage_of_sales(tw_metro, tw_total)
     tw_victory_pct = calc_percentage_of_sales(tw_victory, tw_total)
     tw_ck_pct = calc_percentage_of_sales(tw_ck, tw_total)
-    
-    # Last Week row
+
     lw_johns_pct = calc_percentage_of_sales(lw_johns, lw_total)
     lw_terra_pct = calc_percentage_of_sales(lw_terra, lw_total)
     lw_metro_pct = calc_percentage_of_sales(lw_metro, lw_total)
     lw_victory_pct = calc_percentage_of_sales(lw_victory, lw_total)
     lw_ck_pct = calc_percentage_of_sales(lw_ck, lw_total)
-    
-    # L4wt row (calculate from actual last 4 weeks data)
+
     l4wt_johns_pct = calc_percentage_of_sales(l4wt_johns, l4wt_total)
     l4wt_terra_pct = calc_percentage_of_sales(l4wt_terra, l4wt_total)
     l4wt_metro_pct = calc_percentage_of_sales(l4wt_metro, l4wt_total)
     l4wt_victory_pct = calc_percentage_of_sales(l4wt_victory, l4wt_total)
     l4wt_ck_pct = calc_percentage_of_sales(l4wt_ck, l4wt_total)
-    
-    # Ly row (set to 0 as requested)
+
     ly_johns_pct = ly_terra_pct = ly_metro_pct = ly_victory_pct = ly_ck_pct = "0.00%"
-    
-    # Budget row
+
     bdg_total = budget_copy['Net_Sales'].sum() if 'Net_Sales' in budget_copy.columns else (
-        budget_copy['Sales'].sum() if 'Sales' in budget_copy.columns else 1)  # Avoid division by zero
-    
+        budget_copy['Sales'].sum() if 'Sales' in budget_copy.columns else 1)
+
     if bdg_total == 0:
-        bdg_total = 1  # Avoid division by zero
-        
+        bdg_total = 1
+
     bdg_johns_pct = calc_percentage_of_sales(budget_johns, bdg_total)
     bdg_terra_pct = calc_percentage_of_sales(budget_terra, bdg_total)
     bdg_metro_pct = calc_percentage_of_sales(budget_metro, bdg_total)
     bdg_victory_pct = calc_percentage_of_sales(budget_victory, bdg_total)
     bdg_ck_pct = calc_percentage_of_sales(budget_ck, bdg_total)
-    
-    # This Week row
+
+    result_rows = []
+
     tw_row = {
         "Time Period": "Tw",
         "% Change": "-",
@@ -4506,13 +4782,12 @@ def financials_food_cost_modified(df, df_budget, store='All', start_date=None, e
         "% (+/-)_Ck": calc_delta(tw_ck_pct, lw_ck_pct)
     }
     result_rows.append(tw_row)
-    
-    # Last Week row (baseline - all deltas are 0)
+
     lw_row = {
         "Time Period": "Lw",
         "% Change": "0.00%",
         "Johns": lw_johns_pct,
-        "% (+/-)_Johns": "0.00%",  # Base comparison
+        "% (+/-)_Johns": "0.00%",
         "Terra": lw_terra_pct,
         "% (+/-)_Terra": "0.00%",
         "Metro": lw_metro_pct,
@@ -4523,8 +4798,7 @@ def financials_food_cost_modified(df, df_budget, store='All', start_date=None, e
         "% (+/-)_Ck": "0.00%"
     }
     result_rows.append(lw_row)
-    
-    # L4wt row (set to 0 as requested)
+
     l4wt_row = {
         "Time Period": "L4wt",
         "% Change": calc_delta(l4wt_johns_pct, lw_johns_pct),
@@ -4540,8 +4814,7 @@ def financials_food_cost_modified(df, df_budget, store='All', start_date=None, e
         "% (+/-)_Ck": calc_delta(l4wt_ck_pct, lw_ck_pct)
     }
     result_rows.append(l4wt_row)
-    
-    # Last Year row (set to 0 as requested)
+
     ly_row = {
         "Time Period": "Ly",
         "% Change": calc_delta(ly_johns_pct, lw_johns_pct),
@@ -4557,8 +4830,7 @@ def financials_food_cost_modified(df, df_budget, store='All', start_date=None, e
         "% (+/-)_Ck": calc_delta(ly_ck_pct, lw_ck_pct)
     }
     result_rows.append(ly_row)
-    
-    # Budget row
+
     bdg_row = {
         "Time Period": "Bdg",
         "% Change": calc_delta(bdg_johns_pct, lw_johns_pct),
@@ -4574,20 +4846,19 @@ def financials_food_cost_modified(df, df_budget, store='All', start_date=None, e
         "% (+/-)_Ck": calc_delta(bdg_ck_pct, lw_ck_pct)
     }
     result_rows.append(bdg_row)
-    
-    # Create DataFrame with proper column order matching dummy data
+
     columns = [
         "Time Period",
         "% Change",
         "Johns", "% (+/-)_Johns",
-        "Terra", "% (+/-)_Terra", 
+        "Terra", "% (+/-)_Terra",
         "Metro", "% (+/-)_Metro",
         "Victory", "% (+/-)_Victory",
         "Ck", "% (+/-)_Ck"
     ]
-    
+
     result_df = pd.DataFrame(result_rows, columns=columns)
-    
+
     return result_df
 
 
