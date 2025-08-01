@@ -901,6 +901,244 @@ const ModernSingleBarChart = ({
   );
 };
 
+// // Responsive Financial Data Table Component
+// const ResponsiveFinancialTable = ({
+//   title,
+//   mainValue,
+//   data,
+//   columns,
+//   isCompact = false,
+// }: any) => {
+//   if (!data || data.length === 0) {
+//     return (
+//       <div
+//         style={{
+//           background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+//           borderRadius: "24px",
+//           boxShadow:
+//             "0 20px 40px rgba(0,0,0,0.08), 0 8px 25px rgba(0,0,0,0.04)",
+//           border: "1px solid #e2e8f0",
+//           padding: "32px",
+//           textAlign: "center",
+//         }}
+//       >
+//         <h3
+//           style={{
+//             margin: "0 0 16px 0",
+//             fontSize: "24px",
+//             fontWeight: "700",
+//             color: "#1e293b",
+//           }}
+//         >
+//           {title}
+//         </h3>
+//         <div
+//           style={{
+//             fontSize: "36px",
+//             fontWeight: "800",
+//             background: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
+//             WebkitBackgroundClip: "text",
+//             WebkitTextFillColor: "transparent",
+//             backgroundClip: "text",
+//             marginBottom: "16px",
+//           }}
+//         >
+//           {mainValue}
+//         </div>
+//         <span style={{ color: "#64748b", fontSize: "16px" }}>
+//           No breakdown data available
+//         </span>
+//       </div>
+//     );
+//   }
+
+//   // For mobile, show fewer columns
+//   const priorityColumns = columns.slice(0, isCompact ? 4 : columns.length);
+
+//   return (
+//     <div
+//       style={{
+//         background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+//         borderRadius: "24px",
+//         boxShadow: "0 20px 40px rgba(0,0,0,0.08), 0 8px 25px rgba(0,0,0,0.04)",
+//         border: "1px solid #e2e8f0",
+//         transition: "all 0.3s ease",
+//         width: "100%",
+//         boxSizing: "border-box",
+//         overflow: "hidden",
+//       }}
+//     >
+//       <div style={{ padding: "32px 28px" }}>
+//         <div
+//           style={{
+//             display: "flex",
+//             justifyContent: "space-between",
+//             alignItems: "center",
+//             marginBottom: "28px",
+//             flexWrap: "wrap",
+//             gap: "16px",
+//           }}
+//         >
+//           <h3
+//             style={{
+//               margin: 0,
+//               fontSize: "26px",
+//               fontWeight: "700",
+//               color: "#1e293b",
+//               letterSpacing: "-0.01em",
+//             }}
+//           >
+//             {title}
+//           </h3>
+//           <div
+//             style={{
+//               fontSize: "36px",
+//               fontWeight: "800",
+//               background: "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
+//               WebkitBackgroundClip: "text",
+//               WebkitTextFillColor: "transparent",
+//               backgroundClip: "text",
+//             }}
+//           >
+//             {mainValue}
+//           </div>
+//         </div>
+
+//         <div
+//           style={{
+//             overflowX: "auto",
+//             borderRadius: "16px",
+//             backgroundColor: "#f8fafc",
+//             boxShadow: "inset 0 2px 4px rgba(0,0,0,0.06)",
+//           }}
+//         >
+//           <table
+//             style={{
+//               width: "100%",
+//               borderCollapse: "collapse",
+//               fontSize: "14px",
+//               minWidth: isCompact ? "400px" : "600px",
+//             }}
+//           >
+//             <thead>
+//               <tr style={{ backgroundColor: "#f1f5f9" }}>
+//                 <th
+//                   style={{
+//                     padding: "20px 16px",
+//                     textAlign: "left",
+//                     fontWeight: "700",
+//                     fontSize: "13px",
+//                     color: "#475569",
+//                     borderRadius: "16px 0 0 0",
+//                     textTransform: "uppercase",
+//                     letterSpacing: "0.05em",
+//                   }}
+//                 >
+//                   Time Period
+//                 </th>
+//                 <th
+//                   style={{
+//                     padding: "20px 16px",
+//                     textAlign: "left",
+//                     fontWeight: "700",
+//                     fontSize: "13px",
+//                     color: "#475569",
+//                     textTransform: "uppercase",
+//                     letterSpacing: "0.05em",
+//                   }}
+//                 >
+//                   % Change
+//                 </th>
+//                 {priorityColumns.map((col: any, index: number) => (
+//                   <th
+//                     key={index}
+//                     style={{
+//                       padding: "20px 16px",
+//                       textAlign: "left",
+//                       fontWeight: "700",
+//                       fontSize: "13px",
+//                       color: "#475569",
+//                       borderRadius:
+//                         index === priorityColumns.length - 1
+//                           ? "0 16px 0 0"
+//                           : "0",
+//                       textTransform: "uppercase",
+//                       letterSpacing: "0.05em",
+//                     }}
+//                   >
+//                     {col.label}
+//                   </th>
+//                 ))}
+//               </tr>
+//             </thead>
+//             <tbody>
+//               {data.map((row: any, index: number) => (
+//                 <tr
+//                   key={index}
+//                   style={{
+//                     backgroundColor: index % 2 === 0 ? "#ffffff" : "#f8fafc",
+//                     borderBottom:
+//                       index === data.length - 1 ? "none" : "1px solid #e2e8f0",
+//                   }}
+//                 >
+//                   <td
+//                     style={{
+//                       padding: "16px",
+//                       fontWeight: "700",
+//                       color: "#334155",
+//                       fontSize: "15px",
+//                     }}
+//                   >
+//                     {row["Time Period"]}
+//                   </td>
+//                   <td
+//                     style={{
+//                       padding: "16px",
+//                       textAlign: "center",
+//                       backgroundColor: formatChange(row["% Change"] || "0%")
+//                         .color,
+//                       color: formatChange(row["% Change"] || "0%").textColor,
+//                       fontWeight: "700",
+//                       fontSize: "14px",
+//                     }}
+//                   >
+//                     <div
+//                       style={{
+//                         display: "flex",
+//                         alignItems: "center",
+//                         gap: "4px",
+//                         justifyContent: "center",
+//                       }}
+//                     >
+//                       <span style={{ fontSize: "12px" }}>
+//                         {formatChange(row["% Change"] || "0%").arrow}
+//                       </span>
+//                       <span>{row["% Change"]}</span>
+//                     </div>
+//                   </td>
+//                   {priorityColumns.map((col: any, colIndex: number) => (
+//                     <td
+//                       key={colIndex}
+//                       style={{
+//                         padding: "16px",
+//                         color: "#64748b",
+//                         fontWeight: "600",
+//                         fontSize: "14px",
+//                       }}
+//                     >
+//                       {row[col.key] || "-"}
+//                     </td>
+//                   ))}
+//                 </tr>
+//               ))}
+//             </tbody>
+//           </table>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
 // Responsive Financial Data Table Component
 const ResponsiveFinancialTable = ({
   title,
@@ -952,7 +1190,6 @@ const ResponsiveFinancialTable = ({
     );
   }
 
-  // For mobile, show fewer columns
   const priorityColumns = columns.slice(0, isCompact ? 4 : columns.length);
 
   return (
@@ -1036,19 +1273,7 @@ const ResponsiveFinancialTable = ({
                 >
                   Time Period
                 </th>
-                <th
-                  style={{
-                    padding: "20px 16px",
-                    textAlign: "left",
-                    fontWeight: "700",
-                    fontSize: "13px",
-                    color: "#475569",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  % Change
-                </th>
+                {/* Removed % Change Column Header */}
                 {priorityColumns.map((col: any, index: number) => (
                   <th
                     key={index}
@@ -1091,31 +1316,7 @@ const ResponsiveFinancialTable = ({
                   >
                     {row["Time Period"]}
                   </td>
-                  <td
-                    style={{
-                      padding: "16px",
-                      textAlign: "center",
-                      backgroundColor: formatChange(row["% Change"] || "0%")
-                        .color,
-                      color: formatChange(row["% Change"] || "0%").textColor,
-                      fontWeight: "700",
-                      fontSize: "14px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <span style={{ fontSize: "12px" }}>
-                        {formatChange(row["% Change"] || "0%").arrow}
-                      </span>
-                      <span>{row["% Change"]}</span>
-                    </div>
-                  </td>
+                  {/* Removed % Change Cell */}
                   {priorityColumns.map((col: any, colIndex: number) => (
                     <td
                       key={colIndex}
@@ -1414,14 +1615,14 @@ const ComprehensiveFinancialDashboard: React.FC<FinancialDashboardProps> = ({
   ];
 
   const laborColumns = [
-    { label: "Manager", key: "Manager" },
-    { label: "% (+/-)", key: "% (+/-)_Manager" },
-    { label: "FOH", key: "FOH" },
-    { label: "% (+/-)", key: "% (+/-)_FOH" },
-    { label: "BOH", key: "BOH" },
-    { label: "% (+/-)", key: "% (+/-)_BOH" },
-    { label: "Training", key: "Training" },
-    { label: "Other", key: "Other" },
+    { label: "Hours", key: "Hours" },
+    { label: "% (+/-)", key: "% (+/-)_Hours" },
+    { label: "Payroll", key: "Payroll" },
+    { label: "% (+/-)", key: "% (+/-)_Payroll" },
+    { label: "SPMH", key: "SPMH" },
+    { label: "% (+/-)", key: "% (+/-)_SPMH" },
+    { label: "LPMH", key: "LPMH" },
+    { label:  "% (+/-)", key: "% (+/-)_LPMH"},
   ];
 
   const avgTicketColumns = [
@@ -1454,7 +1655,9 @@ const ComprehensiveFinancialDashboard: React.FC<FinancialDashboardProps> = ({
     { label: "Metro", key: "Metro" },
     { label: "% (+/-)", key: "% (+/-)_Metro" },
     { label: "Victory", key: "Victory" },
+    { label: "% (+/-)", key: "% (+/-)_Victory" },
     { label: "CK", key: "Ck" },
+    { label: "% (+/-)", key: "% (+/-)_Ck" },
   ];
 
   // Container styles with modern design
@@ -1548,24 +1751,10 @@ const ComprehensiveFinancialDashboard: React.FC<FinancialDashboardProps> = ({
         />
 
         <ResponsiveFinancialTable
-          title="Labor Cost"
-          mainValue={mainLaborCostValue}
-          data={laborCostData}
-          columns={laborColumns}
-        />
-
-        <ResponsiveFinancialTable
           title="Avg Ticket"
           mainValue={mainAvgTicketValue}
           data={avgTicketData}
           columns={avgTicketColumns}
-        />
-
-        <ResponsiveFinancialTable
-          title="Prime Cost"
-          mainValue={mainPrimeCostValue}
-          data={primeCostData}
-          columns={primeCostColumns}
         />
 
         <ResponsiveFinancialTable
@@ -1574,14 +1763,28 @@ const ComprehensiveFinancialDashboard: React.FC<FinancialDashboardProps> = ({
           data={foodCostData}
           columns={foodCostColumns}
         />
+
+        <ResponsiveFinancialTable
+          title="Labor Cost"
+          mainValue={mainLaborCostValue}
+          data={laborCostData}
+          columns={laborColumns}
+        />
+
+        <ResponsiveFinancialTable
+          title="Prime Cost"
+          mainValue={mainPrimeCostValue}
+          data={primeCostData}
+          columns={primeCostColumns}
+        />
       </div>
 
       {/* SPMH and LPMH Cards - Side by Side */}
-      <div style={twoColumnGrid}>
+      {/* <div style={twoColumnGrid}>
         <MetricCard title="SPMH" value={mainSpmhValue} data={spmhData} />
 
         <MetricCard title="LPMH" value={mainLpmhValue} data={lpmhData} />
-      </div>
+      </div> */}
 
       {/* Charts Section - Weekly Sales and Average Ticket */}
       {/* <div style={chartsGrid}>

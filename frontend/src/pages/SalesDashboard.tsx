@@ -2020,7 +2020,7 @@ export default function SalesDashboard() {
                 <Tab label="All Charts" />
                 <Tab label="Sales" />
                 <Tab label="Orders" />
-                <Tab label="Avg Ticket" />
+                <Tab label="Avg Ticke" />
                 <Tab label="Labor" />
                 <Tab label="COGS" />
               </Tabs>

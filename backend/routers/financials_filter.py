@@ -333,7 +333,9 @@ async def filter_financials_data(
         #  weekly_sales_trends, 
         #  avg_ticket_by_day_df,
          kpi_vs_budget_df,
-         financial_sales_table_df
+         financial_sales_table_df,
+         financials_food_cost_modified_df,
+         financials_labour_cost_modified_df
          )  = process_financials_file(
                 df1 = df_financials,
                 df2 = df_budget,  
@@ -343,6 +345,10 @@ async def filter_financials_data(
                 year="All",
                 week_range="All",
                 )
+         
+         
+        # print(" financials_food_cost_modified_df", financials_food_cost_modified_df)
+        # print("financials_food_cost_df", financials_food_cost_df)
             # Ensure the 'Metric' column is set as index
         tw_lw_bdg_df = financials_tw_lw_bdg_table.set_index("Metric")
         financials_result = {
@@ -360,10 +366,10 @@ async def filter_financials_data(
             "table4": financials_avg_ticket_table.to_dict(orient='records'),
             "table5": financials_tw_lw_bdg_table.to_dict(orient='records'),
             "table6": financial_sales_table_df.to_dict(orient='records'),  
-            "table7": financials_labor_df.to_dict(orient='records'),
+            "table7": financials_labour_cost_modified_df.to_dict(orient='records'),
             "table8": financials_avg_ticker_df.to_dict(orient='records'),
             "table9": financials_prime_cost_df.to_dict(orient='records'),
-            "table10": financials_food_cost_df.to_dict(orient='records'),
+            "table10": financials_food_cost_modified_df.to_dict(orient='records'),
             "table11": financials_spmh_df.to_dict(orient='records'),
             "table12": financials_lpmh_df.to_dict(orient='records'),
             # "table13": financials_weekly_sales_df.to_dict(orient='records'),

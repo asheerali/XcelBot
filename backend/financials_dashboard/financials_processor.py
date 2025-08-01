@@ -9,7 +9,11 @@ from financials_dashboard.financials_utils import (financials_filters,
                                                    day_of_the_week_tables, 
                                                    calculate_tw_lw_bdg_comparison,
                                                    weekly_sales_trend, avg_ticket_by_day,
-                                                   kpi_vs_budget, financial_sales_df)
+                                                   kpi_vs_budget, financial_sales_df,
+                                                   financial_sales_df_modified,
+                                                   financials_food_cost_modified,
+                                                   financials_labour_cost_modified
+                                                   )
 
 
 def process_financials_file(df1, df2, year="All", week_range="All", location="All", start_date=None, end_date=None):
@@ -69,13 +73,26 @@ def process_financials_file(df1, df2, year="All", week_range="All", location="Al
     
     
     financial_sales_table_df = financial_sales_df(df, df_budget, store=location, start_date=start_date, end_date=end_date)
+
+    financials_food_cost_modified_df = financials_food_cost_modified(df, df_budget, store=location, start_date=start_date, end_date=end_date)
+
+
+    financials_labour_cost_modified_df = financials_labour_cost_modified(df, df_budget, store=location, start_date=start_date, end_date=end_date)
     
+    print("printing the columns of the df", df.columns)
+    print("printing the columns of the df_budget", df_budget.columns)
+    
+    # print("i am here in the financials processor printing the financials_labour_cost_modified", financials_labour_cost_modified_df)
+    
+
     return (financials_weeks, financials_years, financials_stores, 
             financials_sales_table, financials_orders_table, 
             financials_avg_ticket_table, financials_tw_lw_bdg_table, 
             years, dates, stores, 
             # weekly_sales_trends, avg_ticket_by_day_df,
-            kpi_vs_budget_df, financial_sales_table_df)
+            kpi_vs_budget_df, financial_sales_table_df, financials_food_cost_modified_df,
+            financials_labour_cost_modified_df
+            )
 
 
 
