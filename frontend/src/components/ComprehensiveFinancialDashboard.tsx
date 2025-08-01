@@ -1743,19 +1743,19 @@ const ComprehensiveFinancialDashboard: React.FC<FinancialDashboardProps> = ({
 
       {/* Single Column Layout for Main Financial Tables */}
       <div style={singleColumnGrid}>
-        <ResponsiveFinancialTable
+        {/* <ResponsiveFinancialTable
           title="Sales"
           mainValue={mainSalesValue}
           data={salesData}
           columns={salesColumns}
-        />
+        /> */}
 
-        <ResponsiveFinancialTable
+        {/* <ResponsiveFinancialTable
           title="Avg Ticket"
           mainValue={mainAvgTicketValue}
           data={avgTicketData}
           columns={avgTicketColumns}
-        />
+        /> */}
 
         <ResponsiveFinancialTable
           title="Food Cost"
@@ -1771,12 +1771,12 @@ const ComprehensiveFinancialDashboard: React.FC<FinancialDashboardProps> = ({
           columns={laborColumns}
         />
 
-        <ResponsiveFinancialTable
+        {/* <ResponsiveFinancialTable
           title="Prime Cost"
           mainValue={mainPrimeCostValue}
           data={primeCostData}
           columns={primeCostColumns}
-        />
+        /> */}
       </div>
 
       {/* SPMH and LPMH Cards - Side by Side */}
