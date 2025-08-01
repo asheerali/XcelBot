@@ -214,15 +214,59 @@ def get_budget_summary(
     )
     return summary
 
+# @router.get("/analytics/file-list")
+# def get_uploaded_files_list(
+#     company_id: Optional[int] = Query(None, description="Filter by company ID"),
+#     db: Session = Depends(get_db),
+#     # current_user: User = Depends(get_current_active_user)
+# ):
+#     """Get list of all uploaded files with record counts"""
+#     files = budget_crud.get_budget_uploaded_files_list(db, company_id)
+#     return files
+
+
+# Updated file list endpoint with store breakdown
 @router.get("/analytics/file-list")
 def get_uploaded_files_list(
     company_id: Optional[int] = Query(None, description="Filter by company ID"),
     db: Session = Depends(get_db),
     # current_user: User = Depends(get_current_active_user)
 ):
-    """Get list of all uploaded files with record counts"""
+    """Get list of all uploaded files with record counts broken down by store"""
     files = budget_crud.get_budget_uploaded_files_list(db, company_id)
     return files
+
+# Add this new delete endpoint for store and company
+@router.delete("/bulk/by-store-and-company")
+def delete_budget_by_store_and_company(
+    store: str = Query(..., description="Store name to delete records for"),
+    company_name: str = Query(..., description="Company name to delete records for"),
+    confirm: bool = Query(False, description="Must be set to true to confirm deletion"),
+    db: Session = Depends(get_db),
+    # current_user: User = Depends(get_current_active_user)
+):
+    """Delete all budget records for a specific store and company combination"""
+    if not confirm:
+        raise HTTPException(
+            status_code=400, 
+            detail="You must set confirm=true to delete records. This action cannot be undone."
+        )
+    
+    result = budget_crud.delete_budget_by_store_and_company(db, store, company_name)
+    
+    if result["company_id"] is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Company '{company_name}' not found"
+        )
+    
+    return {
+        "detail": f"Successfully deleted {result['deleted_count']} Budget records for store '{store}' and company '{company_name}'",
+        "deleted_count": result["deleted_count"],
+        "store": store,
+        "company_name": company_name,
+        "company_id": result["company_id"]
+    }
 
 @router.get("/analytics/stores")
 def get_stores_list(

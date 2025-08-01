@@ -214,15 +214,65 @@ def get_financials_summary(
     )
     return summary
 
+# @router.get("/analytics/file-list")
+# def get_uploaded_files_list(
+#     company_id: Optional[int] = Query(None, description="Filter by company ID"),
+#     db: Session = Depends(get_db),
+#     # current_user: User = Depends(get_current_active_user)
+# ):
+#     """Get list of all uploaded files with record counts"""
+#     files = financials_crud.get_financials_uploaded_files_list(db, company_id)
+#     return files
+
+
+
+# ============================================================================
+# ROUTER UPDATES (routes/financials_company_wide.py)
+# ============================================================================
+
+# Updated file list endpoint with store breakdown
 @router.get("/analytics/file-list")
 def get_uploaded_files_list(
     company_id: Optional[int] = Query(None, description="Filter by company ID"),
     db: Session = Depends(get_db),
     # current_user: User = Depends(get_current_active_user)
 ):
-    """Get list of all uploaded files with record counts"""
+    """Get list of all uploaded files with record counts broken down by store"""
     files = financials_crud.get_financials_uploaded_files_list(db, company_id)
     return files
+
+# Add this new delete endpoint for store and company
+@router.delete("/bulk/by-store-and-company")
+def delete_financials_by_store_and_company(
+    store: str = Query(..., description="Store name to delete records for"),
+    company_name: str = Query(..., description="Company name to delete records for"),
+    confirm: bool = Query(False, description="Must be set to true to confirm deletion"),
+    db: Session = Depends(get_db),
+    # current_user: User = Depends(get_current_active_user)
+):
+    """Delete all financials records for a specific store and company combination"""
+    if not confirm:
+        raise HTTPException(
+            status_code=400, 
+            detail="You must set confirm=true to delete records. This action cannot be undone."
+        )
+    
+    result = financials_crud.delete_financials_by_store_and_company(db, store, company_name)
+    
+    if result["company_id"] is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Company '{company_name}' not found"
+        )
+    
+    return {
+        "detail": f"Successfully deleted {result['deleted_count']} Financials records for store '{store}' and company '{company_name}'",
+        "deleted_count": result["deleted_count"],
+        "store": store,
+        "company_name": company_name,
+        "company_id": result["company_id"]
+    }
+
 
 @router.get("/analytics/stores")
 def get_stores_list(

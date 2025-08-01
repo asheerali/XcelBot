@@ -963,6 +963,115 @@ def get_budget_uploaded_files_list(db: Session, company_id: Optional[int] = None
     
     return results
 
+
+
+
+# Add this new function to your CRUD file:
+def delete_budget_by_store_and_company(db: Session, store: str, company_name: str) -> Dict[str, Any]:
+    """Delete all budget records for a specific store and company name"""
+    
+    # First, get the company_id from company name
+    company = db.query(Company).filter(Company.name == company_name).first()
+    
+    if not company:
+        return {
+            "deleted_count": 0,
+            "company_id": None
+        }
+    
+    company_id = company.id
+    
+    # Delete records matching both store and company_id
+    query = db.query(Budget).filter(
+        and_(
+            Budget.Store == store,
+            Budget.company_id == company_id
+        )
+    )
+    
+    deleted_count = query.count()
+    query.delete(synchronize_session=False)
+    db.commit()
+    
+    return {
+        "deleted_count": deleted_count,
+        "company_id": company_id
+    }
+
+# Updated file list function with store breakdown
+def get_budget_uploaded_files_list(db: Session, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    """Get list of all uploaded budget files with record counts broken down by store and company name"""
+    
+    # Get detailed breakdown by file, store, and company
+    query = db.query(
+        Budget.file_name,
+        Budget.Store,
+        Company.name.label('company_name'),
+        func.count(Budget.id).label('store_record_count'),
+        func.sum(Budget.Net_Sales).label('store_total_sales'),
+        func.min(Budget.Year).label('store_earliest_year'),
+        func.max(Budget.Year).label('store_latest_year')
+    ).join(Company, Budget.company_id == Company.id) \
+     .filter(Budget.file_name.isnot(None))
+
+    if company_id:
+        query = query.filter(Budget.company_id == company_id)
+
+    query = query.group_by(
+        Budget.file_name, 
+        Budget.Store, 
+        Company.name
+    ).order_by(Budget.file_name, Budget.Store)
+
+    # Group results by file
+    files_dict = {}
+    for row in query.all():
+        file_key = row.file_name
+        
+        if file_key not in files_dict:
+            file_timestamp = parse_datetime_from_filename(row.file_name)
+            files_dict[file_key] = {
+                "file_name": row.file_name,
+                "file_timestamp": file_timestamp,
+                "company_name": row.company_name,
+                "record_count": 0,
+                "total_sales": 0.0,
+                "earliest_year": None,
+                "latest_year": None,
+                "stores": []
+            }
+        
+        # Update file totals
+        files_dict[file_key]["record_count"] += row.store_record_count
+        files_dict[file_key]["total_sales"] += float(row.store_total_sales or 0)
+        
+        # Update year ranges
+        if files_dict[file_key]["earliest_year"] is None or (row.store_earliest_year and row.store_earliest_year < files_dict[file_key]["earliest_year"]):
+            files_dict[file_key]["earliest_year"] = row.store_earliest_year
+        if files_dict[file_key]["latest_year"] is None or (row.store_latest_year and row.store_latest_year > files_dict[file_key]["latest_year"]):
+            files_dict[file_key]["latest_year"] = row.store_latest_year
+        
+        # Add store details
+        files_dict[file_key]["stores"].append({
+            "store": row.Store or "Unknown Store",
+            "record_count": row.store_record_count,
+            "total_sales": float(row.store_total_sales or 0),
+            "earliest_year": row.store_earliest_year,
+            "latest_year": row.store_latest_year,
+        })
+
+    # Convert to list and sort stores
+    results = []
+    for file_data in files_dict.values():
+        # Sort stores by record count (descending)
+        file_data["stores"].sort(key=lambda x: x["record_count"], reverse=True)
+        
+        results.append(file_data)
+
+    return results
+
+
+
 def get_budget_stores_list(db: Session, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
     """Get list of all stores with record counts"""
     query = db.query(

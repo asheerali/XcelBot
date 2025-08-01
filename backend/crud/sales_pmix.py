@@ -1,81 +1,4 @@
-# # from sqlalchemy.orm import Session
-# # from models.sales_pmix import SalesPMix
-# # from schemas.sales_pmix import SalesPMixCreate
-# # import pandas as pd
-
-# # def create_sales_pmix(db: Session, obj_in: SalesPMixCreate):
-# #     db_obj = SalesPMix(**obj_in.dict())
-# #     db.add(db_obj)
-# #     db.commit()
-# #     db.refresh(db_obj)
-# #     return db_obj
-
-# # def insert_sales_pmix_df(db: Session, df: pd.DataFrame, company_id: int):
-# #     for _, row in df.iterrows():
-# #         data = row.to_dict()
-# #         data["company_id"] = company_id
-# #         db_obj = SalesPMix(**data)
-# #         db.add(db_obj)
-# #     db.commit()
-
-
-# from sqlalchemy.orm import Session
-# from models.sales_pmix import SalesPMix
-# from schemas.sales_pmix import SalesPMixCreate
-# import pandas as pd
-
-# def create_sales_pmix(db: Session, obj_in: SalesPMixCreate):
-#     db_obj = SalesPMix(**obj_in.dict())
-#     db.add(db_obj)
-#     db.commit()
-#     db.refresh(db_obj)
-#     return db_obj
-
-# def insert_sales_pmix_df(db: Session, df: pd.DataFrame, company_id: int, file_name: str = None, dashboard: int = None):
-#     """
-#     Insert sales data from DataFrame into database.
-    
-#     Args:
-#         db: Database session
-#         df: DataFrame containing sales data
-#         company_id: Company ID to associate with the data
-#         file_name: Optional filename to store with each record
-#         dashboard: Optional dashboard integer to store with each record
-#     """
-#     for _, row in df.iterrows():
-#         data = row.to_dict()
-#         data["company_id"] = company_id
-        
-#         # Add new fields if provided
-#         if file_name:
-#             data["file_name"] = file_name
-#         if dashboard is not None:
-#             data["dashboard"] = dashboard
-            
-#         db_obj = SalesPMix(**data)
-#         db.add(db_obj)
-#     db.commit()
-
-# def insert_sales_pmix_df_with_metadata(db: Session, df: pd.DataFrame, company_id: int, metadata: dict):
-#     """
-#     Insert sales data from DataFrame with metadata applied to all records.
-    
-#     Args:
-#         db: Database session
-#         df: DataFrame containing sales data
-#         company_id: Company ID to associate with the data
-#         metadata: Dictionary containing metadata fields like file_name, dashboard, etc.
-#     """
-#     for _, row in df.iterrows():
-#         data = row.to_dict()
-#         data["company_id"] = company_id
-        
-#         # Apply metadata to each record
-#         data.update(metadata)
-            
-#         db_obj = SalesPMix(**data)
-#         db.add(db_obj)
-#     db.commit()
+#crud/sales_pmix.py
 
 from sqlalchemy.orm import Session
 from models.sales_pmix import SalesPMix
@@ -254,6 +177,39 @@ def delete_sales_pmix_by_location(db: Session, location: str, company_id: Option
     
     return deleted_count
 
+
+def delete_sales_pmix_by_location_and_company(db: Session, location: str, company_name: str) -> Dict[str, Any]:
+    """Delete all sales pmix records for a specific location and company name"""
+    
+    # First, get the company_id from company name
+    company = db.query(Company).filter(Company.name == company_name).first()
+    
+    if not company:
+        return {
+            "deleted_count": 0,
+            "company_id": None
+        }
+    
+    company_id = company.id
+    
+    # Delete records matching both location and company_id
+    query = db.query(SalesPMix).filter(
+        and_(
+            SalesPMix.Location == location,
+            SalesPMix.company_id == company_id
+        )
+    )
+    
+    deleted_count = query.count()
+    query.delete(synchronize_session=False)
+    db.commit()
+    
+    return {
+        "deleted_count": deleted_count,
+        "company_id": company_id
+    }
+
+
 # ============================================================================
 # ANALYTICS AND SUMMARY OPERATIONS
 # ============================================================================
@@ -307,65 +263,84 @@ def get_sales_pmix_summary(
         }
     }
 
-# def get_uploaded_files_list(db: Session, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
-#     """Get list of all uploaded files with record counts"""
-#     query = db.query(
-#         SalesPMix.file_name,
-#         func.count(SalesPMix.id).label('record_count'),
-#         func.min(SalesPMix.Sent_Date).label('earliest_date'),
-#         func.max(SalesPMix.Sent_Date).label('latest_date'),
-#         func.sum(SalesPMix.Net_Price).label('total_sales')
-#     ).filter(SalesPMix.file_name.isnot(None))
-    
-#     if company_id:
-#         query = query.filter(SalesPMix.company_id == company_id)
-    
-#     query = query.group_by(SalesPMix.file_name).order_by(SalesPMix.file_name)
-    
-#     results = []
-#     for row in query.all():
-#         results.append({
-#             "file_name": row.file_name,
-#             "record_count": row.record_count,
-#             "earliest_date": row.earliest_date.isoformat() if row.earliest_date else None,
-#             "latest_date": row.latest_date.isoformat() if row.latest_date else None,
-#             "total_sales": float(row.total_sales or 0)
-#         })
-    
-#     return results
 
-
+# Updated CRUD function with location breakdown
 def get_uploaded_files_list(db: Session, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
-    """Get list of all uploaded files with record counts and company name"""
+    """Get list of all uploaded files with record counts broken down by location and company name"""
+    
+    # Get detailed breakdown by file, location, and company
     query = db.query(
         SalesPMix.file_name,
-        func.count(SalesPMix.id).label('record_count'),
-        func.min(SalesPMix.Sent_Date).label('earliest_date'),
-        func.max(SalesPMix.Sent_Date).label('latest_date'),
-        func.sum(SalesPMix.Net_Price).label('total_sales'),
-        Company.name.label('company_name')
+        SalesPMix.Location,  # Replace with your actual location field
+        Company.name.label('company_name'),
+        func.count(SalesPMix.id).label('location_record_count'),
+        func.sum(SalesPMix.Net_Price).label('location_total_sales'),
+        func.min(SalesPMix.Sent_Date).label('location_earliest_date'),
+        func.max(SalesPMix.Sent_Date).label('location_latest_date')
     ).join(Company, SalesPMix.company_id == Company.id) \
      .filter(SalesPMix.file_name.isnot(None))
 
     if company_id:
         query = query.filter(SalesPMix.company_id == company_id)
 
-    query = query.group_by(SalesPMix.file_name, Company.name).order_by(SalesPMix.file_name)
+    query = query.group_by(
+        SalesPMix.file_name, 
+        SalesPMix.Location, 
+        Company.name
+    ).order_by(SalesPMix.file_name, SalesPMix.Location)
 
-    results = []
+    # Group results by file
+    files_dict = {}
     for row in query.all():
-        file_timestamp = parse_datetime_from_filename(row.file_name)
-        results.append({
-            "file_name": row.file_name,
-            "file_timestamp": file_timestamp,  # formatted as MM-DD-YYYY - hh:mm AM/PM
-            "company_name": row.company_name,
-            "record_count": row.record_count,
-            "earliest_date": row.earliest_date.isoformat() if row.earliest_date else None,
-            "latest_date": row.latest_date.isoformat() if row.latest_date else None,
-            "total_sales": float(row.total_sales or 0)
+        file_key = row.file_name
+        
+        if file_key not in files_dict:
+            file_timestamp = parse_datetime_from_filename(row.file_name)
+            files_dict[file_key] = {
+                "file_name": row.file_name,
+                "file_timestamp": file_timestamp,
+                "company_name": row.company_name,
+                "record_count": 0,
+                "total_sales": 0.0,
+                "earliest_date": None,
+                "latest_date": None,
+                "locations": []
+            }
+        
+        # Update file totals
+        files_dict[file_key]["record_count"] += row.location_record_count
+        files_dict[file_key]["total_sales"] += float(row.location_total_sales or 0)
+        
+        # Update date ranges
+        if files_dict[file_key]["earliest_date"] is None or (row.location_earliest_date and row.location_earliest_date < files_dict[file_key]["earliest_date"]):
+            files_dict[file_key]["earliest_date"] = row.location_earliest_date
+        if files_dict[file_key]["latest_date"] is None or (row.location_latest_date and row.location_latest_date > files_dict[file_key]["latest_date"]):
+            files_dict[file_key]["latest_date"] = row.location_latest_date
+        
+        # Add location details
+        files_dict[file_key]["locations"].append({
+            "location": row.Location or "Unknown Location",
+            "record_count": row.location_record_count,
+            "total_sales": float(row.location_total_sales or 0),
+            "earliest_date": row.location_earliest_date.isoformat() if row.location_earliest_date else None,
+            "latest_date": row.location_latest_date.isoformat() if row.location_latest_date else None,
         })
 
+    # Convert to list and format dates
+    results = []
+    for file_data in files_dict.values():
+        file_data["earliest_date"] = file_data["earliest_date"].isoformat() if file_data["earliest_date"] else None
+        file_data["latest_date"] = file_data["latest_date"].isoformat() if file_data["latest_date"] else None
+        
+        # Sort locations by record count (descending)
+        file_data["locations"].sort(key=lambda x: x["record_count"], reverse=True)
+        
+        results.append(file_data)
+
     return results
+
+
+
 
 
 def get_locations_list(db: Session, company_id: Optional[int] = None) -> List[Dict[str, Any]]:

@@ -188,6 +188,39 @@ def delete_sales_pmix_by_location(
         "company_id": company_id
     }
 
+
+# Add this new delete endpoint:
+@router.delete("/bulk/by-location-and-company")
+def delete_sales_pmix_by_location_and_company(
+    location: str = Query(..., description="Location name to delete records for"),
+    company_name: str = Query(..., description="Company name to delete records for"),
+    confirm: bool = Query(False, description="Must be set to true to confirm deletion"),
+    db: Session = Depends(get_db),
+    # current_user: User = Depends(get_current_active_user)
+):
+    """Delete all sales pmix records for a specific location and company combination"""
+    if not confirm:
+        raise HTTPException(
+            status_code=400, 
+            detail="You must set confirm=true to delete records. This action cannot be undone."
+        )
+    
+    result = sales_pmix_crud.delete_sales_pmix_by_location_and_company(db, location, company_name)
+    
+    if result["company_id"] is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Company '{company_name}' not found"
+        )
+    
+    return {
+        "detail": f"Successfully deleted {result['deleted_count']} Sales PMix records for location '{location}' and company '{company_name}'",
+        "deleted_count": result["deleted_count"],
+        "location": location,
+        "company_name": company_name,
+        "company_id": result["company_id"]
+    }
+
 # ============================================================================
 # ANALYTICS AND SUMMARY ENDPOINTS
 # ============================================================================
@@ -211,15 +244,45 @@ def get_sales_pmix_summary(
     )
     return summary
 
+# @router.get("/analytics/file-list")
+# def get_uploaded_files_list(
+#     company_id: Optional[int] = Query(None, description="Filter by company ID"),
+#     db: Session = Depends(get_db),
+#     # current_user: User = Depends(get_current_active_user)
+# ):
+#     """Get list of all uploaded files with record counts"""
+#     files = sales_pmix_crud.get_uploaded_files_list(db, company_id)
+#     return files
+
+
+
+# Updated API endpoint
 @router.get("/analytics/file-list")
 def get_uploaded_files_list(
     company_id: Optional[int] = Query(None, description="Filter by company ID"),
     db: Session = Depends(get_db),
     # current_user: User = Depends(get_current_active_user)
 ):
-    """Get list of all uploaded files with record counts"""
+    """Get list of all uploaded files with record counts broken down by location"""
     files = sales_pmix_crud.get_uploaded_files_list(db, company_id)
     return files
+
+
+
+@router.get("/analytics/file-list")
+def get_uploaded_files_list(
+    company_id: Optional[int] = Query(None, description="Filter by company ID"),
+    include_location_breakdown: bool = Query(False, description="Include location breakdown"),
+    db: Session = Depends(get_db),
+    # current_user: User = Depends(get_current_active_user)
+):
+    """Get list of all uploaded files with record counts and optional location breakdown"""
+    if include_location_breakdown:
+        files = sales_pmix_crud.get_uploaded_files_list_with_locations(db, company_id)
+    else:
+        files = sales_pmix_crud.get_uploaded_files_list(db, company_id)
+    return files
+
 
 @router.get("/analytics/locations")
 def get_locations_list(
