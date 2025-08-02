@@ -229,7 +229,7 @@ from sqlalchemy import and_, or_, func
 from models.budget import Budget
 from schemas.budget import BudgetCreate
 from typing import List, Tuple, Optional, Dict, Any
-from utils.parse_datetime import parse_datetime_from_filename
+from utils.parse_datetime import parse_datetime_from_filename, extract_clean_filename
 from models.companies import Company
 
 
@@ -458,8 +458,6 @@ from models.companies import Company
 #         db.rollback()
 #         print(f"Error during budget insertion: {str(e)}")
 #         raise e
-
-
 
 
 def check_and_filter_duplicates_budget(
@@ -1030,8 +1028,9 @@ def get_budget_uploaded_files_list(db: Session, company_id: Optional[int] = None
         
         if file_key not in files_dict:
             file_timestamp = parse_datetime_from_filename(row.file_name)
+            clean_file_name = extract_clean_filename(row.file_name)
             files_dict[file_key] = {
-                "file_name": row.file_name,
+                "file_name": clean_file_name,
                 "file_timestamp": file_timestamp,
                 "company_name": row.company_name,
                 "record_count": 0,

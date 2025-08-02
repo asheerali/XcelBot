@@ -411,6 +411,7 @@ def calculate_tw_lw_bdg_comparison(df, df_budget, store='All', year='All', week_
         if lw_col in filtered_df.columns:
             filtered_df[lw_col] = clean_currency(filtered_df, lw_col)
     
+    
     # Process budget data columns from df_budget
     budget_values = {}
     for metric, (_, _, bdg_col) in metrics.items():
@@ -419,6 +420,12 @@ def calculate_tw_lw_bdg_comparison(df, df_budget, store='All', year='All', week_
         else:
             budget_values[metric] = clean_currency(filtered_budget_df, bdg_col).sum() if bdg_col in filtered_budget_df.columns else 0
     
+    # logic only for the this week budget, net sales 
+    if 'Net_Sales' in filtered_budget_df.columns:
+        budget_values['Net_Sales'] = clean_currency(filtered_budget_df, 'Net_Sales').sum()
+    else:
+        budget_values['Net_Sales'] = 0
+        
     # Calculate values
     rows = []
     for label, (tw_col, lw_col, _) in metrics.items():

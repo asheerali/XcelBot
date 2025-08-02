@@ -1,6 +1,6 @@
 from typing import Optional
 from datetime import datetime
-
+import re
 
 def parse_datetime_from_filename(filename: str) -> Optional[str]:
     """
@@ -17,3 +17,17 @@ def parse_datetime_from_filename(filename: str) -> Optional[str]:
     except Exception:
         return None
     
+
+def extract_clean_filename(full_filename: str) -> str:
+    """Extract the meaningful filename part, removing timestamp prefix"""
+    # Pattern to match timestamp prefix like "20250725_013228_"
+    timestamp_pattern = r'^\d{8}_\d{6}_'
+    
+    # Remove timestamp prefix if it exists
+    clean_name = re.sub(timestamp_pattern, '', full_filename)
+    
+    return clean_name
+
+
+
+

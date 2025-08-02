@@ -7,7 +7,7 @@ import pandas as pd
 from sqlalchemy import func, and_, or_
 from typing import Optional, List, Dict, Any
 from models.companies import Company
-from utils.parse_datetime import parse_datetime_from_filename
+from utils.parse_datetime import parse_datetime_from_filename, extract_clean_filename
     
     
 # ============================================================================
@@ -296,8 +296,9 @@ def get_uploaded_files_list(db: Session, company_id: Optional[int] = None) -> Li
         
         if file_key not in files_dict:
             file_timestamp = parse_datetime_from_filename(row.file_name)
+            clean_file_name = extract_clean_filename(row.file_name)
             files_dict[file_key] = {
-                "file_name": row.file_name,
+                "file_name": clean_file_name,
                 "file_timestamp": file_timestamp,
                 "company_name": row.company_name,
                 "record_count": 0,

@@ -235,7 +235,7 @@ from sqlalchemy import and_, or_, func
 from models.financials_company_wide import FinancialsCompanyWide
 from schemas.financials_company_wide import FinancialsCompanyWideCreate
 from typing import List, Tuple, Optional, Dict, Any
-from utils.parse_datetime import parse_datetime_from_filename
+from utils.parse_datetime import parse_datetime_from_filename, extract_clean_filename
 from models.companies import Company
 
 
@@ -803,8 +803,9 @@ def get_financials_uploaded_files_list(db: Session, company_id: Optional[int] = 
         
         if file_key not in files_dict:
             file_timestamp = parse_datetime_from_filename(row.file_name)
+            clean_file_name = extract_clean_filename(row.file_name)
             files_dict[file_key] = {
-                "file_name": row.file_name,
+                "file_name": clean_file_name,
                 "file_timestamp": file_timestamp,
                 "company_name": row.company_name,
                 "record_count": 0,
