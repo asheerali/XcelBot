@@ -33,8 +33,6 @@ import {
   AccordionSummary,
   AccordionDetails,
   Slider,
-  FormControlLabel,
-  Switch,
   Grid,
 } from "@mui/material";
 
@@ -206,7 +204,8 @@ const DateRangeSelectorButton = ({ onDateRangeSelect }) => {
     </>
   );
 };
-// FiltersOrderIQ2 Component
+
+// Improved FiltersOrderIQ2 Component
 const FiltersOrderIQ2 = ({
   onFiltersChange,
   totalItems,
@@ -217,12 +216,8 @@ const FiltersOrderIQ2 = ({
 }) => {
   const [filters, setFilters] = useState({
     priceRange: priceRange,
-    stockStatus: "all",
     unit: "all",
     category: "all",
-    priceChange: "all",
-    showLowStock: false,
-    showOutOfStock: false,
   });
 
   const [expanded, setExpanded] = useState(false);
@@ -231,9 +226,9 @@ const FiltersOrderIQ2 = ({
   useEffect(() => {
     setFilters((prev) => ({
       ...prev,
-      priceRange: priceRange,
+      priceRange: [...priceRange], // Use spread to create new array
     }));
-  }, [priceRange]);
+  }, [priceRange[0], priceRange[1]]); // Watch for changes in individual values
 
   const handleFilterChange = (filterName, value) => {
     const newFilters = { ...filters, [filterName]: value };
@@ -241,15 +236,27 @@ const FiltersOrderIQ2 = ({
     onFiltersChange(newFilters);
   };
 
+  const handlePriceRangeChange = (index, value) => {
+    const numValue = value === '' ? 0 : parseFloat(value) || 0;
+    const newPriceRange = [...filters.priceRange];
+    newPriceRange[index] = numValue;
+    
+    // Ensure min is not greater than max
+    if (index === 0 && numValue > newPriceRange[1] && newPriceRange[1] > 0) {
+      newPriceRange[1] = numValue;
+    }
+    if (index === 1 && numValue < newPriceRange[0] && numValue > 0) {
+      newPriceRange[0] = numValue;
+    }
+    
+    handleFilterChange("priceRange", newPriceRange);
+  };
+
   const clearAllFilters = () => {
     const clearedFilters = {
       priceRange: priceRange,
-      stockStatus: "all",
       unit: "all",
       category: "all",
-      priceChange: "all",
-      showLowStock: false,
-      showOutOfStock: false,
     };
     setFilters(clearedFilters);
     onFiltersChange(clearedFilters);
@@ -257,18 +264,24 @@ const FiltersOrderIQ2 = ({
 
   const getActiveFiltersCount = () => {
     let count = 0;
-    if (filters.stockStatus !== "all") count++;
     if (filters.unit !== "all") count++;
     if (filters.category !== "all") count++;
-    if (filters.priceChange !== "all") count++;
-    if (filters.showLowStock) count++;
-    if (filters.showOutOfStock) count++;
     if (
       filters.priceRange[0] > priceRange[0] ||
       filters.priceRange[1] < priceRange[1]
     )
       count++;
     return count;
+  };
+
+  const formatPriceLabel = (value) => {
+    if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(1)}M`;
+    }
+    if (value >= 1000) {
+      return `${(value / 1000).toFixed(0)}K`;
+    }
+    return `${value.toFixed(value < 10 ? 2 : 0)}`;
   };
 
   return (
@@ -320,67 +333,84 @@ const FiltersOrderIQ2 = ({
         </AccordionSummary>
 
         <AccordionDetails style={{ padding: 24 }}>
-          <Grid container spacing={3}>
-            {/* Price Range Filter */}
-            <Grid item xs={12} md={3}>
+          <Grid container spacing={3} alignItems="center">
+            {/* Price Range Input Fields with Slider */}
+            <Grid item xs={12} md={4}>
               <Typography
                 gutterBottom
                 variant="subtitle2"
-                style={{ fontWeight: 600 }}
+                style={{ fontWeight: 600, marginBottom: 16 }}
               >
                 Price Range
               </Typography>
+              <Box style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                <TextField
+                  label="Min Price"
+                  type="number"
+                  size="small"
+                  value={filters.priceRange[0] || ''}
+                  onChange={(e) => handlePriceRangeChange(0, e.target.value)}
+                  inputProps={{
+                    min: 0,
+                    step: "0.01",
+                  }}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                  }}
+                  style={{ flex: 1 }}
+                />
+                <Typography variant="body2" style={{ color: "#666" }}>
+                  to
+                </Typography>
+                <TextField
+                  label="Max Price"
+                  type="number"
+                  size="small"
+                  value={filters.priceRange[1] || ''}
+                  onChange={(e) => handlePriceRangeChange(1, e.target.value)}
+                  inputProps={{
+                    min: 0,
+                    step: "0.01",
+                  }}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                  }}
+                  style={{ flex: 1 }}
+                />
+              </Box>
+              
+              {/* Price Range Slider */}
               <Box style={{ paddingLeft: 8, paddingRight: 8 }}>
                 <Slider
                   value={filters.priceRange}
-                  onChange={(e, newValue) =>
-                    handleFilterChange("priceRange", newValue)
-                  }
+                  onChange={(e, newValue) => handleFilterChange("priceRange", newValue)}
                   valueLabelDisplay="auto"
+                  valueLabelFormat={formatPriceLabel}
                   min={priceRange[0]}
                   max={priceRange[1]}
-                  step={priceRange[1] > 100 ? 10 : 1}
+                  step={(priceRange[1] - priceRange[0]) <= 10 ? 0.1 : (priceRange[1] - priceRange[0]) <= 100 ? 1 : (priceRange[1] - priceRange[0]) <= 1000 ? 10 : 100}
                   marks={[
-                    { value: priceRange[0], label: `$${priceRange[0]}` },
-                    {
-                      value: Math.round((priceRange[0] + priceRange[1]) / 2),
-                      label: `$${Math.round(
-                        (priceRange[0] + priceRange[1]) / 2
-                      )}`,
-                    },
-                    { value: priceRange[1], label: `$${priceRange[1]}+` },
+                    { value: priceRange[0], label: formatPriceLabel(priceRange[0]) },
+                    { value: priceRange[1], label: formatPriceLabel(priceRange[1]) }
                   ]}
+                  color="primary"
                 />
-                <Typography
-                  variant="body2"
-                  style={{ color: "#666", textAlign: "center", marginTop: 8 }}
-                >
-                  ${filters.priceRange[0]} - ${filters.priceRange[1]}
-                </Typography>
               </Box>
-            </Grid>
-
-            {/* Stock Status Filter */}
-            <Grid item xs={12} md={2}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Stock Status</InputLabel>
-                <Select
-                  value={filters.stockStatus}
-                  label="Stock Status"
-                  onChange={(e) =>
-                    handleFilterChange("stockStatus", e.target.value)
-                  }
-                >
-                  <MenuItem value="all">All Items</MenuItem>
-                  <MenuItem value="inStock">In Stock</MenuItem>
-                  <MenuItem value="lowStock">Low Stock</MenuItem>
-                  <MenuItem value="outOfStock">Out of Stock</MenuItem>
-                </Select>
-              </FormControl>
+              
+              <Typography
+                variant="caption"
+                style={{ 
+                  color: "#666", 
+                  display: "block", 
+                  marginTop: 8 
+                }}
+              >
+                Original range: {formatPriceLabel(priceRange[0])} - {formatPriceLabel(priceRange[1])}
+              </Typography>
             </Grid>
 
             {/* Unit Filter */}
-            <Grid item xs={12} md={2}>
+            <Grid item xs={12} md={4}>
               <FormControl fullWidth size="small">
                 <InputLabel>Unit Type</InputLabel>
                 <Select
@@ -400,7 +430,7 @@ const FiltersOrderIQ2 = ({
 
             {/* Category Filter */}
             {categories.length > 0 && (
-              <Grid item xs={12} md={2}>
+              <Grid item xs={12} md={4}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Category</InputLabel>
                   <Select
@@ -420,77 +450,37 @@ const FiltersOrderIQ2 = ({
                 </FormControl>
               </Grid>
             )}
-
-            {/* Price Change Filter */}
-            <Grid item xs={12} md={2}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Price Change</InputLabel>
-                <Select
-                  value={filters.priceChange}
-                  label="Price Change"
-                  onChange={(e) =>
-                    handleFilterChange("priceChange", e.target.value)
-                  }
-                >
-                  <MenuItem value="all">All Changes</MenuItem>
-                  <MenuItem value="increased">Price Increased</MenuItem>
-                  <MenuItem value="decreased">Price Decreased</MenuItem>
-                  <MenuItem value="unchanged">No Change</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-
-            {/* Toggle Switches */}
-            <Grid item xs={12} md={3}>
-              <Typography
-                variant="subtitle2"
-                style={{ fontWeight: 600, marginBottom: 8 }}
-              >
-                Quick Filters
-              </Typography>
-              <Box style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={filters.showLowStock}
-                      onChange={(e) =>
-                        handleFilterChange("showLowStock", e.target.checked)
-                      }
-                      size="small"
-                    />
-                  }
-                  label="Show only low stock"
-                />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={filters.showOutOfStock}
-                      onChange={(e) =>
-                        handleFilterChange("showOutOfStock", e.target.checked)
-                      }
-                      size="small"
-                    />
-                  }
-                  label="Include out of stock"
-                />
-              </Box>
-            </Grid>
           </Grid>
 
           {/* Clear Filters Button */}
           {getActiveFiltersCount() > 0 && (
             <Box
               style={{
-                marginTop: 16,
+                marginTop: 20,
                 paddingTop: 16,
                 borderTop: "1px solid #e0e0e0",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
               }}
             >
+              <Typography variant="body2" style={{ color: "#666" }}>
+                {getActiveFiltersCount()} filter{getActiveFiltersCount() > 1 ? "s" : ""} applied
+              </Typography>
               <Button
                 startIcon={<ClearIcon />}
                 onClick={clearAllFilters}
                 variant="outlined"
                 size="small"
+                style={{
+                  borderColor: "#e0e0e0",
+                  color: "#666",
+                  "&:hover": {
+                    borderColor: "#1976d2",
+                    color: "#1976d2",
+                    backgroundColor: "#f5f5f5",
+                  },
+                }}
               >
                 Clear All Filters
               </Button>
@@ -516,81 +506,95 @@ const FiltersOrderIQWithFilename = ({
   // Get unique companies
   const companyOptions = Array.from(
     new Map(
-      masterFileDetails.map((item) => [
-        item.company_id,
-        {
-          value: item.company_id.toString(),
-          label: item.company_name,
-        },
-      ])
+      masterFileDetails
+        .filter(item => item && item.company_id && item.company_name) // Filter out invalid items
+        .map((item) => [
+          item.company_id,
+          {
+            value: item.company_id.toString(),
+            label: item.company_name,
+          },
+        ])
     ).values()
   );
 
   // Get unique locations filtered by selected companies
   const getLocationOptions = () => {
+    if (!masterFileDetails || masterFileDetails.length === 0) return [];
+    
     let filteredData = masterFileDetails;
-    if (selectedCompanies.length > 0) {
+    if (selectedCompanies && selectedCompanies.length > 0) {
       filteredData = masterFileDetails.filter((item) =>
-        selectedCompanies.includes(item.company_id.toString())
+        item && selectedCompanies.includes(item.company_id?.toString())
       );
     }
 
     return Array.from(
       new Map(
-        filteredData.map((item) => [
-          item.location_id,
-          {
-            value: item.location_id.toString(),
-            label: item.location_name,
-          },
-        ])
+        filteredData
+          .filter(item => item && item.location_id && item.location_name) // Filter out invalid items
+          .map((item) => [
+            item.location_id,
+            {
+              value: item.location_id.toString(),
+              label: item.location_name,
+            },
+          ])
       ).values()
     );
   };
 
   // Get unique filenames filtered by selected companies and locations
   const getFilenameOptions = () => {
+    if (!masterFileDetails || masterFileDetails.length === 0) return [];
+    
     let filteredData = masterFileDetails;
 
-    if (selectedCompanies.length > 0) {
+    if (selectedCompanies && selectedCompanies.length > 0) {
       filteredData = filteredData.filter((item) =>
-        selectedCompanies.includes(item.company_id.toString())
+        item && selectedCompanies.includes(item.company_id?.toString())
       );
     }
 
-    if (selectedLocations.length > 0) {
+    if (selectedLocations && selectedLocations.length > 0) {
       filteredData = filteredData.filter((item) =>
-        selectedLocations.includes(item.location_id.toString())
+        item && selectedLocations.includes(item.location_id?.toString())
       );
     }
 
-    return Array.from(new Set(filteredData.map((item) => item.filename))).map(
-      (filename) => ({
-        value: filename,
-        label: filename,
-      })
-    );
+    return Array.from(
+      new Set(
+        filteredData
+          .filter(item => item && item.filename) // Filter out invalid items
+          .map((item) => item.filename)
+      )
+    ).map((filename) => ({
+      value: filename,
+      label: filename,
+    }));
   };
 
   // Calculate how many API calls will be made
   const getApiCallCount = () => {
+    if (!masterFileDetails || masterFileDetails.length === 0) return 0;
+    
     let filteredDetails = masterFileDetails;
 
-    if (selectedCompanies.length > 0) {
+    if (selectedCompanies && selectedCompanies.length > 0) {
       filteredDetails = filteredDetails.filter((item) =>
-        selectedCompanies.includes(item.company_id.toString())
+        item && selectedCompanies.includes(item.company_id?.toString())
       );
     }
 
-    if (selectedLocations.length > 0) {
+    if (selectedLocations && selectedLocations.length > 0) {
       filteredDetails = filteredDetails.filter((item) =>
-        selectedLocations.includes(item.location_id.toString())
+        item && selectedLocations.includes(item.location_id?.toString())
       );
     }
 
-    if (selectedFilenames.length > 0) {
+    if (selectedFilenames && selectedFilenames.length > 0) {
       filteredDetails = filteredDetails.filter((item) =>
-        selectedFilenames.includes(item.filename)
+        item && selectedFilenames.includes(item.filename)
       );
     }
 
@@ -598,14 +602,17 @@ const FiltersOrderIQWithFilename = ({
   };
 
   // Check if dropdowns should be enabled based on current Redux state
-  const isLocationDropdownEnabled = selectedCompanies.length > 0;
+  const isLocationDropdownEnabled = selectedCompanies && selectedCompanies.length > 0;
   const isFilenameDropdownEnabled =
-    selectedCompanies.length > 0 && selectedLocations.length > 0;
+    selectedCompanies && selectedCompanies.length > 0 && 
+    selectedLocations && selectedLocations.length === 1; // Only enable when exactly one location is selected
 
   // Handle company selection with Select All functionality
   const handleCompanyChange = (value) => {
+    if (!value || !Array.isArray(value)) return;
+    
     if (value.includes("select_all")) {
-      if (selectedCompanies.length === companyOptions.length) {
+      if (selectedCompanies && selectedCompanies.length === companyOptions.length) {
         // If all are selected, deselect all
         onCompanyChange([]);
       } else {
@@ -617,27 +624,41 @@ const FiltersOrderIQWithFilename = ({
     }
   };
 
-  // Handle location selection with Select All functionality
+  // Handle location selection - UPDATED for single selection only
   const handleLocationChange = (value) => {
+    if (!value || !Array.isArray(value)) {
+      onLocationChange([]);
+      return;
+    }
+    
     const locationOptions = getLocationOptions();
-    if (value.includes("select_all")) {
-      if (selectedLocations.length === locationOptions.length) {
-        // If all are selected, deselect all
-        onLocationChange([]);
-      } else {
-        // Select all locations
-        onLocationChange(locationOptions.map((option) => option.value));
-      }
+    if (value.includes("clear_all")) {
+      // Clear all locations
+      onLocationChange([]);
+    } else if (value.includes("select_all")) {
+      // For single selection, we don't allow "select all"
+      return;
     } else {
-      onLocationChange(value);
+      // Only allow single selection - take the last selected value
+      const lastSelected = value[value.length - 1];
+      if (lastSelected) {
+        onLocationChange([lastSelected]);
+      } else {
+        onLocationChange([]);
+      }
     }
   };
 
   // Handle filename selection with Select All functionality
   const handleFilenameChange = (value) => {
+    if (!value || !Array.isArray(value)) {
+      onFilenameChange([]);
+      return;
+    }
+    
     const filenameOptions = getFilenameOptions();
     if (value.includes("select_all")) {
-      if (selectedFilenames.length === filenameOptions.length) {
+      if (selectedFilenames && selectedFilenames.length === filenameOptions.length) {
         // If all are selected, deselect all
         onFilenameChange([]);
       } else {
@@ -651,34 +672,40 @@ const FiltersOrderIQWithFilename = ({
 
   // Render value functions with proper disabled state handling
   const renderCompanyValue = (selected) => {
-    if (selected.length === 0) return "Select Companies";
-    if (selected.length === companyOptions.length)
-      return "All Companies Selected";
-    if (selected.length === 1)
-      return companyOptions.find((c) => c.value === selected[0])?.label;
+    if (!selected || !Array.isArray(selected) || selected.length === 0) return "Select Companies";
+    if (selected.length === companyOptions.length) return "All Companies Selected";
+    if (selected.length === 1) {
+      const foundCompany = companyOptions.find((c) => c && c.value === selected[0]);
+      return foundCompany ? foundCompany.label : "Select Companies";
+    }
     return `${selected.length} selected`;
   };
 
   const renderLocationValue = (selected) => {
     if (!isLocationDropdownEnabled) return "Select companies first";
-    const locationOptions = getLocationOptions();
-    if (selected.length === 0) return "Select Locations";
-    if (
-      selected.length === locationOptions.length &&
-      locationOptions.length > 0
-    )
-      return "All Locations Selected";
-    if (selected.length === 1)
-      return locationOptions.find((l) => l.value === selected[0])?.label;
-    return `${selected.length} selected`;
+    
+    // Handle multiple locations selected
+    if (selected && selected.length > 1) {
+      return "Multiple locations selected - Please select only one";
+    }
+    
+    if (!selected || selected.length === 0) return "Select One Location";
+    
+    if (selected.length === 1) {
+      const locationOptions = getLocationOptions();
+      const foundLocation = locationOptions.find((l) => l && l.value === selected[0]);
+      return foundLocation ? foundLocation.label : "Select One Location";
+    }
+    
+    return "Select One Location";
   };
 
   const renderFilenameValue = (selected) => {
     if (!isLocationDropdownEnabled) return "Select companies first";
-    if (!isFilenameDropdownEnabled) return "Select locations first";
+    if (!isFilenameDropdownEnabled) return "Select one location first";
 
     const filenameOptions = getFilenameOptions();
-    if (selected.length === 0) return "Select Files";
+    if (!selected || !Array.isArray(selected) || selected.length === 0) return "Select Files";
     if (
       selected.length === filenameOptions.length &&
       filenameOptions.length > 0
@@ -688,7 +715,7 @@ const FiltersOrderIQWithFilename = ({
     return `${selected.length} selected`;
   };
 
-  // UPDATED: Better status message rendering
+  // UPDATED: Better status message rendering with location restriction
   const renderStatusMessage = () => {
     if (loadingMasterFileDetails) {
       return (
@@ -701,7 +728,7 @@ const FiltersOrderIQWithFilename = ({
       );
     }
 
-    if (selectedCompanies.length === 0) {
+    if (!selectedCompanies || selectedCompanies.length === 0) {
       return (
         <Typography variant="body2" color="primary" style={{ fontWeight: 500 }}>
           Step 1: Select companies to continue
@@ -709,15 +736,34 @@ const FiltersOrderIQWithFilename = ({
       );
     }
 
-    if (selectedLocations.length === 0) {
+    // NEW: Check for multiple locations selected
+    if (selectedLocations && selectedLocations.length > 1) {
+      return (
+        <Alert 
+          severity="warning" 
+          style={{ 
+            marginTop: 8,
+            backgroundColor: "#fff3cd",
+            color: "#856404",
+            border: "1px solid #ffeaa7"
+          }}
+        >
+          <Typography variant="body2" style={{ fontWeight: 500 }}>
+            Multiple locations selected. Please clear all locations and select only one location to continue.
+          </Typography>
+        </Alert>
+      );
+    }
+
+    if (!selectedLocations || selectedLocations.length === 0) {
       return (
         <Typography variant="body2" color="primary" style={{ fontWeight: 500 }}>
-          Step 2: Select locations to enable file selection
+          Step 2: Select one location to enable file selection
         </Typography>
       );
     }
 
-    if (selectedFilenames.length === 0) {
+    if (!selectedFilenames || selectedFilenames.length === 0) {
       return (
         <Typography variant="body2" color="warning.main" style={{ fontWeight: 500 }}>
           Step 3: Select files to load data ({getFilenameOptions().length} available)
@@ -728,7 +774,7 @@ const FiltersOrderIQWithFilename = ({
     if (getFilenameOptions().length === 0) {
       return (
         <Typography variant="body2" color="warning.main" style={{ fontWeight: 500 }}>
-          No files available for selected companies and locations
+          No files available for selected company and location
         </Typography>
       );
     }
@@ -778,14 +824,14 @@ const FiltersOrderIQWithFilename = ({
           </FormControl>
         </Grid>
 
-        {/* Location Filter - Enabled only when companies are selected */}
+        {/* Location Filter - Single selection only */}
         <Grid item xs={12} md={4}>
           <FormControl fullWidth size="small">
-            <InputLabel>Locations *</InputLabel>
+            <InputLabel>Locations * (Select One)</InputLabel>
             <Select
               multiple
               value={selectedLocations}
-              label="Locations *"
+              label="Locations * (Select One)"
               onChange={(e) => handleLocationChange(e.target.value)}
               renderValue={renderLocationValue}
               disabled={!isLocationDropdownEnabled}
@@ -793,19 +839,17 @@ const FiltersOrderIQWithFilename = ({
                 opacity: isLocationDropdownEnabled ? 1 : 0.6,
               }}
             >
-              {/* Select All Option - Only show when locations are available */}
-              {isLocationDropdownEnabled && getLocationOptions().length > 0 && (
+              {/* Clear All Option - Show when locations are selected */}
+              {isLocationDropdownEnabled && selectedLocations.length > 0 && (
                 <MenuItem
-                  value="select_all"
-                  style={{ fontWeight: "bold", borderBottom: "1px solid #eee" }}
+                  value="clear_all"
+                  style={{ fontWeight: "bold", borderBottom: "1px solid #eee", color: "#d32f2f" }}
                 >
                   <Box
                     style={{ display: "flex", alignItems: "center", gap: 8 }}
                   >
-                    <LocationOnIcon fontSize="small" />
-                    {selectedLocations.length === getLocationOptions().length
-                      ? "Deselect All"
-                      : "Select All Locations"}
+                    <ClearIcon fontSize="small" />
+                    Clear All Locations
                   </Box>
                 </MenuItem>
               )}
@@ -895,12 +939,8 @@ const MasterFile = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [filters, setFilters] = useState({
     priceRange: [0, 100],
-    stockStatus: "all",
     unit: "all",
     category: "all",
-    priceChange: "all",
-    showLowStock: false,
-    showOutOfStock: false,
   });
 
   // Master file details and upload states
@@ -1001,11 +1041,11 @@ const MasterFile = () => {
     }
   }, []); // Run only once on mount
 
-  // FIXED: Auto-apply filters when selections change - ONLY when files are selected
+  // FIXED: Auto-apply filters when selections change - ONLY when files are selected and single location
   useEffect(() => {
     const autoApplyFilters = async () => {
-      // KEY CHANGE: Only auto-apply if we have companies, locations, AND at least one filename
-      if (selectedCompanies.length > 0 && selectedLocations.length > 0 && selectedFilenames.length > 0) {
+      // KEY CHANGE: Only auto-apply if we have companies, exactly ONE location, AND at least one filename
+      if (selectedCompanies.length > 0 && selectedLocations.length === 1 && selectedFilenames.length > 0) {
         console.log("Auto-applying filters due to selection change:", {
           companies: selectedCompanies,
           locations: selectedLocations,
@@ -1039,7 +1079,7 @@ const MasterFile = () => {
             console.log("Single file API params with date range:", apiParams);
             dispatch(loadMasterFileData(apiParams));
           } else {
-            // Multiple files scenario - BATCH THEM
+            // Multiple files scenario - BATCH THEM (but still single location)
             await handleMultipleFilesLoadWithDateRange(
               selectedCompanies,
               selectedLocations,
@@ -1215,7 +1255,7 @@ const MasterFile = () => {
     console.log("Selected date range:", range);
   };
 
-  // Apply filters to items - Updated for dynamic data
+  // Apply filters to items - Updated for dynamic data (removed stock and price change filters)
   const applyFilters = (itemsList) => {
     if (!itemsList.length || !currentPriceColumn) return itemsList;
 
@@ -1254,56 +1294,11 @@ const MasterFile = () => {
         !categoryColumn ||
         item[categoryColumn] === filters.category;
 
-      // Price change filter
-      let matchesPriceChange = true;
-      if (previousPriceColumn && filters.priceChange !== "all") {
-        const previousPrice = parseFloat(item[previousPriceColumn]) || 0;
-        if (filters.priceChange === "increased") {
-          matchesPriceChange = currentPrice > previousPrice;
-        } else if (filters.priceChange === "decreased") {
-          matchesPriceChange = currentPrice < previousPrice;
-        } else if (filters.priceChange === "unchanged") {
-          matchesPriceChange = currentPrice === previousPrice;
-        }
-      }
-
-      // Stock status filter - look for stock/inventory column
-      const stockColumn = Object.keys(columns).find(
-        (key) =>
-          columns[key].toLowerCase().includes("stock") ||
-          columns[key].toLowerCase().includes("inventory") ||
-          columns[key].toLowerCase().includes("quantity")
-      );
-      let matchesStockStatus = true;
-      if (stockColumn && filters.stockStatus !== "all") {
-        const stock = parseInt(item[stockColumn]) || 0;
-        if (filters.stockStatus === "inStock") {
-          matchesStockStatus = stock > 20;
-        } else if (filters.stockStatus === "lowStock") {
-          matchesStockStatus = stock > 0 && stock <= 20;
-        } else if (filters.stockStatus === "outOfStock") {
-          matchesStockStatus = stock === 0;
-        }
-      }
-
-      // Quick filters for stock
-      let matchesLowStock = true;
-      let matchesOutOfStock = true;
-      if (stockColumn) {
-        const stock = parseInt(item[stockColumn]) || 0;
-        matchesLowStock = !filters.showLowStock || (stock > 0 && stock <= 20);
-        matchesOutOfStock = filters.showOutOfStock || stock > 0;
-      }
-
       return (
         matchesSearch &&
         withinPriceRange &&
         matchesUnit &&
-        matchesCategory &&
-        matchesPriceChange &&
-        matchesStockStatus &&
-        matchesLowStock &&
-        matchesOutOfStock
+        matchesCategory
       );
     });
   };

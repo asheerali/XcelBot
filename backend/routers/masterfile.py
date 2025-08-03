@@ -330,7 +330,9 @@ def get_masterfile_details(
         
         for item in file_data:
             # Create a unique key based on Category and Products
-            product_key = f"{item.get('Category', '')}-{item.get('Products', '')}"
+            # product_key = f"{item.get('Category', '')}-{item.get('Products', '')}"
+            product_key = f"{item.get('Category', '')}-{item.get('Products', '')}-{item.get('Current Price', '')}-{item.get('Batch Size', '')}"
+
             
             # If this product hasn't been seen before, add it
             if product_key not in seen_products:

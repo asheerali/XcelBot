@@ -394,157 +394,6 @@ def bulk_create_storeorders(storeorders: list[storeorders_schema.StoreOrdersCrea
     return storeorders_crud.bulk_create_storeorders(db, storeorders)
     
 
-# @router.post("/orderitems")
-# def create_new_order_items(request: OrderItemsRequest,
-#                            background_tasks: BackgroundTasks,
-#                            db: Session = Depends(get_db),
-#                            current_user: User = Depends(get_current_active_user),
-#                            ):
-#     """Create new store orders entry every time"""
-#     print("Received request to create new order:", request.model_dump())
-#     print("dates", request.start_date, request.end_date)
-#     try:
-#         # Prepare the items_ordered data
-#         items_ordered_data = {
-#             "total_items": len(request.items),
-#             "items": request.items,
-#         }
-        
-#         # Always create new store orders entry
-#         create_obj = storeorders_schema.StoreOrdersCreate(
-#             company_id=request.company_id,
-#             location_id=request.location_id,
-#             # created_at=datetime.utcnow(),  # Set current time as created_at
-#             created_at=request.order_date if request.order_date else datetime.utcnow.isoformat(),
-#             items_ordered=items_ordered_data
-#         )
-#         print(f"Creating new store items ordered with data: {items_ordered_data}")
-        
-        
-#         new_order = storeorders_crud.create_storeorders(db, create_obj)
-        
-#         if request.email_order:
-#             company_id = request.company_id
-#             current_user_id = current_user.id   
-#             # print("Email order is enabled. Company ID:", company_id, "Current User ID:", current_user_id)
-            
-#             # Get user details from user ID
-#             user_details = get_user(db, current_user_id)
-            
-#             if user_details and user_details.email:
-#                 # Send order confirmation email in background
-#                 background_tasks.add_task(
-#                     send_order_confirmation_email,
-#                     user_details.email,
-#                     user_details.first_name,
-#                     new_order.id,
-#                     items_ordered_data,
-#                     new_order.created_at,
-#                     False
-#                 )
-#                 print(f"Order confirmation email queued for {user_details.email}")
-#             else:
-#                 print("Warning: Could not find user email for order confirmation")
-            
-        
-
-#         return {
-#             "message": "New store orders created successfully",
-#             "store_orders_id": new_order.id,
-#             "received_data": request.model_dump(),
-#             "items_ordered": items_ordered_data,
-#             "created_at": new_order.created_at.isoformat()
-#         }
-        
-#     except Exception as e:
-#         print(f"Error creating new order: {str(e)}")
-#         import traceback
-#         print(traceback.format_exc())
-#         raise HTTPException(status_code=500, detail=f"Error creating order: {str(e)}")    
-    
-
-# @router.post("/orderitems")
-# def create_new_order_items(
-#     request: OrderItemsRequest,
-#     background_tasks: BackgroundTasks,
-#     db: Session = Depends(get_db),
-#     current_user: User = Depends(get_current_active_user),
-# ):
-#     """Create new store orders entry every time"""
-#     print("Received request to create new order:", request.model_dump())
-#     print("dates", request.start_date, request.end_date)
-
-#     try:
-#         # Parse order_date
-#         # order_date = pd.to_datetime(request.order_date) if request.order_date else datetime.utcnow()
-#         order_date = pd.to_datetime(request.order_date).replace(tzinfo=None) if request.order_date else datetime.utcnow()
-
-#         created_at = order_date  # Default value
-
-#         if request.start_date:
-#             # Get date from start_date and time from order_date
-#             start_date_only = pd.to_datetime(request.start_date).date()
-#             order_time = order_date.time()
-
-#             start_date_with_time = datetime.combine(start_date_only, order_time)
-#             print("Computed start_date_with_time:", start_date_with_time)
-
-#             if order_date < start_date_with_time:
-#                 raise HTTPException(
-#                     status_code=400,
-#                     detail=f"Order date {order_date.isoformat()} is before allowed start date {start_date_with_time.isoformat()}"
-#                 )
-#             else:
-#                 created_at = start_date_with_time  # Use adjusted timestamp
-
-#         # Prepare items_ordered
-#         items_ordered_data = {
-#             "total_items": len(request.items),
-#             "items": request.items,
-#         }
-
-#         # Create object using `created_at`
-#         create_obj = storeorders_schema.StoreOrdersCreate(
-#             company_id=request.company_id,
-#             location_id=request.location_id,
-#             created_at=created_at.isoformat(),
-#             items_ordered=items_ordered_data
-#         )
-
-#         print(f"Creating new store items ordered with data: {items_ordered_data}")
-#         new_order = storeorders_crud.create_storeorders(db, create_obj)
-
-#         # Background email sending
-#         if request.email_order:
-#             user_details = get_user(db, current_user.id)
-#             if user_details and user_details.email:
-#                 background_tasks.add_task(
-#                     send_order_confirmation_email,
-#                     user_details.email,
-#                     user_details.first_name,
-#                     new_order.id,
-#                     items_ordered_data,
-#                     new_order.created_at,
-#                     False
-#                 )
-#                 print(f"Order confirmation email queued for {user_details.email}")
-#             else:
-#                 print("Warning: Could not find user email for order confirmation")
-
-#         return {
-#             "message": "New store orders created successfully",
-#             "store_orders_id": new_order.id,
-#             "received_data": request.model_dump(),
-#             "items_ordered": items_ordered_data,
-#             "created_at": new_order.created_at.isoformat()
-#         }
-
-#     except Exception as e:
-#         print(f"Error creating new order: {str(e)}")
-#         import traceback
-#         print(traceback.format_exc())
-#         raise HTTPException(status_code=500, detail=f"Error creating order: {str(e)}")
-
 
 @router.post("/orderitems")
 def create_new_order_items(
@@ -866,102 +715,6 @@ def update_storeorders_by_id(
         raise HTTPException(status_code=500, detail=f"Error updating store order: {str(e)}")
     
 
-# @router.get("/analytics/{company_id}/{location_id}")
-# def get_avg_daily_orders(
-#     company_id: int, 
-#     location_id: int, 
-#     db: Session = Depends(get_db)
-# ):
-#     """Get average daily orders, total orders, and top 2 items ordered for a company and location"""
-    
-#     try:
-#         # FIXED: Use get_storeorders_by_location() to get ALL orders, not just the latest one
-#         storeorders = storeorders_crud.get_storeorders_by_location(db, location_id)
-        
-#         # Filter by company_id since get_storeorders_by_location doesn't filter by company
-#         storeorders = [order for order in storeorders if order.company_id == company_id]
-        
-#         if not storeorders:
-#             return {
-#                 "message": "No store orders found for this company and location", 
-#                 "data": {
-#                     "total_orders": 0,
-#                     "avg_daily_orders": 0,
-#                     "date_range": None,
-#                     "top_items": []
-#                 }
-#             }
-        
-#         total_orders = len(storeorders)
-        
-#         # Calculate average daily orders
-#         if total_orders > 0:
-#             # Get valid dates only
-#             valid_dates = [order.created_at for order in storeorders if order.created_at]
-            
-#             if valid_dates:
-#                 first_order_date = min(valid_dates)
-#                 last_order_date = max(valid_dates)
-#                 days_difference = (last_order_date - first_order_date).days + 1  # Include the last day
-                
-#                 avg_daily_orders = round(total_orders / days_difference, 2) if days_difference > 0 else total_orders
-#                 date_range = {
-#                     "first_order": first_order_date.strftime('%Y-%m-%d'),
-#                     "last_order": last_order_date.strftime('%Y-%m-%d'),
-#                     "total_days": days_difference
-#                 }
-#             else:
-#                 avg_daily_orders = 0
-#                 date_range = None
-#         else:
-#             avg_daily_orders = 0
-#             date_range = None
-        
-#         # Aggregate items ordered
-#         item_counts = {}
-#         for order in storeorders:
-#             if order.items_ordered and 'items' in order.items_ordered:
-#                 items_ordered = order.items_ordered.get('items', [])
-#                 for item in items_ordered:
-#                     # Handle different possible item structure
-#                     item_name = item.get('name') or item.get('product') or item.get('item_name', 'Unknown')
-#                     item_quantity = item.get('quantity', 1)
-                    
-#                     if item_name in item_counts:
-#                         item_counts[item_name] += item_quantity
-#                     else:
-#                         item_counts[item_name] = item_quantity
-        
-#         # Get top 2 items ordered
-#         top_items = sorted(item_counts.items(), key=lambda x: x[1], reverse=True)[:2]
-#         top_items_formatted = [{"name": name, "total_quantity": quantity} for name, quantity in top_items]
-        
-#         # Get company and location names for response
-#         company = db.query(Company).filter(Company.id == company_id).first()
-#         location = db.query(Store).filter(Store.id == location_id).first()
-        
-#         return {
-#             "message": "Average daily orders and top items fetched successfully",
-#             "data": {
-#                 "company_name": company.name if company else "Unknown",
-#                 "location_name": location.name if location else "Unknown",
-#                 "total_orders": total_orders,
-#                 "avg_daily_orders": avg_daily_orders,
-#                 "date_range": date_range,
-#                 "top_items": top_items_formatted,
-#                 "all_items_summary": {
-#                     "unique_items_count": len(item_counts),
-#                     "total_item_quantities": sum(item_counts.values())
-#                 }
-#             }
-#         }
-    
-#     except Exception as e:
-#         print(f"Error fetching average daily orders: {str(e)}")
-#         import traceback
-#         print(traceback.format_exc())
-#         raise HTTPException(status_code=500, detail=f"Error fetching average daily orders: {str(e)}")
-
 
 
 @router.get("/analytics/{company_id}/{location_id}")
@@ -1082,131 +835,6 @@ def get_avg_daily_orders(
         raise HTTPException(status_code=500, detail=f"Error fetching average daily orders: {str(e)}")
 
 
-
-
-# @router.get("/analyticsdashboard/{company_id}/{location_id}")
-# def get_analytics_dashboard(
-#     company_id: int, 
-#     location_id: int, 
-#     start_date: str = Query(None),
-#     end_date: str = Query(None),
-#     db: Session = Depends(get_db)
-# ):
-#     """Get total sales, total orders, average order value, and daily analytics tables"""
-#     print(f"Fetching analytics dashboard for company {company_id} and location {location_id} with date range {start_date} to {end_date}")
-#     try:
-#         storeorders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
-
-#                # Apply date filtering if start_date and end_date are provided
-#         if start_date and end_date:
-#             try:
-#                 start = datetime.strptime(start_date, "%Y-%m-%d").date()
-#                 end = datetime.strptime(end_date, "%Y-%m-%d").date()
-#                 print("Filtering store orders between dates:", start, end)
-#                 storeorders = [
-#                     order for order in storeorders
-#                     if (order.updated_at or order.created_at)
-#                     and start <= (order.updated_at or order.created_at).date() <= end
-#                 ]
-#             except ValueError:
-#                 return {"message": "Invalid date format. Use YYYY-MM-DD", "data": []}
-        
-        
-#         if not storeorders:
-#             return {
-#                 "message": "No store orders found for this company and location", 
-#                 "data": {
-#                     "total_sales": 0,
-#                     "total_orders": 0,
-#                     "avg_order_value": 0.0,
-#                     "daily_orders": [],
-#                     "avg_order_value_table": [],
-#                     "daily_sales_trend": []
-#                 }
-#             }
-
-#         if not isinstance(storeorders, list):
-#             storeorders = [storeorders] if storeorders else []
-
-#         total_orders = len(storeorders)
-#         total_sales = 0.0
-
-#         # Build rows with date and order_sales
-#         rows = []
-#         for order in storeorders:
-#             created_date = order.created_at.date()
-#             order_sales = 0.0
-#             if order.items_ordered and "items" in order.items_ordered:
-#                 for item in order.items_ordered["items"]:
-#                     total_price = item.get("total_price", 0)
-#                     order_sales += float(total_price)
-#             total_sales += order_sales
-#             rows.append({"created_at": created_date, "order_sales": order_sales})
-
-#         avg_order_value = round(total_sales / total_orders, 2) if total_orders > 0 else 0.0
-
-#         df = pd.DataFrame(rows)
-#         df["created_at"] = pd.to_datetime(df["created_at"])
-
-#         # Daily Orders
-#         daily_counts = df.groupby(df["created_at"].dt.date).size().reset_index(name="order_count")
-#         daily_counts["created_at"] = pd.to_datetime(daily_counts["created_at"])
-#         daily_counts = daily_counts.sort_values(by="created_at")
-#         daily_counts["moving_avg"] = daily_counts["order_count"].rolling(window=5, min_periods=1).mean().round(2)
-
-#         # Daily Sales and Avg Order Value
-#         daily_sales = df.groupby(df["created_at"].dt.date).agg(
-#             total_sales_per_day=("order_sales", "sum"),
-#             order_count=("order_sales", "count")
-#         ).reset_index()
-#         daily_sales["created_at"] = pd.to_datetime(daily_sales["created_at"])
-#         daily_sales["avg_order_value"] = (daily_sales["total_sales_per_day"] / daily_sales["order_count"]).round(2)
-#         daily_sales = daily_sales.sort_values(by="created_at")
-#         daily_sales["moving_avg"] = daily_sales["avg_order_value"].rolling(window=5, min_periods=1).mean().round(2)
-
-#         # Daily Sales Trend (new)
-#         daily_sales_trend_df = daily_sales[["created_at", "total_sales_per_day"]].copy()
-#         daily_sales_trend_df = daily_sales_trend_df.sort_values(by="created_at")
-#         daily_sales_trend_df["moving_avg"] = daily_sales_trend_df["total_sales_per_day"].rolling(window=5, min_periods=1).mean().round(2)
-
-#         # Format dates
-#         if platform.system() == "Windows":
-#             date_format = "%b %#d"
-#         else:
-#             date_format = "%b %-d"
-
-#         daily_counts = daily_counts.rename(columns={"created_at": "date"})
-#         daily_counts["date"] = daily_counts["date"].dt.strftime(date_format)
-
-#         daily_sales = daily_sales.rename(columns={"created_at": "date"})
-#         daily_sales["date"] = daily_sales["date"].dt.strftime(date_format)
-
-#         daily_sales_trend_df = daily_sales_trend_df.rename(columns={"created_at": "date", "total_sales_per_day": "total_sales"})
-#         daily_sales_trend_df["date"] = daily_sales_trend_df["date"].dt.strftime(date_format)
-
-#         # Company and Location Info
-#         company = db.query(Company).filter(Company.id == company_id).first()
-#         location = db.query(Store).filter(Store.id == location_id).first()
-
-#         return {
-#             "message": "Analytics dashboard data fetched successfully",
-#             "data": {
-#                 "company_name": company.name if company else "Unknown",
-#                 "location_name": location.name if location else "Unknown",
-#                 "total_sales": total_sales,
-#                 "total_orders": total_orders,
-#                 "avg_order_value": avg_order_value,
-#                 "daily_orders": daily_counts.to_dict(orient="records"),
-#                 "avg_order_value_table": daily_sales.to_dict(orient="records"),
-#                 "daily_sales_trend": daily_sales_trend_df.to_dict(orient="records")
-#             }
-#         }
-
-#     except Exception as e:
-#         print(f"Error fetching analytics dashboard data: {str(e)}")
-#         import traceback
-#         print(traceback.format_exc())
-#         raise HTTPException(status_code=500, detail=f"Error fetching analytics dashboard data: {str(e)}")
 
 
 @router.get("/analyticsdashboard/{company_id}/{location_ids}")
@@ -1333,89 +961,6 @@ def get_analytics_dashboard(
         raise HTTPException(status_code=500, detail=f"Error fetching analytics dashboard data: {str(e)}")
 
 
-# @router.get("/allordersinvoices/{company_id}/{location_id}")
-# def get_analytics_dashboard(
-#     company_id: int, 
-#     location_id: int, 
-#     startDate: str = Query(None),
-#     endDate: str = Query(None),
-#     db: Session = Depends(get_db)
-# ):
-#     """Get total sales, total orders, average order value, and daily analytics tables"""
-#     print(f"Fetching all orders and invoices for company {company_id} and location {location_id} with date range {startDate} to {endDate}")
-#     try:
-#         # storeorders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
-#         storeorders = storeorders_crud.get_recent_storeorders_by_company_and_location(db, company_id, location_id, limit="all")
-
-
-#         if not isinstance(storeorders, list):
-#             storeorders = [storeorders] if storeorders else []
-
-#         # Apply date filtering if startDate and endDate are provided
-#         if startDate and endDate:
-#             try:
-#                 start = datetime.strptime(startDate, "%Y-%m-%d").date()
-#                 end = datetime.strptime(endDate, "%Y-%m-%d").date()
-#                 print("Filtering store orders between dates:", start, end)
-#                 storeorders = [
-#                     order for order in storeorders
-#                     if (order.updated_at or order.created_at)
-#                     and start <= (order.updated_at or order.created_at).date() <= end
-#                 ]
-#             except ValueError:
-#                 return {"message": "Invalid date format. Use YYYY-MM-DD", "data": []}
-        
-        
-
-
-#         total_sales = 0.0
-#         # Build rows with date and order_sales
-#         rows = []
-#         for order in storeorders:
-#             # print("i am here in the store orders printing the _items_ordered_", order)
-#             the_date = order.updated_at if order.updated_at else order.created_at
-#             created_date = the_date
-#             total_amount = 0.0
-#             total_quantity = 0
-
-#             if order.items_ordered:
-#                 items = order.items_ordered.get("items", [])
-#                 for item in items:
-#                     total_price = item.get("total_price", 0)
-#                     if total_price is None:
-#                         total_price = 0
-
-#                     quantity = item.get("quantity", 0)
-#                     if quantity is None:
-#                         quantity = 0
-#                     total_amount += float(total_price)
-#                     total_quantity += int(quantity)
-
-#                 items_count = order.items_ordered.get("total_items", len(items))
-#             else:
-#                 items_count = 0
-
-#             total_sales += total_amount
-#             rows.append({
-#                 "order_id": order.id,
-#                 "created_at": created_date,
-#                 "items_count": items_count,
-#                 "total_quantity": total_quantity,
-#                 "total_amount": total_amount,
-#             })
-
-#         return {
-#             "message": "Analytics dashboard data fetched successfully",
-#             "data": rows,
-#             "total": total_sales
-#         }
-
-#     except Exception as e:
-#         print(f"Error fetching analytics dashboard data: {str(e)}")
-#         import traceback
-#         print(traceback.format_exc())
-#         raise HTTPException(status_code=500, detail=f"Error fetching analytics dashboard data: {str(e)}")
-
 
 @router.get("/allordersinvoices/{company_id}/{location_ids}")
 def get_analytics_dashboard(
@@ -1432,7 +977,7 @@ def get_analytics_dashboard(
         "order_id": "#-",
         "created_at": "-",
         "items_count": 0,
-        "total_quantity": 0,
+        "total_quantity": 0.0,
         "total_amount": 0.0
     }]
 
@@ -1484,7 +1029,7 @@ def get_analytics_dashboard(
             the_date = order.updated_at if order.updated_at else order.created_at
             created_date = the_date
             total_amount = 0.0
-            total_quantity = 0
+            total_quantity = 0.0
 
             if order.items_ordered:
                 items = order.items_ordered.get("items", [])
@@ -1492,7 +1037,7 @@ def get_analytics_dashboard(
                     total_price = item.get("total_price", 0) or 0
                     quantity = item.get("quantity", 0) or 0
                     total_amount += float(total_price)
-                    total_quantity += int(quantity)
+                    total_quantity += float(quantity)
                 items_count = order.items_ordered.get("total_items", len(items))
             else:
                 items_count = 0
