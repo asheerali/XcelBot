@@ -803,7 +803,8 @@ def get_financials_uploaded_files_list(db: Session, company_id: Optional[int] = 
         
         if file_key not in files_dict:
             file_timestamp = parse_datetime_from_filename(row.file_name)
-            clean_file_name = extract_clean_filename(row.file_name)
+            # clean_file_name = extract_clean_filename(row.file_name)
+            clean_file_name = row.file_name
             files_dict[file_key] = {
                 "file_name": clean_file_name,
                 "file_timestamp": file_timestamp,

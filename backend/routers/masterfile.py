@@ -1,6 +1,6 @@
 import datetime
 import traceback
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from models.locations import Store
 from models.companies import Company
@@ -10,10 +10,8 @@ from database import get_db
 import pandas as pd
 from crud.locations import get_store  # Add this import at the top with your other imports
 
-
 from pydantic import BaseModel
-from typing import Dict, Any
-
+from typing import Dict, Any, Optional, List
 class UpdateMasterFileRequest(BaseModel):
     company_id: int
     location_id: int
@@ -627,4 +625,113 @@ def get_specific_masterfile_dataframe(db: Session = Depends(get_db)):
         }
     }
     
+
+
+# router/master_file.py - Add these new endpoints:
+
+@router.delete("/bulk/by-location-and-company")
+def delete_masterfiles_by_location_and_company(
+    location_id: int = Query(..., description="Location ID to delete records for"),
+    company_id: int = Query(..., description="Company ID to delete records for"),
+    filename: Optional[str] = Query(None, description="Optional filename to filter deletion"),
+    confirm: bool = Query(False, description="Must be set to true to confirm deletion"),
+    db: Session = Depends(get_db),
+    # current_user: User = Depends(get_current_active_user)
+):
+    """Delete master file records for a specific location and company combination"""
+    if not confirm:
+        raise HTTPException(
+            status_code=400, 
+            detail="You must set confirm=true to delete records. This action cannot be undone."
+        )
     
+    result = masterfile_crud.delete_masterfiles_by_location_and_company(db, location_id, company_id, filename)
+    
+    if result["deleted_count"] == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No master files found for the specified criteria"
+        )
+    
+    filter_info = f"location_id '{location_id}' and company_id '{company_id}'"
+    if filename:
+        filter_info += f" and filename '{filename}'"
+    
+    return {
+        "detail": f"Successfully deleted {result['deleted_count']} master file records for {filter_info}",
+        "deleted_count": result["deleted_count"],
+        "location_id": location_id,
+        "company_id": company_id,
+        "filename": filename
+    }
+
+
+@router.delete("/{masterfile_id}")
+def delete_masterfile_by_id(
+    masterfile_id: int,
+    confirm: bool = Query(False, description="Must be set to true to confirm deletion"),
+    db: Session = Depends(get_db),
+    # current_user: User = Depends(get_current_active_user)
+):
+    """Delete a specific master file record by ID"""
+    if not confirm:
+        raise HTTPException(
+            status_code=400, 
+            detail="You must set confirm=true to delete records. This action cannot be undone."
+        )
+    
+    result = masterfile_crud.delete_masterfile(db, masterfile_id)
+    
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Master file with ID {masterfile_id} not found"
+        )
+    
+    return {
+        "detail": f"Successfully deleted master file record with ID {masterfile_id}",
+        "masterfile_id": masterfile_id
+    }
+
+
+@router.get("/analytics/file-list")
+def get_uploaded_masterfiles_list(
+    company_id: Optional[int] = Query(None, description="Filter by company ID"),
+    location_id: Optional[int] = Query(None, description="Filter by location ID"),
+    include_location_breakdown: bool = Query(False, description="Include location breakdown"),
+    db: Session = Depends(get_db),
+    # current_user: User = Depends(get_current_active_user)
+):
+    """Get list of all uploaded master files with metadata and optional location breakdown"""
+    if include_location_breakdown:
+        files = masterfile_crud.get_uploaded_masterfiles_list_with_locations(db, company_id, location_id)
+    else:
+        files = masterfile_crud.get_uploaded_masterfiles_list(db, company_id, location_id)
+    return files
+
+
+@router.get("/analytics/locations")
+def get_masterfile_locations_list(
+    company_id: Optional[int] = Query(None, description="Filter by company ID"),
+    db: Session = Depends(get_db),
+    # current_user: User = Depends(get_current_active_user)
+):
+    """Get list of all locations with master file counts"""
+    locations = masterfile_crud.get_masterfile_locations_list(db, company_id)
+    return locations
+
+
+@router.get("/analytics/companies")
+def get_masterfile_companies_list(
+    location_id: Optional[int] = Query(None, description="Filter by location ID"),
+    db: Session = Depends(get_db),
+    # current_user: User = Depends(get_current_active_user)
+):
+    """Get list of all companies with master file counts"""
+    companies = masterfile_crud.get_masterfile_companies_list(db, location_id)
+    return companies
+
+
+
+
+

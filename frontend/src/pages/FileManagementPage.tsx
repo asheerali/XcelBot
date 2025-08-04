@@ -139,9 +139,12 @@ const FileManagementPage = () => {
   const [loading, setLoading] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState({
     open: false,
-    fileName: "",
+    fileName: "", // This will store the original filename with timestamp
+    displayName: "", // This will store the clean display name
+    fileId: null, // For master file deletions
     type: "",
     companyName: "",
+    locationName: "", // For master file location display
     selectedLocation: "",
     availableLocations: [],
   });
@@ -176,7 +179,8 @@ const FileManagementPage = () => {
       bgGradient: "linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%)",
       fileListEndpoint: "/financialscompanywide/analytics/file-list",
       deleteEndpoint: "/financialscompanywide/bulk/by-filename",
-      locationDeleteEndpoint: "/financialscompanywide/bulk/by-store-and-company",
+      locationDeleteEndpoint:
+        "/financialscompanywide/bulk/by-store-and-company",
       locationsEndpoint: "/financialscompanywide/analytics/stores",
       locationKey: "store",
       locationsField: "stores",
@@ -197,9 +201,57 @@ const FileManagementPage = () => {
       locationsField: "stores",
       hasSales: true,
     },
+    {
+      name: "Master File",
+      key: "masterfile",
+      icon: StorageIcon,
+      color: theme.palette.info.main,
+      gradient: "linear-gradient(135deg, #0288d1 0%, #0277bd 100%)",
+      bgGradient: "linear-gradient(135deg, #e1f5fe 0%, #b3e5fc 100%)",
+      fileListEndpoint: "api/masterfile/analytics/file-list",
+      deleteEndpoint: "api/masterfile", // Will use /{id} format
+      locationsEndpoint: null, // Master file doesn't have separate locations endpoint
+      locationKey: null,
+      locationsField: null,
+      hasSales: false,
+      isMasterFile: true, // Special flag for master file handling
+    },
   ];
 
   const currentDataType = dataTypes[activeTab];
+
+  // Helper function to clean filename by removing timestamp pattern
+  const cleanFileName = (fileName) => {
+    if (!fileName) return "N/A";
+
+    // Remove common timestamp patterns like _20241201_143022, _2024-12-01_14-30-22, etc.
+    const timestampPatterns = [
+      /_\d{8}_\d{6}/, // _20241201_143022
+      /_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}/, // _2024-12-01_14-30-22
+      /_\d{4}\d{2}\d{2}\d{6}/, // _20241201143022
+      /_\d{13}/, // Unix timestamp _1701234567890
+      /_\d{10}/, // Unix timestamp _1701234567
+      /\d{8}_\d{6}/, // 20241201_143022 (without underscore prefix)
+      /\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}/, // 2024-12-01_14-30-22
+    ];
+
+    let cleanName = fileName;
+
+    // Try to remove each timestamp pattern
+    timestampPatterns.forEach((pattern) => {
+      cleanName = cleanName.replace(pattern, "");
+    });
+
+    // Remove any leading or trailing underscores/dashes that might be left
+    cleanName = cleanName.replace(/^[_-]+|[_-]+$/g, "");
+
+    // If we accidentally removed the entire filename, return the original
+    if (!cleanName || cleanName.trim() === "") {
+      return fileName;
+    }
+
+    return cleanName;
+  };
 
   useEffect(() => {
     fetchData();
@@ -221,14 +273,18 @@ const FileManagementPage = () => {
       console.log("📂 Files response:", filesResponse.data);
       setFiles(Array.isArray(filesResponse.data) ? filesResponse.data : []);
 
-      // Fetch locations
-      const locationsResponse = await apiClient.get(
-        currentDataType.locationsEndpoint
-      );
-      console.log("📍 Locations response:", locationsResponse.data);
-      setLocations(
-        Array.isArray(locationsResponse.data) ? locationsResponse.data : []
-      );
+      // Fetch locations (only for non-master file types)
+      if (!currentDataType.isMasterFile && currentDataType.locationsEndpoint) {
+        const locationsResponse = await apiClient.get(
+          currentDataType.locationsEndpoint
+        );
+        console.log("📍 Locations response:", locationsResponse.data);
+        setLocations(
+          Array.isArray(locationsResponse.data) ? locationsResponse.data : []
+        );
+      } else {
+        setLocations([]);
+      }
     } catch (error) {
       console.error("❌ Error fetching data:", error);
 
@@ -272,28 +328,56 @@ const FileManagementPage = () => {
     setExpandedFiles(newExpanded);
   };
 
-  const handleDeleteClick = (fileName, companyName, fileLocations = []) => {
-    const availableLocations = fileLocations.map(loc => ({
-      name: loc[currentDataType.locationKey],
-      ...loc
-    }));
-    
-    setDeleteDialog({
-      open: true,
-      fileName,
-      type: currentDataType.name,
-      companyName,
-      selectedLocation: "",
-      availableLocations,
-    });
+  const handleDeleteClick = (
+    fileName,
+    companyName,
+    fileLocations = [],
+    fileId = null,
+    locationName = ""
+  ) => {
+    if (currentDataType.isMasterFile) {
+      // Master file deletion
+      setDeleteDialog({
+        open: true,
+        fileName,
+        displayName: cleanFileName(fileName),
+        fileId,
+        type: currentDataType.name,
+        companyName,
+        locationName,
+        selectedLocation: "",
+        availableLocations: [],
+      });
+    } else {
+      // Regular file deletion
+      const availableLocations = fileLocations.map((loc) => ({
+        name: loc[currentDataType.locationKey],
+        ...loc,
+      }));
+
+      setDeleteDialog({
+        open: true,
+        fileName,
+        displayName: cleanFileName(fileName),
+        fileId: null,
+        type: currentDataType.name,
+        companyName,
+        locationName: "",
+        selectedLocation: "",
+        availableLocations,
+      });
+    }
   };
 
   const handleLocationDeleteClick = (fileName, companyName, locationName) => {
     setDeleteDialog({
       open: true,
-      fileName,
+      fileName, // Keep original filename for API calls
+      displayName: cleanFileName(fileName), // Clean name for display
+      fileId: null,
       type: currentDataType.name,
       companyName,
+      locationName: "",
       selectedLocation: locationName,
       availableLocations: [],
     });
@@ -303,12 +387,20 @@ const FileManagementPage = () => {
     try {
       console.log("🗑️ Deleting:", {
         fileName: deleteDialog.fileName,
+        fileId: deleteDialog.fileId,
         location: deleteDialog.selectedLocation,
         company: deleteDialog.companyName,
+        isMasterFile: currentDataType.isMasterFile,
       });
 
       let response;
-      if (deleteDialog.selectedLocation) {
+
+      if (currentDataType.isMasterFile) {
+        // Master file deletion by ID
+        response = await apiClient.delete(
+          `${currentDataType.deleteEndpoint}/${deleteDialog.fileId}`
+        );
+      } else if (deleteDialog.selectedLocation) {
         // Delete specific location
         response = await apiClient.delete(
           currentDataType.locationDeleteEndpoint,
@@ -321,21 +413,26 @@ const FileManagementPage = () => {
           }
         );
       } else {
-        // Delete entire file
+        // Delete entire file - use original filename
         response = await apiClient.delete(currentDataType.deleteEndpoint, {
           params: {
-            file_name: deleteDialog.fileName,
+            file_name: deleteDialog.fileName, // Use original filename
             confirm: true,
           },
         });
       }
 
       console.log("✅ Delete successful:", response.data);
-      
-      const successMessage = deleteDialog.selectedLocation
-        ? `Location "${deleteDialog.selectedLocation}" deleted successfully from "${deleteDialog.fileName}"`
-        : `File "${deleteDialog.fileName}" deleted successfully`;
-        
+
+      let successMessage;
+      if (currentDataType.isMasterFile) {
+        successMessage = `Master file "${deleteDialog.displayName}" deleted successfully`;
+      } else {
+        successMessage = deleteDialog.selectedLocation
+          ? `Location "${deleteDialog.selectedLocation}" deleted successfully from "${deleteDialog.displayName}"`
+          : `File "${deleteDialog.displayName}" deleted successfully`;
+      }
+
       showAlert(successMessage, "success");
       fetchData();
     } catch (error) {
@@ -361,8 +458,11 @@ const FileManagementPage = () => {
       setDeleteDialog({
         open: false,
         fileName: "",
+        displayName: "",
+        fileId: null,
         type: "",
         companyName: "",
+        locationName: "",
         selectedLocation: "",
         availableLocations: [],
       });
@@ -373,8 +473,11 @@ const FileManagementPage = () => {
     setDeleteDialog({
       open: false,
       fileName: "",
+      displayName: "",
+      fileId: null,
       type: "",
       companyName: "",
+      locationName: "",
       selectedLocation: "",
       availableLocations: [],
     });
@@ -434,10 +537,21 @@ const FileManagementPage = () => {
 
   // Calculate total locations/stores from files
   const getTotalLocationsFromFiles = () => {
+    if (currentDataType.isMasterFile) {
+      // For master files, count unique locations directly
+      const uniqueLocations = new Set();
+      files.forEach((file) => {
+        if (file.location_name) {
+          uniqueLocations.add(file.location_name);
+        }
+      });
+      return uniqueLocations.size;
+    }
+
     const allLocations = new Set();
-    files.forEach(file => {
+    files.forEach((file) => {
       const fileLocations = file[currentDataType.locationsField] || [];
-      fileLocations.forEach(loc => {
+      fileLocations.forEach((loc) => {
         allLocations.add(loc[currentDataType.locationKey]);
       });
     });
@@ -446,9 +560,22 @@ const FileManagementPage = () => {
 
   // Calculate total sales from files
   const getTotalSalesFromFiles = () => {
+    if (currentDataType.isMasterFile) {
+      return 0; // Master files don't have sales data
+    }
     return files.reduce((sum, file) => {
       return sum + (file.total_sales || 0);
     }, 0);
+  };
+
+  // Calculate total rows for master files
+  const getTotalRowsFromFiles = () => {
+    if (currentDataType.isMasterFile) {
+      return files.reduce((sum, file) => {
+        return sum + (file.total_rows || 0);
+      }, 0);
+    }
+    return files.reduce((sum, file) => sum + (file.record_count || 0), 0);
   };
 
   const renderFileColumns = () => {
@@ -522,6 +649,18 @@ const FileManagementPage = () => {
       </TableCell>
     );
 
+    if (currentDataType.isMasterFile) {
+      return (
+        <>
+          {renderHeader("Company", "company_name")}
+          {renderHeader("Location", "location_name")}
+          {renderHeader("Upload Date", "upload_date")}
+          {renderHeader("Updated At", "updated_at")}
+          {renderHeader("Total Rows", "total_rows")}
+        </>
+      );
+    }
+
     return (
       <>
         {renderHeader("Company", "company_name")}
@@ -547,19 +686,100 @@ const FileManagementPage = () => {
   };
 
   const renderFileData = (file) => {
+    if (currentDataType.isMasterFile) {
+      return (
+        <>
+          <TableCell sx={{ maxWidth: 120 }}>
+            <Typography
+              variant="body2"
+              sx={{ fontWeight: 500, fontSize: "0.875rem" }}
+            >
+              {file.company_name || "N/A"}
+            </Typography>
+          </TableCell>
+
+          <TableCell sx={{ maxWidth: 140 }}>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <LocationOnIcon
+                sx={{
+                  mr: 1,
+                  color: theme.palette.text.secondary,
+                  fontSize: 16,
+                }}
+              />
+              <Typography variant="body2" sx={{ fontSize: "0.875rem" }}>
+                {file.location_name || "N/A"}
+              </Typography>
+            </Box>
+          </TableCell>
+
+          <TableCell sx={{ maxWidth: 140 }}>
+            <Typography
+              variant="body2"
+              sx={{ fontFamily: "monospace", fontSize: "0.8rem" }}
+            >
+              {formatDateTime(file.upload_date)}
+            </Typography>
+          </TableCell>
+
+          <TableCell sx={{ maxWidth: 140 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                fontFamily: "monospace",
+                fontSize: "0.8rem",
+                color:
+                  file.updated_at === "-"
+                    ? theme.palette.text.disabled
+                    : theme.palette.text.primary,
+              }}
+            >
+              {file.updated_at === "-"
+                ? "Not Updated"
+                : formatDateTime(file.updated_at)}
+            </Typography>
+          </TableCell>
+
+          <TableCell sx={{ maxWidth: 100 }}>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <StorageIcon
+                sx={{
+                  mr: 1,
+                  color: theme.palette.text.secondary,
+                  fontSize: 16,
+                }}
+              />
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 500, fontSize: "0.875rem" }}
+              >
+                {file.total_rows?.toLocaleString() || "N/A"}
+              </Typography>
+            </Box>
+          </TableCell>
+        </>
+      );
+    }
+
     const fileLocations = file[currentDataType.locationsField] || [];
     const isExpanded = expandedFiles.has(file.file_name);
 
     return (
       <>
         <TableCell sx={{ maxWidth: 120 }}>
-          <Typography variant="body2" sx={{ fontWeight: 500, fontSize: "0.875rem" }}>
+          <Typography
+            variant="body2"
+            sx={{ fontWeight: 500, fontSize: "0.875rem" }}
+          >
             {file.company_name || "N/A"}
           </Typography>
         </TableCell>
 
         <TableCell sx={{ maxWidth: 140 }}>
-          <Typography variant="body2" sx={{ fontFamily: "monospace", fontSize: "0.8rem" }}>
+          <Typography
+            variant="body2"
+            sx={{ fontFamily: "monospace", fontSize: "0.8rem" }}
+          >
             {formatDateTime(file.file_timestamp)}
           </Typography>
         </TableCell>
@@ -573,7 +793,10 @@ const FileManagementPage = () => {
                 fontSize: 16,
               }}
             />
-            <Typography variant="body2" sx={{ fontWeight: 500, fontSize: "0.875rem" }}>
+            <Typography
+              variant="body2"
+              sx={{ fontWeight: 500, fontSize: "0.875rem" }}
+            >
               {file.record_count?.toLocaleString() || "N/A"}
             </Typography>
           </Box>
@@ -601,30 +824,44 @@ const FileManagementPage = () => {
         </TableCell>
 
         <TableCell sx={{ maxWidth: 200 }}>
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
             <Box>
-              <Typography variant="body2" sx={{ fontWeight: 500, fontSize: "0.875rem" }}>
-                {fileLocations.length} {currentDataType.key === "salespmix" ? "locations" : "stores"}
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 500, fontSize: "0.875rem" }}
+              >
+                {fileLocations.length}{" "}
+                {currentDataType.key === "salespmix" ? "locations" : "stores"}
               </Typography>
-              
+
               {/* Compact location chips */}
-              <Box sx={{ mt: 0.5, display: "flex", flexWrap: "wrap", gap: 0.25 }}>
-                {fileLocations.slice(0, isExpanded ? fileLocations.length : 2).map((location, idx) => (
-                  <Chip
-                    key={idx}
-                    label={location[currentDataType.locationKey]}
-                    size="small"
-                    variant="outlined"
-                    sx={{
-                      height: 20,
-                      fontSize: "0.7rem",
-                      textTransform: "capitalize",
-                      "& .MuiChip-label": {
-                        px: 0.5,
-                      },
-                    }}
-                  />
-                ))}
+              <Box
+                sx={{ mt: 0.5, display: "flex", flexWrap: "wrap", gap: 0.25 }}
+              >
+                {fileLocations
+                  .slice(0, isExpanded ? fileLocations.length : 2)
+                  .map((location, idx) => (
+                    <Chip
+                      key={idx}
+                      label={location[currentDataType.locationKey]}
+                      size="small"
+                      variant="outlined"
+                      sx={{
+                        height: 20,
+                        fontSize: "0.7rem",
+                        textTransform: "capitalize",
+                        "& .MuiChip-label": {
+                          px: 0.5,
+                        },
+                      }}
+                    />
+                  ))}
                 {!isExpanded && fileLocations.length > 2 && (
                   <Chip
                     label={`+${fileLocations.length - 2}`}
@@ -643,20 +880,24 @@ const FileManagementPage = () => {
                 )}
               </Box>
             </Box>
-            
+
             {fileLocations.length > 0 && (
               <IconButton
                 size="small"
                 onClick={() => toggleFileExpansion(file.file_name)}
-                sx={{ 
+                sx={{
                   ml: 1,
                   color: theme.palette.primary.main,
                   "&:hover": {
                     backgroundColor: alpha(theme.palette.primary.main, 0.04),
-                  }
+                  },
                 }}
               >
-                {isExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                {isExpanded ? (
+                  <ExpandLessIcon fontSize="small" />
+                ) : (
+                  <ExpandMoreIcon fontSize="small" />
+                )}
               </IconButton>
             )}
           </Box>
@@ -686,7 +927,7 @@ const FileManagementPage = () => {
     let valA = a[sortBy];
     let valB = b[sortBy];
 
-    if (sortBy === "file_timestamp") {
+    if (sortBy === "file_timestamp" || sortBy === "upload_date") {
       valA = new Date(valA);
       valB = new Date(valB);
       return sortOrder === "asc" ? valA - valB : valB - valA;
@@ -924,9 +1165,7 @@ const FileManagementPage = () => {
                       lineHeight: 1,
                     }}
                   >
-                    {files
-                      .reduce((sum, file) => sum + (file.record_count || 0), 0)
-                      .toLocaleString()}
+                    {getTotalRowsFromFiles().toLocaleString()}
                   </Typography>
                 </Box>
               </MetricCard>
@@ -974,6 +1213,8 @@ const FileManagementPage = () => {
                     >
                       {currentDataType.key === "salespmix"
                         ? "Locations"
+                        : currentDataType.isMasterFile
+                        ? "Locations"
                         : "Stores"}
                     </Typography>
                     <LocationOnIcon
@@ -995,66 +1236,68 @@ const FileManagementPage = () => {
             </Grid>
 
             {/* Total Sales Card */}
-            <Grid item xs={12} sm={6} md={3}>
-              <MetricCard
-                sx={{
-                  background:
-                    "linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%)",
-                  border: `1px solid ${alpha(
-                    theme.palette.warning.main,
-                    0.2
-                  )}`,
-                  "&::before": {
-                    background:
-                      "linear-gradient(135deg, #ff8f00 0%, #ff6f00 100%)",
-                  },
-                }}
-              >
-                <Box
+            {!currentDataType.isMasterFile && (
+              <Grid item xs={12} sm={6} md={3}>
+                <MetricCard
                   sx={{
-                    p: 3,
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
+                    background:
+                      "linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%)",
+                    border: `1px solid ${alpha(
+                      theme.palette.warning.main,
+                      0.2
+                    )}`,
+                    "&::before": {
+                      background:
+                        "linear-gradient(135deg, #ff8f00 0%, #ff6f00 100%)",
+                    },
                   }}
                 >
                   <Box
                     sx={{
+                      p: 3,
+                      height: "100%",
                       display: "flex",
+                      flexDirection: "column",
                       justifyContent: "space-between",
-                      alignItems: "center",
                     }}
                   >
-                    <Typography
-                      variant="caption"
+                    <Box
                       sx={{
-                        color: theme.palette.warning.main,
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                        letterSpacing: 0.5,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
                       }}
                     >
-                      Total Sales
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: theme.palette.warning.main,
+                          fontWeight: 600,
+                          textTransform: "uppercase",
+                          letterSpacing: 0.5,
+                        }}
+                      >
+                        Total Sales
+                      </Typography>
+                      <AttachMoneyIcon
+                        sx={{ color: theme.palette.warning.main, fontSize: 24 }}
+                      />
+                    </Box>
+                    <Typography
+                      variant="h3"
+                      sx={{
+                        fontWeight: 800,
+                        color: theme.palette.warning.main,
+                        lineHeight: 1,
+                        fontSize: "1.5rem",
+                      }}
+                    >
+                      {formatCurrency(getTotalSalesFromFiles())}
                     </Typography>
-                    <AttachMoneyIcon
-                      sx={{ color: theme.palette.warning.main, fontSize: 24 }}
-                    />
                   </Box>
-                  <Typography
-                    variant="h3"
-                    sx={{
-                      fontWeight: 800,
-                      color: theme.palette.warning.main,
-                      lineHeight: 1,
-                      fontSize: "1.5rem",
-                    }}
-                  >
-                    {formatCurrency(getTotalSalesFromFiles())}
-                  </Typography>
-                </Box>
-              </MetricCard>
-            </Grid>
+                </MetricCard>
+              </Grid>
+            )}
           </Grid>
         </StyledCard>
       </Container>
@@ -1147,7 +1390,10 @@ const FileManagementPage = () => {
                                 >
                                   <TableCell sx={{ maxWidth: 200 }}>
                                     <Box
-                                      sx={{ display: "flex", alignItems: "center" }}
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                      }}
                                     >
                                       <Box
                                         sx={{
@@ -1182,9 +1428,17 @@ const FileManagementPage = () => {
                                             textOverflow: "ellipsis",
                                             whiteSpace: "nowrap",
                                           }}
-                                          title={file.file_name}
+                                          title={cleanFileName(
+                                            currentDataType.isMasterFile
+                                              ? file.filename
+                                              : file.file_name
+                                          )}
                                         >
-                                          {file.file_name}
+                                          {cleanFileName(
+                                            currentDataType.isMasterFile
+                                              ? file.filename
+                                              : file.file_name
+                                          )}
                                         </Typography>
                                       </Box>
                                     </Box>
@@ -1195,13 +1449,25 @@ const FileManagementPage = () => {
                                       variant="outlined"
                                       color="error"
                                       size="small"
-                                      startIcon={<DeleteIcon sx={{ fontSize: 16 }} />}
+                                      startIcon={
+                                        <DeleteIcon sx={{ fontSize: 16 }} />
+                                      }
                                       onClick={() =>
-                                        handleDeleteClick(
-                                          file.file_name,
-                                          file.company_name,
-                                          file[currentDataType.locationsField]
-                                        )
+                                        currentDataType.isMasterFile
+                                          ? handleDeleteClick(
+                                              file.filename,
+                                              file.company_name,
+                                              [],
+                                              file.id,
+                                              file.location_name
+                                            )
+                                          : handleDeleteClick(
+                                              file.file_name,
+                                              file.company_name,
+                                              file[
+                                                currentDataType.locationsField
+                                              ]
+                                            )
                                       }
                                       sx={{
                                         textTransform: "none",
@@ -1216,99 +1482,209 @@ const FileManagementPage = () => {
                                     </Button>
                                   </TableCell>
                                 </TableRow>
-                                
-                                {/* Expanded location details */}
-                                <TableRow>
-                                  <TableCell
-                                    colSpan={7}
-                                    sx={{ py: 0, border: 0 }}
-                                  >
-                                    <Collapse
-                                      in={expandedFiles.has(file.file_name)}
-                                      timeout="auto"
-                                      unmountOnExit
+
+                                {/* Expanded location details - only for non-master files */}
+                                {!currentDataType.isMasterFile && (
+                                  <TableRow>
+                                    <TableCell
+                                      colSpan={7}
+                                      sx={{ py: 0, border: 0 }}
                                     >
-                                      <Box sx={{ py: 2, pl: 4, pr: 2 }}>
-                                        <Typography
-                                          variant="subtitle2"
-                                          sx={{ mb: 2, fontWeight: 600, fontSize: "0.875rem" }}
-                                        >
-                                          {currentDataType.key === "salespmix" ? "Location" : "Store"} Details:
-                                        </Typography>
-                                        <Grid container spacing={1.5}>
-                                          {(file[currentDataType.locationsField] || []).map((location, locIndex) => (
-                                            <Grid item xs={12} sm={6} md={4} lg={3} key={locIndex}>
-                                              <Paper
-                                                elevation={0}
-                                                sx={{
-                                                  p: 2,
-                                                  border: `1px solid ${alpha(theme.palette.divider, 0.3)}`,
-                                                  borderRadius: 2,
-                                                  position: "relative",
-                                                  transition: "all 0.2s ease",
-                                                  "&:hover": {
-                                                    borderColor: alpha(currentDataType.color, 0.3),
-                                                    backgroundColor: alpha(currentDataType.color, 0.02),
-                                                  },
-                                                }}
+                                      <Collapse
+                                        in={expandedFiles.has(file.file_name)}
+                                        timeout="auto"
+                                        unmountOnExit
+                                      >
+                                        <Box sx={{ py: 2, pl: 4, pr: 2 }}>
+                                          <Typography
+                                            variant="subtitle2"
+                                            sx={{
+                                              mb: 2,
+                                              fontWeight: 600,
+                                              fontSize: "0.875rem",
+                                            }}
+                                          >
+                                            {currentDataType.key === "salespmix"
+                                              ? "Location"
+                                              : "Store"}{" "}
+                                            Details:
+                                          </Typography>
+                                          <Grid container spacing={1.5}>
+                                            {(
+                                              file[
+                                                currentDataType.locationsField
+                                              ] || []
+                                            ).map((location, locIndex) => (
+                                              <Grid
+                                                item
+                                                xs={12}
+                                                sm={6}
+                                                md={4}
+                                                lg={3}
+                                                key={locIndex}
                                               >
-                                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
-                                                  <Typography
-                                                    variant="subtitle2"
+                                                <Paper
+                                                  elevation={0}
+                                                  sx={{
+                                                    p: 2,
+                                                    border: `1px solid ${alpha(
+                                                      theme.palette.divider,
+                                                      0.3
+                                                    )}`,
+                                                    borderRadius: 2,
+                                                    position: "relative",
+                                                    transition: "all 0.2s ease",
+                                                    "&:hover": {
+                                                      borderColor: alpha(
+                                                        currentDataType.color,
+                                                        0.3
+                                                      ),
+                                                      backgroundColor: alpha(
+                                                        currentDataType.color,
+                                                        0.02
+                                                      ),
+                                                    },
+                                                  }}
+                                                >
+                                                  <Box
                                                     sx={{
-                                                      fontWeight: 600,
-                                                      textTransform: "capitalize",
-                                                      fontSize: "0.8rem",
-                                                      color: currentDataType.color,
+                                                      display: "flex",
+                                                      justifyContent:
+                                                        "space-between",
+                                                      alignItems: "flex-start",
+                                                      mb: 1,
                                                     }}
                                                   >
-                                                    {location[currentDataType.locationKey]}
-                                                  </Typography>
-                                                  <IconButton
-                                                    size="small"
-                                                    color="error"
-                                                    onClick={() =>
-                                                      handleLocationDeleteClick(
-                                                        file.file_name,
-                                                        file.company_name,
-                                                        location[currentDataType.locationKey]
-                                                      )
-                                                    }
+                                                    <Typography
+                                                      variant="subtitle2"
+                                                      sx={{
+                                                        fontWeight: 600,
+                                                        textTransform:
+                                                          "capitalize",
+                                                        fontSize: "0.8rem",
+                                                        color:
+                                                          currentDataType.color,
+                                                      }}
+                                                    >
+                                                      {
+                                                        location[
+                                                          currentDataType
+                                                            .locationKey
+                                                        ]
+                                                      }
+                                                    </Typography>
+                                                    <IconButton
+                                                      size="small"
+                                                      color="error"
+                                                      onClick={() =>
+                                                        handleLocationDeleteClick(
+                                                          file.file_name,
+                                                          file.company_name,
+                                                          location[
+                                                            currentDataType
+                                                              .locationKey
+                                                          ]
+                                                        )
+                                                      }
+                                                      sx={{
+                                                        p: 0.25,
+                                                        "&:hover": {
+                                                          backgroundColor:
+                                                            alpha(
+                                                              theme.palette
+                                                                .error.main,
+                                                              0.1
+                                                            ),
+                                                        },
+                                                      }}
+                                                    >
+                                                      <DeleteIcon
+                                                        sx={{ fontSize: 14 }}
+                                                      />
+                                                    </IconButton>
+                                                  </Box>
+                                                  <Box
                                                     sx={{
-                                                      p: 0.25,
-                                                      "&:hover": {
-                                                        backgroundColor: alpha(theme.palette.error.main, 0.1),
-                                                      },
+                                                      display: "flex",
+                                                      flexDirection: "column",
+                                                      gap: 0.5,
                                                     }}
                                                   >
-                                                    <DeleteIcon sx={{ fontSize: 14 }} />
-                                                  </IconButton>
-                                                </Box>
-                                                <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-                                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.7rem" }}>
-                                                    Records: <strong>{location.record_count?.toLocaleString() || "N/A"}</strong>
-                                                  </Typography>
-                                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.7rem" }}>
-                                                    Sales: <strong>{formatCurrency(location.total_sales)}</strong>
-                                                  </Typography>
-                                                  {currentDataType.key === "salespmix" ? (
-                                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.7rem" }}>
-                                                      Period: <strong>{formatDate(location.earliest_date)} - {formatDate(location.latest_date)}</strong>
+                                                    <Typography
+                                                      variant="caption"
+                                                      color="text.secondary"
+                                                      sx={{
+                                                        fontSize: "0.7rem",
+                                                      }}
+                                                    >
+                                                      Records:{" "}
+                                                      <strong>
+                                                        {location.record_count?.toLocaleString() ||
+                                                          "N/A"}
+                                                      </strong>
                                                     </Typography>
-                                                  ) : (
-                                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.7rem" }}>
-                                                      Years: <strong>{location.earliest_year} - {location.latest_year}</strong>
+                                                    <Typography
+                                                      variant="caption"
+                                                      color="text.secondary"
+                                                      sx={{
+                                                        fontSize: "0.7rem",
+                                                      }}
+                                                    >
+                                                      Sales:{" "}
+                                                      <strong>
+                                                        {formatCurrency(
+                                                          location.total_sales
+                                                        )}
+                                                      </strong>
                                                     </Typography>
-                                                  )}
-                                                </Box>
-                                              </Paper>
-                                            </Grid>
-                                          ))}
-                                        </Grid>
-                                      </Box>
-                                    </Collapse>
-                                  </TableCell>
-                                </TableRow>
+                                                    {currentDataType.key ===
+                                                    "salespmix" ? (
+                                                      <Typography
+                                                        variant="caption"
+                                                        color="text.secondary"
+                                                        sx={{
+                                                          fontSize: "0.7rem",
+                                                        }}
+                                                      >
+                                                        Period:{" "}
+                                                        <strong>
+                                                          {formatDate(
+                                                            location.earliest_date
+                                                          )}{" "}
+                                                          -{" "}
+                                                          {formatDate(
+                                                            location.latest_date
+                                                          )}
+                                                        </strong>
+                                                      </Typography>
+                                                    ) : (
+                                                      <Typography
+                                                        variant="caption"
+                                                        color="text.secondary"
+                                                        sx={{
+                                                          fontSize: "0.7rem",
+                                                        }}
+                                                      >
+                                                        Years:{" "}
+                                                        <strong>
+                                                          {
+                                                            location.earliest_year
+                                                          }{" "}
+                                                          -{" "}
+                                                          {location.latest_year}
+                                                        </strong>
+                                                      </Typography>
+                                                    )}
+                                                  </Box>
+                                                </Paper>
+                                              </Grid>
+                                            ))}
+                                          </Grid>
+                                        </Box>
+                                      </Collapse>
+                                    </TableCell>
+                                  </TableRow>
+                                )}
                               </React.Fragment>
                             ))}
                           </>
@@ -1386,7 +1762,13 @@ const FileManagementPage = () => {
           </Box>
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              Confirm {deleteDialog.selectedLocation ? "Location" : "File"} Deletion
+              Confirm{" "}
+              {currentDataType.isMasterFile
+                ? "Master File"
+                : deleteDialog.selectedLocation
+                ? "Location"
+                : "File"}{" "}
+              Deletion
             </Typography>
             <Typography variant="body2" color="text.secondary">
               This action cannot be undone
@@ -1396,7 +1778,13 @@ const FileManagementPage = () => {
 
         <DialogContent sx={{ p: 3 }}>
           <Typography variant="body1" gutterBottom>
-            Are you sure you want to delete this {deleteDialog.selectedLocation ? "location" : "file"}?
+            Are you sure you want to delete this{" "}
+            {currentDataType.isMasterFile
+              ? "master file"
+              : deleteDialog.selectedLocation
+              ? "location"
+              : "file"}
+            ?
           </Typography>
 
           <Box
@@ -1416,42 +1804,66 @@ const FileManagementPage = () => {
                 fontWeight: 500,
               }}
             >
-              {deleteDialog.selectedLocation ? (
+              {currentDataType.isMasterFile ? (
                 <>
-                  <strong>Location:</strong> {deleteDialog.selectedLocation}<br />
-                  <strong>File:</strong> {deleteDialog.fileName}<br />
+                  <strong>File:</strong> {deleteDialog.displayName}
+                  <br />
+                  <strong>Company:</strong> {deleteDialog.companyName}
+                  <br />
+                  <strong>Location:</strong> {deleteDialog.locationName}
+                </>
+              ) : deleteDialog.selectedLocation ? (
+                <>
+                  <strong>Location:</strong> {deleteDialog.selectedLocation}
+                  <br />
+                  <strong>File:</strong> {deleteDialog.displayName}
+                  <br />
                   <strong>Company:</strong> {deleteDialog.companyName}
                 </>
               ) : (
-                deleteDialog.fileName
+                deleteDialog.displayName
               )}
             </Typography>
           </Box>
 
-          {!deleteDialog.selectedLocation && deleteDialog.availableLocations.length > 0 && (
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                Or delete a specific {currentDataType.key === "salespmix" ? "location" : "store"}:
-              </Typography>
-              <FormControl fullWidth size="small">
-                <InputLabel>Select {currentDataType.key === "salespmix" ? "Location" : "Store"}</InputLabel>
-                <Select
-                  value={deleteDialog.selectedLocation}
-                  label={`Select ${currentDataType.key === "salespmix" ? "Location" : "Store"}`}
-                  onChange={(e) => setDeleteDialog(prev => ({ ...prev, selectedLocation: e.target.value }))}
-                >
-                  <MenuItem value="">
-                    <em>Delete entire file</em>
-                  </MenuItem>
-                  {deleteDialog.availableLocations.map((location, index) => (
-                    <MenuItem key={index} value={location.name}>
-                      {location.name} ({location.record_count} records, {formatCurrency(location.total_sales)})
+          {!currentDataType.isMasterFile &&
+            !deleteDialog.selectedLocation &&
+            deleteDialog.availableLocations.length > 0 && (
+              <Box sx={{ mt: 3 }}>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Or delete a specific{" "}
+                  {currentDataType.key === "salespmix" ? "location" : "store"}:
+                </Typography>
+                <FormControl fullWidth size="small">
+                  <InputLabel>
+                    Select{" "}
+                    {currentDataType.key === "salespmix" ? "Location" : "Store"}
+                  </InputLabel>
+                  <Select
+                    value={deleteDialog.selectedLocation}
+                    label={`Select ${
+                      currentDataType.key === "salespmix" ? "Location" : "Store"
+                    }`}
+                    onChange={(e) =>
+                      setDeleteDialog((prev) => ({
+                        ...prev,
+                        selectedLocation: e.target.value,
+                      }))
+                    }
+                  >
+                    <MenuItem value="">
+                      <em>Delete entire file</em>
                     </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-          )}
+                    {deleteDialog.availableLocations.map((location, index) => (
+                      <MenuItem key={index} value={location.name}>
+                        {location.name} ({location.record_count} records,{" "}
+                        {formatCurrency(location.total_sales)})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            )}
 
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
             From: <strong>{deleteDialog.type}</strong>
@@ -1468,10 +1880,11 @@ const FileManagementPage = () => {
             }}
           >
             <Typography variant="body2">
-              {deleteDialog.selectedLocation 
+              {currentDataType.isMasterFile
+                ? `This master file will be permanently deleted and cannot be recovered.`
+                : deleteDialog.selectedLocation
                 ? `This location will be permanently deleted from the file and cannot be recovered.`
-                : `This file will be permanently deleted and cannot be recovered.`
-              }
+                : `This file will be permanently deleted and cannot be recovered.`}
             </Typography>
           </Alert>
         </DialogContent>
@@ -1510,7 +1923,12 @@ const FileManagementPage = () => {
               },
             }}
           >
-            Delete {deleteDialog.selectedLocation ? "Location" : "File"}
+            Delete{" "}
+            {currentDataType.isMasterFile
+              ? "Master File"
+              : deleteDialog.selectedLocation
+              ? "Location"
+              : "File"}
           </Button>
         </DialogActions>
       </Dialog>

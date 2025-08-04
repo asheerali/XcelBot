@@ -257,6 +257,7 @@ def get_sales_pmix_summary(
 
 
 # Updated API endpoint
+
 @router.get("/analytics/file-list")
 def get_uploaded_files_list(
     company_id: Optional[int] = Query(None, description="Filter by company ID"),
@@ -269,19 +270,19 @@ def get_uploaded_files_list(
 
 
 
-@router.get("/analytics/file-list")
-def get_uploaded_files_list(
-    company_id: Optional[int] = Query(None, description="Filter by company ID"),
-    include_location_breakdown: bool = Query(False, description="Include location breakdown"),
-    db: Session = Depends(get_db),
-    # current_user: User = Depends(get_current_active_user)
-):
-    """Get list of all uploaded files with record counts and optional location breakdown"""
-    if include_location_breakdown:
-        files = sales_pmix_crud.get_uploaded_files_list_with_locations(db, company_id)
-    else:
-        files = sales_pmix_crud.get_uploaded_files_list(db, company_id)
-    return files
+# @router.get("/analytics/file-list")
+# def get_uploaded_files_list(
+#     company_id: Optional[int] = Query(None, description="Filter by company ID"),
+#     include_location_breakdown: bool = Query(False, description="Include location breakdown"),
+#     db: Session = Depends(get_db),
+#     # current_user: User = Depends(get_current_active_user)
+# ):
+#     """Get list of all uploaded files with record counts and optional location breakdown"""
+#     if include_location_breakdown:
+#         files = sales_pmix_crud.get_uploaded_files_list_with_locations(db, company_id)
+#     else:
+#         files = sales_pmix_crud.get_uploaded_files_list(db, company_id)
+#     return files
 
 
 @router.get("/analytics/locations")
@@ -293,6 +294,8 @@ def get_locations_list(
     """Get list of all locations with record counts"""
     locations = sales_pmix_crud.get_locations_list(db, company_id)
     return locations
+
+
 
 @router.get("/analytics/dashboards")
 def get_dashboards_list(
