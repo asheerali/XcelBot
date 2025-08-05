@@ -996,11 +996,23 @@ def delete_budget_by_store_and_company(db: Session, store: str, company_name: st
         "company_id": company_id
     }
 
+
 # Updated file list function with store breakdown
 def get_budget_uploaded_files_list(db: Session, company_id: Optional[int] = None) -> List[Dict[str, Any]]:
     """Get list of all uploaded budget files with record counts broken down by store and company name"""
     
-    # Get detailed breakdown by file, store, and company
+    # # Get detailed breakdown by file, store, and company
+    # query = db.query(
+    #     Budget.file_name,
+    #     Budget.Store,
+    #     Company.name.label('company_name'),
+    #     func.count(Budget.id).label('store_record_count'),
+    #     func.sum(Budget.Net_Sales).label('store_total_sales'),
+    #     func.min(Budget.Year).label('store_earliest_year'),
+    #     func.max(Budget.Year).label('store_latest_year')
+    # ).join(Company, Budget.company_id == Company.id) \
+    #  .filter(Budget.file_name.isnot(None))
+
     query = db.query(
         Budget.file_name,
         Budget.Store,
@@ -1010,7 +1022,11 @@ def get_budget_uploaded_files_list(db: Session, company_id: Optional[int] = None
         func.min(Budget.Year).label('store_earliest_year'),
         func.max(Budget.Year).label('store_latest_year')
     ).join(Company, Budget.company_id == Company.id) \
-     .filter(Budget.file_name.isnot(None))
+    .filter(Budget.file_name.isnot(None)) \
+    .filter(Budget.Store.isnot(None)) \
+    .filter(Budget.Store != "")  # Adding condition to exclude empty store names
+
+
 
     if company_id:
         query = query.filter(Budget.company_id == company_id)
@@ -1021,6 +1037,16 @@ def get_budget_uploaded_files_list(db: Session, company_id: Optional[int] = None
         Company.name
     ).order_by(Budget.file_name, Budget.Store)
 
+
+    
+    # Fetch the query result
+    result1 = query.all()
+
+    # Print the earliest year after group_by
+    for row in result1:
+        print(f"File budget.py_: {row.file_name}, Store: {row.Store}, Earliest Year: {row.store_earliest_year}")
+        
+    
     # Group results by file
     files_dict = {}
     for row in query.all():
@@ -1045,6 +1071,16 @@ def get_budget_uploaded_files_list(db: Session, company_id: Optional[int] = None
         files_dict[file_key]["record_count"] += row.store_record_count
         files_dict[file_key]["total_sales"] += float(row.store_total_sales or 0)
         
+        # # Before comparing, ensure both are ints
+        # store_earliest_year = int(row.store_earliest_year) if row.store_earliest_year is not None else None
+        # store_latest_year = int(row.store_latest_year) if row.store_latest_year is not None else None
+
+
+        # if files_dict[file_key]["earliest_year"] is None or (store_earliest_year is not None and store_earliest_year < files_dict[file_key]["earliest_year"]):
+        #     files_dict[file_key]["earliest_year"] = store_earliest_year
+        # if files_dict[file_key]["latest_year"] is None or (store_latest_year is not None and store_latest_year > files_dict[file_key]["latest_year"]):
+        #     files_dict[file_key]["latest_year"] = store_latest_year
+
         # Update year ranges
         if files_dict[file_key]["earliest_year"] is None or (row.store_earliest_year and row.store_earliest_year < files_dict[file_key]["earliest_year"]):
             files_dict[file_key]["earliest_year"] = row.store_earliest_year

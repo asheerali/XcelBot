@@ -4338,6 +4338,11 @@ def financials_food_cost_modified(df, df_budget, store='All', start_date=None, e
             errors='coerce'
         ).fillna(0)
     
+    print("------------------------------------------")
+    print("i am here in the financials utils printing df_copy ", df_copy, df_copy["TW_Johns"])
+    print("------------------------------------------")
+    
+
     # Define food cost columns for This Week and Last Week
     food_suppliers = ['Johns', 'Terra', 'Metro', 'Victory', 'Central_Kitchen']
     

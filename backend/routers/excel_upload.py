@@ -758,12 +758,14 @@ async def upload_excel(
                     excel_data_copy.seek(0)
                     # df_budget = pd.read_excel(file_data, sheet_name="Budget")
                     df_budget = pd.read_excel(excel_data_copy, sheet_name="Budget", header=1)
+                    
 
                 if df.empty:
                     raise ValueError("The sheet 'Actuals' is empty or missing.")
+                elif df_budget.empty:
+                    raise ValueError("The sheet 'Budget' is empty or missing.")
             except ValueError as e:
-                raise ValueError("Sheet named 'Actuals' not found in the uploaded Excel file.")
-
+                raise ValueError("Sheet named 'Actuals or Budget' not found in the uploaded Excel file.")
 
 
 
@@ -859,6 +861,8 @@ async def upload_excel(
             exclude_cols = ['Store', 'Ly Date', 'Date', 'Day', 'Week', 'Month', 'Quarter', 'Year',
                             'Helper 1', 'Helper 2', 'Helper 3', 'Helper 4']
 
+            
+            
             # Get all columns that should be filled with 0
             fill_cols = [col for col in df.columns if col not in exclude_cols]
 
@@ -877,8 +881,9 @@ async def upload_excel(
             df_budget.columns = df_budget.columns.str.strip()
             
 
-
-
+            
+            df_budget = df_budget.dropna(subset=['Store'])
+            
             # ===== ADD HELPER COLUMN CHECK HERE =====
             # Check if Helper 1 exists, create it if it doesn't
             if 'Helper 1' not in df_budget.columns:
