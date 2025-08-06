@@ -237,10 +237,10 @@ const FiltersOrderIQ2 = ({
   };
 
   const handlePriceRangeChange = (index, value) => {
-    const numValue = value === '' ? 0 : parseFloat(value) || 0;
+    const numValue = value === "" ? 0 : parseFloat(value) || 0;
     const newPriceRange = [...filters.priceRange];
     newPriceRange[index] = numValue;
-    
+
     // Ensure min is not greater than max
     if (index === 0 && numValue > newPriceRange[1] && newPriceRange[1] > 0) {
       newPriceRange[1] = numValue;
@@ -248,7 +248,7 @@ const FiltersOrderIQ2 = ({
     if (index === 1 && numValue < newPriceRange[0] && numValue > 0) {
       newPriceRange[0] = numValue;
     }
-    
+
     handleFilterChange("priceRange", newPriceRange);
   };
 
@@ -343,19 +343,28 @@ const FiltersOrderIQ2 = ({
               >
                 Price Range
               </Typography>
-              <Box style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+              <Box
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  marginBottom: 16,
+                }}
+              >
                 <TextField
                   label="Min Price"
                   type="number"
                   size="small"
-                  value={filters.priceRange[0] || ''}
+                  value={filters.priceRange[0] || ""}
                   onChange={(e) => handlePriceRangeChange(0, e.target.value)}
                   inputProps={{
                     min: 0,
                     step: "0.01",
                   }}
                   InputProps={{
-                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    startAdornment: (
+                      <InputAdornment position="start">$</InputAdornment>
+                    ),
                   }}
                   style={{ flex: 1 }}
                 />
@@ -366,46 +375,65 @@ const FiltersOrderIQ2 = ({
                   label="Max Price"
                   type="number"
                   size="small"
-                  value={filters.priceRange[1] || ''}
+                  value={filters.priceRange[1] || ""}
                   onChange={(e) => handlePriceRangeChange(1, e.target.value)}
                   inputProps={{
                     min: 0,
                     step: "0.01",
                   }}
                   InputProps={{
-                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    startAdornment: (
+                      <InputAdornment position="start">$</InputAdornment>
+                    ),
                   }}
                   style={{ flex: 1 }}
                 />
               </Box>
-              
+
               {/* Price Range Slider */}
               <Box style={{ paddingLeft: 8, paddingRight: 8 }}>
                 <Slider
                   value={filters.priceRange}
-                  onChange={(e, newValue) => handleFilterChange("priceRange", newValue)}
+                  onChange={(e, newValue) =>
+                    handleFilterChange("priceRange", newValue)
+                  }
                   valueLabelDisplay="auto"
                   valueLabelFormat={formatPriceLabel}
                   min={priceRange[0]}
                   max={priceRange[1]}
-                  step={(priceRange[1] - priceRange[0]) <= 10 ? 0.1 : (priceRange[1] - priceRange[0]) <= 100 ? 1 : (priceRange[1] - priceRange[0]) <= 1000 ? 10 : 100}
+                  step={
+                    priceRange[1] - priceRange[0] <= 10
+                      ? 0.1
+                      : priceRange[1] - priceRange[0] <= 100
+                      ? 1
+                      : priceRange[1] - priceRange[0] <= 1000
+                      ? 10
+                      : 100
+                  }
                   marks={[
-                    { value: priceRange[0], label: formatPriceLabel(priceRange[0]) },
-                    { value: priceRange[1], label: formatPriceLabel(priceRange[1]) }
+                    {
+                      value: priceRange[0],
+                      label: formatPriceLabel(priceRange[0]),
+                    },
+                    {
+                      value: priceRange[1],
+                      label: formatPriceLabel(priceRange[1]),
+                    },
                   ]}
                   color="primary"
                 />
               </Box>
-              
+
               <Typography
                 variant="caption"
-                style={{ 
-                  color: "#666", 
-                  display: "block", 
-                  marginTop: 8 
+                style={{
+                  color: "#666",
+                  display: "block",
+                  marginTop: 8,
                 }}
               >
-                Original range: {formatPriceLabel(priceRange[0])} - {formatPriceLabel(priceRange[1])}
+                Original range: {formatPriceLabel(priceRange[0])} -{" "}
+                {formatPriceLabel(priceRange[1])}
               </Typography>
             </Grid>
 
@@ -465,7 +493,8 @@ const FiltersOrderIQ2 = ({
               }}
             >
               <Typography variant="body2" style={{ color: "#666" }}>
-                {getActiveFiltersCount()} filter{getActiveFiltersCount() > 1 ? "s" : ""} applied
+                {getActiveFiltersCount()} filter
+                {getActiveFiltersCount() > 1 ? "s" : ""} applied
               </Typography>
               <Button
                 startIcon={<ClearIcon />}
@@ -507,7 +536,7 @@ const FiltersOrderIQWithFilename = ({
   const companyOptions = Array.from(
     new Map(
       masterFileDetails
-        .filter(item => item && item.company_id && item.company_name) // Filter out invalid items
+        .filter((item) => item && item.company_id && item.company_name) // Filter out invalid items
         .map((item) => [
           item.company_id,
           {
@@ -521,18 +550,19 @@ const FiltersOrderIQWithFilename = ({
   // Get unique locations filtered by selected companies
   const getLocationOptions = () => {
     if (!masterFileDetails || masterFileDetails.length === 0) return [];
-    
+
     let filteredData = masterFileDetails;
     if (selectedCompanies && selectedCompanies.length > 0) {
-      filteredData = masterFileDetails.filter((item) =>
-        item && selectedCompanies.includes(item.company_id?.toString())
+      filteredData = masterFileDetails.filter(
+        (item) =>
+          item && selectedCompanies.includes(item.company_id?.toString())
       );
     }
 
     return Array.from(
       new Map(
         filteredData
-          .filter(item => item && item.location_id && item.location_name) // Filter out invalid items
+          .filter((item) => item && item.location_id && item.location_name) // Filter out invalid items
           .map((item) => [
             item.location_id,
             {
@@ -547,25 +577,27 @@ const FiltersOrderIQWithFilename = ({
   // Get unique filenames filtered by selected companies and locations
   const getFilenameOptions = () => {
     if (!masterFileDetails || masterFileDetails.length === 0) return [];
-    
+
     let filteredData = masterFileDetails;
 
     if (selectedCompanies && selectedCompanies.length > 0) {
-      filteredData = filteredData.filter((item) =>
-        item && selectedCompanies.includes(item.company_id?.toString())
+      filteredData = filteredData.filter(
+        (item) =>
+          item && selectedCompanies.includes(item.company_id?.toString())
       );
     }
 
     if (selectedLocations && selectedLocations.length > 0) {
-      filteredData = filteredData.filter((item) =>
-        item && selectedLocations.includes(item.location_id?.toString())
+      filteredData = filteredData.filter(
+        (item) =>
+          item && selectedLocations.includes(item.location_id?.toString())
       );
     }
 
     return Array.from(
       new Set(
         filteredData
-          .filter(item => item && item.filename) // Filter out invalid items
+          .filter((item) => item && item.filename) // Filter out invalid items
           .map((item) => item.filename)
       )
     ).map((filename) => ({
@@ -577,24 +609,26 @@ const FiltersOrderIQWithFilename = ({
   // Calculate how many API calls will be made
   const getApiCallCount = () => {
     if (!masterFileDetails || masterFileDetails.length === 0) return 0;
-    
+
     let filteredDetails = masterFileDetails;
 
     if (selectedCompanies && selectedCompanies.length > 0) {
-      filteredDetails = filteredDetails.filter((item) =>
-        item && selectedCompanies.includes(item.company_id?.toString())
+      filteredDetails = filteredDetails.filter(
+        (item) =>
+          item && selectedCompanies.includes(item.company_id?.toString())
       );
     }
 
     if (selectedLocations && selectedLocations.length > 0) {
-      filteredDetails = filteredDetails.filter((item) =>
-        item && selectedLocations.includes(item.location_id?.toString())
+      filteredDetails = filteredDetails.filter(
+        (item) =>
+          item && selectedLocations.includes(item.location_id?.toString())
       );
     }
 
     if (selectedFilenames && selectedFilenames.length > 0) {
-      filteredDetails = filteredDetails.filter((item) =>
-        item && selectedFilenames.includes(item.filename)
+      filteredDetails = filteredDetails.filter(
+        (item) => item && selectedFilenames.includes(item.filename)
       );
     }
 
@@ -602,25 +636,35 @@ const FiltersOrderIQWithFilename = ({
   };
 
   // Check if dropdowns should be enabled based on current Redux state
-  const isLocationDropdownEnabled = selectedCompanies && selectedCompanies.length > 0;
+  const isLocationDropdownEnabled =
+    selectedCompanies && selectedCompanies.length === 1; // Only enable when exactly one company is selected
   const isFilenameDropdownEnabled =
-    selectedCompanies && selectedCompanies.length > 0 && 
-    selectedLocations && selectedLocations.length === 1; // Only enable when exactly one location is selected
+    selectedCompanies &&
+    selectedCompanies.length === 1 &&
+    selectedLocations &&
+    selectedLocations.length === 1; // Only enable when exactly one location is selected
 
-  // Handle company selection with Select All functionality
+  // Handle company selection - UPDATED for single selection only
   const handleCompanyChange = (value) => {
-    if (!value || !Array.isArray(value)) return;
-    
-    if (value.includes("select_all")) {
-      if (selectedCompanies && selectedCompanies.length === companyOptions.length) {
-        // If all are selected, deselect all
-        onCompanyChange([]);
-      } else {
-        // Select all companies
-        onCompanyChange(companyOptions.map((option) => option.value));
-      }
+    if (!value || !Array.isArray(value)) {
+      onCompanyChange([]);
+      return;
+    }
+
+    if (value.includes("clear_all")) {
+      // Clear all companies
+      onCompanyChange([]);
+    } else if (value.includes("select_all")) {
+      // For single selection, we don't allow "select all"
+      return;
     } else {
-      onCompanyChange(value);
+      // Only allow single selection - take the last selected value
+      const lastSelected = value[value.length - 1];
+      if (lastSelected) {
+        onCompanyChange([lastSelected]);
+      } else {
+        onCompanyChange([]);
+      }
     }
   };
 
@@ -630,7 +674,7 @@ const FiltersOrderIQWithFilename = ({
       onLocationChange([]);
       return;
     }
-    
+
     const locationOptions = getLocationOptions();
     if (value.includes("clear_all")) {
       // Clear all locations
@@ -655,10 +699,13 @@ const FiltersOrderIQWithFilename = ({
       onFilenameChange([]);
       return;
     }
-    
+
     const filenameOptions = getFilenameOptions();
     if (value.includes("select_all")) {
-      if (selectedFilenames && selectedFilenames.length === filenameOptions.length) {
+      if (
+        selectedFilenames &&
+        selectedFilenames.length === filenameOptions.length
+      ) {
         // If all are selected, deselect all
         onFilenameChange([]);
       } else {
@@ -672,40 +719,52 @@ const FiltersOrderIQWithFilename = ({
 
   // Render value functions with proper disabled state handling
   const renderCompanyValue = (selected) => {
-    if (!selected || !Array.isArray(selected) || selected.length === 0) return "Select Companies";
-    if (selected.length === companyOptions.length) return "All Companies Selected";
-    if (selected.length === 1) {
-      const foundCompany = companyOptions.find((c) => c && c.value === selected[0]);
-      return foundCompany ? foundCompany.label : "Select Companies";
+    if (!selected || !Array.isArray(selected) || selected.length === 0)
+      return "Select One Company";
+
+    // Handle multiple companies selected
+    if (selected.length > 1) {
+      return "Multiple companies selected - Please select only one";
     }
-    return `${selected.length} selected`;
+
+    if (selected.length === 1) {
+      const foundCompany = companyOptions.find(
+        (c) => c && c.value === selected[0]
+      );
+      return foundCompany ? foundCompany.label : "Select One Company";
+    }
+
+    return "Select One Company";
   };
 
   const renderLocationValue = (selected) => {
-    if (!isLocationDropdownEnabled) return "Select companies first";
-    
+    if (!isLocationDropdownEnabled) return "Select one company first";
+
     // Handle multiple locations selected
     if (selected && selected.length > 1) {
       return "Multiple locations selected - Please select only one";
     }
-    
+
     if (!selected || selected.length === 0) return "Select One Location";
-    
+
     if (selected.length === 1) {
       const locationOptions = getLocationOptions();
-      const foundLocation = locationOptions.find((l) => l && l.value === selected[0]);
+      const foundLocation = locationOptions.find(
+        (l) => l && l.value === selected[0]
+      );
       return foundLocation ? foundLocation.label : "Select One Location";
     }
-    
+
     return "Select One Location";
   };
 
   const renderFilenameValue = (selected) => {
-    if (!isLocationDropdownEnabled) return "Select companies first";
+    if (!isLocationDropdownEnabled) return "Select one company first";
     if (!isFilenameDropdownEnabled) return "Select one location first";
 
     const filenameOptions = getFilenameOptions();
-    if (!selected || !Array.isArray(selected) || selected.length === 0) return "Select Files";
+    if (!selected || !Array.isArray(selected) || selected.length === 0)
+      return "Select Files";
     if (
       selected.length === filenameOptions.length &&
       filenameOptions.length > 0
@@ -721,7 +780,11 @@ const FiltersOrderIQWithFilename = ({
       return (
         <Box style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <LinearProgress style={{ width: 100, height: 4 }} />
-          <Typography variant="body2" color="primary" style={{ fontWeight: 500 }}>
+          <Typography
+            variant="body2"
+            color="primary"
+            style={{ fontWeight: 500 }}
+          >
             Loading data from {getApiCallCount()} file(s)...
           </Typography>
         </Box>
@@ -731,25 +794,46 @@ const FiltersOrderIQWithFilename = ({
     if (!selectedCompanies || selectedCompanies.length === 0) {
       return (
         <Typography variant="body2" color="primary" style={{ fontWeight: 500 }}>
-          Step 1: Select companies to continue
+          Step 1: Select one company to continue
         </Typography>
+      );
+    }
+
+    // NEW: Check for multiple companies selected
+    if (selectedCompanies && selectedCompanies.length > 1) {
+      return (
+        <Alert
+          severity="warning"
+          style={{
+            marginTop: 8,
+            backgroundColor: "#fff3cd",
+            color: "#856404",
+            border: "1px solid #ffeaa7",
+          }}
+        >
+          <Typography variant="body2" style={{ fontWeight: 500 }}>
+            Multiple companies selected. Please clear all companies and select
+            only one company to continue.
+          </Typography>
+        </Alert>
       );
     }
 
     // NEW: Check for multiple locations selected
     if (selectedLocations && selectedLocations.length > 1) {
       return (
-        <Alert 
-          severity="warning" 
-          style={{ 
+        <Alert
+          severity="warning"
+          style={{
             marginTop: 8,
             backgroundColor: "#fff3cd",
             color: "#856404",
-            border: "1px solid #ffeaa7"
+            border: "1px solid #ffeaa7",
           }}
         >
           <Typography variant="body2" style={{ fontWeight: 500 }}>
-            Multiple locations selected. Please clear all locations and select only one location to continue.
+            Multiple locations selected. Please clear all locations and select
+            only one location to continue.
           </Typography>
         </Alert>
       );
@@ -765,15 +849,24 @@ const FiltersOrderIQWithFilename = ({
 
     if (!selectedFilenames || selectedFilenames.length === 0) {
       return (
-        <Typography variant="body2" color="warning.main" style={{ fontWeight: 500 }}>
-          Step 3: Select files to load data ({getFilenameOptions().length} available)
+        <Typography
+          variant="body2"
+          color="warning.main"
+          style={{ fontWeight: 500 }}
+        >
+          Step 3: Select files to load data ({getFilenameOptions().length}{" "}
+          available)
         </Typography>
       );
     }
 
     if (getFilenameOptions().length === 0) {
       return (
-        <Typography variant="body2" color="warning.main" style={{ fontWeight: 500 }}>
+        <Typography
+          variant="body2"
+          color="warning.main"
+          style={{ fontWeight: 500 }}
+        >
           No files available for selected company and location
         </Typography>
       );
@@ -792,29 +885,35 @@ const FiltersOrderIQWithFilename = ({
   return (
     <Box style={{ marginBottom: 16 }}>
       <Grid container spacing={2} alignItems="flex-start">
-        {/* Company Filter - Always Enabled */}
+        {/* Company Filter - Single selection only */}
         <Grid item xs={12} md={4}>
           <FormControl fullWidth size="small">
-            <InputLabel>Companies *</InputLabel>
+            <InputLabel>Companies * (Select One)</InputLabel>
             <Select
               multiple
               value={selectedCompanies}
-              label="Companies *"
+              label="Companies * (Select One)"
               onChange={(e) => handleCompanyChange(e.target.value)}
               renderValue={renderCompanyValue}
             >
-              {/* Select All Option */}
-              <MenuItem
-                value="select_all"
-                style={{ fontWeight: "bold", borderBottom: "1px solid #eee" }}
-              >
-                <Box style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <BusinessIcon fontSize="small" />
-                  {selectedCompanies.length === companyOptions.length
-                    ? "Deselect All"
-                    : "Select All Companies"}
-                </Box>
-              </MenuItem>
+              {/* Clear All Option - Show when companies are selected */}
+              {selectedCompanies && selectedCompanies.length > 0 && (
+                <MenuItem
+                  value="clear_all"
+                  style={{
+                    fontWeight: "bold",
+                    borderBottom: "1px solid #eee",
+                    color: "#d32f2f",
+                  }}
+                >
+                  <Box
+                    style={{ display: "flex", alignItems: "center", gap: 8 }}
+                  >
+                    <ClearIcon fontSize="small" />
+                    Clear All Companies
+                  </Box>
+                </MenuItem>
+              )}
               {companyOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
                   {option.label}
@@ -843,7 +942,11 @@ const FiltersOrderIQWithFilename = ({
               {isLocationDropdownEnabled && selectedLocations.length > 0 && (
                 <MenuItem
                   value="clear_all"
-                  style={{ fontWeight: "bold", borderBottom: "1px solid #eee", color: "#d32f2f" }}
+                  style={{
+                    fontWeight: "bold",
+                    borderBottom: "1px solid #eee",
+                    color: "#d32f2f",
+                  }}
                 >
                   <Box
                     style={{ display: "flex", alignItems: "center", gap: 8 }}
@@ -908,9 +1011,7 @@ const FiltersOrderIQWithFilename = ({
       </Grid>
 
       {/* Updated status display */}
-      <Box style={{ marginTop: 8 }}>
-        {renderStatusMessage()}
-      </Box>
+      <Box style={{ marginTop: 8 }}>{renderStatusMessage()}</Box>
     </Box>
   );
 };
@@ -947,10 +1048,12 @@ const MasterFile = () => {
   const [masterFileDetails, setMasterFileDetails] = useState<
     MasterFileDetail[]
   >([]);
-  
+
   // Updated: Single state for company-locations data
-  const [companyLocations, setCompanyLocations] = useState<CompanyLocation[]>([]);
-  
+  const [companyLocations, setCompanyLocations] = useState<CompanyLocation[]>(
+    []
+  );
+
   const [loadingMasterFileDetails, setLoadingMasterFileDetails] =
     useState(false);
   const [uploadDialog, setUploadDialog] = useState(false);
@@ -962,7 +1065,12 @@ const MasterFile = () => {
   const [selectedDateRange, setSelectedDateRange] = useState(null);
 
   // UPDATED: Helper function to handle multiple files loading with date range
-  const handleMultipleFilesLoadWithDateRange = async (companies, locations, filenames, dateRangeParams) => {
+  const handleMultipleFilesLoadWithDateRange = async (
+    companies,
+    locations,
+    filenames,
+    dateRangeParams
+  ) => {
     // Create filter combinations
     let filteredDetails = masterFileDetails;
 
@@ -986,13 +1094,16 @@ const MasterFile = () => {
 
     if (filteredDetails.length > 0) {
       // Add date range parameters to each file request
-      const filteredDetailsWithDateRange = filteredDetails.map(detail => ({
+      const filteredDetailsWithDateRange = filteredDetails.map((detail) => ({
         ...detail,
-        ...dateRangeParams
+        ...dateRangeParams,
       }));
 
-      console.log("Batched files API call with date range:", filteredDetailsWithDateRange);
-      
+      console.log(
+        "Batched files API call with date range:",
+        filteredDetailsWithDateRange
+      );
+
       // This should make ONE API call with all files, not multiple calls
       dispatch(loadMultipleMasterFileData(filteredDetailsWithDateRange));
     }
@@ -1003,7 +1114,11 @@ const MasterFile = () => {
     const autoLoadData = async () => {
       const { companies, locations, filenames } = lastAppliedFilters;
 
-      if (companies.length > 0 && locations.length > 0 && filenames.length > 0) {
+      if (
+        companies.length > 0 &&
+        locations.length > 0 &&
+        filenames.length > 0
+      ) {
         console.log(
           "Auto-loading data from saved filters:",
           lastAppliedFilters
@@ -1030,22 +1145,38 @@ const MasterFile = () => {
           );
         } else {
           // Multiple files load
-          await handleMultipleFilesLoadWithDateRange(companies, locations, filenames, {});
+          await handleMultipleFilesLoadWithDateRange(
+            companies,
+            locations,
+            filenames,
+            {}
+          );
         }
       }
     };
 
     // Only auto-load if we don't already have items loaded
-    if (items.length === 0 && lastAppliedFilters.companies.length > 0 && lastAppliedFilters.filenames.length > 0) {
+    if (
+      items.length === 0 &&
+      lastAppliedFilters.companies.length > 0 &&
+      lastAppliedFilters.filenames.length > 0
+    ) {
       autoLoadData();
     }
   }, []); // Run only once on mount
 
-  // FIXED: Auto-apply filters when selections change - ONLY when files are selected and single location
+  // FIXED: Auto-apply filters when selections change - ONLY when single company, single location, and files are selected
   useEffect(() => {
     const autoApplyFilters = async () => {
-      // KEY CHANGE: Only auto-apply if we have companies, exactly ONE location, AND at least one filename
-      if (selectedCompanies.length > 0 && selectedLocations.length === 1 && selectedFilenames.length > 0) {
+      // KEY CHANGE: Only auto-apply if we have exactly ONE company, exactly ONE location, AND at least one filename
+      if (
+        selectedCompanies &&
+        selectedCompanies.length === 1 &&
+        selectedLocations &&
+        selectedLocations.length === 1 &&
+        selectedFilenames &&
+        selectedFilenames.length > 0
+      ) {
         console.log("Auto-applying filters due to selection change:", {
           companies: selectedCompanies,
           locations: selectedLocations,
@@ -1058,28 +1189,28 @@ const MasterFile = () => {
 
         try {
           // Prepare date range data for backend
-          const dateRangeParams = selectedDateRange ? {
-            start_date: selectedDateRange.startDate.toISOString().split('T')[0],
-            end_date: selectedDateRange.endDate.toISOString().split('T')[0]
-          } : {};
+          const dateRangeParams = selectedDateRange
+            ? {
+                start_date: selectedDateRange.startDate
+                  .toISOString()
+                  .split("T")[0],
+                end_date: selectedDateRange.endDate.toISOString().split("T")[0],
+              }
+            : {};
 
           // Single file scenario
-          if (
-            selectedCompanies.length === 1 &&
-            selectedLocations.length === 1 &&
-            selectedFilenames.length === 1
-          ) {
+          if (selectedFilenames.length === 1) {
             const apiParams = {
               company_id: parseInt(selectedCompanies[0]),
               location_id: parseInt(selectedLocations[0]),
               filename: selectedFilenames[0],
-              ...dateRangeParams
+              ...dateRangeParams,
             };
 
             console.log("Single file API params with date range:", apiParams);
             dispatch(loadMasterFileData(apiParams));
           } else {
-            // Multiple files scenario - BATCH THEM (but still single location)
+            // Multiple files scenario - BATCH THEM (but still single company and location)
             await handleMultipleFilesLoadWithDateRange(
               selectedCompanies,
               selectedLocations,
@@ -1090,10 +1221,12 @@ const MasterFile = () => {
 
           setUploadStatus({
             type: "success",
-            message: `Successfully loaded data for ${selectedFilenames.length} file(s)${
-              selectedDateRange 
-                ? ` for period ${selectedDateRange.startDate.toLocaleDateString()} - ${selectedDateRange.endDate.toLocaleDateString()}` 
-                : ''
+            message: `Successfully loaded data for ${
+              selectedFilenames.length
+            } file(s)${
+              selectedDateRange
+                ? ` for period ${selectedDateRange.startDate.toLocaleDateString()} - ${selectedDateRange.endDate.toLocaleDateString()}`
+                : ""
             }`,
           });
 
@@ -1115,7 +1248,12 @@ const MasterFile = () => {
     // IMPROVED: Increase debounce time and add proper cleanup
     const timeoutId = setTimeout(autoApplyFilters, 1000); // Increased from 500ms
     return () => clearTimeout(timeoutId);
-  }, [selectedCompanies, selectedLocations, selectedFilenames, selectedDateRange]);
+  }, [
+    selectedCompanies,
+    selectedLocations,
+    selectedFilenames,
+    selectedDateRange,
+  ]);
 
   // Get unique values for filters
   const getUniqueValues = (columnKey) => {
@@ -1211,24 +1349,26 @@ const MasterFile = () => {
 
   // Updated: Get companies for upload dialog
   const getCompaniesForUpload = () => {
-    return companyLocations.map(item => ({
+    return companyLocations.map((item) => ({
       id: item.company_id,
-      name: item.company_name
+      name: item.company_name,
     }));
   };
 
   // Updated: Get locations for upload dialog based on selected company
   const getLocationsForUpload = () => {
     if (!selectedCompanyId) return [];
-    
+
     const selectedCompany = companyLocations.find(
-      company => company.company_id.toString() === selectedCompanyId
+      (company) => company.company_id.toString() === selectedCompanyId
     );
-    
-    return selectedCompany ? selectedCompany.locations.map(location => ({
-      id: location.location_id,
-      name: location.location_name
-    })) : [];
+
+    return selectedCompany
+      ? selectedCompany.locations.map((location) => ({
+          id: location.location_id,
+          name: location.location_name,
+        }))
+      : [];
   };
 
   // Handler for FiltersOrderIQ filter changes (these will trigger auto-apply)
@@ -1295,10 +1435,7 @@ const MasterFile = () => {
         item[categoryColumn] === filters.category;
 
       return (
-        matchesSearch &&
-        withinPriceRange &&
-        matchesUnit &&
-        matchesCategory
+        matchesSearch && withinPriceRange && matchesUnit && matchesCategory
       );
     });
   };
@@ -2009,11 +2146,46 @@ const MasterFile = () => {
                     colSpan={Object.keys(columns).length + 3}
                     style={{ textAlign: "center", padding: 40 }}
                   >
-                    <Typography variant="body1" color="textSecondary">
-                      {items.length === 0
-                        ? "No data loaded. Please select companies, locations, and files to auto-load data."
-                        : "No items match the current filters."}
-                    </Typography>
+                    {items.length === 0 ? (
+                      <Box
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: 16,
+                        }}
+                      >
+                        <DescriptionIcon
+                          style={{ fontSize: 48, color: "#ccc" }}
+                        />
+                        <Typography variant="h6" color="textSecondary">
+                          {!selectedCompanies || selectedCompanies.length === 0
+                            ? "Please select a company to get started"
+                            : !selectedLocations ||
+                              selectedLocations.length === 0
+                            ? "Please select a location to continue"
+                            : !selectedFilenames ||
+                              selectedFilenames.length === 0
+                            ? "Please select a file for proper data viewing"
+                            : "No data loaded. Please check your selections."}
+                        </Typography>
+                        <Typography variant="body2" color="textSecondary">
+                          {!selectedCompanies || selectedCompanies.length === 0
+                            ? "Step 1 of 3: Choose one company from the dropdown above"
+                            : !selectedLocations ||
+                              selectedLocations.length === 0
+                            ? "Step 2 of 3: Choose one location for the selected company"
+                            : !selectedFilenames ||
+                              selectedFilenames.length === 0
+                            ? "Step 3 of 3: Choose files to view their data in this table"
+                            : "Data will appear here once files are successfully loaded"}
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Typography variant="body1" color="textSecondary">
+                        No items match the current filters.
+                      </Typography>
+                    )}
                   </TableCell>
                 </TableRow>
               )}
@@ -2093,7 +2265,9 @@ const MasterFile = () => {
                     <LocationOnIcon />
                   </InputAdornment>
                 }
-                disabled={!selectedCompanyId || getLocationsForUpload().length === 0}
+                disabled={
+                  !selectedCompanyId || getLocationsForUpload().length === 0
+                }
               >
                 {getLocationsForUpload().map((location) => (
                   <MenuItem key={location.id} value={location.id.toString()}>
