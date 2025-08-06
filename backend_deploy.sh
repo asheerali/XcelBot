@@ -18,11 +18,11 @@ cd backend
 echo "creating a folder on AWS backend first..."
 ssh -i "$PEM_PATH" "$SERVER_USER@$SERVER_DOMAIN" 'bash -s' << EOF
 
+  sudo timedatectl set-timezone America/New_York
 
   set -e  # Exit on any failure
   cd "$BACKEND_DIR"
-  
-  sudo timedatectl set-timezone America/New_York
+
 
   echo "Checking out branch: $BRANCH_NAME"
   git fetch origin
