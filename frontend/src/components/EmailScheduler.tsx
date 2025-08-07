@@ -95,7 +95,7 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
   const [createMailsLoading, setCreateMailsLoading] = useState(false);
   const [customEmail, setCustomEmail] = useState("");
   const [selectAll, setSelectAll] = useState(false);
-  const [globalScheduledTime, setGlobalScheduledTime] = useState("09:00");
+  const [globalScheduledTime, setGlobalScheduledTime] = useState("10:45");
   const [localError, setLocalError] = useState<string | null>(null);
 
   // Email Scheduler functions
@@ -347,7 +347,7 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
       setEmailListItems([]);
       setCustomEmail("");
       setSelectAll(false);
-      setGlobalScheduledTime("09:00"); // Reset to default
+      setGlobalScheduledTime("10:45"); // Reset to new default
 
       // Refresh the scheduled emails list
       await fetchScheduledEmails();
@@ -377,7 +377,7 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
     setEmailListItems([]);
     setCustomEmail("");
     setSelectAll(false);
-    setGlobalScheduledTime("09:00");
+    setGlobalScheduledTime("10:45");
     setLocalError(null);
     onClose();
   };
@@ -545,7 +545,7 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
           setEmailListItems([]);
           setCustomEmail("");
           setSelectAll(false);
-          setGlobalScheduledTime("09:00");
+          setGlobalScheduledTime("10:45");
         }}
         maxWidth="lg"
         fullWidth
@@ -576,7 +576,7 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
                 setEmailListItems([]);
                 setCustomEmail("");
                 setSelectAll(false);
-                setGlobalScheduledTime("09:00");
+                setGlobalScheduledTime("10:45");
               }}
               size="small"
             >
@@ -832,7 +832,7 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
                   setEmailListItems([]);
                   setCustomEmail("");
                   setSelectAll(false);
-                  setGlobalScheduledTime("09:00");
+                  setGlobalScheduledTime("10:45");
                 }}
                 variant="outlined"
               >
