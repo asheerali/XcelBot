@@ -307,19 +307,28 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
       return;
     }
 
+    if (selectedCompanies.length === 0) {
+      setLocalError("No company selected");
+      return;
+    }
+
     try {
       setCreateMailsLoading(true);
 
-      // Prepare data for API using global time for all emails
+      const companyId = selectedCompanies[0];
+
+      // Prepare data for API - each mail object includes company_id
       const mailsData = selectedItems.map((item) => ({
         receiver_name: item.name,
         receiver_email: item.email,
         receiving_time: globalScheduledTime,
+        company_id: parseInt(companyId), // Convert to integer as expected by backend
       }));
 
       console.log("=== CREATE MAILS REQUEST ===");
       console.log("URL:", `${API_URL_Local}/mails/createmails`);
       console.log("Request Body:", JSON.stringify(mailsData, null, 2));
+      console.log("Company ID:", companyId);
       console.log("Global Scheduled Time Applied:", globalScheduledTime);
 
       const response = await fetch(`${API_URL_Local}/mails/createmails`, {
@@ -353,7 +362,7 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
       await fetchScheduledEmails();
 
       alert(
-        `Successfully created ${selectedItems.length} scheduled emails at ${globalScheduledTime}!`
+        `Successfully created ${selectedItems.length} scheduled emails at ${globalScheduledTime} for company ${getCompanyName(companyId)}!`
       );
     } catch (err) {
       console.error("Error creating mails:", err);

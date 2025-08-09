@@ -6,6 +6,7 @@ from datetime import time
 
 
 class MailBase(BaseModel):
+    
     receiver_name: Optional[str] = None  # Can be username or company name   
     receiver_email: EmailStr
     receiving_time: time  # Time when user will receive the mail
