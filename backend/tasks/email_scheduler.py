@@ -154,7 +154,8 @@ def check_and_send_scheduled_emails():
             try:
                 send_actual_email(
                     to=mail.receiver_email,
-                    name=mail.receiver_name
+                    name=mail.receiver_name,
+                    company_id=mail.company_id
                 )
                 logger.info(f"Successfully sent scheduled email to {mail.receiver_email} at {now_time} EST")
                 

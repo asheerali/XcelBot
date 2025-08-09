@@ -589,7 +589,11 @@ def get_consolidated_production(company_id: int, db: Session):
 def send_actual_email(to: str, name: str, company_id: int = None):
     db = SessionLocal()
     try:
-        company_id = 1
+        # company_id = 1
+        print("---------------------------------------------")
+        print("Sending email to:", to, "for user:", name, "with company ID:", company_id)
+        print("---------------------------------------------")
+        
         data = get_consolidated_production(company_id, db)
         
         

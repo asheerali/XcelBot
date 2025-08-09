@@ -1622,7 +1622,7 @@ const ComprehensiveFinancialDashboard: React.FC<FinancialDashboardProps> = ({
     { label: "SPMH", key: "SPMH" },
     { label: "% (+/-)", key: "% (+/-)_SPMH" },
     { label: "LPMH", key: "LPMH" },
-    { label:  "% (+/-)", key: "% (+/-)_LPMH"},
+    { label: "% (+/-)", key: "% (+/-)_LPMH" },
   ];
 
   const avgTicketColumns = [
@@ -1830,7 +1830,7 @@ const ComprehensiveFinancialDashboard: React.FC<FinancialDashboardProps> = ({
                   letterSpacing: "-0.01em",
                 }}
               >
-                KPI vs Budget
+                Actual vs Budget
               </h3>
               <div
                 style={{
@@ -1875,7 +1875,7 @@ const ComprehensiveFinancialDashboard: React.FC<FinancialDashboardProps> = ({
                           letterSpacing: "0.05em",
                         }}
                       >
-                        This Week
+                        Actual
                       </th>
                       <th
                         style={{
