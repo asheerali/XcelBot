@@ -17,11 +17,12 @@ from schemas import storeorders as storeorders_schema
 from models.users import User
 from dependencies.auth import get_current_active_user
 from fastapi import BackgroundTasks
-from utils.email import send_order_confirmation_email
+from utils.email import send_order_confirmation_email, send_production
 from crud.users import get_user 
 from fastapi import Query
-from datetime import datetime
+from datetime import datetime, timedelta
 from pydantic import BaseModel
+from models.mails import Mail  # Add this import for the Mail model
 from typing import Optional, List, Dict, Any
 
 
@@ -40,7 +41,7 @@ class OrderItemsRequest(BaseModel):
 
     # Add other fields as neede
 
-        
+ 
 router = APIRouter(
     prefix="/api/storeorders",
     tags=["Store Orders"]
@@ -394,7 +395,7 @@ def bulk_create_storeorders(storeorders: list[storeorders_schema.StoreOrdersCrea
     return storeorders_crud.bulk_create_storeorders(db, storeorders)
     
 
-
+# Modified routers/storeorders.py - Update the create_new_order_items function
 @router.post("/orderitems")
 def create_new_order_items(
     request: OrderItemsRequest,
@@ -407,10 +408,40 @@ def create_new_order_items(
     print("dates", request.start_date, request.end_date)
 
     try:
+        # Query and print first email entry for this company
+        first_company_email = db.query(Mail).filter(Mail.company_id == request.company_id).first()
+        
+        users_mails =  db.query(Mail).filter(Mail.company_id == request.company_id).all()
+
+
+        # Create a list of emails from users mails
+        user_emails = [mail.receiver_email for mail in users_mails]
+
+        print(f"User emails for company_ID {user_emails}" )
+        # Extract global time from the first email entry
+        global_time = None
+        if first_company_email and first_company_email.receiving_time:
+            global_time = first_company_email.receiving_time
+            print(f"\n=== GLOBAL TIME SET FROM COMPANY EMAIL ===")
+            print(f"Global time extracted: {global_time}")
+        
+        print(f"\n=== FIRST EMAIL ENTRY FOR COMPANY ID {request.company_id} ===")
+        if first_company_email:
+            print(f"Found first email for company ID {request.company_id}:")
+            print(f"  - ID: {first_company_email.id}")
+            print(f"    Receiver Name: {first_company_email.receiver_name}")
+            print(f"    Receiver Email: {first_company_email.receiver_email}")
+            print(f"    Receiving Time: {first_company_email.receiving_time}")
+            print(f"    Company ID: {first_company_email.company_id}")
+        else:
+            print(f"No email entries found for company ID {request.company_id}")
+        print("=" * 50 + "\n")
+
         # Default created_at is the order_date or current time
         order_date = pd.to_datetime(request.order_date).replace(tzinfo=None) if request.order_date else datetime.utcnow()
         created_at = order_date  # default
 
+        # Handle start_date logic first
         if request.start_date:
             # Convert start_date to date and combine with order time
             start_date_only = pd.to_datetime(request.start_date).date()
@@ -427,6 +458,35 @@ def create_new_order_items(
                 )
             else:
                 created_at = start_date_with_time
+
+        # NOW check if this is a future order and adjust time if global_time exists
+        current_time = datetime.utcnow()
+        is_future_order = created_at > current_time
+        
+        if is_future_order and global_time:
+            print(f"\n=== FUTURE ORDER DETECTED ===")
+            print(f"Final calculated order time: {created_at}")
+            print(f"Current time: {current_time}")
+            print(f"Global time from email: {global_time}")
+            
+            # Convert global_time to datetime for calculation (using the created_at date)
+            global_datetime = datetime.combine(created_at.date(), global_time)
+            
+            # Calculate one hour before global time
+            adjusted_time = global_datetime - timedelta(hours=1)
+            
+            print(f"Original scheduled time would be: {created_at}")
+            print(f"Adjusted time (global_time - 1 hour): {adjusted_time}")
+            
+            # Update created_at to the adjusted time
+            created_at = adjusted_time
+            print(f"Final order time set to: {created_at}")
+            print("=" * 50 + "\n")
+        elif is_future_order:
+            print(f"\n=== FUTURE ORDER DETECTED BUT NO GLOBAL TIME ===")
+            print(f"Future order detected but no global time available from emails")
+            print(f"Final order time: {created_at}")
+            print("=" * 50 + "\n")
 
         # Prepare the items_ordered data
         items_ordered_data = {
@@ -445,29 +505,48 @@ def create_new_order_items(
         print(f"Creating new store items ordered with data: {items_ordered_data}")
         new_order = storeorders_crud.create_storeorders(db, create_obj)
 
-        # Optional: Send order confirmation email
+        # Modified: Send production requirements email instead of order confirmation
         if request.email_order:
             user_details = get_user(db, current_user.id)
             if user_details and user_details.email:
+                # Check if email is being sent after global time
+                current_time_for_email = datetime.utcnow()
+                is_email_after_global_time = False
+                order_id_to_send = None
+                
+                if global_time:
+                    # Get today's date to combine with global_time
+                    today = current_time_for_email.date()
+                    global_datetime_today = datetime.combine(today, global_time)
+                    
+                    if current_time_for_email > global_datetime_today:
+                        is_email_after_global_time = True
+                        order_id_to_send = new_order.id
+                        print(f"Email being sent after global time. Order ID {new_order.id} will be specially highlighted.")
+                
                 background_tasks.add_task(
-                    send_order_confirmation_email,
-                    user_details.email,
+                    send_production,
+                    user_emails,
+                    # user_details.email,
                     user_details.first_name,
-                    new_order.id,
-                    items_ordered_data,
-                    new_order.created_at,
-                    False
+                    request.company_id,
+                    False,  # is_update = False (this is for general updates, not new orders)
+                    is_email_after_global_time,  # is_email_update = True if email sent after global time
+                    new_order.id  
                 )
-                print(f"Order confirmation email queued for {user_details.email}")
+                print(f"Production requirements email queued for {user_details.email} (email after global time: {is_email_after_global_time}, order ID: {order_id_to_send})")
             else:
-                print("Warning: Could not find user email for order confirmation")
+                print("Warning: Could not find user email for production requirements")
 
         return {
             "message": "New store orders created successfully",
             "store_orders_id": new_order.id,
             "received_data": request.model_dump(),
             "items_ordered": items_ordered_data,
-            "created_at": new_order.created_at.isoformat()
+            "created_at": new_order.created_at.isoformat(),
+            "global_time": str(global_time) if global_time else None,
+            "is_future_order": is_future_order,
+            "adjusted_time_applied": is_future_order and global_time is not None
         }
 
     except HTTPException as http_exc:
@@ -478,6 +557,165 @@ def create_new_order_items(
         import traceback
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error creating order: {str(e)}")
+
+
+
+# @router.post("/orderitems")
+# def create_new_order_items(
+#     request: OrderItemsRequest,
+#     background_tasks: BackgroundTasks,
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(get_current_active_user),
+# ):
+#     """Create new store orders entry every time"""
+#     print("Received request to create new order:", request.model_dump())
+#     print("dates", request.start_date, request.end_date)
+
+#     try:
+#         # Query and print first email entry for this company
+#         first_company_email = db.query(Mail).filter(Mail.company_id == request.company_id).first()
+        
+#         # Extract global time from the first email entry
+#         global_time = None
+#         if first_company_email and first_company_email.receiving_time:
+#             global_time = first_company_email.receiving_time
+#             print(f"\n=== GLOBAL TIME SET FROM COMPANY EMAIL ===")
+#             print(f"Global time extracted: {global_time}")
+        
+#         print(f"\n=== FIRST EMAIL ENTRY FOR COMPANY ID {request.company_id} ===")
+#         if first_company_email:
+#             print(f"Found first email for company ID {request.company_id}:")
+#             print(f"  - ID: {first_company_email.id}")
+#             print(f"    Receiver Name: {first_company_email.receiver_name}")
+#             print(f"    Receiver Email: {first_company_email.receiver_email}")
+#             print(f"    Receiving Time: {first_company_email.receiving_time}")
+#             print(f"    Company ID: {first_company_email.company_id}")
+#         else:
+#             print(f"No email entries found for company ID {request.company_id}")
+#         print("=" * 50 + "\n")
+
+#         # Default created_at is the order_date or current time
+#         order_date = pd.to_datetime(request.order_date).replace(tzinfo=None) if request.order_date else datetime.utcnow()
+#         created_at = order_date  # default
+
+#         # Handle start_date logic first
+#         if request.start_date:
+#             # Convert start_date to date and combine with order time
+#             start_date_only = pd.to_datetime(request.start_date).date()
+#             order_time = order_date.time()
+#             start_date_with_time = datetime.combine(start_date_only, order_time)
+
+#             print("Computed start_date_with_time:", start_date_with_time)
+#             print("Order date:", order_date)
+
+#             if order_date > start_date_with_time:
+#                 raise HTTPException(
+#                     status_code=400,
+#                     detail=f"Order date {order_date.isoformat()} is before allowed start date {start_date_with_time.isoformat()}"
+#                 )
+#             else:
+#                 created_at = start_date_with_time
+
+#         # NOW check if this is a future order and adjust time if global_time exists
+#         current_time = datetime.utcnow()
+#         is_future_order = created_at > current_time
+        
+#         if is_future_order and global_time:
+#             print(f"\n=== FUTURE ORDER DETECTED ===")
+#             print(f"Final calculated order time: {created_at}")
+#             print(f"Current time: {current_time}")
+#             print(f"Global time from email: {global_time}")
+            
+#             # Convert global_time to datetime for calculation (using the created_at date)
+#             global_datetime = datetime.combine(created_at.date(), global_time)
+            
+#             # Calculate one hour before global time
+#             adjusted_time = global_datetime - timedelta(hours=1)
+            
+#             print(f"Original scheduled time would be: {created_at}")
+#             print(f"Adjusted time (global_time - 1 hour): {adjusted_time}")
+            
+#             # Update created_at to the adjusted time
+#             created_at = adjusted_time
+#             print(f"Final order time set to: {created_at}")
+#             print("=" * 50 + "\n")
+#         elif is_future_order:
+#             print(f"\n=== FUTURE ORDER DETECTED BUT NO GLOBAL TIME ===")
+#             print(f"Future order detected but no global time available from emails")
+#             print(f"Final order time: {created_at}")
+#             print("=" * 50 + "\n")
+
+#         # Prepare the items_ordered data
+#         items_ordered_data = {
+#             "total_items": len(request.items),
+#             "items": request.items,
+#         }
+
+#         # Create store order entry
+#         create_obj = storeorders_schema.StoreOrdersCreate(
+#             company_id=request.company_id,
+#             location_id=request.location_id,
+#             created_at=created_at.isoformat(),
+#             items_ordered=items_ordered_data
+#         )
+
+#         print(f"Creating new store items ordered with data: {items_ordered_data}")
+#         new_order = storeorders_crud.create_storeorders(db, create_obj)
+
+#         # Modified: Send production requirements email instead of order confirmation
+#         if request.email_order:
+#             user_details = get_user(db, current_user.id)
+#             if user_details and user_details.email:
+#                 # Check if email is being sent after global time
+#                 current_time_for_email = datetime.utcnow()
+#                 is_email_after_global_time = False
+#                 order_id_to_send = None
+                
+#                 if global_time:
+#                     # Get today's date to combine with global_time
+#                     today = current_time_for_email.date()
+#                     global_datetime_today = datetime.combine(today, global_time)
+                    
+#                     if current_time_for_email > global_datetime_today:
+#                         is_email_after_global_time = True
+#                         order_id_to_send = new_order.id
+#                         print(f"Email being sent after global time. Order ID {new_order.id} will be specially highlighted.")
+                
+#                 background_tasks.add_task(
+    
+    
+#                     send_production,
+#                     user_details.email,
+#                     user_details.first_name,
+#                     request.company_id,
+#                     False,  # is_update = False (this is for general updates, not new orders)
+#                     is_email_after_global_time,  # is_email_update = True if email sent after global time
+#                     order_id_to_send  # recent_order_id = order ID if email sent after global time
+#                 )
+#                 print(f"Production requirements email queued for {user_details.email} (email after global time: {is_email_after_global_time}, order ID: {order_id_to_send})")
+#             else:
+#                 print("Warning: Could not find user email for production requirements")
+
+#         return {
+#             "message": "New store orders created successfully",
+#             "store_orders_id": new_order.id,
+#             "received_data": request.model_dump(),
+#             "items_ordered": items_ordered_data,
+#             "created_at": new_order.created_at.isoformat(),
+#             "global_time": str(global_time) if global_time else None,
+#             "is_future_order": is_future_order,
+#             "adjusted_time_applied": is_future_order and global_time is not None
+#         }
+
+#     except HTTPException as http_exc:
+#         raise http_exc  # re-raise expected errors
+
+#     except Exception as e:
+#         print(f"Error creating new order: {str(e)}")
+#         import traceback
+#         print(traceback.format_exc())
+#         raise HTTPException(status_code=500, detail=f"Error creating order: {str(e)}")
+
 
 
 
@@ -555,7 +793,6 @@ def get_recent_storeorders_details_by_location(
     }
     
 
-
 @router.get("/aisuggestions/{company_id}/{location_id}")
 def get_recent_storeorders_details_by_location(
     company_id: int, 
@@ -599,9 +836,6 @@ def get_recent_storeorders_details_by_location(
         "company_name": company.name if company else "Unknown",
         "location_name": location.name if location else "Unknown"
     }
-    
-    
-
 
 
 # Updated function to update order by ID
@@ -619,14 +853,14 @@ def update_storeorders_by_id(
         # First, check if the order exists
         existing_order = storeorders_crud.get_storeorders(db, request.order_id)
         print(f"Checking existing order with ID:", existing_order)    
-   
-    
+        
+        
         if not existing_order:
             raise HTTPException(
                 status_code=404, 
                 detail=f"Store order with ID {request.order_id} not found"
             )
-        
+
         # Optional: Verify that the order belongs to the specified company and location
         if existing_order.company_id != request.company_id or existing_order.location_id != request.location_id:
             raise HTTPException(
@@ -637,7 +871,7 @@ def update_storeorders_by_id(
         print(f"Found existing order with ID: {existing_order.id}")
         print(f"Current items_ordered: {existing_order.items_ordered}")
         
-            
+        
         # Prepare the items_ordered data
         new_items_ordered_data = {
             "total_items": len(request.items),
@@ -1138,161 +1372,6 @@ def get_consolidated_production(company_id: int,
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching consolidated production: {str(e)}")
 
-
-
-# @router.get("/financialsummary/{company_id}/{location_id}")
-# def get_financial_summary(
-#     company_id: int, 
-#     location_id: int, 
-#     start_date: str = Query(None),
-#     end_date: str = Query(None),
-#     db: Session = Depends(get_db)
-# ):
-    
-#     """Get total sales, total orders, average order value, and daily analytics tables"""
-#     try:
-#         storeorders = storeorders_crud.get_all_storeorders_by_company_and_location(db, company_id, location_id)
-
-
-
-#         # Apply date filtering if start_date and end_date are provided
-#         if start_date and end_date:
-#             try:
-#                 start = datetime.strptime(start_date, "%Y-%m-%d").date()
-#                 end = datetime.strptime(end_date, "%Y-%m-%d").date()
-#                 print("Filtering store orders between dates:", start, end)
-#                 storeorders = [
-#                     order for order in storeorders
-#                     if (order.updated_at or order.created_at)
-#                     and start <= (order.updated_at or order.created_at).date() <= end
-#                 ]
-#             except ValueError:
-#                 return {"message": "Invalid date format. Use YYYY-MM-DD", "data": []}
-        
-        
-
-#         if not storeorders:
-#             return {
-#                 "message": "No store orders found for this company and location", 
-#                 "data": {
-#                     "total_sales": 0,
-#                     "total_orders": 0,
-#                     "orders_cost_per_day": 0.0
-#                 }
-#             }
-
-#         if not isinstance(storeorders, list):
-#             storeorders = [storeorders] if storeorders else []
-
-#         total_orders = len(storeorders)
-#         total_sales = 0.0
-
-#         # Build rows with date and order_sales
-#         rows = []
-#         for order in storeorders:
-#             created_date = order.created_at.date()
-#             order_sales = 0.0
-#             if order.items_ordered and "items" in order.items_ordered:
-#                 print("i am here in the store orders printing the items_ordered_", order.items_ordered["items"]) 
-                
-#                 for item in order.items_ordered["items"]:
-#                     total_price = item.get("total_price", 0)
-#                     if total_price is None:
-#                         total_price = 0
-#                     order_sales += float(total_price)
-#             total_sales += order_sales
-#             rows.append({"created_at": created_date, "order_sales": order_sales})
-
-#         avg_order_value = round(total_sales / total_orders, 2) if total_orders > 0 else 0.0
-
-#         df = pd.DataFrame(rows)
-#         df["created_at"] = pd.to_datetime(df["created_at"])
-
-#         # Daily Orders
-#         daily_counts = df.groupby(df["created_at"].dt.date).size().reset_index(name="order_count")
-#         daily_counts["created_at"] = pd.to_datetime(daily_counts["created_at"])
-#         daily_counts = daily_counts.sort_values(by="created_at")
-#         daily_counts["moving_avg"] = daily_counts["order_count"].rolling(window=5, min_periods=1).mean().round(2)
-
-#         # Daily Sales and Avg Order Value
-#         daily_sales = df.groupby(df["created_at"].dt.date).agg(
-#             total_sales_per_day=("order_sales", "sum"),
-#             order_count=("order_sales", "count")
-#         ).reset_index()
-#         daily_sales["created_at"] = pd.to_datetime(daily_sales["created_at"])
-#         daily_sales["avg_order_value"] = (daily_sales["total_sales_per_day"] / daily_sales["order_count"]).round(2)
-#         daily_sales = daily_sales.sort_values(by="created_at")
-#         daily_sales["moving_avg"] = daily_sales["avg_order_value"].rolling(window=5, min_periods=1).mean().round(2)
-
-#         # Daily Sales Trend (new)
-#         daily_sales_trend_df = daily_sales[["created_at", "total_sales_per_day"]].copy()
-#         daily_sales_trend_df = daily_sales_trend_df.sort_values(by="created_at")
-#         daily_sales_trend_df["moving_avg"] = daily_sales_trend_df["total_sales_per_day"].rolling(window=5, min_periods=1).mean().round(2)
-
-#         # Format dates
-#         if platform.system() == "Windows":
-#             date_format = "%b %#d"
-#         else:
-#             date_format = "%b %-d"
-
-#         daily_counts = daily_counts.rename(columns={"created_at": "date"})
-#         daily_counts["date"] = daily_counts["date"].dt.strftime(date_format)
-
-#         daily_sales = daily_sales.rename(columns={"created_at": "date"})
-#         daily_sales["date"] = daily_sales["date"].dt.strftime(date_format)
-
-#         daily_sales_trend_df = daily_sales_trend_df.rename(columns={"created_at": "date", "total_sales_per_day": "total_sales"})
-#         daily_sales_trend_df["date"] = daily_sales_trend_df["date"].dt.strftime(date_format)
-
-#         # Company and Location Info
-#         company = db.query(Company).filter(Company.id == company_id).first()
-#         location = db.query(Store).filter(Store.id == location_id).first()
-        
-
-#         # Step: Cost Breakdown by Category
-#         category_costs = {}
-
-#         for order in storeorders:
-#             if order.items_ordered and "items" in order.items_ordered:
-#                 for item in order.items_ordered["items"]:
-#                     category = item.get("category", "Uncategorized")
-#                     cost = item.get("total_price", 0.0)
-#                     if cost is None:
-#                         cost = 0.0
-#                     cost = float(cost)
-#                     category_costs[category] = category_costs.get(category, 0.0) + cost
-
-#         # Convert to DataFrame
-#         category_rows = [{"category": k, "cost": v} for k, v in category_costs.items()]
-#         cost_breakdown_by_category_df = pd.DataFrame(category_rows)
-
-#         if cost_breakdown_by_category_df.empty:
-#             cost_breakdown_by_category_df = pd.DataFrame(columns=["category", "cost", "percentage"])
-#         else:
-#             total_category_cost = cost_breakdown_by_category_df["cost"].sum()
-#             cost_breakdown_by_category_df["cost"] = cost_breakdown_by_category_df["cost"].round(2)
-#             cost_breakdown_by_category_df["percentage"] = (
-#                 (cost_breakdown_by_category_df["cost"] / total_category_cost) * 100
-#             ).round(2)
-
-
-#         return {
-#             "message": "Financial summary data fetched successfully",
-#             "data": {
-#                 "company_name": company.name if company else "Unknown",
-#                 "location_name": location.name if location else "Unknown",
-#                 "total_sales": total_sales,
-#                 "total_orders": total_orders,
-#                 "orders_cost_per_day": round(total_sales / total_orders, 2) if total_orders > 0 else 0.0,
-#                 "cost_breakdown_by_category": cost_breakdown_by_category_df.to_dict(orient="records"),
-#             }
-#         }
-
-#     except Exception as e:
-#         print(f"Error fetching financial summary data: {str(e)}")
-#         import traceback
-#         print(traceback.format_exc())
-#         raise HTTPException(status_code=500, detail=f"Error fetching analytics dashboard data: {str(e)}")
 
 
 @router.get("/financialsummary/{company_id}/{location_ids}")

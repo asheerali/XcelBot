@@ -1,11 +1,12 @@
 # crud/storeorders.py
-from sqlalchemy import desc, func
+from sqlalchemy import desc, func, or_, and_
 from sqlalchemy.orm import Session
 from models.storeorders import StoreOrders
 from schemas.storeorders import StoreOrdersCreate, StoreOrdersUpdate
 from typing import List, Optional, Union
 from sqlalchemy.orm.attributes import flag_modified
 from datetime import datetime
+
 
 def create_storeorders(db: Session, obj_in: StoreOrdersCreate):
     """Create a new store orders record"""
@@ -21,6 +22,8 @@ def create_storeorders(db: Session, obj_in: StoreOrdersCreate):
     db.refresh(db_obj)
     return db_obj
 
+
+
 def get_storeorders(db: Session, storeorders_id: int):
     """Get a store orders record by ID"""
     return db.query(StoreOrders).filter(StoreOrders.id == storeorders_id).first()
@@ -33,6 +36,22 @@ def get_storeorders_by_company(db: Session, company_id: int, skip: int = 0, limi
     """Get store orders records by company ID with pagination"""
     return db.query(StoreOrders).filter(StoreOrders.company_id == company_id).offset(skip).limit(limit).all()
 
+
+
+def get_storeorders_by_company_current_date(db: Session, company_id: int):
+    """Get all store orders for company from current date (prioritizing updated_at over created_at)"""
+    current_date = datetime.today().date()
+    return db.query(StoreOrders).filter(
+        StoreOrders.company_id == company_id,
+        or_(
+            # If updated_at exists, use it for filtering
+            and_(StoreOrders.updated_at.isnot(None), func.date(StoreOrders.updated_at) == current_date),
+            # Otherwise, use created_at for filtering
+            and_(StoreOrders.updated_at.is_(None), func.date(StoreOrders.created_at) == current_date)
+        )
+    ).all()
+    
+    
 def get_storeorders_by_location(db: Session, location_id: int, skip: int = 0, limit: int = 100):
     """Get store orders records by location ID with pagination"""
     return db.query(StoreOrders).filter(StoreOrders.location_id == location_id).offset(skip).limit(limit).all()

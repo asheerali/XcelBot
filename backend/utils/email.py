@@ -1,8 +1,12 @@
 from fastapi import Depends, HTTPException
+from models.mails import Mail
 from fastapi_mail import MessageSchema
 from models.email_config import fm
 import asyncio
 from fastapi_mail import MessageSchema
+from typing import Union, List
+
+
 
 # Updated utils/email.py - Add mail logging
 from sqlalchemy.orm import Session
@@ -22,6 +26,7 @@ from reportlab.lib.pagesizes import letter, A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
+
 
 async def send_account_email(email: str, username: str, password: str):
     
@@ -534,12 +539,82 @@ async def send_order_confirmation_email(email: str, username: str, order_id: int
 
 
 
+# def get_consolidated_production(company_id: int, db: Session):
+#     try:
+#         # current_date = 
+#                 # Apply date filtering if startDate and endDate are provided
+#         startDate  = endDate = datetime.today().date()
+
+#         storeorders = storeorders_crud.get_storeorders_by_company(db, company_id)
+#         if not storeorders:
+#             return {"message": "No store orders found for this company", "data": []}
+        
+
+        
+#         # Get all unique locations
+#         location_ids = list(set(order.location_id for order in storeorders if order.location_id))
+#         locations = db.query(Store).filter(Store.id.in_(location_ids)).all()
+#         location_lookup = {loc.id: loc.name for loc in locations}
+
+#         # Build item-location-quantity matrix
+#         item_data = defaultdict(lambda: defaultdict(int))  # item_data[item_name][location_name] = quantity
+#         item_units = {}  # item_data[item_name] = unit
+
+#         for order in storeorders:
+#             location_name = location_lookup.get(order.location_id, f"Location {order.location_id}")
+#             if not order.items_ordered or "items" not in order.items_ordered:
+#                 continue
+
+#             for item in order.items_ordered["items"]:
+#                 name = item.get("name")
+#                 quantity = item.get("quantity", 0)
+#                 unit = item.get("unit", "")
+#                 item_data[name][location_name] += quantity
+#                 item_units[name] = unit
+
+#         # Format final table rows
+#         all_location_names = sorted(location_lookup.values())
+#         table_rows = []
+#         for item_name, location_qtys in item_data.items():
+#             row = {"Item": item_name}
+#             total_required = 0
+#             for loc in all_location_names:
+#                 qty = location_qtys.get(loc, 0)
+#                 row[loc] = qty
+#                 total_required += qty
+#             row["Total Required"] = total_required
+#             row["Unit"] = item_units.get(item_name, "")
+#             table_rows.append(row)
+
+#         return {
+#             "message": "Consolidated production table generated successfully",
+#             "columns": ["Item"] + all_location_names + ["Total Required", "Unit"],
+#             "data": table_rows
+#         }
+
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Error fetching consolidated production: {str(e)}")
+
+
 def get_consolidated_production(company_id: int, db: Session):
     try:
-        storeorders = storeorders_crud.get_storeorders_by_company(db, company_id)
+        # Get current date for filtering
+        current_date = datetime.today().date()
+        
+        # Get store orders filtered by current date (prioritizing updated_at over created_at)
+        storeorders = storeorders_crud.get_storeorders_by_company_current_date(db, company_id)
+        
+        # Alternative approach if you prefer to do filtering in this function:
+        # all_storeorders = storeorders_crud.get_storeorders_by_company(db, company_id, skip=0, limit=1000)
+        # storeorders = []
+        # for order in all_storeorders:
+        #     order_date = order.updated_at.date() if order.updated_at else order.created_at.date()
+        #     if order_date == current_date:
+        #         storeorders.append(order)
+        
         if not storeorders:
-            return {"message": "No store orders found for this company", "data": []}
-
+            return {"message": f"No store orders found for this company for {current_date}", "data": []}
+        
         # Get all unique locations
         location_ids = list(set(order.location_id for order in storeorders if order.location_id))
         locations = db.query(Store).filter(Store.id.in_(location_ids)).all()
@@ -558,8 +633,9 @@ def get_consolidated_production(company_id: int, db: Session):
                 name = item.get("name")
                 quantity = item.get("quantity", 0)
                 unit = item.get("unit", "")
-                item_data[name][location_name] += quantity
-                item_units[name] = unit
+                if name:  # Only process if name exists
+                    item_data[name][location_name] += quantity
+                    item_units[name] = unit
 
         # Format final table rows
         all_location_names = sorted(location_lookup.values())
@@ -576,13 +652,90 @@ def get_consolidated_production(company_id: int, db: Session):
             table_rows.append(row)
 
         return {
-            "message": "Consolidated production table generated successfully",
+            "message": f"Consolidated production table generated successfully for {current_date}",
             "columns": ["Item"] + all_location_names + ["Total Required", "Unit"],
             "data": table_rows
         }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching consolidated production: {str(e)}")
+
+
+# from datetime import datetime
+
+# def get_consolidated_production(company_id: int, db: Session):
+#     try:
+#         # Set date filter to today's date
+#         startDate = endDate = datetime.today().date()
+        
+#         # Get all store orders for the company first
+#         all_storeorders = storeorders_crud.get_storeorders_by_company(db, company_id)
+#         if not all_storeorders:
+#             return {"message": "No store orders found for this company", "data": []}
+        
+#         # Apply date filtering
+#         print(f"Filtering store orders for date: {startDate}")
+#         storeorders = []
+#         for order in all_storeorders:
+#             # Use updated_at if available, otherwise fall back to created_at
+#             order_date = None
+#             if hasattr(order, 'updated_at') and order.updated_at:
+#                 order_date = order.updated_at.date() if hasattr(order.updated_at, 'date') else order.updated_at
+#             elif hasattr(order, 'created_at') and order.created_at:
+#                 order_date = order.created_at.date() if hasattr(order.created_at, 'date') else order.created_at
+            
+#             # Filter by date range
+#             if order_date and startDate <= order_date <= endDate:
+#                 storeorders.append(order)
+        
+#         print(f"Found {len(storeorders)} orders matching the date filter")
+        
+#         if not storeorders:
+#             return {"message": f"No store orders found for date {startDate}", "data": []}
+        
+#         # Get all unique locations
+#         location_ids = list(set(order.location_id for order in storeorders if order.location_id))
+#         locations = db.query(Store).filter(Store.id.in_(location_ids)).all()
+#         location_lookup = {loc.id: loc.name for loc in locations}
+
+#         # Build item-location-quantity matrix
+#         item_data = defaultdict(lambda: defaultdict(int))  # item_data[item_name][location_name] = quantity
+#         item_units = {}  # item_data[item_name] = unit
+
+#         for order in storeorders:
+#             location_name = location_lookup.get(order.location_id, f"Location {order.location_id}")
+#             if not order.items_ordered or "items" not in order.items_ordered:
+#                 continue
+
+#             for item in order.items_ordered["items"]:
+#                 name = item.get("name")
+#                 quantity = item.get("quantity", 0)
+#                 unit = item.get("unit", "")
+#                 item_data[name][location_name] += quantity
+#                 item_units[name] = unit
+
+#         # Format final table rows
+#         all_location_names = sorted(location_lookup.values())
+#         table_rows = []
+#         for item_name, location_qtys in item_data.items():
+#             row = {"Item": item_name}
+#             total_required = 0
+#             for loc in all_location_names:
+#                 qty = location_qtys.get(loc, 0)
+#                 row[loc] = qty
+#                 total_required += qty
+#             row["Total Required"] = total_required
+#             row["Unit"] = item_units.get(item_name, "")
+#             table_rows.append(row)
+
+#         return {
+#             "message": f"Consolidated production table generated successfully for {startDate}",
+#             "columns": ["Item"] + all_location_names + ["Total Required", "Unit"],
+#             "data": table_rows
+#         }
+
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Error fetching consolidated production: {str(e)}")
 
 
 
@@ -973,5 +1126,1159 @@ def send_actual_email(to: str, name: str, company_id: int = None):
 
 
 
+# def send_production(to: Union[str, List[str]], name: str, company_id: int = None, is_update: bool = False, is_email_update: bool = False, recent_order_id: int = None):
+#     """
+#     Send production requirements email with attachments
+    
+#     Args:
+#         to: Recipient email address (string) or list of email addresses
+#         name: Recipient name
+#         company_id: Company ID for data filtering
+#         is_update: Boolean flag to indicate if this is an update to existing requirements
+#         is_email_update: Boolean flag to indicate if items were ordered after global time
+#         recent_order_id: ID of the recent order to highlight (when email sent after global time)
+#     """
+#     db = SessionLocal()
+#     try:
+#         # Handle both single email and list of emails
+#         if isinstance(to, str):
+#             recipient_list = [to]
+#         elif isinstance(to, list):
+#             recipient_list = to
+#         else:
+#             print(f"Invalid email format: {to}")
+#             return
+        
+#         print("---------------------------------------------")
+#         print("Sending production email to:", recipient_list, "for user:", name, "with company ID:", company_id, "Is update:", is_update, "Is email update:", is_email_update, "Recent order ID:", recent_order_id)
+#         print("---------------------------------------------")
+        
+#         # Get global time for highlighting recent orders
+#         global_time = None
+#         recent_order_items = set()
+#         current_order_items = set()  # Initialize here to ensure it's always available
+        
+#         try:
+#             first_company_email = db.query(Mail).filter(Mail.company_id == company_id).first()
+#             if first_company_email and first_company_email.receiving_time:
+#                 global_time = first_company_email.receiving_time
+#                 print(f"Global time for highlighting: {global_time}")
+#         except Exception as e:
+#             print(f"Error getting global time: {e}")
+        
+#         data = get_consolidated_production(company_id, db)
+#         print("Production data retrieved:", bool(data))
+        
+#         if not data:
+#             print("WARNING: No production data available")
+#             return  # Exit early if no data
+        
+#         # Get recent orders (after global time) for highlighting
+#         if global_time:
+#             try:
+#                 from sqlalchemy import and_
+#                 # Import StoreOrders model - adjust import path as needed
+#                 from models.storeorders import StoreOrders
+                
+#                 # Get today's date to combine with global_time
+#                 today = datetime.now().date()
+#                 global_datetime_today = datetime.combine(today, global_time)
+                
+#                 # Query orders created after global time
+#                 recent_orders = db.query(StoreOrders).filter(
+#                     and_(
+#                         StoreOrders.company_id == company_id,
+#                         StoreOrders.created_at > global_datetime_today
+#                     )
+#                 ).all()
+                
+#                 # Extract item names from recent orders
+#                 for order in recent_orders:
+#                     if order.items_ordered and isinstance(order.items_ordered, dict) and 'items' in order.items_ordered:
+#                         for item in order.items_ordered['items']:
+#                             if isinstance(item, dict):
+#                                 if 'item_name' in item:
+#                                     recent_order_items.add(str(item['item_name']))
+#                                 elif 'name' in item:
+#                                     recent_order_items.add(str(item['name']))
+                
+#                 # If we have a specific recent_order_id, get its items for special highlighting
+#                 if recent_order_id:
+#                     current_order = db.query(StoreOrders).filter(StoreOrders.id == recent_order_id).first()
+#                     if current_order and current_order.items_ordered and isinstance(current_order.items_ordered, dict) and 'items' in current_order.items_ordered:
+#                         for item in current_order.items_ordered['items']:
+#                             if isinstance(item, dict):
+#                                 if 'item_name' in item:
+#                                     current_order_items.add(str(item['item_name']))
+#                                 elif 'name' in item:
+#                                     current_order_items.add(str(item['name']))
+#                         print(f"Current order items to specially highlight: {current_order_items}")
+                
+#                 print(f"Recent order items to highlight: {recent_order_items}")
+#             except Exception as e:
+#                 print(f"Error getting recent orders: {e}")
+#                 # Continue without highlighting if there's an error
+        
+#         print("This is the data which I want to print:", data)
+
+#         # Generate timestamp for file names
+#         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+#         # Create downloads directory if it doesn't exist
+#         downloads_dir = "downloads"
+#         if not os.path.exists(downloads_dir):
+#             os.makedirs(downloads_dir)
+
+#         # Generate Excel file
+#         def create_excel_file(data, filename):
+#             if not data or 'data' not in data or not data['data']:
+#                 return None
+            
+#             try:
+#                 # Convert data to DataFrame
+#                 df = pd.DataFrame(data['data'])
+                
+#                 # Create Excel file with formatting
+#                 excel_path = os.path.join(downloads_dir, filename)
+#                 with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
+#                     df.to_excel(writer, sheet_name='Production Requirements', index=False)
+                    
+#                     # Get workbook and worksheet objects
+#                     workbook = writer.book
+#                     worksheet = writer.sheets['Production Requirements']
+                    
+#                     # Apply formatting
+#                     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+                    
+#                     # Header formatting
+#                     header_font = Font(bold=True, color="000000")
+#                     header_fill = PatternFill(start_color="F8F9FA", end_color="F8F9FA", fill_type="solid")
+#                     total_fill = PatternFill(start_color="E8F5E8", end_color="E8F5E8", fill_type="solid")
+#                     highlight_fill = PatternFill(start_color="FFF3CD", end_color="FFF3CD", fill_type="solid")
+#                     recent_order_fill = PatternFill(start_color="FFE6E6", end_color="FFE6E6", fill_type="solid")  # Light red for recent orders
+#                     current_order_fill = PatternFill(start_color="FF9999", end_color="FF9999", fill_type="solid")  # Darker red for current order
+                    
+#                     # Border style
+#                     thin_border = Border(
+#                         left=Side(style='thin'),
+#                         right=Side(style='thin'),
+#                         top=Side(style='thin'),
+#                         bottom=Side(style='thin')
+#                     )
+                    
+#                     # Get item name column index
+#                     item_name_col = None
+#                     for idx, col in enumerate(df.columns):
+#                         if 'item' in col.lower() and ('name' in col.lower() or col.lower() == 'item'):
+#                             item_name_col = idx + 1  # Excel is 1-indexed
+#                             break
+                    
+#                     # Format headers
+#                     for col_num, column in enumerate(df.columns, 1):
+#                         cell = worksheet.cell(row=1, column=col_num)
+#                         cell.font = header_font
+#                         cell.fill = header_fill
+#                         cell.alignment = Alignment(horizontal="center", vertical="center")
+#                         cell.border = thin_border
+                        
+#                         # Special formatting for total columns
+#                         if 'total' in column.lower() or 'required' in column.lower():
+#                             cell.fill = total_fill
+                    
+#                     # Format data cells
+#                     for row_num in range(2, len(df) + 2):
+#                         # Check if this item is a recent order or current order
+#                         is_recent_item = False
+#                         is_current_order_item = False
+#                         if item_name_col and (recent_order_items or current_order_items):
+#                             item_name = worksheet.cell(row=row_num, column=item_name_col).value
+#                             item_name_str = str(item_name)
+#                             is_current_order_item = item_name_str in current_order_items
+#                             is_recent_item = item_name_str in recent_order_items and not is_current_order_item
+                        
+#                         for col_num, column in enumerate(df.columns, 1):
+#                             cell = worksheet.cell(row=row_num, column=col_num)
+#                             cell.border = thin_border
+#                             cell.alignment = Alignment(horizontal="center", vertical="center")
+                            
+#                             # Priority: Current order > Recent orders > Total columns > Positive values
+#                             if is_current_order_item:
+#                                 cell.fill = current_order_fill
+#                                 cell.font = Font(bold=True, color="990000")  # Dark red bold text
+#                             elif is_recent_item:
+#                                 cell.fill = recent_order_fill
+#                                 cell.font = Font(bold=True, color="CC0000")  # Red bold text
+#                             elif 'total' in column.lower() or 'required' in column.lower():
+#                                 cell.fill = total_fill
+#                                 cell.font = Font(bold=True)
+#                             elif ('total' not in column.lower() and 'required' not in column.lower() 
+#                                 and isinstance(cell.value, (int, float)) and cell.value > 0):
+#                                 cell.fill = highlight_fill
+                    
+#                     # Auto-adjust column widths
+#                     for column in worksheet.columns:
+#                         max_length = 0
+#                         column_letter = column[0].column_letter
+#                         for cell in column:
+#                             try:
+#                                 if len(str(cell.value)) > max_length:
+#                                     max_length = len(str(cell.value))
+#                             except:
+#                                 pass
+#                         adjusted_width = min(max_length + 2, 50)
+#                         worksheet.column_dimensions[column_letter].width = adjusted_width
+                
+#                 return excel_path
+#             except Exception as e:
+#                 print(f"Error creating Excel file: {e}")
+#                 return None
+
+#         # Generate PDF file
+#         def create_pdf_file(data, filename):
+#             if not data or 'data' not in data or not data['data']:
+#                 return None
+            
+#             try:
+#                 pdf_path = os.path.join(downloads_dir, filename)
+                
+#                 # Create PDF document
+#                 doc = SimpleDocTemplate(pdf_path, pagesize=A4)
+#                 elements = []
+                
+#                 # Get styles
+#                 styles = getSampleStyleSheet()
+#                 title_style = ParagraphStyle(
+#                     'CustomTitle',
+#                     parent=styles['Heading1'],
+#                     fontSize=16,
+#                     spaceAfter=30,
+#                     alignment=1  # Center alignment
+#                 )
+                
+#                 # Add title with update indicator if needed
+#                 title_text = "Consolidated Production Requirements"
+#                 if is_update:
+#                     title_text += " (Updated)"
+#                 title = Paragraph(title_text, title_style)
+#                 elements.append(title)
+#                 elements.append(Spacer(1, 12))
+                
+#                 # Add subtitle
+#                 subtitle = Paragraph("", styles['Normal'])
+#                 elements.append(subtitle)
+#                 elements.append(Spacer(1, 20))
+                
+#                 # Prepare table data
+#                 columns = data.get('columns', list(data['data'][0].keys()) if data['data'] else [])
+#                 table_data = [columns]  # Header row
+                
+#                 # Add data rows
+#                 for item in data['data']:
+#                     row = [str(item.get(col, "")) for col in columns]
+#                     table_data.append(row)
+                
+#                 # Create table
+#                 table = Table(table_data)
+                
+#                 # Define table style
+#                 table_style = [
+#                     # Header row styling
+#                     ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+#                     ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+#                     ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+#                     ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+#                     ('FONTSIZE', (0, 0), (-1, 0), 10),
+#                     ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    
+#                     # Data rows styling
+#                     ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+#                     ('FONTSIZE', (0, 1), (-1, -1), 9),
+#                     ('GRID', (0, 0), (-1, -1), 1, colors.black),
+#                     ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+#                 ]
+                
+#                 # Highlight total columns and positive values
+#                 for col_idx, col in enumerate(columns):
+#                     if 'total' in col.lower() or 'required' in col.lower():
+#                         # Green background for total columns
+#                         table_style.append(('BACKGROUND', (col_idx, 0), (col_idx, -1), colors.lightgreen))
+#                         table_style.append(('FONTNAME', (col_idx, 1), (col_idx, -1), 'Helvetica-Bold'))
+                
+#                 # Apply alternating row colors
+#                 for row_idx in range(1, len(table_data)):
+#                     if row_idx % 2 == 0:
+#                         table_style.append(('BACKGROUND', (0, row_idx), (-1, row_idx), colors.beige))
+                
+#                 table.setStyle(TableStyle(table_style))
+#                 elements.append(table)
+                
+#                 # Add footer
+#                 elements.append(Spacer(1, 30))
+#                 footer_text = f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}<br/>KPI360.ai Team"
+#                 footer = Paragraph(footer_text, styles['Normal'])
+#                 elements.append(footer)
+                
+#                 # Build PDF
+#                 doc.build(elements)
+#                 return pdf_path
+#             except Exception as e:
+#                 print(f"Error creating PDF file: {e}")
+#                 return None
+
+#         # Generate HTML table from the data - DYNAMIC VERSION
+#         def generate_production_table(data):
+#             if not data or 'data' not in data or not data['data']:
+#                 return "<p>No production data available.</p>"
+            
+#             # Get columns dynamically from the data
+#             columns = data.get('columns', [])
+#             if not columns and data['data']:
+#                 # If columns not provided, extract from first row
+#                 columns = list(data['data'][0].keys())
+            
+#             if not columns:
+#                 return "<p>No columns found in data.</p>"
+            
+#             # Find item name column
+#             item_name_col = None
+#             for idx, col in enumerate(columns):
+#                 if 'item' in col.lower() and ('name' in col.lower() or col.lower() == 'item'):
+#                     item_name_col = idx
+#                     break
+            
+#             # Start building the table
+#             table_html = """
+#             <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
+#                 <thead>
+#                     <tr style="background-color: #f8f9fa;">
+#             """
+            
+#             # Generate header row dynamically
+#             for col in columns:
+#                 # Special styling for specific column types
+#                 if 'total' in col.lower() or 'required' in col.lower() or 'sum' in col.lower():
+#                     header_style = "border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold; background-color: #e8f5e8;"
+#                 else:
+#                     header_style = "border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;"
+                
+#                 table_html += f'<th style="{header_style}">{col}</th>'
+            
+#             table_html += """
+#                     </tr>
+#                 </thead>
+#                 <tbody>
+#             """
+            
+#             # Generate data rows dynamically
+#             for row_index, item in enumerate(data['data']):
+#                 # Check if this item is a recent order or current order
+#                 is_recent_item = False
+#                 is_current_order_item = False
+#                 if item_name_col is not None and (recent_order_items or current_order_items):
+#                     item_name = list(item.values())[item_name_col] if item_name_col < len(item) else None
+#                     item_name_str = str(item_name)
+#                     is_current_order_item = item_name_str in current_order_items
+#                     is_recent_item = item_name_str in recent_order_items and not is_current_order_item
+                
+#                 # Alternate row colors for better readability, with special highlighting for orders
+#                 if is_current_order_item:
+#                     row_bg = "#ff9999"  # Darker red for current order
+#                 elif is_recent_item:
+#                     row_bg = "#ffe6e6"  # Light red for recent orders
+#                 else:
+#                     row_bg = "#f9f9f9" if row_index % 2 == 0 else "#ffffff"
+                
+#                 table_html += f'<tr style="background-color: {row_bg};">'
+                
+#                 for col_index, col in enumerate(columns):
+#                     cell_value = item.get(col, "")
+                    
+#                     # Smart styling based on column type and content
+#                     if is_current_order_item and col_index == item_name_col:
+#                         # Current order item name - bold dark red text
+#                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: left; background-color: #ff9999; font-weight: bold; color: #990000;"
+#                     elif is_current_order_item:
+#                         # Current order other columns - bold dark red text
+#                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center; background-color: #ff9999; font-weight: bold; color: #990000;"
+#                     elif is_recent_item and col_index == item_name_col:
+#                         # Recent item name - bold red text
+#                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: left; background-color: #ffe6e6; font-weight: bold; color: #cc0000;"
+#                     elif is_recent_item:
+#                         # Recent item other columns
+#                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center; background-color: #ffe6e6; font-weight: bold; color: #cc0000;"
+#                     elif 'total' in col.lower() or 'required' in col.lower() or 'sum' in col.lower():
+#                         # Highlight total/required columns in green
+#                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center; background-color: #e8f5e8; font-weight: bold;"
+#                     elif col_index == 0:  # First column (usually item name)
+#                         # Check if any store column has a value for this row to highlight the item
+#                         has_store_value = any(
+#                             isinstance(item.get(c, 0), (int, float)) and item.get(c, 0) > 0 
+#                             for c in columns[1:-2] if 'store' in c.lower() or 'location' in c.lower() or 'shop' in c.lower()
+#                         )
+#                         if has_store_value:
+#                             cell_style = "border: 1px solid #ddd; padding: 12px; text-align: left; background-color: #fff3cd;"
+#                         else:
+#                             cell_style = "border: 1px solid #ddd; padding: 12px; text-align: left;"
+#                     elif isinstance(cell_value, (int, float)) and cell_value > 0:
+#                         # Highlight cells with positive values (like store quantities)
+#                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center; background-color: #fff3cd;"
+#                     elif col.lower() in ['unit', 'units', 'type', 'category']:
+#                         # Unit/type columns - center aligned, no highlighting
+#                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center;"
+#                     else:
+#                         # Default styling
+#                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center;"
+                    
+#                     table_html += f'<td style="{cell_style}">{cell_value}</td>'
+                
+#                 table_html += "</tr>"
+            
+#             table_html += """
+#                 </tbody>
+#             </table>
+#             """
+            
+#             return table_html
+
+#         # Generate files
+#         excel_filename = f"production_requirements_{timestamp}.xlsx"
+#         pdf_filename = f"production_requirements_{timestamp}.pdf"
+        
+#         excel_path = create_excel_file(data, excel_filename)
+#         pdf_path = create_pdf_file(data, pdf_filename)
+        
+#         production_table = generate_production_table(data)
+        
+#         # Determine subject and greeting based on flags
+#         subject = "Consolidated Production Requirements"
+#         greeting = f"Hello {name},"
+        
+#         # Determine intro text based on is_email_update flag
+#         if is_email_update:
+#             intro_text = "**Updated** - Please find below the *updated* consolidated production requirements for all stores."
+#         else:
+#             intro_text = "Please find below the consolidated production requirements for all stores."
+        
+#         # Add "Updated" to subject if is_update is True
+#         if is_update:
+#             subject += " - Updated"
+        
+#         html_body = f"""
+#         <html>
+#         <head>
+#             <style>
+#                 body {{
+#                     font-family: Arial, sans-serif;
+#                     line-height: 1.6;
+#                     color: #333;
+#                     max-width: 1200px;
+#                     margin: 0 auto;
+#                     padding: 20px;
+#                 }}
+#                 .header {{
+#                     background-color: #f8f9fa;
+#                     padding: 20px;
+#                     border-radius: 5px;
+#                     margin-bottom: 20px;
+#                     text-align: center;
+#                 }}
+#                 .footer {{
+#                     margin-top: 30px;
+#                     padding-top: 20px;
+#                     border-top: 1px solid #ddd;
+#                 }}
+#                 .table-container {{
+#                     overflow-x: auto;
+#                 }}
+#                 @media screen and (max-width: 600px) {{
+#                     .table-container {{
+#                         font-size: 12px;
+#                     }}
+#                 }}
+#                 .update-notice {{
+#                     background-color: #fff3cd;
+#                     border: 1px solid #ffeaa7;
+#                     border-radius: 5px;
+#                     padding: 15px;
+#                     margin-bottom: 20px;
+#                 }}
+#             </style>
+#         </head>
+#         <body>
+#             <div class="header">
+#                 <h2>{subject}</h2>
+#             </div>
+            
+#             <h3>{greeting}</h3>
+            
+#             {"<div class='update-notice'><strong>📋 Update Notice:</strong> This is an updated version of the production requirements.</div>" if is_update else ""}
+            
+#             {"<div class='update-notice'><strong>🔔 New Orders Alert:</strong> Some items were ordered after the global time and are highlighted in red." + (f" Order ID #{recent_order_id} is highlighted in darker red." if recent_order_id else "") + "</div>" if is_email_update else ""}
+            
+#             <p>{intro_text} Excel and PDF versions are attached to this email for your convenience.</p>
+            
+#             <div class="table-container">
+#                 {production_table}
+#             </div>
+            
+#             <div class="footer">
+#                 <p>This report shows the total quantities needed for production across all stores.</p>
+#                 <p><strong>Legend:</strong></p>
+#                 <ul>
+#                     {"<li>🔴 <strong>Dark red highlighted rows:</strong> Items from current order (Order #" + str(recent_order_id) + ")</li>" if recent_order_id else ""}
+#                     <li>🔴 <strong>Red highlighted rows:</strong> Items ordered after global time (recent orders)</li>
+#                     <li>🟡 <strong>Yellow highlighted cells:</strong> Items required by specific stores</li>
+#                     <li>🟢 <strong>Green highlighted columns:</strong> Total/Required quantities</li>
+#                     <li>📊 <strong>Alternating row colors:</strong> For better readability</li>
+#                 </ul>
+#                 <p>This report automatically adapts to your data structure.</p>
+                
+#                 <p>Regards,<br><strong>KPI360.ai Team</strong></p>
+#             </div>
+#         </body>
+#         </html>
+#         """
+
+#         # Create attachments list for your MessageSchema
+#         attachments = []
+        
+#         # Add Excel attachment
+#         if excel_path and os.path.exists(excel_path):
+#             attachments.append(excel_path)
+        
+#         # Add PDF attachment  
+#         if pdf_path and os.path.exists(pdf_path):
+#             attachments.append(pdf_path)
+
+#         # Use your original MessageSchema with attachments
+#         message = MessageSchema(
+#             subject=subject,
+#             recipients=recipient_list,  # Now supports multiple recipients
+#             body=html_body,
+#             subtype="html",
+#             attachments=attachments if attachments else None  # Add attachments if they exist
+#         )
+
+#         async def send():
+#             try:
+#                 await fm.send_message(message)
+#                 print(f"Email sent successfully to {recipient_list}")
+#             except Exception as e:
+#                 print(f"Error sending email: {e}")
+#                 raise e
+
+#         try:
+#             asyncio.run(send())
+#             print(f"Production requirements email {'(update)' if is_update else ''} {'(with recent orders)' if is_email_update else ''} with downloads sent successfully to {recipient_list}")
+#         except Exception as e:
+#             print(f"Failed to send email via asyncio: {e}")
+#             # Try alternative approach if asyncio.run fails
+#             try:
+#                 import asyncio
+#                 loop = asyncio.new_event_loop()
+#                 asyncio.set_event_loop(loop)
+#                 loop.run_until_complete(send())
+#                 loop.close()
+#                 print(f"Email sent successfully using alternative method to {recipient_list}")
+#             except Exception as e2:
+#                 print(f"Alternative email send method also failed: {e2}")
+#                 raise e2
+        
+#         # Clean up files after sending
+#         if excel_path and os.path.exists(excel_path):
+#             os.remove(excel_path)
+#         if pdf_path and os.path.exists(pdf_path):
+#             os.remove(pdf_path)
+        
+#     except Exception as e:
+#         print(f"Failed to send production requirements email to {recipient_list if 'recipient_list' in locals() else to}: {e}")
+#     finally:
+#         db.close()
+
+
+
+def send_production(to: Union[str, List[str]], name: str, company_id: int = None, is_update: bool = False, is_email_update: bool = False, recent_order_id: int = None):
+    """
+    Send production requirements email with attachments
+    
+    Args:
+        to: Recipient email address (string) or list of email addresses
+        name: Recipient name
+        company_id: Company ID for data filtering
+        is_update: Boolean flag to indicate if this is an update to existing requirements
+        is_email_update: Boolean flag to indicate if items were ordered after global time
+        recent_order_id: ID of the recent order to highlight (when email sent after global time)
+    """
+    db = SessionLocal()
+    try:
+        # Handle both single email and list of emails
+        if isinstance(to, str):
+            recipient_list = [to]
+        elif isinstance(to, list):
+            recipient_list = to
+        else:
+            print(f"Invalid email format: {to}")
+            return
+        
+        print("---------------------------------------------")
+        print("Sending production email to:", recipient_list, "for user:", name, "with company ID:", company_id, "Is update:", is_update, "Is email update:", is_email_update, "Recent order ID:", recent_order_id)
+        print("---------------------------------------------")
+        
+        # Get global time for highlighting recent orders
+        global_time = None
+        recent_order_items = set()
+        current_order_items = set()  # Initialize here to ensure it's always available
+        
+        try:
+            first_company_email = db.query(Mail).filter(Mail.company_id == company_id).first()
+            if first_company_email and first_company_email.receiving_time:
+                global_time = first_company_email.receiving_time
+                print(f"Global time for highlighting: {global_time}")
+        except Exception as e:
+            print(f"Error getting global time: {e}")
+        
+        data = get_consolidated_production(company_id, db)
+        print("Production data retrieved:", bool(data))
+        
+        if not data:
+            print("WARNING: No production data available")
+            return  # Exit early if no data
+        
+        # Get recent orders (after global time) for highlighting
+        if global_time:
+            try:
+                from sqlalchemy import and_
+                # Import StoreOrders model - adjust import path as needed
+                from models.storeorders import StoreOrders
+                
+                # Get today's date to combine with global_time
+                today = datetime.now().date()
+                global_datetime_today = datetime.combine(today, global_time)
+                
+                # Query orders created after global time
+                recent_orders = db.query(StoreOrders).filter(
+                    and_(
+                        StoreOrders.company_id == company_id,
+                        StoreOrders.created_at > global_datetime_today
+                    )
+                ).all()
+                
+                # Extract item names from recent orders
+                for order in recent_orders:
+                    if order.items_ordered and isinstance(order.items_ordered, dict) and 'items' in order.items_ordered:
+                        for item in order.items_ordered['items']:
+                            if isinstance(item, dict):
+                                if 'item_name' in item:
+                                    recent_order_items.add(str(item['item_name']))
+                                elif 'name' in item:
+                                    recent_order_items.add(str(item['name']))
+                
+                # If we have a specific recent_order_id, get its items for special highlighting
+                if recent_order_id:
+                    current_order = db.query(StoreOrders).filter(StoreOrders.id == recent_order_id).first()
+                    if current_order and current_order.items_ordered and isinstance(current_order.items_ordered, dict) and 'items' in current_order.items_ordered:
+                        for item in current_order.items_ordered['items']:
+                            if isinstance(item, dict):
+                                if 'item_name' in item:
+                                    current_order_items.add(str(item['item_name']))
+                                elif 'name' in item:
+                                    current_order_items.add(str(item['name']))
+                        print(f"Current order items to specially highlight: {current_order_items}")
+                
+                print(f"Recent order items to highlight: {recent_order_items}")
+            except Exception as e:
+                print(f"Error getting recent orders: {e}")
+                # Continue without highlighting if there's an error
+        
+        print("This is the data which I want to print:", data)
+
+        # Generate timestamp for file names
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Create downloads directory if it doesn't exist
+        downloads_dir = "downloads"
+        if not os.path.exists(downloads_dir):
+            os.makedirs(downloads_dir)
+
+        # Generate Excel file
+        def create_excel_file(data, filename):
+            if not data or 'data' not in data or not data['data']:
+                return None
+            
+            try:
+                # Convert data to DataFrame
+                df = pd.DataFrame(data['data'])
+                
+                # Create Excel file with formatting
+                excel_path = os.path.join(downloads_dir, filename)
+                with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
+                    df.to_excel(writer, sheet_name='Production Requirements', index=False)
+                    
+                    # Get workbook and worksheet objects
+                    workbook = writer.book
+                    worksheet = writer.sheets['Production Requirements']
+                    
+                    # Apply formatting
+                    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+                    
+                    # Header formatting
+                    header_font = Font(bold=True, color="000000")
+                    header_fill = PatternFill(start_color="F8F9FA", end_color="F8F9FA", fill_type="solid")
+                    total_fill = PatternFill(start_color="E8F5E8", end_color="E8F5E8", fill_type="solid")
+                    highlight_fill = PatternFill(start_color="FFF3CD", end_color="FFF3CD", fill_type="solid")
+                    recent_order_fill = PatternFill(start_color="FFE6E6", end_color="FFE6E6", fill_type="solid")  # Light red for recent orders
+                    current_order_fill = PatternFill(start_color="FF9999", end_color="FF9999", fill_type="solid")  # Darker red for current order
+                    
+                    # Border style
+                    thin_border = Border(
+                        left=Side(style='thin'),
+                        right=Side(style='thin'),
+                        top=Side(style='thin'),
+                        bottom=Side(style='thin')
+                    )
+                    
+                    # Get item name column index
+                    item_name_col = None
+                    for idx, col in enumerate(df.columns):
+                        if 'item' in col.lower() and ('name' in col.lower() or col.lower() == 'item'):
+                            item_name_col = idx + 1  # Excel is 1-indexed
+                            break
+                    
+                    # Format headers
+                    for col_num, column in enumerate(df.columns, 1):
+                        cell = worksheet.cell(row=1, column=col_num)
+                        cell.font = header_font
+                        cell.fill = header_fill
+                        cell.alignment = Alignment(horizontal="center", vertical="center")
+                        cell.border = thin_border
+                        
+                        # Special formatting for total columns
+                        if 'total' in column.lower() or 'required' in column.lower():
+                            cell.fill = total_fill
+                    
+                    # Format data cells
+                    for row_num in range(2, len(df) + 2):
+                        # Check if this item is a recent order or current order
+                        is_recent_item = False
+                        is_current_order_item = False
+                        if item_name_col and (recent_order_items or current_order_items):
+                            item_name = worksheet.cell(row=row_num, column=item_name_col).value
+                            item_name_str = str(item_name)
+                            is_current_order_item = item_name_str in current_order_items
+                            # Recent items include ALL items ordered after global time (including current order)
+                            is_recent_item = item_name_str in recent_order_items
+                        
+                        for col_num, column in enumerate(df.columns, 1):
+                            cell = worksheet.cell(row=row_num, column=col_num)
+                            cell.border = thin_border
+                            cell.alignment = Alignment(horizontal="center", vertical="center")
+                            
+                            # Apply base effects first: 1) Recent orders (red), 2) Totals (green), 3) Positive values (yellow)
+                            if is_recent_item:
+                                cell.fill = recent_order_fill
+                                cell.font = Font(bold=True, color="CC0000")  # Red bold text
+                            elif 'total' in column.lower() or 'required' in column.lower():
+                                cell.fill = total_fill
+                                cell.font = Font(bold=True)
+                            elif ('total' not in column.lower() and 'required' not in column.lower() 
+                                and isinstance(cell.value, (int, float)) and cell.value > 0):
+                                cell.fill = highlight_fill
+                            
+                            # Final layer: Apply bold border and underline for current order items (keep existing formatting)
+                            if is_current_order_item:
+                                # Keep existing font but add underline
+                                current_font = cell.font
+                                cell.font = Font(
+                                    bold=current_font.bold,
+                                    color=current_font.color,
+                                    italic=False,  # No italic
+                                    underline='single'
+                                )
+                                # Add medium border for current order items
+                                medium_border = Border(
+                                    left=Side(style='medium'),
+                                    right=Side(style='medium'),
+                                    top=Side(style='medium'),
+                                    bottom=Side(style='medium')
+                                )
+                                cell.border = medium_border
+                    
+                    # Auto-adjust column widths
+                    for column in worksheet.columns:
+                        max_length = 0
+                        column_letter = column[0].column_letter
+                        for cell in column:
+                            try:
+                                if len(str(cell.value)) > max_length:
+                                    max_length = len(str(cell.value))
+                            except:
+                                pass
+                        adjusted_width = min(max_length + 2, 50)
+                        worksheet.column_dimensions[column_letter].width = adjusted_width
+                
+                return excel_path
+            except Exception as e:
+                print(f"Error creating Excel file: {e}")
+                return None
+
+        # Generate PDF file
+        def create_pdf_file(data, filename):
+            if not data or 'data' not in data or not data['data']:
+                return None
+            
+            try:
+                pdf_path = os.path.join(downloads_dir, filename)
+                
+                # Create PDF document
+                doc = SimpleDocTemplate(pdf_path, pagesize=A4)
+                elements = []
+                
+                # Get styles
+                styles = getSampleStyleSheet()
+                title_style = ParagraphStyle(
+                    'CustomTitle',
+                    parent=styles['Heading1'],
+                    fontSize=16,
+                    spaceAfter=30,
+                    alignment=1  # Center alignment
+                )
+                
+                # Add title with update indicator if needed
+                title_text = "Consolidated Production Requirements"
+                if is_update:
+                    title_text += " (Updated)"
+                title = Paragraph(title_text, title_style)
+                elements.append(title)
+                elements.append(Spacer(1, 12))
+                
+                # Add subtitle
+                subtitle = Paragraph("", styles['Normal'])
+                elements.append(subtitle)
+                elements.append(Spacer(1, 20))
+                
+                # Prepare table data
+                columns = data.get('columns', list(data['data'][0].keys()) if data['data'] else [])
+                table_data = [columns]  # Header row
+                
+                # Add data rows
+                for item in data['data']:
+                    row = [str(item.get(col, "")) for col in columns]
+                    table_data.append(row)
+                
+                # Create table
+                table = Table(table_data)
+                
+                # Define table style
+                table_style = [
+                    # Header row styling
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 10),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    
+                    # Data rows styling
+                    ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 1), (-1, -1), 9),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ]
+                
+                # Highlight total columns and positive values
+                for col_idx, col in enumerate(columns):
+                    if 'total' in col.lower() or 'required' in col.lower():
+                        # Green background for total columns
+                        table_style.append(('BACKGROUND', (col_idx, 0), (col_idx, -1), colors.lightgreen))
+                        table_style.append(('FONTNAME', (col_idx, 1), (col_idx, -1), 'Helvetica-Bold'))
+                
+                # Apply alternating row colors
+                for row_idx in range(1, len(table_data)):
+                    if row_idx % 2 == 0:
+                        table_style.append(('BACKGROUND', (0, row_idx), (-1, row_idx), colors.beige))
+                
+                table.setStyle(TableStyle(table_style))
+                elements.append(table)
+                
+                # Add footer
+                elements.append(Spacer(1, 30))
+                footer_text = f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}<br/>KPI360.ai Team"
+                footer = Paragraph(footer_text, styles['Normal'])
+                elements.append(footer)
+                
+                # Build PDF
+                doc.build(elements)
+                return pdf_path
+            except Exception as e:
+                print(f"Error creating PDF file: {e}")
+                return None
+
+        # Generate HTML table from the data - DYNAMIC VERSION
+        def generate_production_table(data):
+            if not data or 'data' not in data or not data['data']:
+                return "<p>No production data available.</p>"
+            
+            # Get columns dynamically from the data
+            columns = data.get('columns', [])
+            if not columns and data['data']:
+                # If columns not provided, extract from first row
+                columns = list(data['data'][0].keys())
+            
+            if not columns:
+                return "<p>No columns found in data.</p>"
+            
+            # Find item name column
+            item_name_col = None
+            for idx, col in enumerate(columns):
+                if 'item' in col.lower() and ('name' in col.lower() or col.lower() == 'item'):
+                    item_name_col = idx
+                    break
+            
+            # Start building the table
+            table_html = """
+            <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
+                <thead>
+                    <tr style="background-color: #f8f9fa;">
+            """
+            
+            # Generate header row dynamically
+            for col in columns:
+                # Special styling for specific column types
+                if 'total' in col.lower() or 'required' in col.lower() or 'sum' in col.lower():
+                    header_style = "border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold; background-color: #e8f5e8;"
+                else:
+                    header_style = "border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;"
+                
+                table_html += f'<th style="{header_style}">{col}</th>'
+            
+            table_html += """
+                    </tr>
+                </thead>
+                <tbody>
+            """
+            
+            # Generate data rows dynamically
+            for row_index, item in enumerate(data['data']):
+                # Check if this item is a recent order or current order
+                is_recent_item = False
+                is_current_order_item = False
+                if item_name_col is not None and (recent_order_items or current_order_items):
+                    item_name = list(item.values())[item_name_col] if item_name_col < len(item) else None
+                    item_name_str = str(item_name)
+                    is_current_order_item = item_name_str in current_order_items
+                    # Recent items include ALL items ordered after global time (including current order)
+                    is_recent_item = item_name_str in recent_order_items
+                
+                # Alternate row colors for better readability, with special highlighting for orders
+                if is_recent_item:
+                    row_bg = "#ffe6e6"  # Light red for recent orders
+                else:
+                    row_bg = "#f9f9f9" if row_index % 2 == 0 else "#ffffff"
+                
+                table_html += f'<tr style="background-color: {row_bg};">'
+                
+                for col_index, col in enumerate(columns):
+                    cell_value = item.get(col, "")
+                    
+                    # Apply base effects first: 1) Recent orders (red), 2) Totals (green), 3) Positive values (yellow)
+                    if is_recent_item and col_index == item_name_col:
+                        # Recent item name - bold red text
+                        cell_style = "border: 1px solid #ddd; padding: 12px; text-align: left; background-color: #ffe6e6; font-weight: bold; color: #cc0000;"
+                    elif is_recent_item:
+                        # Recent item other columns
+                        cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center; background-color: #ffe6e6; font-weight: bold; color: #cc0000;"
+                    elif 'total' in col.lower() or 'required' in col.lower() or 'sum' in col.lower():
+                        # Highlight total/required columns in green
+                        cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center; background-color: #e8f5e8; font-weight: bold;"
+                    elif col_index == 0:  # First column (usually item name)
+                        # Check if any store column has a value for this row to highlight the item
+                        has_store_value = any(
+                            isinstance(item.get(c, 0), (int, float)) and item.get(c, 0) > 0 
+                            for c in columns[1:-2] if 'store' in c.lower() or 'location' in c.lower() or 'shop' in c.lower()
+                        )
+                        if has_store_value:
+                            cell_style = "border: 1px solid #ddd; padding: 12px; text-align: left; background-color: #fff3cd;"
+                        else:
+                            cell_style = "border: 1px solid #ddd; padding: 12px; text-align: left;"
+                    elif isinstance(cell_value, (int, float)) and cell_value > 0:
+                        # Highlight cells with positive values (like store quantities)
+                        cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center; background-color: #fff3cd;"
+                    elif col.lower() in ['unit', 'units', 'type', 'category']:
+                        # Unit/type columns - center aligned, no highlighting
+                        cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center;"
+                    else:
+                        # Default styling
+                        cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center;"
+                    
+                    # Final layer: Apply medium border and underline for current order items (keep base effects)
+                    if is_current_order_item:
+                        # Add underline and medium border to existing styling
+                        cell_style += " text-decoration: underline; border: 2px solid #333;"
+                    
+                    table_html += f'<td style="{cell_style}">{cell_value}</td>'
+                
+                table_html += "</tr>"
+            
+            table_html += """
+                </tbody>
+            </table>
+            """
+            
+            return table_html
+
+        # Generate files
+        excel_filename = f"production_requirements_{timestamp}.xlsx"
+        pdf_filename = f"production_requirements_{timestamp}.pdf"
+        
+        excel_path = create_excel_file(data, excel_filename)
+        pdf_path = create_pdf_file(data, pdf_filename)
+        
+        production_table = generate_production_table(data)
+        
+        # Determine subject and greeting based on flags
+        subject = "Consolidated Production Requirements"
+        greeting = f"Hello {name},"
+        
+        # Determine intro text based on is_email_update flag
+        if is_email_update:
+            intro_text = "**Updated** - Please find below the *updated* consolidated production requirements for all stores."
+        else:
+            intro_text = "Please find below the consolidated production requirements for all stores."
+        
+        # Add "Updated" to subject if is_update is True
+        if is_update:
+            subject += " - Updated"
+        
+        html_body = f"""
+        <html>
+        <head>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    padding: 20px;
+                }}
+                .header {{
+                    background-color: #f8f9fa;
+                    padding: 20px;
+                    border-radius: 5px;
+                    margin-bottom: 20px;
+                    text-align: center;
+                }}
+                .footer {{
+                    margin-top: 30px;
+                    padding-top: 20px;
+                    border-top: 1px solid #ddd;
+                }}
+                .table-container {{
+                    overflow-x: auto;
+                }}
+                @media screen and (max-width: 600px) {{
+                    .table-container {{
+                        font-size: 12px;
+                    }}
+                }}
+                .update-notice {{
+                    background-color: #fff3cd;
+                    border: 1px solid #ffeaa7;
+                    border-radius: 5px;
+                    padding: 15px;
+                    margin-bottom: 20px;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h2>{subject}</h2>
+            </div>
+            
+            <h3>{greeting}</h3>
+            
+            {"<div class='update-notice'><strong>📋 Update Notice:</strong> This is an updated version of the production requirements.</div>" if is_update else ""}
+            
+            {"<div class='update-notice'><strong>🔔 New Orders Alert:</strong> Some items were ordered after the global time and are highlighted in red." + (f" Items from Order ID #{recent_order_id} also have medium borders and underlines." if recent_order_id else "") + "</div>" if is_email_update else ""}
+            
+            <p>{intro_text} Excel and PDF versions are attached to this email for your convenience.</p>
+            
+            <div class="table-container">
+                {production_table}
+            </div>
+            
+            <div class="footer">
+                <p>This report shows the total quantities needed for production across all stores.</p>
+                <p><strong>Legend:</strong></p>
+                <ul>
+                    <li>🔴 <strong>Red highlighted rows:</strong> Items ordered after global time (recent orders)</li>
+                    <li>🟡 <strong>Yellow highlighted cells:</strong> Items required by specific stores</li>
+                    <li>🟢 <strong>Green highlighted columns:</strong> Total/Required quantities</li>
+                    <li>📊 <strong>Alternating row colors:</strong> For better readability</li>
+                    {f"<li>🔲 <strong><u>Medium borders and underlined:</u></strong> Items from current order (Order #{recent_order_id})</li>" if recent_order_id else ""}
+                </ul>
+                <p>This report automatically adapts to your data structure.</p>
+                
+                <p>Regards,<br><strong>KPI360.ai Team</strong></p>
+            </div>
+        </body>
+        </html>
+        """
+
+        # Create attachments list for your MessageSchema
+        attachments = []
+        
+        # Add Excel attachment
+        if excel_path and os.path.exists(excel_path):
+            attachments.append(excel_path)
+        
+        # Add PDF attachment  
+        if pdf_path and os.path.exists(pdf_path):
+            attachments.append(pdf_path)
+
+        # Use your original MessageSchema with attachments
+        message = MessageSchema(
+            subject=subject,
+            recipients=recipient_list,  # Now supports multiple recipients
+            body=html_body,
+            subtype="html",
+            attachments=attachments if attachments else None  # Add attachments if they exist
+        )
+
+        async def send():
+            try:
+                await fm.send_message(message)
+                print(f"Email sent successfully to {recipient_list}")
+            except Exception as e:
+                print(f"Error sending email: {e}")
+                raise e
+
+        try:
+            asyncio.run(send())
+            print(f"Production requirements email {'(update)' if is_update else ''} {'(with recent orders)' if is_email_update else ''} with downloads sent successfully to {recipient_list}")
+        except Exception as e:
+            print(f"Failed to send email via asyncio: {e}")
+            # Try alternative approach if asyncio.run fails
+            try:
+                import asyncio
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(send())
+                loop.close()
+                print(f"Email sent successfully using alternative method to {recipient_list}")
+            except Exception as e2:
+                print(f"Alternative email send method also failed: {e2}")
+                raise e2
+        
+        # Clean up files after sending
+        if excel_path and os.path.exists(excel_path):
+            os.remove(excel_path)
+        if pdf_path and os.path.exists(pdf_path):
+            os.remove(pdf_path)
+        
+    except Exception as e:
+        print(f"Failed to send production requirements email to {recipient_list if 'recipient_list' in locals() else to}: {e}")
+    finally:
+        db.close()
 
 
