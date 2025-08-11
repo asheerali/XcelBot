@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import React, { useState, useEffect, useMemo } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import {
   Box,
   Typography,
@@ -31,8 +31,8 @@ import {
   Select,
   MenuItem,
   Tooltip,
-  Snackbar
-} from '@mui/material';
+  Snackbar,
+} from "@mui/material";
 import {
   TrendingUp as TrendingUpIcon,
   ShoppingCart as ShoppingCartIcon,
@@ -47,16 +47,16 @@ import {
   Place as PlaceIcon,
   BugReport as BugReportIcon,
   ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon
-} from '@mui/icons-material';
+  ExpandLess as ExpandLessIcon,
+} from "@mui/icons-material";
 
 // Import Redux actions and selectors
 import {
   setSelectedCompanies,
   setSelectedLocations,
   selectSelectedCompanies,
-  selectSelectedLocations
-} from '../store/slices/masterFileSlice';
+  selectSelectedLocations,
+} from "../store/slices/masterFileSlice";
 
 // Import OrderIQ Dashboard date range Redux actions and selectors
 import {
@@ -67,26 +67,30 @@ import {
   selectOrderIQDashboardStartDate,
   selectOrderIQDashboardEndDate,
   selectOrderIQDashboardDateRange,
-  selectHasOrderIQDashboardDateRange
-} from '../store/slices/dateRangeSlice';
+  selectHasOrderIQDashboardDateRange,
+} from "../store/slices/dateRangeSlice";
 
-import { API_URL_Local } from '../constants';
+import { API_URL_Local } from "../constants";
 import apiClient from "../api/axiosConfig";
 
 // Import your actual DateRangeSelector component
-import DateRangeSelector from '../components/DateRangeSelector';
+import DateRangeSelector from "../components/DateRangeSelector";
 
 // Helper function for consistent quantity formatting
 const formatQuantity = (quantity) => {
   if (quantity % 1 === 0) {
     return quantity.toString(); // Show whole numbers without decimals
   } else {
-    return quantity.toFixed(2).replace(/\.?0+$/, ''); // Remove trailing zeros
+    return quantity.toFixed(2).replace(/\.?0+$/, ""); // Remove trailing zeros
   }
 };
 
 // FIXED: DateRangeSelector Button Component with timezone safety
-const DateRangeSelectorButton = ({ onDateRangeSelect, selectedRange, onClear }) => {
+const DateRangeSelectorButton = ({
+  onDateRangeSelect,
+  selectedRange,
+  onClear,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [tempRange, setTempRange] = useState(null);
 
@@ -117,28 +121,30 @@ const DateRangeSelectorButton = ({ onDateRangeSelect, selectedRange, onClear }) 
       <Button
         variant="outlined"
         startIcon={<CalendarTodayIcon />}
-        endIcon={selectedRange && (
-          <IconButton 
-            size="small" 
-            onClick={handleClear}
-            style={{ padding: '2px', marginLeft: '4px' }}
-          >
-            <ClearIcon style={{ fontSize: '16px' }} />
-          </IconButton>
-        )}
+        endIcon={
+          selectedRange && (
+            <IconButton
+              size="small"
+              onClick={handleClear}
+              style={{ padding: "2px", marginLeft: "4px" }}
+            >
+              <ClearIcon style={{ fontSize: "16px" }} />
+            </IconButton>
+          )
+        }
         onClick={handleOpen}
         sx={{
           borderRadius: 2,
-          textTransform: 'none',
-          minWidth: '180px',
-          justifyContent: 'flex-start',
-          borderColor: 'primary.main',
-          '&:hover': {
-            borderColor: 'primary.dark'
-          }
+          textTransform: "none",
+          minWidth: "180px",
+          justifyContent: "flex-start",
+          borderColor: "primary.main",
+          "&:hover": {
+            borderColor: "primary.dark",
+          },
         }}
       >
-        {selectedRange || 'Date Range'}
+        {selectedRange || "Date Range"}
       </Button>
 
       <Dialog
@@ -149,57 +155,60 @@ const DateRangeSelectorButton = ({ onDateRangeSelect, selectedRange, onClear }) 
         PaperProps={{
           sx: {
             borderRadius: 3,
-            maxHeight: '80vh'
-          }
+            maxHeight: "80vh",
+          },
         }}
       >
-        <DialogTitle sx={{ 
-          borderBottom: '1px solid #e0e0e0',
-          pb: 2,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1.5
-        }}>
+        <DialogTitle
+          sx={{
+            borderBottom: "1px solid #e0e0e0",
+            pb: 2,
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+          }}
+        >
           <CalendarTodayIcon color="primary" />
           Select Date Range for Orders
         </DialogTitle>
-        
+
         <DialogContent sx={{ p: 0 }}>
-          <DateRangeSelector 
+          <DateRangeSelector
             initialState={[
               {
                 startDate: new Date(),
                 endDate: new Date(),
-                key: 'selection'
-              }
+                key: "selection",
+              },
             ]}
-            onSelect={handleDateRangeSelect} 
+            onSelect={handleDateRangeSelect}
           />
         </DialogContent>
-        
-        <DialogActions sx={{ 
-          p: 3,
-          borderTop: '1px solid #e0e0e0',
-          justifyContent: 'space-between'
-        }}>
+
+        <DialogActions
+          sx={{
+            p: 3,
+            borderTop: "1px solid #e0e0e0",
+            justifyContent: "space-between",
+          }}
+        >
           <Typography variant="body2" color="text.secondary">
-            {tempRange && tempRange.startDate && tempRange.endDate && 
-              `${tempRange.startDate.toLocaleDateString()} - ${tempRange.endDate.toLocaleDateString()}`
-            }
+            {tempRange &&
+              tempRange.startDate &&
+              tempRange.endDate &&
+              `${tempRange.startDate.toLocaleDateString()} - ${tempRange.endDate.toLocaleDateString()}`}
           </Typography>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button 
-              onClick={handleClose}
-              color="secondary"
-              variant="outlined"
-            >
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button onClick={handleClose} color="secondary" variant="outlined">
               Cancel
             </Button>
-            <Button 
-              onClick={handleApply} 
-              variant="contained" 
+            <Button
+              onClick={handleApply}
+              variant="contained"
               color="primary"
-              disabled={!tempRange || !tempRange.startDate || !tempRange.endDate}
+              disabled={
+                !tempRange || !tempRange.startDate || !tempRange.endDate
+              }
             >
               Apply Range
             </Button>
@@ -214,13 +223,15 @@ const DateRangeSelectorButton = ({ onDateRangeSelect, selectedRange, onClear }) 
 const UpdateOrderDialog = ({ open, onClose, order, onConfirm }) => {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle sx={{ 
-        borderBottom: '1px solid #e0e0e0',
-        pb: 2,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 1.5
-      }}>
+      <DialogTitle
+        sx={{
+          borderBottom: "1px solid #e0e0e0",
+          pb: 2,
+          display: "flex",
+          alignItems: "center",
+          gap: 1.5,
+        }}
+      >
         <ReceiptIcon color="primary" />
         Update Order #{order?.id}
       </DialogTitle>
@@ -245,8 +256,9 @@ const UpdateOrderDialog = ({ open, onClose, order, onConfirm }) => {
 
         <Alert severity="info" sx={{ mb: 3 }}>
           <Typography variant="body2">
-            The order items have been loaded into your current order basket. 
-            You can modify quantities, add new items, or remove items before updating.
+            The order items have been loaded into your current order basket. You
+            can modify quantities, add new items, or remove items before
+            updating.
           </Typography>
         </Alert>
 
@@ -258,13 +270,18 @@ const UpdateOrderDialog = ({ open, onClose, order, onConfirm }) => {
             <ListItem key={index}>
               <ListItemText
                 primary={item.name}
-                secondary={`${formatQuantity(item.quantity)} ${item.unit} × ${item.unit_price || item.price} = ${item.total_price || (item.quantity * (item.unit_price || item.price)).toFixed(2)}`}
+                secondary={`${formatQuantity(item.quantity)} ${item.unit} × ${
+                  item.unit_price || item.price
+                } = ${
+                  item.total_price ||
+                  (item.quantity * (item.unit_price || item.price)).toFixed(2)
+                }`}
               />
             </ListItem>
           ))}
         </List>
       </DialogContent>
-      <DialogActions sx={{ p: 3, borderTop: '1px solid #e0e0e0' }}>
+      <DialogActions sx={{ p: 3, borderTop: "1px solid #e0e0e0" }}>
         <Button onClick={onClose} color="secondary" variant="outlined">
           Cancel Update
         </Button>
@@ -286,27 +303,30 @@ const OrderIQDashboard = () => {
   // ENHANCED: Redux date range selectors with debugging
   const reduxDateRange = useSelector(selectOrderIQDashboardDateRange);
   const hasDateRange = useSelector(selectHasOrderIQDashboardDateRange);
-  
-  console.log('🔍 DEBUG: OrderIQ Redux State Investigation:');
-  console.log('reduxDateRange:', reduxDateRange);
-  console.log('hasDateRange:', hasDateRange);
+
+  console.log("🔍 DEBUG: OrderIQ Redux State Investigation:");
+  console.log("reduxDateRange:", reduxDateRange);
+  console.log("hasDateRange:", hasDateRange);
 
   // State management
   const [filters, setFilters] = useState({});
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [currentOrder, setCurrentOrder] = useState([]);
   const [emailOrder, setEmailOrder] = useState(false);
-  const [updateOrderDialog, setUpdateOrderDialog] = useState({ open: false, order: null });
+  const [updateOrderDialog, setUpdateOrderDialog] = useState({
+    open: false,
+    order: null,
+  });
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
   const [orderToUpdate, setOrderToUpdate] = useState(null);
   const [itemQuantities, setItemQuantities] = useState({});
-  
+
   // State for expanded order items
   const [expandedOrders, setExpandedOrders] = useState(new Set());
 
   // Toggle expanded state for order items
   const toggleOrderExpansion = (orderId) => {
-    setExpandedOrders(prev => {
+    setExpandedOrders((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(orderId)) {
         newSet.delete(orderId);
@@ -316,7 +336,7 @@ const OrderIQDashboard = () => {
       return newSet;
     });
   };
-  
+
   // API data state
   const [companyLocations, setCompanyLocations] = useState([]);
   const [availableItems, setAvailableItems] = useState([]);
@@ -327,34 +347,41 @@ const OrderIQDashboard = () => {
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [loadingAISuggestions, setLoadingAISuggestions] = useState(false);
   const [error, setError] = useState(null);
-  
+
   // Success notification state
   const [notification, setNotification] = useState({
     open: false,
-    message: '',
-    severity: 'success'
+    message: "",
+    severity: "success",
   });
 
   // Selected company and location for API calls - Initialize from Redux
   const [selectedCompanyId, setSelectedCompanyId] = useState(() => {
     return reduxSelectedCompanies.length > 0 ? reduxSelectedCompanies[0] : null;
   });
-  
+
   const [selectedLocationId, setSelectedLocationId] = useState(() => {
     return reduxSelectedLocations.length > 0 ? reduxSelectedLocations[0] : null;
   });
 
   // FIXED: Simplified apiDateRange computation with timezone safety
   const apiDateRange = useMemo(() => {
-    console.log('🔍 Computing apiDateRange with:', { hasDateRange, reduxDateRange });
+    console.log("🔍 Computing apiDateRange with:", {
+      hasDateRange,
+      reduxDateRange,
+    });
 
-    if (!hasDateRange || !reduxDateRange?.startDate || !reduxDateRange?.endDate) {
+    if (
+      !hasDateRange ||
+      !reduxDateRange?.startDate ||
+      !reduxDateRange?.endDate
+    ) {
       return null;
     }
 
     // FIXED: Create Date objects in local timezone to avoid timezone shift
     const createSafeDate = (dateStr) => {
-      const [year, month, day] = dateStr.split('-').map(Number);
+      const [year, month, day] = dateStr.split("-").map(Number);
       return new Date(year, month - 1, day); // month is 0-indexed, creates date in local timezone
     };
 
@@ -365,7 +392,7 @@ const OrderIQDashboard = () => {
       startDate,
       endDate,
       startDateStr: reduxDateRange.startDate,
-      endDateStr: reduxDateRange.endDate
+      endDateStr: reduxDateRange.endDate,
     };
   }, [hasDateRange, reduxDateRange]);
 
@@ -374,7 +401,7 @@ const OrderIQDashboard = () => {
     if (!apiDateRange?.startDate || !apiDateRange?.endDate) {
       return null;
     }
-    
+
     // FIXED: Use simple local date formatting
     const startStr = apiDateRange.startDate.toLocaleDateString();
     const endStr = apiDateRange.endDate.toLocaleDateString();
@@ -382,146 +409,158 @@ const OrderIQDashboard = () => {
   }, [apiDateRange]);
 
   // Derived data for dropdowns
-  const companies = companyLocations.map(item => ({
+  const companies = companyLocations.map((item) => ({
     id: item.company_id,
-    name: item.company_name
+    name: item.company_name,
   }));
 
-  const availableLocationsForCompany = selectedCompanyId 
-    ? companyLocations.find(item => item.company_id === parseInt(selectedCompanyId))?.locations || []
+  const availableLocationsForCompany = selectedCompanyId
+    ? companyLocations.find(
+        (item) => item.company_id === parseInt(selectedCompanyId)
+      )?.locations || []
     : [];
 
   // Success notification function
-  const showNotification = (message, severity = 'success') => {
+  const showNotification = (message, severity = "success") => {
     setNotification({
       open: true,
       message,
-      severity
+      severity,
     });
   };
 
   const handleCloseNotification = (event, reason) => {
-    if (reason === 'clickaway') {
+    if (reason === "clickaway") {
       return;
     }
-    setNotification(prev => ({ ...prev, open: false }));
+    setNotification((prev) => ({ ...prev, open: false }));
   };
 
   // UPDATED: Handle quantity change for specific item - now supports decimals
   const handleQuantityChange = (itemId, newQuantity) => {
-    if (newQuantity === '') {
-      setItemQuantities(prev => ({
+    if (newQuantity === "") {
+      setItemQuantities((prev) => ({
         ...prev,
-        [itemId]: ''
+        [itemId]: "",
       }));
       return;
     }
-    
+
     const quantity = parseFloat(newQuantity); // Changed from parseInt to parseFloat
     if (!isNaN(quantity) && quantity >= 0) {
-      setItemQuantities(prev => ({
+      setItemQuantities((prev) => ({
         ...prev,
-        [itemId]: quantity
+        [itemId]: quantity,
       }));
     }
   };
 
   // Event handlers - Updated to sync with Redux
   const handleCompanyChange = (companyId) => {
-    console.log('OrderIQ: Company changed to:', companyId);
-    
+    console.log("OrderIQ: Company changed to:", companyId);
+
     setSelectedCompanyId(companyId);
     setSelectedLocationId(null);
     setAvailableItems([]);
     setRecentOrders([]);
-    setFilters(prev => ({ ...prev, companies: [companyId], location: [] }));
-    
+    setFilters((prev) => ({ ...prev, companies: [companyId], location: [] }));
+
     dispatch(setSelectedCompanies(companyId ? [companyId] : []));
     dispatch(setSelectedLocations([]));
   };
 
   const handleLocationChange = (locationId) => {
-    console.log('OrderIQ: Location changed to:', locationId);
-    
+    console.log("OrderIQ: Location changed to:", locationId);
+
     setSelectedLocationId(locationId);
-    setFilters(prev => ({ ...prev, location: [locationId] }));
-    
+    setFilters((prev) => ({ ...prev, location: [locationId] }));
+
     dispatch(setSelectedLocations(locationId ? [locationId] : []));
   };
 
   // FIXED: Simplified date range handler
   const handleDateRangeSelect = (range) => {
-    console.log('🔥 OrderIQ: handleDateRangeSelect called with:', range);
-    
+    console.log("🔥 OrderIQ: handleDateRangeSelect called with:", range);
+
     if (!range.startDate || !range.endDate) {
-      console.error('Invalid date range - missing dates:', range);
+      console.error("Invalid date range - missing dates:", range);
       return;
     }
-    
+
     // FIXED: Simple local timezone formatting
     const formatDate = (date) => {
       const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
       return `${year}-${month}-${day}`;
     };
 
     const startDateStr = formatDate(range.startDate);
     const endDateStr = formatDate(range.endDate);
-    
-    console.log('📤 Dispatching to Redux:', { startDateStr, endDateStr });
-    
-    dispatch(setOrderIQDashboardDateRange({
-      startDate: startDateStr,
-      endDate: endDateStr
-    }));
+
+    console.log("📤 Dispatching to Redux:", { startDateStr, endDateStr });
+
+    dispatch(
+      setOrderIQDashboardDateRange({
+        startDate: startDateStr,
+        endDate: endDateStr,
+      })
+    );
   };
 
   // Handle date range clear
   const handleDateRangeClear = () => {
-    console.log('🧹 OrderIQ: Clearing date range from Redux');
+    console.log("🧹 OrderIQ: Clearing date range from Redux");
     dispatch(clearOrderIQDashboardDateRange());
   };
 
   // UPDATED: Add to order function - now supports decimals
   const handleAddToOrder = (item, quantity = null, showNotif = true) => {
-    let quantityToAdd = quantity !== null ? quantity : (itemQuantities[item.id] || 1); // Default back to 1
-    
-    if (typeof quantityToAdd === 'string') {
+    let quantityToAdd =
+      quantity !== null ? quantity : itemQuantities[item.id] || 1; // Default back to 1
+
+    if (typeof quantityToAdd === "string") {
       quantityToAdd = parseFloat(quantityToAdd) || 1; // Default back to 1
     }
-    
-    if (quantityToAdd <= 0) { // Changed from < 1 to <= 0 to allow decimals
+
+    if (quantityToAdd <= 0) {
+      // Changed from < 1 to <= 0 to allow decimals
       return;
     }
-    
-    setCurrentOrder(prev => {
-      const existingIndex = prev.findIndex(orderItem => orderItem.id === item.id);
+
+    setCurrentOrder((prev) => {
+      const existingIndex = prev.findIndex(
+        (orderItem) => orderItem.id === item.id
+      );
       if (existingIndex >= 0) {
         const updated = [...prev];
         updated[existingIndex].quantity += quantityToAdd;
         if (showNotif) {
-          showNotification(`Added ${formatQuantity(quantityToAdd)} more ${item.name} to cart`);
+          showNotification(
+            `Added ${formatQuantity(quantityToAdd)} more ${item.name} to cart`
+          );
         }
         return updated;
       } else {
         if (showNotif) {
-          showNotification(`${formatQuantity(quantityToAdd)} × ${item.name} added to cart`);
+          showNotification(
+            `${formatQuantity(quantityToAdd)} × ${item.name} added to cart`
+          );
         }
         return [...prev, { ...item, quantity: quantityToAdd }];
       }
     });
-    
+
     // Reset the quantity input to 1 after adding to order
-    setItemQuantities(prev => ({
+    setItemQuantities((prev) => ({
       ...prev,
-      [item.id]: 1
+      [item.id]: 1,
     }));
   };
 
   const handleRemoveFromOrder = (itemId) => {
-    const removedItem = currentOrder.find(item => item.id === itemId);
-    setCurrentOrder(prev => prev.filter(item => item.id !== itemId));
+    const removedItem = currentOrder.find((item) => item.id === itemId);
+    setCurrentOrder((prev) => prev.filter((item) => item.id !== itemId));
     if (removedItem) {
       showNotification(`${removedItem.name} removed from cart`);
     }
@@ -533,47 +572,59 @@ const OrderIQDashboard = () => {
       handleRemoveFromOrder(itemId);
       return;
     }
-    setCurrentOrder(prev => 
-      prev.map(item => 
-        item.id === itemId ? { ...item, quantity: parseFloat(newQuantity.toFixed(2)) || item.quantity } : item
+    setCurrentOrder((prev) =>
+      prev.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              quantity: parseFloat(newQuantity.toFixed(2)) || item.quantity,
+            }
+          : item
       )
     );
   };
 
   // UPDATED: Calculate order total with floating point precision handling
   const calculateOrderTotal = () => {
-    const total = currentOrder.reduce((total, item) => total + (item.price * item.quantity), 0);
+    const total = currentOrder.reduce(
+      (total, item) => total + item.price * item.quantity,
+      0
+    );
     return Math.round(total * 100) / 100; // Round to 2 decimal places to avoid floating point precision issues
   };
 
   const handleAddRecentOrderToCart = (recentOrder) => {
     let itemsAdded = 0;
-    recentOrder.orderItems.forEach(item => {
+    recentOrder.orderItems.forEach((item) => {
       if (item.quantity > 0) {
         handleAddToOrder(item, item.quantity, false);
         itemsAdded++;
       }
     });
-    
+
     if (itemsAdded > 0) {
-      showNotification(`Added ${itemsAdded} item${itemsAdded > 1 ? 's' : ''} from recent order to cart`);
+      showNotification(
+        `Added ${itemsAdded} item${
+          itemsAdded > 1 ? "s" : ""
+        } from recent order to cart`
+      );
     }
   };
 
   const handleUpdateRecentOrder = (recentOrder) => {
     setOrderToUpdate(recentOrder);
     setIsUpdatingOrder(true);
-    
-    const orderItems = recentOrder.orderItems.map(item => ({
+
+    const orderItems = recentOrder.orderItems.map((item) => ({
       ...item,
       id: item.id,
       name: item.name,
       price: item.unit_price || item.price,
       unit: item.unit,
       quantity: item.quantity,
-      category: item.category
+      category: item.category,
     }));
-    
+
     setCurrentOrder(orderItems);
   };
 
@@ -588,37 +639,46 @@ const OrderIQDashboard = () => {
     if (reduxSelectedCompanies.length > 0) {
       const companyId = reduxSelectedCompanies[0];
       setSelectedCompanyId(companyId);
-      console.log('OrderIQ: Loaded company from Redux:', companyId);
+      console.log("OrderIQ: Loaded company from Redux:", companyId);
     }
-    
+
     if (reduxSelectedLocations.length > 0) {
       const locationId = reduxSelectedLocations[0];
       setSelectedLocationId(locationId);
-      console.log('OrderIQ: Loaded location from Redux:', locationId);
+      console.log("OrderIQ: Loaded location from Redux:", locationId);
     }
   }, [reduxSelectedCompanies, reduxSelectedLocations]);
 
   // Auto-fetch data when company, location, OR date range changes
   useEffect(() => {
-    if (selectedCompanyId && selectedLocationId && companyLocations.length > 0) {
-      console.log('🚀 OrderIQ: Auto-fetching data due to filter change:', { 
-        companyId: selectedCompanyId, 
+    if (
+      selectedCompanyId &&
+      selectedLocationId &&
+      companyLocations.length > 0
+    ) {
+      console.log("🚀 OrderIQ: Auto-fetching data due to filter change:", {
+        companyId: selectedCompanyId,
         locationId: selectedLocationId,
         dateRange: apiDateRange,
-        companyLocationsLoaded: companyLocations.length > 0
+        companyLocationsLoaded: companyLocations.length > 0,
       });
-      
+
       fetchAvailableItems(selectedCompanyId, selectedLocationId, apiDateRange);
       fetchRecentOrders(selectedCompanyId, selectedLocationId, apiDateRange);
       fetchAnalytics(selectedCompanyId, selectedLocationId, apiDateRange);
     }
-  }, [selectedCompanyId, selectedLocationId, companyLocations.length, apiDateRange]);
+  }, [
+    selectedCompanyId,
+    selectedLocationId,
+    companyLocations.length,
+    apiDateRange,
+  ]);
 
   // UPDATED: Initialize item quantities with default value of 1
   useEffect(() => {
     if (availableItems.length > 0) {
       const initialQuantities = {};
-      availableItems.forEach(item => {
+      availableItems.forEach((item) => {
         initialQuantities[item.id] = 1; // Set default back to 1
       });
       setItemQuantities(initialQuantities);
@@ -635,26 +695,29 @@ const OrderIQDashboard = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await apiClient.get('/company-locations/all');
-      
+
+      const response = await apiClient.get("/company-locations/all");
+
       if (!Array.isArray(response.data)) {
-        throw new Error('Invalid response format: expected array of companies');
+        throw new Error("Invalid response format: expected array of companies");
       }
-      
-      const validCompanies = response.data.filter(company => {
-        return company.company_id && company.company_name && Array.isArray(company.locations);
+
+      const validCompanies = response.data.filter((company) => {
+        return (
+          company.company_id &&
+          company.company_name &&
+          Array.isArray(company.locations)
+        );
       });
-      
+
       if (validCompanies.length === 0) {
-        throw new Error('No valid companies found in response');
+        throw new Error("No valid companies found in response");
       }
-      
+
       setCompanyLocations(validCompanies);
-      
     } catch (err) {
-      console.error('Error fetching company-locations:', err);
-      setError('Failed to load companies and locations.');
+      console.error("Error fetching company-locations:", err);
+      setError("Failed to load companies and locations.");
     } finally {
       setLoading(false);
     }
@@ -663,57 +726,71 @@ const OrderIQDashboard = () => {
   const fetchRecentOrders = async (companyId, locationId, dateRange = null) => {
     try {
       setLoadingOrders(true);
-      
+
       let url = `/api/storeorders/detailsrecent/${companyId}/${locationId}`;
       const params = new URLSearchParams();
-      
+
       if (dateRange && dateRange.startDateStr && dateRange.endDateStr) {
-        params.append('start_date', dateRange.startDateStr);
-        params.append('end_date', dateRange.endDateStr);
+        params.append("start_date", dateRange.startDateStr);
+        params.append("end_date", dateRange.endDateStr);
         url += `?${params.toString()}`;
       }
-      
+
       const response = await apiClient.get(url);
-      
+
       if (!response.data.data || !Array.isArray(response.data.data)) {
-        throw new Error('Invalid recent orders data structure received from API');
+        throw new Error(
+          "Invalid recent orders data structure received from API"
+        );
       }
-      
+
       const transformedOrders = response.data.data.map((order) => ({
         id: order.id,
         items: order.items_ordered?.total_items || 0,
-        total: order.items_ordered?.items?.reduce((sum, item) => sum + item.total_price, 0) || 0,
-        avg: order.items_ordered?.items?.length > 0 
-          ? (order.items_ordered.items.reduce((sum, item) => sum + item.total_price, 0) / order.items_ordered.items.length) 
-          : 0,
-        qty: order.items_ordered?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0,
-        date: new Date(order.created_at).toLocaleString('en-US', {
-          month: 'numeric',
-          day: 'numeric', 
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true
+        total:
+          order.items_ordered?.items?.reduce(
+            (sum, item) => sum + item.total_price,
+            0
+          ) || 0,
+        avg:
+          order.items_ordered?.items?.length > 0
+            ? order.items_ordered.items.reduce(
+                (sum, item) => sum + item.total_price,
+                0
+              ) / order.items_ordered.items.length
+            : 0,
+        qty:
+          order.items_ordered?.items?.reduce(
+            (sum, item) => sum + item.quantity,
+            0
+          ) || 0,
+        date: new Date(order.created_at).toLocaleString("en-US", {
+          month: "numeric",
+          day: "numeric",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
         }),
         created_at: order.created_at,
         company_name: order.company_name,
         location_name: order.location_name,
-        orderItems: order.items_ordered?.items?.map(item => ({
-          id: item.item_id,
-          name: item.name,
-          price: item.unit_price,
-          unit: item.unit,
-          quantity: item.quantity,
-          category: item.category,
-          total_price: item.total_price
-        })) || []
+        orderItems:
+          order.items_ordered?.items?.map((item) => ({
+            id: item.item_id,
+            name: item.name,
+            price: item.unit_price,
+            unit: item.unit,
+            quantity: item.quantity,
+            category: item.category,
+            total_price: item.total_price,
+          })) || [],
       }));
-      
+
       setRecentOrders(transformedOrders);
-      
     } catch (err) {
-      console.error('Error fetching recent orders:', err);
-      setError('Failed to load recent orders.');
+      console.error("Error fetching recent orders:", err);
+      setError("Failed to load recent orders.");
     } finally {
       setLoadingOrders(false);
     }
@@ -722,68 +799,79 @@ const OrderIQDashboard = () => {
   const fetchAnalytics = async (companyId, locationId, dateRange = null) => {
     try {
       setLoadingAnalytics(true);
-      
+
       let url = `/api/storeorders/analytics/${companyId}/${locationId}`;
       const params = new URLSearchParams();
-      
+
       if (dateRange && dateRange.startDateStr && dateRange.endDateStr) {
-        params.append('start_date', dateRange.startDateStr);
-        params.append('end_date', dateRange.endDateStr);
+        params.append("start_date", dateRange.startDateStr);
+        params.append("end_date", dateRange.endDateStr);
         url += `?${params.toString()}`;
       }
-      
+
       const response = await apiClient.get(url);
-      
+
       if (!response.data.data) {
-        throw new Error('Invalid analytics data structure received from API');
+        throw new Error("Invalid analytics data structure received from API");
       }
-      
+
       setAnalyticsData(response.data.data);
-      
     } catch (err) {
-      console.error('Error fetching analytics:', err);
-      setError('Failed to load analytics.');
+      console.error("Error fetching analytics:", err);
+      setError("Failed to load analytics.");
       setAnalyticsData(null);
     } finally {
       setLoadingAnalytics(false);
     }
   };
 
-  const fetchAvailableItems = async (companyId, locationId, dateRange = null) => {
+  const fetchAvailableItems = async (
+    companyId,
+    locationId,
+    dateRange = null
+  ) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       let url = `/api/masterfile/availableitems/${companyId}/${locationId}`;
       const params = new URLSearchParams();
-      
+
       if (dateRange && dateRange.startDateStr && dateRange.endDateStr) {
-        params.append('start_date', dateRange.startDateStr);
-        params.append('end_date', dateRange.endDateStr);
+        params.append("start_date", dateRange.startDateStr);
+        params.append("end_date", dateRange.endDateStr);
         url += `?${params.toString()}`;
       }
-      
+
       const response = await apiClient.get(url);
-      
-      if (!response.data.data || !response.data.data.dataframe || !Array.isArray(response.data.data.dataframe)) {
-        throw new Error('Invalid data structure received from API');
+
+      if (
+        !response.data.data ||
+        !response.data.data.dataframe ||
+        !Array.isArray(response.data.data.dataframe)
+      ) {
+        throw new Error("Invalid data structure received from API");
       }
-      
-      const transformedItems = response.data.data.dataframe.map((item, index) => ({
-        id: `item_${index}_${companyId}_${locationId}`,
-        name: item.column1 || 'Unknown Item',
-        category: item.column0 || 'Unknown Category',
-        price: parseFloat(item.column4) || 0,
-        unit: item.column3 || 'Unit',
-        batchSize: item.column2 || '',
-        previousPrice: item.column5 !== "-" && item.column5 ? parseFloat(item.column5) : null
-      }));
-      
+
+      const transformedItems = response.data.data.dataframe.map(
+        (item, index) => ({
+          id: `item_${index}_${companyId}_${locationId}`,
+          name: item.column1 || "Unknown Item",
+          category: item.column0 || "Unknown Category",
+          price: parseFloat(item.column4) || 0,
+          unit: item.column3 || "Unit",
+          batchSize: item.column2 || "",
+          previousPrice:
+            item.column5 !== "-" && item.column5
+              ? parseFloat(item.column5)
+              : null,
+        })
+      );
+
       setAvailableItems(transformedItems);
-      
     } catch (err) {
-      console.error('Error fetching available items:', err);
-      setError('Failed to load available items.');
+      console.error("Error fetching available items:", err);
+      setError("Failed to load available items.");
       setAvailableItems([]);
     } finally {
       setLoading(false);
@@ -792,39 +880,55 @@ const OrderIQDashboard = () => {
 
   const fetchAISuggestions = async () => {
     if (!selectedCompanyId || !selectedLocationId) {
-      setError('Please select company and location to get AI suggestions');
+      setError("Please select company and location to get AI suggestions");
       return;
     }
 
     try {
       setLoadingAISuggestions(true);
       setError(null);
-      
-      const response = await apiClient.get(`/api/storeorders/aisuggestions/${selectedCompanyId}/${selectedLocationId}`);
-      
-      if (!response.data.data || !response.data.data.items_ordered || !Array.isArray(response.data.data.items_ordered.items)) {
-        throw new Error('Invalid AI suggestions data structure received from API');
+
+      const response = await apiClient.get(
+        `/api/storeorders/aisuggestions/${selectedCompanyId}/${selectedLocationId}`
+      );
+
+      if (
+        !response.data.data ||
+        !response.data.data.items_ordered ||
+        !Array.isArray(response.data.data.items_ordered.items)
+      ) {
+        throw new Error(
+          "Invalid AI suggestions data structure received from API"
+        );
       }
-      
-      const suggestedItems = response.data.data.items_ordered.items.map((item) => ({
-        id: item.item_id,
-        name: item.name,
-        category: item.category,
-        price: item.unit_price,
-        unit: item.unit,
-        quantity: item.quantity
-      }));
-      
+
+      const suggestedItems = response.data.data.items_ordered.items.map(
+        (item) => ({
+          id: item.item_id,
+          name: item.name,
+          category: item.category,
+          price: item.unit_price,
+          unit: item.unit,
+          quantity: item.quantity,
+        })
+      );
+
       if (suggestedItems.length > 0) {
         setCurrentOrder(suggestedItems);
-        showNotification(`🤖 AI suggested ${suggestedItems.length} item${suggestedItems.length > 1 ? 's' : ''} based on your order history!`);
+        showNotification(
+          `🤖 AI suggested ${suggestedItems.length} item${
+            suggestedItems.length > 1 ? "s" : ""
+          } based on your order history!`
+        );
       } else {
-        showNotification('🤖 No AI suggestions available at the moment. Try placing some orders first!', 'info');
+        showNotification(
+          "🤖 No AI suggestions available at the moment. Try placing some orders first!",
+          "info"
+        );
       }
-      
     } catch (err) {
-      console.error('Error fetching AI suggestions:', err);
-      setError('Failed to load AI suggestions.');
+      console.error("Error fetching AI suggestions:", err);
+      setError("Failed to load AI suggestions.");
     } finally {
       setLoadingAISuggestions(false);
     }
@@ -835,45 +939,51 @@ const OrderIQDashboard = () => {
     if (e && e.preventDefault) {
       e.preventDefault();
     }
-    
+
     if (!selectedCompanyId || !selectedLocationId) {
-      setError('Please select company and location before submitting order');
+      setError("Please select company and location before submitting order");
       return;
     }
 
     if (currentOrder.length === 0) {
-      setError('Please add items to your order before submitting');
+      setError("Please add items to your order before submitting");
       return;
     }
 
     try {
       setLoading(true);
       setError(null);
-      
+
       const now = new Date();
-      const localTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString();
-      
+      const localTime = new Date(
+        now.getTime() - now.getTimezoneOffset() * 60000
+      ).toISOString();
+
       const orderData = {
         company_id: parseInt(selectedCompanyId),
         location_id: parseInt(selectedLocationId),
-        items: currentOrder.map(item => ({
+        items: currentOrder.map((item) => ({
           item_id: item.id,
           name: item.name,
           category: item.category,
           quantity: parseFloat(item.quantity.toFixed(2)), // Ensure clean decimal values
           unit_price: item.price,
           unit: item.unit,
-          total_price: Math.round(item.price * item.quantity * 100) / 100 // Round to avoid precision issues
+          total_price: Math.round(item.price * item.quantity * 100) / 100, // Round to avoid precision issues
         })),
         total_amount: calculateOrderTotal(),
-        email_order: emailOrder,
-        order_date: localTime
+        email_order: true, // Always send true regardless of UI checkbox
+        order_date: localTime,
       };
 
-      if (apiDateRange && apiDateRange.startDateStr && apiDateRange.endDateStr) {
+      if (
+        apiDateRange &&
+        apiDateRange.startDateStr &&
+        apiDateRange.endDateStr
+      ) {
         orderData.date_range = {
           start_date: apiDateRange.startDateStr,
-          end_date: apiDateRange.endDateStr
+          end_date: apiDateRange.endDateStr,
         };
         orderData.start_date = apiDateRange.startDateStr;
         orderData.end_date = apiDateRange.endDateStr;
@@ -885,37 +995,42 @@ const OrderIQDashboard = () => {
         orderData.has_date_range = false;
       }
 
-      const response = await apiClient.post('/api/storeorders/orderitems', orderData);
+      const response = await apiClient.post(
+        "/api/storeorders/orderitems",
+        orderData
+      );
 
-      console.log('Order submitted successfully:', response.data);
-      
-      showNotification('Order submitted successfully! 🎉');
+      console.log("Order submitted successfully:", response.data);
+
+      showNotification("Order submitted successfully! 🎉");
       setCurrentOrder([]);
-      setEmailOrder(false);
       setError(null);
-      
+
       // Refresh data
       if (selectedCompanyId && selectedLocationId) {
-        fetchAvailableItems(selectedCompanyId, selectedLocationId, apiDateRange);
+        fetchAvailableItems(
+          selectedCompanyId,
+          selectedLocationId,
+          apiDateRange
+        );
         fetchRecentOrders(selectedCompanyId, selectedLocationId, apiDateRange);
         fetchAnalytics(selectedCompanyId, selectedLocationId, apiDateRange);
       }
-      
     } catch (err) {
-      console.error('Error submitting order:', err);
-      let errorMessage = 'Failed to submit order.';
-      
+      console.error("Error submitting order:", err);
+      let errorMessage = "Failed to submit order.";
+
       if (err.response?.status === 401) {
-        errorMessage = 'Authentication failed. Please log in again.';
+        errorMessage = "Authentication failed. Please log in again.";
       } else if (err.response?.status === 403) {
-        errorMessage = 'Access forbidden. You do not have permission to submit orders.';
+        errorMessage =
+          "Access forbidden. You do not have permission to submit orders.";
       } else if (err.response?.data?.message) {
         errorMessage = `Failed to submit order: ${err.response.data.message}`;
       }
-      
+
       setError(errorMessage);
-      showNotification(errorMessage, 'error');
-      
+      showNotification(errorMessage, "error");
     } finally {
       setLoading(false);
     }
@@ -926,46 +1041,52 @@ const OrderIQDashboard = () => {
     if (e && e.preventDefault) {
       e.preventDefault();
     }
-    
+
     if (!orderToUpdate) {
-      setError('No order selected for update');
+      setError("No order selected for update");
       return;
     }
 
     if (currentOrder.length === 0) {
-      setError('Please add items to your order before updating');
+      setError("Please add items to your order before updating");
       return;
     }
 
     try {
       setLoading(true);
       setError(null);
-      
+
       const now = new Date();
-      const localTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString();
-      
+      const localTime = new Date(
+        now.getTime() - now.getTimezoneOffset() * 60000
+      ).toISOString();
+
       const updateData = {
         order_id: orderToUpdate.id,
         company_id: parseInt(selectedCompanyId),
         location_id: parseInt(selectedLocationId),
-        items: currentOrder.map(item => ({
+        items: currentOrder.map((item) => ({
           item_id: item.id,
           name: item.name,
           category: item.category,
           quantity: parseFloat(item.quantity.toFixed(2)), // Ensure clean decimal values
           unit_price: item.price,
           unit: item.unit,
-          total_price: Math.round(item.price * item.quantity * 100) / 100 // Round to avoid precision issues
+          total_price: Math.round(item.price * item.quantity * 100) / 100, // Round to avoid precision issues
         })),
         total_amount: calculateOrderTotal(),
-        email_order: emailOrder,
-        updated_date: localTime
+        email_order: true, // Always send true regardless of UI checkbox
+        updated_date: localTime,
       };
 
-      if (apiDateRange && apiDateRange.startDateStr && apiDateRange.endDateStr) {
+      if (
+        apiDateRange &&
+        apiDateRange.startDateStr &&
+        apiDateRange.endDateStr
+      ) {
         updateData.date_range = {
           start_date: apiDateRange.startDateStr,
-          end_date: apiDateRange.endDateStr
+          end_date: apiDateRange.endDateStr,
         };
         updateData.start_date = apiDateRange.startDateStr;
         updateData.end_date = apiDateRange.endDateStr;
@@ -977,36 +1098,42 @@ const OrderIQDashboard = () => {
         updateData.has_date_range = false;
       }
 
-      const response = await apiClient.post('/api/storeorders/orderupdate', updateData);
+      const response = await apiClient.post(
+        "/api/storeorders/orderupdate",
+        updateData
+      );
 
-      console.log('Order updated successfully:', response.data);
-      
+      console.log("Order updated successfully:", response.data);
+
       showNotification(`Order #${orderToUpdate.id} updated successfully! 🎉`);
       handleCancelOrderUpdate();
       setError(null);
-      
+
       // Refresh all data after successful order update
       if (selectedCompanyId && selectedLocationId) {
-        fetchAvailableItems(selectedCompanyId, selectedLocationId, apiDateRange);
+        fetchAvailableItems(
+          selectedCompanyId,
+          selectedLocationId,
+          apiDateRange
+        );
         fetchRecentOrders(selectedCompanyId, selectedLocationId, apiDateRange);
         fetchAnalytics(selectedCompanyId, selectedLocationId, apiDateRange);
       }
-      
     } catch (err) {
-      console.error('Error updating order:', err);
-      let errorMessage = 'Failed to update order.';
-      
+      console.error("Error updating order:", err);
+      let errorMessage = "Failed to update order.";
+
       if (err.response?.status === 401) {
-        errorMessage = 'Authentication failed. Please log in again.';
+        errorMessage = "Authentication failed. Please log in again.";
       } else if (err.response?.status === 403) {
-        errorMessage = 'Access forbidden. You do not have permission to update orders.';
+        errorMessage =
+          "Access forbidden. You do not have permission to update orders.";
       } else if (err.response?.data?.message) {
         errorMessage = `Failed to update order: ${err.response.data.message}`;
       }
-      
+
       setError(errorMessage);
-      showNotification(errorMessage, 'error');
-      
+      showNotification(errorMessage, "error");
     } finally {
       setLoading(false);
     }
@@ -1014,10 +1141,14 @@ const OrderIQDashboard = () => {
 
   // Helper function to focus next input field
   const focusNextInput = (currentItemId) => {
-    const currentIndex = filteredItems.findIndex(item => item.id === currentItemId);
+    const currentIndex = filteredItems.findIndex(
+      (item) => item.id === currentItemId
+    );
     if (currentIndex < filteredItems.length - 1) {
       const nextItemId = filteredItems[currentIndex + 1].id;
-      const nextInput = document.querySelector(`input[data-item-id="${nextItemId}"]`);
+      const nextInput = document.querySelector(
+        `input[data-item-id="${nextItemId}"]`
+      );
       if (nextInput) {
         nextInput.focus();
         nextInput.select(); // Select all text for easy replacement
@@ -1027,7 +1158,7 @@ const OrderIQDashboard = () => {
 
   // Handle Enter key press on quantity input
   const handleQuantityKeyPress = (event, item) => {
-    if (event.key === 'Enter') {
+    if (event.key === "Enter") {
       event.preventDefault();
       handleAddToOrder(item);
       // Focus next input after a small delay to ensure state updates
@@ -1037,9 +1168,10 @@ const OrderIQDashboard = () => {
     }
   };
 
-  const filteredItems = availableItems.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredItems = availableItems.filter(
+    (item) =>
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -1048,9 +1180,10 @@ const OrderIQDashboard = () => {
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
           {error}
-          {error.includes('Authentication failed') && (
-            <Box sx={{ mt: 1, fontSize: '0.875rem' }}>
-              <strong>Note:</strong> Your session may have expired. Please try logging in again.
+          {error.includes("Authentication failed") && (
+            <Box sx={{ mt: 1, fontSize: "0.875rem" }}>
+              <strong>Note:</strong> Your session may have expired. Please try
+              logging in again.
             </Box>
           )}
         </Alert>
@@ -1059,10 +1192,13 @@ const OrderIQDashboard = () => {
       {/* Development Mode Indicator */}
       {companyLocations.length === 0 && !loading && (
         <Alert severity="warning" sx={{ mb: 3 }}>
-          <strong>No Data Available:</strong> API connection failed. Please check:
+          <strong>No Data Available:</strong> API connection failed. Please
+          check:
           <br />• Is your backend server running?
-          <br />• Is the API_URL_Local configured correctly? (Currently: {API_URL_Local})
-          <br />• Does the /company-locations/all endpoint exist and return JSON?
+          <br />• Is the API_URL_Local configured correctly? (Currently:{" "}
+          {API_URL_Local})
+          <br />• Does the /company-locations/all endpoint exist and return
+          JSON?
           <br />• Are you properly authenticated?
         </Alert>
       )}
@@ -1070,18 +1206,30 @@ const OrderIQDashboard = () => {
       {/* Header Section with Filters and Date Range */}
       <Box sx={{ mb: 3 }}>
         {/* Title and Date Range Selector */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+            flexWrap: "wrap",
+            gap: 2,
+          }}
+        >
           <Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main', mb: 1 }}>
+            <Typography
+              variant="h4"
+              sx={{ fontWeight: 700, color: "primary.main", mb: 1 }}
+            >
               OrderIQ Dashboard
             </Typography>
             <Typography variant="body1" color="text.secondary">
               Manage your orders and track analytics with intelligent insights
             </Typography>
           </Box>
-          
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <DateRangeSelectorButton 
+
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <DateRangeSelectorButton
               onDateRangeSelect={handleDateRangeSelect}
               selectedRange={dateRangeDisplayString}
               onClear={handleDateRangeClear}
@@ -1091,23 +1239,23 @@ const OrderIQDashboard = () => {
 
         {/* Filters Section */}
         <Card sx={{ p: 3, borderRadius: 2, mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
             <FilterListIcon color="primary" />
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
               Filters
             </Typography>
             {companyLocations.length > 0 && (
-              <Chip 
-                label={`${companies.length} companies available`} 
-                size="small" 
-                variant="outlined" 
+              <Chip
+                label={`${companies.length} companies available`}
+                size="small"
+                variant="outlined"
                 color="primary"
               />
             )}
           </Box>
 
           {loading ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
               <CircularProgress size={20} />
               <Typography variant="body1" color="text.secondary">
                 Loading companies and locations...
@@ -1115,7 +1263,8 @@ const OrderIQDashboard = () => {
             </Box>
           ) : companyLocations.length === 0 ? (
             <Alert severity="warning">
-              No companies or locations available. Please check your authentication or contact support.
+              No companies or locations available. Please check your
+              authentication or contact support.
             </Alert>
           ) : (
             <Grid container spacing={3}>
@@ -1124,7 +1273,7 @@ const OrderIQDashboard = () => {
                 <FormControl fullWidth>
                   <InputLabel>Companies</InputLabel>
                   <Select
-                    value={selectedCompanyId || ''}
+                    value={selectedCompanyId || ""}
                     label="Companies"
                     onChange={(e) => handleCompanyChange(e.target.value)}
                     displayEmpty
@@ -1142,11 +1291,11 @@ const OrderIQDashboard = () => {
               </Grid>
 
               {/* Locations Dropdown - filtered by selected company */}
-               <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={6}>
                 <FormControl fullWidth disabled={!selectedCompanyId}>
                   <InputLabel shrink>Location</InputLabel>
                   <Select
-                    value={selectedLocationId || ''}
+                    value={selectedLocationId || ""}
                     label="Location"
                     onChange={(e) => handleLocationChange(e.target.value)}
                     displayEmpty
@@ -1156,45 +1305,84 @@ const OrderIQDashboard = () => {
                       <em>Select Location</em>
                     </MenuItem>
                     {availableLocationsForCompany.map((location) => (
-                      <MenuItem key={location.location_id} value={location.location_id.toString()}>
+                      <MenuItem
+                        key={location.location_id}
+                        value={location.location_id.toString()}
+                      >
                         {location.location_name}
                       </MenuItem>
                     ))}
                   </Select>
-                  {selectedCompanyId && availableLocationsForCompany.length === 0 && (
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, ml: 1 }}>
-                      No locations available for this company
-                    </Typography>
-                  )}
+                  {selectedCompanyId &&
+                    availableLocationsForCompany.length === 0 && (
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ mt: 1, ml: 1 }}
+                      >
+                        No locations available for this company
+                      </Typography>
+                    )}
                 </FormControl>
               </Grid>
 
               {/* Status Display */}
               <Grid item xs={12}>
                 {(!selectedCompanyId || !selectedLocationId) && (
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    Please select both a company and location to automatically load available items and recent orders.
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 1 }}
+                  >
+                    Please select both a company and location to automatically
+                    load available items and recent orders.
                   </Typography>
                 )}
 
                 {/* Show loading status */}
-                {selectedCompanyId && selectedLocationId && (loading || loadingOrders) && (
-                  <Typography variant="body2" color="primary.main" sx={{ mt: 1, fontWeight: 500 }}>
-                    🔄 Loading data for {companies.find(c => c.id.toString() === selectedCompanyId)?.name}...
-                  </Typography>
-                )}
+                {selectedCompanyId &&
+                  selectedLocationId &&
+                  (loading || loadingOrders) && (
+                    <Typography
+                      variant="body2"
+                      color="primary.main"
+                      sx={{ mt: 1, fontWeight: 500 }}
+                    >
+                      🔄 Loading data for{" "}
+                      {
+                        companies.find(
+                          (c) => c.id.toString() === selectedCompanyId
+                        )?.name
+                      }
+                      ...
+                    </Typography>
+                  )}
 
                 {/* Show data loaded status */}
-                {selectedCompanyId && selectedLocationId && !loading && !loadingOrders && availableItems.length > 0 && (
-                  <Typography variant="body2" color="success.main" sx={{ mt: 1, fontWeight: 500 }}>
-                    ✅ Data loaded for {companies.find(c => c.id.toString() === selectedCompanyId)?.name}
-                    {hasDateRange && (
-                      <span style={{ color: '#666', fontWeight: 400 }}>
-                        {' '}with date filter: {dateRangeDisplayString}
-                      </span>
-                    )}
-                  </Typography>
-                )}
+                {selectedCompanyId &&
+                  selectedLocationId &&
+                  !loading &&
+                  !loadingOrders &&
+                  availableItems.length > 0 && (
+                    <Typography
+                      variant="body2"
+                      color="success.main"
+                      sx={{ mt: 1, fontWeight: 500 }}
+                    >
+                      ✅ Data loaded for{" "}
+                      {
+                        companies.find(
+                          (c) => c.id.toString() === selectedCompanyId
+                        )?.name
+                      }
+                      {hasDateRange && (
+                        <span style={{ color: "#666", fontWeight: 400 }}>
+                          {" "}
+                          with date filter: {dateRangeDisplayString}
+                        </span>
+                      )}
+                    </Typography>
+                  )}
               </Grid>
             </Grid>
           )}
@@ -1207,65 +1395,89 @@ const OrderIQDashboard = () => {
           <Grid container spacing={3} sx={{ mb: 3 }}>
             {/* Store Analytics */}
             <Grid item xs={12} md={8}>
-              <Card sx={{ borderRadius: 2, height: '100%' }}>
+              <Card sx={{ borderRadius: 2, height: "100%" }}>
                 <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 2,
+                      mb: 3,
+                    }}
+                  >
                     <TrendingUpIcon color="primary" />
                     <Typography variant="h6" sx={{ fontWeight: 600 }}>
                       Store Analytics
                     </Typography>
                     <Box sx={{ minWidth: 140 }}>
                       {hasDateRange && (
-                        <Chip 
-                          label="Filtered by date range" 
-                          size="small" 
-                          variant="outlined" 
+                        <Chip
+                          label="Filtered by date range"
+                          size="small"
+                          variant="outlined"
                           color="primary"
                         />
                       )}
                     </Box>
                   </Box>
-                  
+
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
-                      <Paper 
-                        sx={{ 
-                          p: 3, 
-                          background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+                      <Paper
+                        sx={{
+                          p: 3,
+                          background:
+                            "linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)",
                           borderRadius: 2,
-                          textAlign: 'center'
+                          textAlign: "center",
                         }}
                       >
-                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          gutterBottom
+                        >
                           Avg Daily Orders
                         </Typography>
                         {loadingAnalytics ? (
                           <CircularProgress size={24} />
                         ) : (
-                          <Typography variant="h4" sx={{ fontWeight: 700, color: '#1565c0' }}>
-                            {analyticsData?.avg_daily_orders?.toFixed(1) || '0.0'}
+                          <Typography
+                            variant="h4"
+                            sx={{ fontWeight: 700, color: "#1565c0" }}
+                          >
+                            {analyticsData?.avg_daily_orders?.toFixed(1) ||
+                              "0.0"}
                           </Typography>
                         )}
                       </Paper>
                     </Grid>
-                    
+
                     <Grid item xs={12} sm={6}>
-                      <Paper 
-                        sx={{ 
-                          p: 3, 
-                          background: 'linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%)',
+                      <Paper
+                        sx={{
+                          p: 3,
+                          background:
+                            "linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%)",
                           borderRadius: 2,
-                          textAlign: 'center'
+                          textAlign: "center",
                         }}
                       >
-                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          gutterBottom
+                        >
                           Total Orders
                         </Typography>
                         {loadingAnalytics ? (
                           <CircularProgress size={24} />
                         ) : (
-                          <Typography variant="h4" sx={{ fontWeight: 700, color: '#2e7d32' }}>
-                            {analyticsData?.total_orders || '0'}
+                          <Typography
+                            variant="h4"
+                            sx={{ fontWeight: 700, color: "#2e7d32" }}
+                          >
+                            {analyticsData?.total_orders || "0"}
                           </Typography>
                         )}
                       </Paper>
@@ -1277,49 +1489,67 @@ const OrderIQDashboard = () => {
 
             {/* Top Items */}
             <Grid item xs={12} md={4}>
-              <Card sx={{ borderRadius: 2, height: '100%' }}>
+              <Card sx={{ borderRadius: 2, height: "100%" }}>
                 <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 2,
+                      mb: 2,
+                    }}
+                  >
                     <Typography variant="h6" sx={{ fontWeight: 600 }}>
                       🏆 Top Items
                     </Typography>
                     <Box sx={{ minWidth: 100 }}>
                       {hasDateRange && (
-                        <Chip 
-                          label="Date filtered" 
-                          size="small" 
-                          variant="outlined" 
+                        <Chip
+                          label="Date filtered"
+                          size="small"
+                          variant="outlined"
                           color="primary"
                         />
                       )}
                     </Box>
                   </Box>
-                  
+
                   <List dense>
-                    {analyticsData?.top_items && analyticsData.top_items.length > 0 ? (
+                    {analyticsData?.top_items &&
+                    analyticsData.top_items.length > 0 ? (
                       analyticsData.top_items.slice(0, 3).map((item, index) => (
                         <React.Fragment key={item.name}>
                           <ListItem sx={{ px: 0 }}>
-                            <ListItemText 
+                            <ListItemText
                               primary={
-                                <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.875rem' }}>
+                                <Typography
+                                  variant="body2"
+                                  sx={{ fontWeight: 500, fontSize: "0.875rem" }}
+                                >
                                   #{index + 1} {item.name}
                                 </Typography>
                               }
                               secondary={
-                                <Typography variant="caption" color="text.secondary">
-                                  {formatQuantity(item.total_quantity)} units total
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  {formatQuantity(item.total_quantity)} units
+                                  total
                                 </Typography>
                               }
                             />
                           </ListItem>
-                          {index < Math.min(analyticsData.top_items.length, 3) - 1 && <Divider />}
+                          {index <
+                            Math.min(analyticsData.top_items.length, 3) - 1 && (
+                            <Divider />
+                          )}
                         </React.Fragment>
                       ))
                     ) : loadingAnalytics ? (
                       <ListItem sx={{ px: 0 }}>
                         <CircularProgress size={16} sx={{ mr: 1 }} />
-                        <ListItemText 
+                        <ListItemText
                           primary={
                             <Typography variant="body2" color="text.secondary">
                               Loading top items...
@@ -1329,14 +1559,17 @@ const OrderIQDashboard = () => {
                       </ListItem>
                     ) : (
                       <ListItem sx={{ px: 0 }}>
-                        <ListItemText 
+                        <ListItemText
                           primary={
                             <Typography variant="body2" color="text.secondary">
                               No top items available
                             </Typography>
                           }
                           secondary={
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               Select a company and location to view top items
                             </Typography>
                           }
@@ -1352,32 +1585,49 @@ const OrderIQDashboard = () => {
 
         {/* Left Column - Recent Orders and Available Items */}
         <Grid item xs={12} lg={8}>
-
           {/* Recent Orders */}
           <Card sx={{ mb: 3, borderRadius: 2 }}>
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 2,
+                  mb: 2,
+                  flexWrap: "wrap",
+                }}
+              >
                 <ReceiptIcon color="primary" />
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                   Recent Orders
                 </Typography>
-                {loadingOrders && (
-                  <CircularProgress size={20} />
-                )}
-                <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 200 }}>
-                  {selectedCompanyId && selectedLocationId 
+                {loadingOrders && <CircularProgress size={20} />}
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ flex: 1, minWidth: 200 }}
+                >
+                  {selectedCompanyId && selectedLocationId
                     ? recentOrders.length === 0 && !loadingOrders
-                      ? 'No orders found for the selected filters.'
-                      : `Recent orders for ${companies.find(c => c.id.toString() === selectedCompanyId)?.name} - ${availableLocationsForCompany.find(l => l.location_id.toString() === selectedLocationId)?.location_name}`
-                    : 'Select company and location to view recent orders'
-                  }
+                      ? "No orders found for the selected filters."
+                      : `Recent orders for ${
+                          companies.find(
+                            (c) => c.id.toString() === selectedCompanyId
+                          )?.name
+                        } - ${
+                          availableLocationsForCompany.find(
+                            (l) =>
+                              l.location_id.toString() === selectedLocationId
+                          )?.location_name
+                        }`
+                    : "Select company and location to view recent orders"}
                 </Typography>
                 <Box sx={{ minWidth: 100 }}>
                   {hasDateRange && (
-                    <Chip 
-                      label="Date filtered" 
-                      size="small" 
-                      variant="outlined" 
+                    <Chip
+                      label="Date filtered"
+                      size="small"
+                      variant="outlined"
                       color="primary"
                     />
                   )}
@@ -1385,45 +1635,80 @@ const OrderIQDashboard = () => {
               </Box>
 
               {loadingOrders ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
                   <CircularProgress />
                 </Box>
               ) : recentOrders.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <ReceiptIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                  <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                <Box sx={{ textAlign: "center", py: 4 }}>
+                  <ReceiptIcon
+                    sx={{ fontSize: 48, color: "text.secondary", mb: 2 }}
+                  />
+                  <Typography
+                    variant="h6"
+                    color="text.secondary"
+                    sx={{ mb: 1 }}
+                  >
                     No recent orders found
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {selectedCompanyId && selectedLocationId 
-                      ? 'No orders have been placed yet for this location with the current filters.'
-                      : 'Please select a company and location to view recent orders.'
-                    }
+                    {selectedCompanyId && selectedLocationId
+                      ? "No orders have been placed yet for this location with the current filters."
+                      : "Please select a company and location to view recent orders."}
                   </Typography>
                 </Box>
               ) : (
                 <List>
                   {recentOrders.map((order, index) => (
                     <React.Fragment key={order.id}>
-                      <ListItem sx={{ px: 0, flexDirection: 'column', alignItems: 'stretch' }}>
+                      <ListItem
+                        sx={{
+                          px: 0,
+                          flexDirection: "column",
+                          alignItems: "stretch",
+                        }}
+                      >
                         {/* Main order row */}
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            width: "100%",
+                          }}
+                        >
                           <ListItemText
                             primary={
-                              <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                                {order.items} item{order.items > 1 ? 's' : ''} ordered
+                              <Typography
+                                variant="body1"
+                                sx={{ fontWeight: 500 }}
+                              >
+                                {order.items} item{order.items > 1 ? "s" : ""}{" "}
+                                ordered
                               </Typography>
                             }
                             secondary={
                               <Box sx={{ mt: 1 }}>
-                                <Typography variant="body2" color="text.secondary">
-                                  Qty: {formatQuantity(order.qty)} • {order.date}
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  Qty: {formatQuantity(order.qty)} •{" "}
+                                  {order.date}
                                 </Typography>
                               </Box>
                             }
                           />
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
+                            <Typography
+                              variant="h6"
+                              sx={{ fontWeight: 600, color: "primary.main" }}
+                            >
                               ${order.total.toFixed(2)}
                             </Typography>
                             <Button
@@ -1448,70 +1733,117 @@ const OrderIQDashboard = () => {
                         </Box>
 
                         {/* UPDATED: Expandable order items section */}
-                        <Box sx={{ mt: 1, width: '100%' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                        <Box sx={{ mt: 1, width: "100%" }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              sx={{ fontWeight: 500 }}
+                            >
                               Items:
                             </Typography>
                             {/* Show first 3 items as chips */}
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, flex: 1 }}>
-                              {order.orderItems.slice(0, 3).map((item, itemIndex) => (
-                                <Chip
-                                  key={itemIndex}
-                                  label={`${item.name} (${formatQuantity(item.quantity)})`}
-                                  size="small"
-                                  variant="outlined"
-                                  sx={{ fontSize: '0.7rem', height: 20 }}
-                                />
-                              ))}
+                            <Box
+                              sx={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: 0.5,
+                                flex: 1,
+                              }}
+                            >
+                              {order.orderItems
+                                .slice(0, 3)
+                                .map((item, itemIndex) => (
+                                  <Chip
+                                    key={itemIndex}
+                                    label={`${item.name} (${formatQuantity(
+                                      item.quantity
+                                    )})`}
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{ fontSize: "0.7rem", height: 20 }}
+                                  />
+                                ))}
                               {order.orderItems.length > 3 && (
                                 <Button
                                   size="small"
                                   variant="text"
                                   onClick={() => toggleOrderExpansion(order.id)}
-                                  endIcon={expandedOrders.has(order.id) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                                  sx={{ 
-                                    fontSize: '0.7rem', 
-                                    height: 20, 
-                                    minWidth: 'auto',
+                                  endIcon={
+                                    expandedOrders.has(order.id) ? (
+                                      <ExpandLessIcon />
+                                    ) : (
+                                      <ExpandMoreIcon />
+                                    )
+                                  }
+                                  sx={{
+                                    fontSize: "0.7rem",
+                                    height: 20,
+                                    minWidth: "auto",
                                     px: 1,
-                                    color: 'primary.main',
-                                    fontWeight: 500
+                                    color: "primary.main",
+                                    fontWeight: 500,
                                   }}
                                 >
-                                  {expandedOrders.has(order.id) 
-                                    ? 'Show Less' 
-                                    : `+${order.orderItems.length - 3} more`
-                                  }
+                                  {expandedOrders.has(order.id)
+                                    ? "Show Less"
+                                    : `+${order.orderItems.length - 3} more`}
                                 </Button>
                               )}
                             </Box>
                           </Box>
 
                           {/* Expanded items view */}
-                          {expandedOrders.has(order.id) && order.orderItems.length > 3 && (
-                            <Box sx={{ mt: 1, pl: 2, borderLeft: 2, borderColor: 'divider' }}>
-                              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, mb: 1, display: 'block' }}>
-                                All Items:
-                              </Typography>
-                              <Grid container spacing={0.5}>
-                                {order.orderItems.map((item, itemIndex) => (
-                                  <Grid item key={itemIndex}>
-                                    <Chip
-                                      label={`${item.name} (${formatQuantity(item.quantity)} ${item.unit})`}
-                                      size="small"
-                                      variant="outlined"
-                                      sx={{ 
-                                        fontSize: '0.7rem', 
-                                        height: 22,
-                                        backgroundColor: itemIndex >= 3 ? 'action.hover' : 'transparent'
-                                      }}
-                                    />
-                                  </Grid>
-                                ))}
-                              </Grid>
-                            </Box>
-                          )}
+                          {expandedOrders.has(order.id) &&
+                            order.orderItems.length > 3 && (
+                              <Box
+                                sx={{
+                                  mt: 1,
+                                  pl: 2,
+                                  borderLeft: 2,
+                                  borderColor: "divider",
+                                }}
+                              >
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  sx={{
+                                    fontWeight: 500,
+                                    mb: 1,
+                                    display: "block",
+                                  }}
+                                >
+                                  All Items:
+                                </Typography>
+                                <Grid container spacing={0.5}>
+                                  {order.orderItems.map((item, itemIndex) => (
+                                    <Grid item key={itemIndex}>
+                                      <Chip
+                                        label={`${item.name} (${formatQuantity(
+                                          item.quantity
+                                        )} ${item.unit})`}
+                                        size="small"
+                                        variant="outlined"
+                                        sx={{
+                                          fontSize: "0.7rem",
+                                          height: 22,
+                                          backgroundColor:
+                                            itemIndex >= 3
+                                              ? "action.hover"
+                                              : "transparent",
+                                        }}
+                                      />
+                                    </Grid>
+                                  ))}
+                                </Grid>
+                              </Box>
+                            )}
                         </Box>
                       </ListItem>
                       {index < recentOrders.length - 1 && <Divider />}
@@ -1529,14 +1861,15 @@ const OrderIQDashboard = () => {
                 Available Items
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                {availableItems.length > 0 
+                {availableItems.length > 0
                   ? `${availableItems.length} items available. Enter desired quantity (supports decimals like 0.5, 0.25) and click "Add" to add items to your cart.`
                   : selectedCompanyId && selectedLocationId
-                    ? loading ? 'Loading available items...' : 'No items available for the selected company and location.'
-                    : 'Select company and location from filters above to view available items.'
-                }
+                  ? loading
+                    ? "Loading available items..."
+                    : "No items available for the selected company and location."
+                  : "Select company and location from filters above to view available items."}
               </Typography>
-              
+
               {availableItems.length > 0 && (
                 <TextField
                   fullWidth
@@ -1548,51 +1881,54 @@ const OrderIQDashboard = () => {
                       <InputAdornment position="start">
                         <SearchIcon />
                       </InputAdornment>
-                    )
+                    ),
                   }}
                   sx={{ mb: 3 }}
                 />
               )}
 
               {loading && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
                   <CircularProgress />
                 </Box>
               )}
 
               {!loading && availableItems.length === 0 && (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                <Box sx={{ textAlign: "center", py: 4 }}>
+                  <Typography
+                    variant="h6"
+                    color="text.secondary"
+                    sx={{ mb: 1 }}
+                  >
                     No items available
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {selectedCompanyId && selectedLocationId 
-                      ? 'No items available for the selected company and location.'
-                      : 'Please select a company and location from the filters above to load available items.'
-                    }
+                    {selectedCompanyId && selectedLocationId
+                      ? "No items available for the selected company and location."
+                      : "Please select a company and location from the filters above to load available items."}
                   </Typography>
                 </Box>
               )}
 
               {!loading && filteredItems.length > 0 && (
-                <Card 
-                  variant="outlined" 
-                  sx={{ 
-                    maxHeight: 600, 
-                    overflow: 'auto',
+                <Card
+                  variant="outlined"
+                  sx={{
+                    maxHeight: 600,
+                    overflow: "auto",
                     borderRadius: 2,
-                    '&::-webkit-scrollbar': {
-                      width: '8px',
+                    "&::-webkit-scrollbar": {
+                      width: "8px",
                     },
-                    '&::-webkit-scrollbar-track': {
-                      background: '#f1f1f1',
-                      borderRadius: '4px',
+                    "&::-webkit-scrollbar-track": {
+                      background: "#f1f1f1",
+                      borderRadius: "4px",
                     },
-                    '&::-webkit-scrollbar-thumb': {
-                      background: '#c1c1c1',
-                      borderRadius: '4px',
-                      '&:hover': {
-                        background: '#a8a8a8',
+                    "&::-webkit-scrollbar-thumb": {
+                      background: "#c1c1c1",
+                      borderRadius: "4px",
+                      "&:hover": {
+                        background: "#a8a8a8",
                       },
                     },
                   }}
@@ -1602,32 +1938,66 @@ const OrderIQDashboard = () => {
                       <React.Fragment key={item.id}>
                         <ListItem sx={{ px: 2, py: 1.5 }}>
                           {/* UPDATED: Single row layout for item details */}
-                          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 2 }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              width: "100%",
+                              gap: 2,
+                            }}
+                          >
                             {/* Item Name and Category */}
                             <Box sx={{ flex: 1, minWidth: 0 }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                <Typography variant="body1" sx={{ fontWeight: 500, fontSize: '0.95rem' }}>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 1,
+                                  mb: 0.5,
+                                }}
+                              >
+                                <Typography
+                                  variant="body1"
+                                  sx={{ fontWeight: 500, fontSize: "0.95rem" }}
+                                >
                                   {item.name}
                                 </Typography>
-                                <Chip 
-                                  label={item.category} 
-                                  size="small" 
-                                  variant="outlined" 
-                                  sx={{ fontSize: '0.7rem', height: 18 }}
+                                <Chip
+                                  label={item.category}
+                                  size="small"
+                                  variant="outlined"
+                                  sx={{ fontSize: "0.7rem", height: 18 }}
                                 />
                               </Box>
                               {/* Price and additional details in one line */}
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-                                <Typography variant="body2" color="primary.main" sx={{ fontWeight: 500 }}>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 2,
+                                  flexWrap: "wrap",
+                                }}
+                              >
+                                <Typography
+                                  variant="body2"
+                                  color="primary.main"
+                                  sx={{ fontWeight: 500 }}
+                                >
                                   ${item.price}/{item.unit}
                                 </Typography>
                                 {item.batchSize && (
-                                  <Typography variant="caption" color="text.secondary">
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
                                     Batch: {item.batchSize}
                                   </Typography>
                                 )}
                                 {item.previousPrice && (
-                                  <Typography variant="caption" color="text.secondary">
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
                                     Prev: ${item.previousPrice}
                                   </Typography>
                                 )}
@@ -1635,26 +2005,37 @@ const OrderIQDashboard = () => {
                             </Box>
 
                             {/* Quantity input and Add button */}
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                                flexShrink: 0,
+                              }}
+                            >
                               <TextField
                                 type="number"
-                                value={itemQuantities[item.id] || ''}
-                                onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-                                onKeyPress={(e) => handleQuantityKeyPress(e, item)}
+                                value={itemQuantities[item.id] || ""}
+                                onChange={(e) =>
+                                  handleQuantityChange(item.id, e.target.value)
+                                }
+                                onKeyPress={(e) =>
+                                  handleQuantityKeyPress(e, item)
+                                }
                                 placeholder="1"
                                 size="small"
-                                inputProps={{ 
+                                inputProps={{
                                   min: 0.01,
                                   max: 999,
                                   step: 0.25,
-                                  style: { textAlign: 'center' },
-                                  'data-item-id': item.id
+                                  style: { textAlign: "center" },
+                                  "data-item-id": item.id,
                                 }}
-                                sx={{ 
+                                sx={{
                                   width: 80,
-                                  '& .MuiOutlinedInput-root': {
-                                    height: 32
-                                  }
+                                  "& .MuiOutlinedInput-root": {
+                                    height: 32,
+                                  },
                                 }}
                               />
                               <Button
@@ -1662,8 +2043,15 @@ const OrderIQDashboard = () => {
                                 size="small"
                                 startIcon={<AddIcon />}
                                 onClick={() => handleAddToOrder(item)}
-                                disabled={!itemQuantities[item.id] || itemQuantities[item.id] <= 0}
-                                sx={{ minWidth: 70, height: 32, fontSize: '0.75rem' }}
+                                disabled={
+                                  !itemQuantities[item.id] ||
+                                  itemQuantities[item.id] <= 0
+                                }
+                                sx={{
+                                  minWidth: 70,
+                                  height: 32,
+                                  fontSize: "0.75rem",
+                                }}
                               >
                                 Add
                               </Button>
@@ -1674,91 +2062,147 @@ const OrderIQDashboard = () => {
                       </React.Fragment>
                     ))}
                   </List>
-                  
+
                   {/* Scrollable items footer */}
-                  <Box sx={{ 
-                    p: 2, 
-                    borderTop: 1, 
-                    borderColor: 'divider', 
-                    backgroundColor: 'grey.50',
-                    textAlign: 'center'
-                  }}>
+                  <Box
+                    sx={{
+                      p: 2,
+                      borderTop: 1,
+                      borderColor: "divider",
+                      backgroundColor: "grey.50",
+                      textAlign: "center",
+                    }}
+                  >
                     <Typography variant="caption" color="text.secondary">
-                      Showing {filteredItems.length} of {availableItems.length} items
+                      Showing {filteredItems.length} of {availableItems.length}{" "}
+                      items
                       {searchTerm && ` (filtered by "${searchTerm}")`}
                     </Typography>
                   </Box>
                 </Card>
               )}
 
-              {!loading && availableItems.length > 0 && filteredItems.length === 0 && searchTerm && (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
-                    No items found
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    No items match your search for "{searchTerm}". Try a different search term.
-                  </Typography>
-                </Box>
-              )}
+              {!loading &&
+                availableItems.length > 0 &&
+                filteredItems.length === 0 &&
+                searchTerm && (
+                  <Box sx={{ textAlign: "center", py: 4 }}>
+                    <Typography
+                      variant="h6"
+                      color="text.secondary"
+                      sx={{ mb: 1 }}
+                    >
+                      No items found
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      No items match your search for "{searchTerm}". Try a
+                      different search term.
+                    </Typography>
+                  </Box>
+                )}
             </CardContent>
           </Card>
         </Grid>
 
         {/* Right Column - Current Order */}
         <Grid item xs={12} lg={4}>
-          <Box sx={{ position: 'sticky', top: 20 }}>
+          <Box sx={{ position: "sticky", top: 20 }}>
             <Card sx={{ borderRadius: 2 }}>
               <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Box
+                  sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}
+                >
                   <Badge badgeContent={currentOrder.length} color="primary">
                     <ShoppingCartIcon />
                   </Badge>
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    {isUpdatingOrder ? `Update Order #${orderToUpdate?.id}` : 'Current Order'}
+                    {isUpdatingOrder
+                      ? `Update Order #${orderToUpdate?.id}`
+                      : "Current Order"}
                   </Typography>
                   {isUpdatingOrder && (
-                    <Chip 
-                      label="Updating" 
-                      color="secondary" 
-                      size="small" 
+                    <Chip
+                      label="Updating"
+                      color="secondary"
+                      size="small"
                       variant="outlined"
                     />
                   )}
                 </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Store: {selectedCompanyId && selectedLocationId 
-                    ? `${companies.find(c => c.id.toString() === selectedCompanyId)?.name} - ${availableLocationsForCompany.find(l => l.location_id.toString() === selectedLocationId)?.location_name}`
-                    : 'Please select company and location'
-                  }
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 3 }}
+                >
+                  Store:{" "}
+                  {selectedCompanyId && selectedLocationId
+                    ? `${
+                        companies.find(
+                          (c) => c.id.toString() === selectedCompanyId
+                        )?.name
+                      } - ${
+                        availableLocationsForCompany.find(
+                          (l) => l.location_id.toString() === selectedLocationId
+                        )?.location_name
+                      }`
+                    : "Please select company and location"}
                 </Typography>
 
                 {currentOrder.length === 0 ? (
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <ShoppingCartIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                    <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                  <Box sx={{ textAlign: "center", py: 4 }}>
+                    <ShoppingCartIcon
+                      sx={{ fontSize: 48, color: "text.secondary", mb: 2 }}
+                    />
+                    <Typography
+                      variant="h6"
+                      color="text.secondary"
+                      sx={{ mb: 1 }}
+                    >
                       Your order is empty
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Enter quantity (including decimals like 0.5, 0.25) and press Enter or click "Add" to add items to your cart. Press Enter to automatically move to the next item.
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 2 }}
+                    >
+                      Enter quantity (including decimals like 0.5, 0.25) and
+                      press Enter or click "Add" to add items to your cart.
+                      Press Enter to automatically move to the next item.
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 1,
+                        justifyContent: "center",
+                        flexWrap: "wrap",
+                      }}
+                    >
                       <Tooltip title="Get personalized item suggestions based on your order history">
                         <span>
-                          <Button 
-                            variant="outlined" 
+                          <Button
+                            variant="outlined"
                             size="small"
                             onClick={fetchAISuggestions}
-                            disabled={loadingAISuggestions || !selectedCompanyId || !selectedLocationId}
-                            startIcon={loadingAISuggestions ? <CircularProgress size={16} /> : null}
-                            sx={{ 
+                            disabled={
+                              loadingAISuggestions ||
+                              !selectedCompanyId ||
+                              !selectedLocationId
+                            }
+                            startIcon={
+                              loadingAISuggestions ? (
+                                <CircularProgress size={16} />
+                              ) : null
+                            }
+                            sx={{
                               minWidth: 140,
-                              '&:disabled': {
-                                opacity: 0.6
-                              }
+                              "&:disabled": {
+                                opacity: 0.6,
+                              },
                             }}
                           >
-                            {loadingAISuggestions ? 'Getting Suggestions...' : '🤖 Get AI Suggestions'}
+                            {loadingAISuggestions
+                              ? "Getting Suggestions..."
+                              : "🤖 Get AI Suggestions"}
                           </Button>
                         </span>
                       </Tooltip>
@@ -1767,23 +2211,23 @@ const OrderIQDashboard = () => {
                 ) : (
                   <>
                     {/* UPDATED: Add scrollable container for order items */}
-                    <Box 
-                      sx={{ 
+                    <Box
+                      sx={{
                         maxHeight: 400, // Set maximum height for scrolling
-                        overflow: 'auto',
+                        overflow: "auto",
                         mb: 2,
-                        '&::-webkit-scrollbar': {
-                          width: '6px',
+                        "&::-webkit-scrollbar": {
+                          width: "6px",
                         },
-                        '&::-webkit-scrollbar-track': {
-                          background: '#f1f1f1',
-                          borderRadius: '3px',
+                        "&::-webkit-scrollbar-track": {
+                          background: "#f1f1f1",
+                          borderRadius: "3px",
                         },
-                        '&::-webkit-scrollbar-thumb': {
-                          background: '#c1c1c1',
-                          borderRadius: '3px',
-                          '&:hover': {
-                            background: '#a8a8a8',
+                        "&::-webkit-scrollbar-thumb": {
+                          background: "#c1c1c1",
+                          borderRadius: "3px",
+                          "&:hover": {
+                            background: "#a8a8a8",
                           },
                         },
                       }}
@@ -1795,24 +2239,42 @@ const OrderIQDashboard = () => {
                               <ListItemText
                                 primary={
                                   <Box>
-                                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                    <Typography
+                                      variant="body1"
+                                      sx={{ fontWeight: 500 }}
+                                    >
                                       {item.name}
                                     </Typography>
-                                    <Chip 
-                                      label={item.category} 
-                                      size="small" 
-                                      variant="outlined" 
-                                      sx={{ mt: 0.5, fontSize: '0.7rem', height: 20 }}
+                                    <Chip
+                                      label={item.category}
+                                      size="small"
+                                      variant="outlined"
+                                      sx={{
+                                        mt: 0.5,
+                                        fontSize: "0.7rem",
+                                        height: 20,
+                                      }}
                                     />
                                   </Box>
                                 }
                                 secondary={`${item.price}/${item.unit}`}
                               />
                               {/* UPDATED: Quantity controls with decimal support and editable input */}
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <IconButton 
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 1,
+                                }}
+                              >
+                                <IconButton
                                   size="small"
-                                  onClick={() => handleUpdateQuantity(item.id, Math.max(0.25, item.quantity - 0.25))} // Prevent going below 0.25
+                                  onClick={() =>
+                                    handleUpdateQuantity(
+                                      item.id,
+                                      Math.max(0.25, item.quantity - 0.25)
+                                    )
+                                  } // Prevent going below 0.25
                                 >
                                   <RemoveIcon />
                                 </IconButton>
@@ -1823,23 +2285,28 @@ const OrderIQDashboard = () => {
                                     const newValue = parseFloat(e.target.value);
                                     if (!isNaN(newValue) && newValue > 0) {
                                       handleUpdateQuantity(item.id, newValue);
-                                    } else if (e.target.value === '') {
+                                    } else if (e.target.value === "") {
                                       // Allow empty field temporarily
-                                      setCurrentOrder(prev => 
-                                        prev.map(orderItem => 
-                                          orderItem.id === item.id ? { ...orderItem, quantity: '' } : orderItem
+                                      setCurrentOrder((prev) =>
+                                        prev.map((orderItem) =>
+                                          orderItem.id === item.id
+                                            ? { ...orderItem, quantity: "" }
+                                            : orderItem
                                         )
                                       );
                                     }
                                   }}
                                   onBlur={(e) => {
                                     // If field is empty on blur, reset to 1
-                                    if (e.target.value === '' || parseFloat(e.target.value) <= 0) {
+                                    if (
+                                      e.target.value === "" ||
+                                      parseFloat(e.target.value) <= 0
+                                    ) {
                                       handleUpdateQuantity(item.id, 1);
                                     }
                                   }}
                                   onKeyPress={(e) => {
-                                    if (e.key === 'Enter') {
+                                    if (e.key === "Enter") {
                                       e.target.blur(); // Trigger onBlur validation
                                     }
                                   }}
@@ -1848,40 +2315,48 @@ const OrderIQDashboard = () => {
                                     min: 0.01,
                                     max: 999,
                                     step: 0.25,
-                                    style: { 
-                                      textAlign: 'center',
-                                      padding: '4px 8px',
-                                      fontSize: '0.875rem',
-                                      fontWeight: 500
-                                    }
+                                    style: {
+                                      textAlign: "center",
+                                      padding: "4px 8px",
+                                      fontSize: "0.875rem",
+                                      fontWeight: 500,
+                                    },
                                   }}
-                                  sx={{ 
+                                  sx={{
                                     width: 60,
-                                    '& .MuiOutlinedInput-root': {
+                                    "& .MuiOutlinedInput-root": {
                                       height: 32,
-                                      '& fieldset': {
-                                        borderColor: 'rgba(0, 0, 0, 0.23)',
+                                      "& fieldset": {
+                                        borderColor: "rgba(0, 0, 0, 0.23)",
                                       },
-                                      '&:hover fieldset': {
-                                        borderColor: 'primary.main',
+                                      "&:hover fieldset": {
+                                        borderColor: "primary.main",
                                       },
-                                      '&.Mui-focused fieldset': {
-                                        borderColor: 'primary.main',
+                                      "&.Mui-focused fieldset": {
+                                        borderColor: "primary.main",
                                         borderWidth: 2,
                                       },
-                                    }
+                                    },
                                   }}
                                 />
-                                <Typography variant="body2" sx={{ minWidth: 30, fontSize: '0.75rem' }}>
+                                <Typography
+                                  variant="body2"
+                                  sx={{ minWidth: 30, fontSize: "0.75rem" }}
+                                >
                                   {item.unit}
                                 </Typography>
-                                <IconButton 
+                                <IconButton
                                   size="small"
-                                  onClick={() => handleUpdateQuantity(item.id, item.quantity + 0.25)}
+                                  onClick={() =>
+                                    handleUpdateQuantity(
+                                      item.id,
+                                      item.quantity + 0.25
+                                    )
+                                  }
                                 >
                                   <AddIcon />
                                 </IconButton>
-                                <IconButton 
+                                <IconButton
                                   size="small"
                                   color="error"
                                   onClick={() => handleRemoveFromOrder(item.id)}
@@ -1896,69 +2371,103 @@ const OrderIQDashboard = () => {
                       </List>
                     </Box>
 
-                    <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 2 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                    <Box sx={{ borderTop: 1, borderColor: "divider", pt: 2 }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          mb: 2,
+                        }}
+                      >
                         <Typography variant="h6" sx={{ fontWeight: 600 }}>
                           Order Total:
                         </Typography>
-                        <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                        <Typography
+                          variant="h6"
+                          sx={{ fontWeight: 600, color: "primary.main" }}
+                        >
                           ${calculateOrderTotal().toFixed(2)}
                         </Typography>
                       </Box>
 
-                      <FormControlLabel
+                      {/* <FormControlLabel
                         control={
                           <Checkbox
                             checked={emailOrder}
                             onChange={(e) => setEmailOrder(e.target.checked)}
                           />
                         }
-                        label={isUpdatingOrder ? "Email updated order details" : "Email order details"}
+                        label={
+                          isUpdatingOrder
+                            ? "Email updated order details"
+                            : "Email order details"
+                        }
                         sx={{ mb: 2 }}
-                      />
+                      /> */}
 
                       {isUpdatingOrder ? (
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Button 
-                            variant="outlined" 
-                            fullWidth 
+                        <Box sx={{ display: "flex", gap: 1 }}>
+                          <Button
+                            variant="outlined"
+                            fullWidth
                             size="medium"
                             onClick={handleCancelOrderUpdate}
                             sx={{ fontWeight: 600, py: 1 }}
                           >
                             Cancel Update
                           </Button>
-                          <Button 
-                            variant="contained" 
-                            fullWidth 
+                          <Button
+                            variant="contained"
+                            fullWidth
                             size="medium"
                             type="button"
-                            startIcon={loading ? <CircularProgress size={16} /> : <ReceiptIcon />}
+                            startIcon={
+                              loading ? (
+                                <CircularProgress size={16} />
+                              ) : (
+                                <ReceiptIcon />
+                              )
+                            }
                             sx={{ fontWeight: 600, py: 1 }}
                             onClick={(e) => handleSubmitOrderUpdate(e)}
                             disabled={loading || currentOrder.length === 0}
                             color="secondary"
                           >
-                            {loading ? 'Updating...' : 'Update Order'}
+                            {loading ? "Updating..." : "Update Order"}
                           </Button>
                         </Box>
                       ) : (
-                        <Button 
-                          variant="contained" 
-                          fullWidth 
+                        <Button
+                          variant="contained"
+                          fullWidth
                           size="medium"
                           type="button"
-                          startIcon={loading ? <CircularProgress size={16} /> : <ReceiptIcon />}
+                          startIcon={
+                            loading ? (
+                              <CircularProgress size={16} />
+                            ) : (
+                              <ReceiptIcon />
+                            )
+                          }
                           sx={{ fontWeight: 600, py: 1 }}
                           onClick={(e) => handleSubmitOrder(e)}
-                          disabled={loading || !selectedCompanyId || !selectedLocationId || currentOrder.length === 0}
+                          disabled={
+                            loading ||
+                            !selectedCompanyId ||
+                            !selectedLocationId ||
+                            currentOrder.length === 0
+                          }
                         >
-                          {loading ? 'Submitting...' : 'Submit Order'}
+                          {loading ? "Submitting..." : "Submit Order"}
                         </Button>
                       )}
 
                       {hasDateRange && (
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ mt: 1, display: "block", textAlign: "center" }}
+                        >
                           Order period: {dateRangeDisplayString}
                         </Typography>
                       )}
@@ -1976,27 +2485,32 @@ const OrderIQDashboard = () => {
         open={notification.open}
         autoHideDuration={3000}
         onClose={handleCloseNotification}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         sx={{
-          '& .MuiSnackbarContent-root': {
-            backgroundColor: notification.severity === 'success' ? '#4caf50' : 
-                           notification.severity === 'info' ? '#2196f3' : 
-                           notification.severity === 'warning' ? '#ff9800' : '#f44336',
-            color: 'white',
+          "& .MuiSnackbarContent-root": {
+            backgroundColor:
+              notification.severity === "success"
+                ? "#4caf50"
+                : notification.severity === "info"
+                ? "#2196f3"
+                : notification.severity === "warning"
+                ? "#ff9800"
+                : "#f44336",
+            color: "white",
             fontWeight: 500,
             borderRadius: 2,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            minWidth: '300px',
-            '& .MuiSnackbarContent-message': {
-              fontSize: '0.95rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1
-            }
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            minWidth: "300px",
+            "& .MuiSnackbarContent-message": {
+              fontSize: "0.95rem",
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+            },
           },
-          '& .MuiSnackbar-root': {
-            bottom: '24px !important'
-          }
+          "& .MuiSnackbar-root": {
+            bottom: "24px !important",
+          },
         }}
         message={notification.message}
       />

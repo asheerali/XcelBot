@@ -45,7 +45,9 @@
 //   CalendarToday as CalendarTodayIcon,
 //   Clear as ClearIcon,
 //   Place as PlaceIcon,
-//   BugReport as BugReportIcon
+//   BugReport as BugReportIcon,
+//   ExpandMore as ExpandMoreIcon,
+//   ExpandLess as ExpandLessIcon
 // } from '@mui/icons-material';
 
 // // Import Redux actions and selectors
@@ -73,6 +75,15 @@
 
 // // Import your actual DateRangeSelector component
 // import DateRangeSelector from '../components/DateRangeSelector';
+
+// // Helper function for consistent quantity formatting
+// const formatQuantity = (quantity) => {
+//   if (quantity % 1 === 0) {
+//     return quantity.toString(); // Show whole numbers without decimals
+//   } else {
+//     return quantity.toFixed(2).replace(/\.?0+$/, ''); // Remove trailing zeros
+//   }
+// };
 
 // // FIXED: DateRangeSelector Button Component with timezone safety
 // const DateRangeSelectorButton = ({ onDateRangeSelect, selectedRange, onClear }) => {
@@ -247,7 +258,7 @@
 //             <ListItem key={index}>
 //               <ListItemText
 //                 primary={item.name}
-//                 secondary={`${item.quantity} ${item.unit} × ${item.unit_price || item.price} = ${item.total_price || (item.quantity * (item.unit_price || item.price)).toFixed(2)}`}
+//                 secondary={`${formatQuantity(item.quantity)} ${item.unit} × ${item.unit_price || item.price} = ${item.total_price || (item.quantity * (item.unit_price || item.price)).toFixed(2)}`}
 //               />
 //             </ListItem>
 //           ))}
@@ -289,6 +300,22 @@
 //   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
 //   const [orderToUpdate, setOrderToUpdate] = useState(null);
 //   const [itemQuantities, setItemQuantities] = useState({});
+  
+//   // State for expanded order items
+//   const [expandedOrders, setExpandedOrders] = useState(new Set());
+
+//   // Toggle expanded state for order items
+//   const toggleOrderExpansion = (orderId) => {
+//     setExpandedOrders(prev => {
+//       const newSet = new Set(prev);
+//       if (newSet.has(orderId)) {
+//         newSet.delete(orderId);
+//       } else {
+//         newSet.add(orderId);
+//       }
+//       return newSet;
+//     });
+//   };
   
 //   // API data state
 //   const [companyLocations, setCompanyLocations] = useState([]);
@@ -380,7 +407,7 @@
 //     setNotification(prev => ({ ...prev, open: false }));
 //   };
 
-//   // Handle quantity change for specific item
+//   // UPDATED: Handle quantity change for specific item - now supports decimals
 //   const handleQuantityChange = (itemId, newQuantity) => {
 //     if (newQuantity === '') {
 //       setItemQuantities(prev => ({
@@ -390,7 +417,7 @@
 //       return;
 //     }
     
-//     const quantity = parseInt(newQuantity);
+//     const quantity = parseFloat(newQuantity); // Changed from parseInt to parseFloat
 //     if (!isNaN(quantity) && quantity >= 0) {
 //       setItemQuantities(prev => ({
 //         ...prev,
@@ -456,15 +483,15 @@
 //     dispatch(clearOrderIQDashboardDateRange());
 //   };
 
-//   // Add to order function
+//   // UPDATED: Add to order function - now supports decimals
 //   const handleAddToOrder = (item, quantity = null, showNotif = true) => {
-//     let quantityToAdd = quantity !== null ? quantity : (itemQuantities[item.id] || 1);
+//     let quantityToAdd = quantity !== null ? quantity : (itemQuantities[item.id] || 1); // Default back to 1
     
 //     if (typeof quantityToAdd === 'string') {
-//       quantityToAdd = parseInt(quantityToAdd) || 1;
+//       quantityToAdd = parseFloat(quantityToAdd) || 1; // Default back to 1
 //     }
     
-//     if (quantityToAdd < 1) {
+//     if (quantityToAdd <= 0) { // Changed from < 1 to <= 0 to allow decimals
 //       return;
 //     }
     
@@ -474,16 +501,22 @@
 //         const updated = [...prev];
 //         updated[existingIndex].quantity += quantityToAdd;
 //         if (showNotif) {
-//           showNotification(`Added ${quantityToAdd} more ${item.name} to cart`);
+//           showNotification(`Added ${formatQuantity(quantityToAdd)} more ${item.name} to cart`);
 //         }
 //         return updated;
 //       } else {
 //         if (showNotif) {
-//           showNotification(`${quantityToAdd} × ${item.name} added to cart`);
+//           showNotification(`${formatQuantity(quantityToAdd)} × ${item.name} added to cart`);
 //         }
 //         return [...prev, { ...item, quantity: quantityToAdd }];
 //       }
 //     });
+    
+//     // Reset the quantity input to 1 after adding to order
+//     setItemQuantities(prev => ({
+//       ...prev,
+//       [item.id]: 1
+//     }));
 //   };
 
 //   const handleRemoveFromOrder = (itemId) => {
@@ -494,6 +527,7 @@
 //     }
 //   };
 
+//   // UPDATED: Handle update quantity - now supports decimals
 //   const handleUpdateQuantity = (itemId, newQuantity) => {
 //     if (newQuantity <= 0) {
 //       handleRemoveFromOrder(itemId);
@@ -501,13 +535,15 @@
 //     }
 //     setCurrentOrder(prev => 
 //       prev.map(item => 
-//         item.id === itemId ? { ...item, quantity: newQuantity } : item
+//         item.id === itemId ? { ...item, quantity: parseFloat(newQuantity.toFixed(2)) || item.quantity } : item
 //       )
 //     );
 //   };
 
+//   // UPDATED: Calculate order total with floating point precision handling
 //   const calculateOrderTotal = () => {
-//     return currentOrder.reduce((total, item) => total + (item.price * item.quantity), 0);
+//     const total = currentOrder.reduce((total, item) => total + (item.price * item.quantity), 0);
+//     return Math.round(total * 100) / 100; // Round to 2 decimal places to avoid floating point precision issues
 //   };
 
 //   const handleAddRecentOrderToCart = (recentOrder) => {
@@ -578,12 +614,12 @@
 //     }
 //   }, [selectedCompanyId, selectedLocationId, companyLocations.length, apiDateRange]);
 
-//   // Initialize item quantities when available items change
+//   // UPDATED: Initialize item quantities with default value of 1
 //   useEffect(() => {
 //     if (availableItems.length > 0) {
 //       const initialQuantities = {};
 //       availableItems.forEach(item => {
-//         initialQuantities[item.id] = 1;
+//         initialQuantities[item.id] = 1; // Set default back to 1
 //       });
 //       setItemQuantities(initialQuantities);
 //     }
@@ -794,7 +830,7 @@
 //     }
 //   };
 
-//   // Order submission
+//   // UPDATED: Order submission with decimal support
 //   const handleSubmitOrder = async (e) => {
 //     if (e && e.preventDefault) {
 //       e.preventDefault();
@@ -824,10 +860,10 @@
 //           item_id: item.id,
 //           name: item.name,
 //           category: item.category,
-//           quantity: item.quantity,
+//           quantity: parseFloat(item.quantity.toFixed(2)), // Ensure clean decimal values
 //           unit_price: item.price,
 //           unit: item.unit,
-//           total_price: item.price * item.quantity
+//           total_price: Math.round(item.price * item.quantity * 100) / 100 // Round to avoid precision issues
 //         })),
 //         total_amount: calculateOrderTotal(),
 //         email_order: emailOrder,
@@ -849,10 +885,7 @@
 //         orderData.has_date_range = false;
 //       }
 
- 
-        
-
-//         const response = await apiClient.post('/api/storeorders/orderitems', orderData);
+//       const response = await apiClient.post('/api/storeorders/orderitems', orderData);
 
 //       console.log('Order submitted successfully:', response.data);
       
@@ -888,7 +921,7 @@
 //     }
 //   };
 
-//   // Order update
+//   // UPDATED: Order update with decimal support
 //   const handleSubmitOrderUpdate = async (e) => {
 //     if (e && e.preventDefault) {
 //       e.preventDefault();
@@ -919,10 +952,10 @@
 //           item_id: item.id,
 //           name: item.name,
 //           category: item.category,
-//           quantity: item.quantity,
+//           quantity: parseFloat(item.quantity.toFixed(2)), // Ensure clean decimal values
 //           unit_price: item.price,
 //           unit: item.unit,
-//           total_price: item.price * item.quantity
+//           total_price: Math.round(item.price * item.quantity * 100) / 100 // Round to avoid precision issues
 //         })),
 //         total_amount: calculateOrderTotal(),
 //         email_order: emailOrder,
@@ -976,6 +1009,31 @@
       
 //     } finally {
 //       setLoading(false);
+//     }
+//   };
+
+//   // Helper function to focus next input field
+//   const focusNextInput = (currentItemId) => {
+//     const currentIndex = filteredItems.findIndex(item => item.id === currentItemId);
+//     if (currentIndex < filteredItems.length - 1) {
+//       const nextItemId = filteredItems[currentIndex + 1].id;
+//       const nextInput = document.querySelector(`input[data-item-id="${nextItemId}"]`);
+//       if (nextInput) {
+//         nextInput.focus();
+//         nextInput.select(); // Select all text for easy replacement
+//       }
+//     }
+//   };
+
+//   // Handle Enter key press on quantity input
+//   const handleQuantityKeyPress = (event, item) => {
+//     if (event.key === 'Enter') {
+//       event.preventDefault();
+//       handleAddToOrder(item);
+//       // Focus next input after a small delay to ensure state updates
+//       setTimeout(() => {
+//         focusNextInput(item.id);
+//       }, 100);
 //     }
 //   };
 
@@ -1144,129 +1202,156 @@
 //       </Box>
 
 //       <Grid container spacing={3}>
-//         {/* Left Column */}
-//         <Grid item xs={12} lg={8}>
-//           {/* Store Analytics */}
-//           <Card sx={{ mb: 3, borderRadius: 2 }}>
-//             <CardContent>
-//               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-//                 <TrendingUpIcon color="primary" />
-//                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
-//                   Store Analytics
-//                 </Typography>
-//                 <Box sx={{ minWidth: 140 }}>
-//                   {hasDateRange && (
-//                     <Chip 
-//                       label="Filtered by date range" 
-//                       size="small" 
-//                       variant="outlined" 
-//                       color="primary"
-//                     />
-//                   )}
-//                 </Box>
-//               </Box>
-              
-//               <Grid container spacing={2}>
-//                 <Grid item xs={12} md={6}>
-//                   <Paper 
-//                     sx={{ 
-//                       p: 3, 
-//                       background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
-//                       borderRadius: 2,
-//                       textAlign: 'center'
-//                     }}
-//                   >
-//                     <Typography variant="body2" color="text.secondary" gutterBottom>
-//                       Avg Daily Orders
+//         {/* Full Width Row for Store Analytics and Top Items */}
+//         <Grid item xs={12}>
+//           <Grid container spacing={3} sx={{ mb: 3 }}>
+//             {/* Store Analytics */}
+//             <Grid item xs={12} md={8}>
+//               <Card sx={{ borderRadius: 2, height: '100%' }}>
+//                 <CardContent>
+//                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+//                     <TrendingUpIcon color="primary" />
+//                     <Typography variant="h6" sx={{ fontWeight: 600 }}>
+//                       Store Analytics
 //                     </Typography>
-//                     {loadingAnalytics ? (
-//                       <CircularProgress size={24} />
-//                     ) : (
-//                       <Typography variant="h4" sx={{ fontWeight: 700, color: '#1565c0' }}>
-//                         {analyticsData?.avg_daily_orders?.toFixed(1) || '0.0'}
-//                       </Typography>
-//                     )}
-//                   </Paper>
-//                 </Grid>
-                
-//                 <Grid item xs={12} md={6}>
-//                   <Paper 
-//                     sx={{ 
-//                       p: 3, 
-//                       background: 'linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%)',
-//                       borderRadius: 2,
-//                       textAlign: 'center'
-//                     }}
-//                   >
-//                     <Typography variant="body2" color="text.secondary" gutterBottom>
-//                       Total Orders
-//                     </Typography>
-//                     {loadingAnalytics ? (
-//                       <CircularProgress size={24} />
-//                     ) : (
-//                       <Typography variant="h4" sx={{ fontWeight: 700, color: '#2e7d32' }}>
-//                         {analyticsData?.total_orders || '0'}
-//                       </Typography>
-//                     )}
-//                   </Paper>
-//                 </Grid>
-//               </Grid>
-//             </CardContent>
-//           </Card>
+//                     <Box sx={{ minWidth: 140 }}>
+//                       {hasDateRange && (
+//                         <Chip 
+//                           label="Filtered by date range" 
+//                           size="small" 
+//                           variant="outlined" 
+//                           color="primary"
+//                         />
+//                       )}
+//                     </Box>
+//                   </Box>
+                  
+//                   <Grid container spacing={2}>
+//                     <Grid item xs={12} sm={6}>
+//                       <Paper 
+//                         sx={{ 
+//                           p: 3, 
+//                           background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+//                           borderRadius: 2,
+//                           textAlign: 'center'
+//                         }}
+//                       >
+//                         <Typography variant="body2" color="text.secondary" gutterBottom>
+//                           Avg Daily Orders
+//                         </Typography>
+//                         {loadingAnalytics ? (
+//                           <CircularProgress size={24} />
+//                         ) : (
+//                           <Typography variant="h4" sx={{ fontWeight: 700, color: '#1565c0' }}>
+//                             {analyticsData?.avg_daily_orders?.toFixed(1) || '0.0'}
+//                           </Typography>
+//                         )}
+//                       </Paper>
+//                     </Grid>
+                    
+//                     <Grid item xs={12} sm={6}>
+//                       <Paper 
+//                         sx={{ 
+//                           p: 3, 
+//                           background: 'linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%)',
+//                           borderRadius: 2,
+//                           textAlign: 'center'
+//                         }}
+//                       >
+//                         <Typography variant="body2" color="text.secondary" gutterBottom>
+//                           Total Orders
+//                         </Typography>
+//                         {loadingAnalytics ? (
+//                           <CircularProgress size={24} />
+//                         ) : (
+//                           <Typography variant="h4" sx={{ fontWeight: 700, color: '#2e7d32' }}>
+//                             {analyticsData?.total_orders || '0'}
+//                           </Typography>
+//                         )}
+//                       </Paper>
+//                     </Grid>
+//                   </Grid>
+//                 </CardContent>
+//               </Card>
+//             </Grid>
 
-//           {/* Top Items */}
-//           <Card sx={{ mb: 3, borderRadius: 2 }}>
-//             <CardContent>
-//               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-//                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
-//                   🏆 Top Items
-//                 </Typography>
-//                 <Box sx={{ minWidth: 100 }}>
-//                   {hasDateRange && (
-//                     <Chip 
-//                       label="Date filtered" 
-//                       size="small" 
-//                       variant="outlined" 
-//                       color="primary"
-//                     />
-//                   )}
-//                 </Box>
-//               </Box>
-              
-//               <List>
-//                 {analyticsData?.top_items && analyticsData.top_items.length > 0 ? (
-//                   analyticsData.top_items.slice(0, 3).map((item, index) => (
-//                     <React.Fragment key={item.name}>
-//                       <ListItem>
+//             {/* Top Items */}
+//             <Grid item xs={12} md={4}>
+//               <Card sx={{ borderRadius: 2, height: '100%' }}>
+//                 <CardContent>
+//                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+//                     <Typography variant="h6" sx={{ fontWeight: 600 }}>
+//                       🏆 Top Items
+//                     </Typography>
+//                     <Box sx={{ minWidth: 100 }}>
+//                       {hasDateRange && (
+//                         <Chip 
+//                           label="Date filtered" 
+//                           size="small" 
+//                           variant="outlined" 
+//                           color="primary"
+//                         />
+//                       )}
+//                     </Box>
+//                   </Box>
+                  
+//                   <List dense>
+//                     {analyticsData?.top_items && analyticsData.top_items.length > 0 ? (
+//                       analyticsData.top_items.slice(0, 3).map((item, index) => (
+//                         <React.Fragment key={item.name}>
+//                           <ListItem sx={{ px: 0 }}>
+//                             <ListItemText 
+//                               primary={
+//                                 <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.875rem' }}>
+//                                   #{index + 1} {item.name}
+//                                 </Typography>
+//                               }
+//                               secondary={
+//                                 <Typography variant="caption" color="text.secondary">
+//                                   {formatQuantity(item.total_quantity)} units total
+//                                 </Typography>
+//                               }
+//                             />
+//                           </ListItem>
+//                           {index < Math.min(analyticsData.top_items.length, 3) - 1 && <Divider />}
+//                         </React.Fragment>
+//                       ))
+//                     ) : loadingAnalytics ? (
+//                       <ListItem sx={{ px: 0 }}>
+//                         <CircularProgress size={16} sx={{ mr: 1 }} />
 //                         <ListItemText 
-//                           primary={`#${index + 1} ${item.name}`}
-//                           secondary={`${item.total_quantity} units total`}
-//                           primaryTypographyProps={{ fontWeight: 500 }}
+//                           primary={
+//                             <Typography variant="body2" color="text.secondary">
+//                               Loading top items...
+//                             </Typography>
+//                           }
 //                         />
 //                       </ListItem>
-//                       {index < Math.min(analyticsData.top_items.length, 3) - 1 && <Divider />}
-//                     </React.Fragment>
-//                   ))
-//                 ) : loadingAnalytics ? (
-//                   <ListItem>
-//                     <CircularProgress size={20} sx={{ mr: 2 }} />
-//                     <ListItemText 
-//                       primary="Loading top items..."
-//                       primaryTypographyProps={{ fontWeight: 500, color: 'text.secondary' }}
-//                     />
-//                   </ListItem>
-//                 ) : (
-//                   <ListItem>
-//                     <ListItemText 
-//                       primary="No top items available"
-//                       secondary="Select a company and location to view top items"
-//                       primaryTypographyProps={{ fontWeight: 500, color: 'text.secondary' }}
-//                     />
-//                   </ListItem>
-//                 )}
-//               </List>
-//             </CardContent>
-//           </Card>
+//                     ) : (
+//                       <ListItem sx={{ px: 0 }}>
+//                         <ListItemText 
+//                           primary={
+//                             <Typography variant="body2" color="text.secondary">
+//                               No top items available
+//                             </Typography>
+//                           }
+//                           secondary={
+//                             <Typography variant="caption" color="text.secondary">
+//                               Select a company and location to view top items
+//                             </Typography>
+//                           }
+//                         />
+//                       </ListItem>
+//                     )}
+//                   </List>
+//                 </CardContent>
+//               </Card>
+//             </Grid>
+//           </Grid>
+//         </Grid>
+
+//         {/* Left Column - Recent Orders and Available Items */}
+//         <Grid item xs={12} lg={8}>
 
 //           {/* Recent Orders */}
 //           <Card sx={{ mb: 3, borderRadius: 2 }}>
@@ -1320,76 +1405,114 @@
 //                 <List>
 //                   {recentOrders.map((order, index) => (
 //                     <React.Fragment key={order.id}>
-//                       <ListItem sx={{ px: 0 }}>
-//                         <ListItemText
-//                           primary={
-//                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+//                       <ListItem sx={{ px: 0, flexDirection: 'column', alignItems: 'stretch' }}>
+//                         {/* Main order row */}
+//                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+//                           <ListItemText
+//                             primary={
 //                               <Typography variant="body1" sx={{ fontWeight: 500 }}>
 //                                 {order.items} item{order.items > 1 ? 's' : ''} ordered
 //                               </Typography>
-//                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-//                                 <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
-//                                   ${order.total.toFixed(2)}
-//                                 </Typography>
-//                                 <Button
-//                                   variant="outlined"
-//                                   size="small"
-//                                   startIcon={<AddIcon />}
-//                                   onClick={() => handleAddRecentOrderToCart(order)}
-//                                   sx={{ ml: 1, mr: 1 }}
-//                                 >
-//                                   Add to Cart
-//                                 </Button>
-//                                 <Button
-//                                   variant="contained"
-//                                   size="small"
-//                                   color="secondary"
-//                                   startIcon={<ReceiptIcon />}
-//                                   onClick={() => handleUpdateRecentOrder(order)}
-//                                 >
-//                                   Update Order
-//                                 </Button>
-//                               </Box>
-//                             </Box>
-//                           }
-//                           secondary={
-//                             <Box sx={{ mt: 1 }}>
-//                               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-//                                 <Typography variant="body2" color="text.secondary">
-//                                   Qty: {order.qty} • {order.date}
-//                                 </Typography>
-//                                 <Typography variant="body2" color="text.secondary">
-//                                   @${order.avg.toFixed(2)}
-//                                 </Typography>
-//                               </Box>
-//                               {/* Order Items Preview */}
+//                             }
+//                             secondary={
 //                               <Box sx={{ mt: 1 }}>
-//                                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-//                                   Items:
+//                                 <Typography variant="body2" color="text.secondary">
+//                                   Qty: {formatQuantity(order.qty)} • {order.date}
 //                                 </Typography>
-//                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-//                                   {order.orderItems.slice(0, 3).map((item, itemIndex) => (
-//                                     <Chip
-//                                       key={itemIndex}
-//                                       label={`${item.name} (${item.quantity})`}
-//                                       size="small"
-//                                       variant="outlined"
-//                                       sx={{ fontSize: '0.7rem', height: 20 }}
-//                                     />
-//                                   ))}
-//                                   {order.orderItems.length > 3 && (
-//                                     <Chip
-//                                       label={`+${order.orderItems.length - 3} more`}
-//                                       size="small"
-//                                       variant="outlined"
-//                                       sx={{ fontSize: '0.7rem', height: 20, fontStyle: 'italic' }}
-//                                     />
-//                                   )}
-//                                 </Box>
 //                               </Box>
+//                             }
+//                           />
+//                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+//                             <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
+//                               ${order.total.toFixed(2)}
+//                             </Typography>
+//                             <Button
+//                               variant="outlined"
+//                               size="small"
+//                               startIcon={<AddIcon />}
+//                               onClick={() => handleAddRecentOrderToCart(order)}
+//                               sx={{ ml: 1, mr: 1 }}
+//                             >
+//                               Add to Cart
+//                             </Button>
+//                             <Button
+//                               variant="contained"
+//                               size="small"
+//                               color="secondary"
+//                               startIcon={<ReceiptIcon />}
+//                               onClick={() => handleUpdateRecentOrder(order)}
+//                             >
+//                               Update Order
+//                             </Button>
+//                           </Box>
+//                         </Box>
+
+//                         {/* UPDATED: Expandable order items section */}
+//                         <Box sx={{ mt: 1, width: '100%' }}>
+//                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+//                             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+//                               Items:
+//                             </Typography>
+//                             {/* Show first 3 items as chips */}
+//                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, flex: 1 }}>
+//                               {order.orderItems.slice(0, 3).map((item, itemIndex) => (
+//                                 <Chip
+//                                   key={itemIndex}
+//                                   label={`${item.name} (${formatQuantity(item.quantity)})`}
+//                                   size="small"
+//                                   variant="outlined"
+//                                   sx={{ fontSize: '0.7rem', height: 20 }}
+//                                 />
+//                               ))}
+//                               {order.orderItems.length > 3 && (
+//                                 <Button
+//                                   size="small"
+//                                   variant="text"
+//                                   onClick={() => toggleOrderExpansion(order.id)}
+//                                   endIcon={expandedOrders.has(order.id) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+//                                   sx={{ 
+//                                     fontSize: '0.7rem', 
+//                                     height: 20, 
+//                                     minWidth: 'auto',
+//                                     px: 1,
+//                                     color: 'primary.main',
+//                                     fontWeight: 500
+//                                   }}
+//                                 >
+//                                   {expandedOrders.has(order.id) 
+//                                     ? 'Show Less' 
+//                                     : `+${order.orderItems.length - 3} more`
+//                                   }
+//                                 </Button>
+//                               )}
 //                             </Box>
-//                           }
-//                         />
+//                           </Box>
+
+//                           {/* Expanded items view */}
+//                           {expandedOrders.has(order.id) && order.orderItems.length > 3 && (
+//                             <Box sx={{ mt: 1, pl: 2, borderLeft: 2, borderColor: 'divider' }}>
+//                               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, mb: 1, display: 'block' }}>
+//                                 All Items:
+//                               </Typography>
+//                               <Grid container spacing={0.5}>
+//                                 {order.orderItems.map((item, itemIndex) => (
+//                                   <Grid item key={itemIndex}>
+//                                     <Chip
+//                                       label={`${item.name} (${formatQuantity(item.quantity)} ${item.unit})`}
+//                                       size="small"
+//                                       variant="outlined"
+//                                       sx={{ 
+//                                         fontSize: '0.7rem', 
+//                                         height: 22,
+//                                         backgroundColor: itemIndex >= 3 ? 'action.hover' : 'transparent'
+//                                       }}
+//                                     />
+//                                   </Grid>
+//                                 ))}
+//                               </Grid>
+//                             </Box>
+//                           )}
+//                         </Box>
 //                       </ListItem>
 //                       {index < recentOrders.length - 1 && <Divider />}
 //                     </React.Fragment>
@@ -1407,7 +1530,7 @@
 //               </Typography>
 //               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
 //                 {availableItems.length > 0 
-//                   ? `${availableItems.length} items available. Enter desired quantity and click "Add" to add items to your cart.`
+//                   ? `${availableItems.length} items available. Enter desired quantity (supports decimals like 0.5, 0.25) and click "Add" to add items to your cart.`
 //                   : selectedCompanyId && selectedLocationId
 //                     ? loading ? 'Loading available items...' : 'No items available for the selected company and location.'
 //                     : 'Select company and location from filters above to view available items.'
@@ -1478,68 +1601,73 @@
 //                     {filteredItems.map((item, index) => (
 //                       <React.Fragment key={item.id}>
 //                         <ListItem sx={{ px: 2, py: 1.5 }}>
-//                           <ListItemText
-//                             primary={
-//                               <Box>
-//                                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
+//                           {/* UPDATED: Single row layout for item details */}
+//                           <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 2 }}>
+//                             {/* Item Name and Category */}
+//                             <Box sx={{ flex: 1, minWidth: 0 }}>
+//                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+//                                 <Typography variant="body1" sx={{ fontWeight: 500, fontSize: '0.95rem' }}>
 //                                   {item.name}
 //                                 </Typography>
 //                                 <Chip 
 //                                   label={item.category} 
 //                                   size="small" 
 //                                   variant="outlined" 
-//                                   sx={{ mt: 0.5 }}
+//                                   sx={{ fontSize: '0.7rem', height: 18 }}
 //                                 />
 //                               </Box>
-//                             }
-//                             secondary={
-//                               <Box sx={{ mt: 1 }}>
-//                                 <Typography variant="body2" color="text.secondary">
+//                               {/* Price and additional details in one line */}
+//                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+//                                 <Typography variant="body2" color="primary.main" sx={{ fontWeight: 500 }}>
 //                                   ${item.price}/{item.unit}
 //                                 </Typography>
 //                                 {item.batchSize && (
 //                                   <Typography variant="caption" color="text.secondary">
-//                                     Batch Size: {item.batchSize}
+//                                     Batch: {item.batchSize}
 //                                   </Typography>
 //                                 )}
 //                                 {item.previousPrice && (
-//                                   <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-//                                     Previous: ${item.previousPrice}
+//                                   <Typography variant="caption" color="text.secondary">
+//                                     Prev: ${item.previousPrice}
 //                                   </Typography>
 //                                 )}
 //                               </Box>
-//                             }
-//                           />
-//                           {/* Quantity input and Add button */}
-//                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
-//                             <TextField
-//                               type="number"
-//                               value={itemQuantities[item.id] || ''}
-//                               onChange={(e) => handleQuantityChange(item.id, e.target.value)}
-//                               placeholder="1"
-//                               size="small"
-//                               inputProps={{ 
-//                                 min: 1, 
-//                                 max: 999,
-//                                 style: { textAlign: 'center' }
-//                               }}
-//                               sx={{ 
-//                                 width: 80,
-//                                 '& .MuiOutlinedInput-root': {
-//                                   height: 36
-//                                 }
-//                               }}
-//                             />
-//                             <Button
-//                               variant="contained"
-//                               size="small"
-//                               startIcon={<AddIcon />}
-//                               onClick={() => handleAddToOrder(item)}
-//                               disabled={!itemQuantities[item.id] || itemQuantities[item.id] < 1}
-//                               sx={{ minWidth: 80, height: 36 }}
-//                             >
-//                               Add
-//                             </Button>
+//                             </Box>
+
+//                             {/* Quantity input and Add button */}
+//                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+//                               <TextField
+//                                 type="number"
+//                                 value={itemQuantities[item.id] || ''}
+//                                 onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+//                                 onKeyPress={(e) => handleQuantityKeyPress(e, item)}
+//                                 placeholder="1"
+//                                 size="small"
+//                                 inputProps={{ 
+//                                   min: 0.01,
+//                                   max: 999,
+//                                   step: 0.25,
+//                                   style: { textAlign: 'center' },
+//                                   'data-item-id': item.id
+//                                 }}
+//                                 sx={{ 
+//                                   width: 80,
+//                                   '& .MuiOutlinedInput-root': {
+//                                     height: 32
+//                                   }
+//                                 }}
+//                               />
+//                               <Button
+//                                 variant="contained"
+//                                 size="small"
+//                                 startIcon={<AddIcon />}
+//                                 onClick={() => handleAddToOrder(item)}
+//                                 disabled={!itemQuantities[item.id] || itemQuantities[item.id] <= 0}
+//                                 sx={{ minWidth: 70, height: 32, fontSize: '0.75rem' }}
+//                               >
+//                                 Add
+//                               </Button>
+//                             </Box>
 //                           </Box>
 //                         </ListItem>
 //                         {index < filteredItems.length - 1 && <Divider />}
@@ -1612,7 +1740,7 @@
 //                       Your order is empty
 //                     </Typography>
 //                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-//                       Enter quantity and click "Add" on any item to add it to your cart.
+//                       Enter quantity (including decimals like 0.5, 0.25) and press Enter or click "Add" to add items to your cart. Press Enter to automatically move to the next item.
 //                     </Typography>
 //                     <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
 //                       <Tooltip title="Get personalized item suggestions based on your order history">
@@ -1634,74 +1762,139 @@
 //                           </Button>
 //                         </span>
 //                       </Tooltip>
-// {/*                   
-//                       {recentOrders.length > 0 && (
-//                         <Button 
-//                           variant="outlined" 
-//                           size="small"
-//                           onClick={() => handleAddRecentOrderToCart(recentOrders[0])}
-//                         >
-//                           🔄 Repeat Last Order
-//                         </Button>
-//                       )} */}
-
-
 //                     </Box>
 //                   </Box>
 //                 ) : (
 //                   <>
-//                     <List sx={{ mb: 2 }}>
-//                       {currentOrder.map((item, index) => (
-//                         <React.Fragment key={item.id}>
-//                           <ListItem sx={{ px: 0 }}>
-//                             <ListItemText
-//                               primary={
-//                                 <Box>
-//                                   <Typography variant="body1" sx={{ fontWeight: 500 }}>
-//                                     {item.name}
-//                                   </Typography>
-//                                   <Chip 
-//                                     label={item.category} 
-//                                     size="small" 
-//                                     variant="outlined" 
-//                                     sx={{ mt: 0.5, fontSize: '0.7rem', height: 20 }}
-//                                   />
-//                                 </Box>
-//                               }
-//                               secondary={`${item.price}/${item.unit}`}
-//                             />
-//                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-//                               <IconButton 
-//                                 size="small"
-//                                 onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
-//                               >
-//                                 <RemoveIcon />
-//                               </IconButton>
-//                               <Typography sx={{ minWidth: 30, textAlign: 'center', fontWeight: 500 }}>
-//                                 {item.quantity}
-//                               </Typography>
-//                               <Typography variant="body2" sx={{ minWidth: 30, fontSize: '0.75rem' }}>
-//                                 {item.unit}
-//                               </Typography>
-//                               <IconButton 
-//                                 size="small"
-//                                 onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
-//                               >
-//                                 <AddIcon />
-//                               </IconButton>
-//                               <IconButton 
-//                                 size="small"
-//                                 color="error"
-//                                 onClick={() => handleRemoveFromOrder(item.id)}
-//                               >
-//                                 <DeleteIcon />
-//                               </IconButton>
-//                             </Box>
-//                           </ListItem>
-//                           {index < currentOrder.length - 1 && <Divider />}
-//                         </React.Fragment>
-//                       ))}
-//                     </List>
+//                     {/* UPDATED: Add scrollable container for order items */}
+//                     <Box 
+//                       sx={{ 
+//                         maxHeight: 400, // Set maximum height for scrolling
+//                         overflow: 'auto',
+//                         mb: 2,
+//                         '&::-webkit-scrollbar': {
+//                           width: '6px',
+//                         },
+//                         '&::-webkit-scrollbar-track': {
+//                           background: '#f1f1f1',
+//                           borderRadius: '3px',
+//                         },
+//                         '&::-webkit-scrollbar-thumb': {
+//                           background: '#c1c1c1',
+//                           borderRadius: '3px',
+//                           '&:hover': {
+//                             background: '#a8a8a8',
+//                           },
+//                         },
+//                       }}
+//                     >
+//                       <List sx={{ py: 0 }}>
+//                         {currentOrder.map((item, index) => (
+//                           <React.Fragment key={item.id}>
+//                             <ListItem sx={{ px: 0 }}>
+//                               <ListItemText
+//                                 primary={
+//                                   <Box>
+//                                     <Typography variant="body1" sx={{ fontWeight: 500 }}>
+//                                       {item.name}
+//                                     </Typography>
+//                                     <Chip 
+//                                       label={item.category} 
+//                                       size="small" 
+//                                       variant="outlined" 
+//                                       sx={{ mt: 0.5, fontSize: '0.7rem', height: 20 }}
+//                                     />
+//                                   </Box>
+//                                 }
+//                                 secondary={`${item.price}/${item.unit}`}
+//                               />
+//                               {/* UPDATED: Quantity controls with decimal support and editable input */}
+//                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+//                                 <IconButton 
+//                                   size="small"
+//                                   onClick={() => handleUpdateQuantity(item.id, Math.max(0.25, item.quantity - 0.25))} // Prevent going below 0.25
+//                                 >
+//                                   <RemoveIcon />
+//                                 </IconButton>
+//                                 <TextField
+//                                   type="number"
+//                                   value={item.quantity}
+//                                   onChange={(e) => {
+//                                     const newValue = parseFloat(e.target.value);
+//                                     if (!isNaN(newValue) && newValue > 0) {
+//                                       handleUpdateQuantity(item.id, newValue);
+//                                     } else if (e.target.value === '') {
+//                                       // Allow empty field temporarily
+//                                       setCurrentOrder(prev => 
+//                                         prev.map(orderItem => 
+//                                           orderItem.id === item.id ? { ...orderItem, quantity: '' } : orderItem
+//                                         )
+//                                       );
+//                                     }
+//                                   }}
+//                                   onBlur={(e) => {
+//                                     // If field is empty on blur, reset to 1
+//                                     if (e.target.value === '' || parseFloat(e.target.value) <= 0) {
+//                                       handleUpdateQuantity(item.id, 1);
+//                                     }
+//                                   }}
+//                                   onKeyPress={(e) => {
+//                                     if (e.key === 'Enter') {
+//                                       e.target.blur(); // Trigger onBlur validation
+//                                     }
+//                                   }}
+//                                   size="small"
+//                                   inputProps={{
+//                                     min: 0.01,
+//                                     max: 999,
+//                                     step: 0.25,
+//                                     style: { 
+//                                       textAlign: 'center',
+//                                       padding: '4px 8px',
+//                                       fontSize: '0.875rem',
+//                                       fontWeight: 500
+//                                     }
+//                                   }}
+//                                   sx={{ 
+//                                     width: 60,
+//                                     '& .MuiOutlinedInput-root': {
+//                                       height: 32,
+//                                       '& fieldset': {
+//                                         borderColor: 'rgba(0, 0, 0, 0.23)',
+//                                       },
+//                                       '&:hover fieldset': {
+//                                         borderColor: 'primary.main',
+//                                       },
+//                                       '&.Mui-focused fieldset': {
+//                                         borderColor: 'primary.main',
+//                                         borderWidth: 2,
+//                                       },
+//                                     }
+//                                   }}
+//                                 />
+//                                 <Typography variant="body2" sx={{ minWidth: 30, fontSize: '0.75rem' }}>
+//                                   {item.unit}
+//                                 </Typography>
+//                                 <IconButton 
+//                                   size="small"
+//                                   onClick={() => handleUpdateQuantity(item.id, item.quantity + 0.25)}
+//                                 >
+//                                   <AddIcon />
+//                                 </IconButton>
+//                                 <IconButton 
+//                                   size="small"
+//                                   color="error"
+//                                   onClick={() => handleRemoveFromOrder(item.id)}
+//                                 >
+//                                   <DeleteIcon />
+//                                 </IconButton>
+//                               </Box>
+//                             </ListItem>
+//                             {index < currentOrder.length - 1 && <Divider />}
+//                           </React.Fragment>
+//                         ))}
+//                       </List>
+//                     </Box>
 
 //                     <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 2 }}>
 //                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
