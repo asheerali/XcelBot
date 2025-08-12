@@ -739,6 +739,391 @@ def get_consolidated_production(company_id: int, db: Session):
 
 
 
+# def send_actual_email(to: str, name: str, company_id: int = None):
+#     db = SessionLocal()
+#     try:
+#         # company_id = 1
+#         print("---------------------------------------------")
+#         print("Sending email to:", to, "for user:", name, "with company ID:", company_id)
+#         print("---------------------------------------------")
+        
+#         data = get_consolidated_production(company_id, db)
+        
+        
+#         print("This is the data which I want to print:", data)
+
+#         # Generate timestamp for file names
+#         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+#         # Create downloads directory if it doesn't exist
+#         downloads_dir = "downloads"
+#         if not os.path.exists(downloads_dir):
+#             os.makedirs(downloads_dir)
+
+#         # Generate Excel file
+#         def create_excel_file(data, filename):
+#             if not data or 'data' not in data or not data['data']:
+#                 return None
+            
+#             try:
+#                 # Convert data to DataFrame
+#                 df = pd.DataFrame(data['data'])
+                
+#                 # Create Excel file with formatting
+#                 excel_path = os.path.join(downloads_dir, filename)
+#                 with pd.ExcelWriter(excel_path, engine='openpyxl') as writer:
+#                     df.to_excel(writer, sheet_name='Production Requirements', index=False)
+                    
+#                     # Get workbook and worksheet objects
+#                     workbook = writer.book
+#                     worksheet = writer.sheets['Production Requirements']
+                    
+#                     # Apply formatting
+#                     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+                    
+#                     # Header formatting
+#                     header_font = Font(bold=True, color="000000")
+#                     header_fill = PatternFill(start_color="F8F9FA", end_color="F8F9FA", fill_type="solid")
+#                     total_fill = PatternFill(start_color="E8F5E8", end_color="E8F5E8", fill_type="solid")
+#                     highlight_fill = PatternFill(start_color="FFF3CD", end_color="FFF3CD", fill_type="solid")
+                    
+#                     # Border style
+#                     thin_border = Border(
+#                         left=Side(style='thin'),
+#                         right=Side(style='thin'),
+#                         top=Side(style='thin'),
+#                         bottom=Side(style='thin')
+#                     )
+                    
+#                     # Format headers
+#                     for col_num, column in enumerate(df.columns, 1):
+#                         cell = worksheet.cell(row=1, column=col_num)
+#                         cell.font = header_font
+#                         cell.fill = header_fill
+#                         cell.alignment = Alignment(horizontal="center", vertical="center")
+#                         cell.border = thin_border
+                        
+#                         # Special formatting for total columns
+#                         if 'total' in column.lower() or 'required' in column.lower():
+#                             cell.fill = total_fill
+                    
+#                     # Format data cells
+#                     for row_num in range(2, len(df) + 2):
+#                         for col_num, column in enumerate(df.columns, 1):
+#                             cell = worksheet.cell(row=row_num, column=col_num)
+#                             cell.border = thin_border
+#                             cell.alignment = Alignment(horizontal="center", vertical="center")
+                            
+#                             # Highlight cells with values > 0 (except total columns)
+#                             if ('total' not in column.lower() and 'required' not in column.lower() 
+#                                 and isinstance(cell.value, (int, float)) and cell.value > 0):
+#                                 cell.fill = highlight_fill
+#                             elif 'total' in column.lower() or 'required' in column.lower():
+#                                 cell.fill = total_fill
+#                                 cell.font = Font(bold=True)
+                    
+#                     # Auto-adjust column widths
+#                     for column in worksheet.columns:
+#                         max_length = 0
+#                         column_letter = column[0].column_letter
+#                         for cell in column:
+#                             try:
+#                                 if len(str(cell.value)) > max_length:
+#                                     max_length = len(str(cell.value))
+#                             except:
+#                                 pass
+#                         adjusted_width = min(max_length + 2, 50)
+#                         worksheet.column_dimensions[column_letter].width = adjusted_width
+                
+#                 return excel_path
+#             except Exception as e:
+#                 print(f"Error creating Excel file: {e}")
+#                 return None
+
+#         # Generate PDF file
+#         def create_pdf_file(data, filename):
+#             if not data or 'data' not in data or not data['data']:
+#                 return None
+            
+#             try:
+#                 pdf_path = os.path.join(downloads_dir, filename)
+                
+#                 # Create PDF document
+#                 doc = SimpleDocTemplate(pdf_path, pagesize=A4)
+#                 elements = []
+                
+#                 # Get styles
+#                 styles = getSampleStyleSheet()
+#                 title_style = ParagraphStyle(
+#                     'CustomTitle',
+#                     parent=styles['Heading1'],
+#                     fontSize=16,
+#                     spaceAfter=30,
+#                     alignment=1  # Center alignment
+#                 )
+                
+#                 # Add title
+#                 title = Paragraph("Consolidated Production Requirements", title_style)
+#                 elements.append(title)
+#                 elements.append(Spacer(1, 12))
+                
+#                 # Add subtitle
+#                 subtitle = Paragraph("", styles['Normal'])
+#                 elements.append(subtitle)
+#                 elements.append(Spacer(1, 20))
+                
+#                 # Prepare table data
+#                 columns = data.get('columns', list(data['data'][0].keys()) if data['data'] else [])
+#                 table_data = [columns]  # Header row
+                
+#                 # Add data rows
+#                 for item in data['data']:
+#                     row = [str(item.get(col, "")) for col in columns]
+#                     table_data.append(row)
+                
+#                 # Create table
+#                 table = Table(table_data)
+                
+#                 # Define table style
+#                 table_style = [
+#                     # Header row styling
+#                     ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+#                     ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+#                     ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+#                     ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+#                     ('FONTSIZE', (0, 0), (-1, 0), 10),
+#                     ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    
+#                     # Data rows styling
+#                     ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+#                     ('FONTSIZE', (0, 1), (-1, -1), 9),
+#                     ('GRID', (0, 0), (-1, -1), 1, colors.black),
+#                     ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+#                 ]
+                
+#                 # Highlight total columns and positive values
+#                 for col_idx, col in enumerate(columns):
+#                     if 'total' in col.lower() or 'required' in col.lower():
+#                         # Green background for total columns
+#                         table_style.append(('BACKGROUND', (col_idx, 0), (col_idx, -1), colors.lightgreen))
+#                         table_style.append(('FONTNAME', (col_idx, 1), (col_idx, -1), 'Helvetica-Bold'))
+                
+#                 # Apply alternating row colors
+#                 for row_idx in range(1, len(table_data)):
+#                     if row_idx % 2 == 0:
+#                         table_style.append(('BACKGROUND', (0, row_idx), (-1, row_idx), colors.beige))
+                
+#                 table.setStyle(TableStyle(table_style))
+#                 elements.append(table)
+                
+#                 # Add footer
+#                 elements.append(Spacer(1, 30))
+#                 footer_text = f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}<br/>KPI360.ai Team"
+#                 footer = Paragraph(footer_text, styles['Normal'])
+#                 elements.append(footer)
+                
+#                 # Build PDF
+#                 doc.build(elements)
+#                 return pdf_path
+#             except Exception as e:
+#                 print(f"Error creating PDF file: {e}")
+#                 return None
+
+#         # Generate HTML table from the data - DYNAMIC VERSION
+#         def generate_production_table(data):
+#             if not data or 'data' not in data or not data['data']:
+#                 return "<p>No production data available.</p>"
+            
+#             # Get columns dynamically from the data
+#             columns = data.get('columns', [])
+#             if not columns and data['data']:
+#                 # If columns not provided, extract from first row
+#                 columns = list(data['data'][0].keys())
+            
+#             if not columns:
+#                 return "<p>No columns found in data.</p>"
+            
+#             # Start building the table
+#             table_html = """
+#             <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
+#                 <thead>
+#                     <tr style="background-color: #f8f9fa;">
+#             """
+            
+#             # Generate header row dynamically
+#             for col in columns:
+#                 # Special styling for specific column types
+#                 if 'total' in col.lower() or 'required' in col.lower() or 'sum' in col.lower():
+#                     header_style = "border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold; background-color: #e8f5e8;"
+#                 else:
+#                     header_style = "border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;"
+                
+#                 table_html += f'<th style="{header_style}">{col}</th>'
+            
+#             table_html += """
+#                     </tr>
+#                 </thead>
+#                 <tbody>
+#             """
+            
+#             # Generate data rows dynamically
+#             for row_index, item in enumerate(data['data']):
+#                 # Alternate row colors for better readability
+#                 row_bg = "#f9f9f9" if row_index % 2 == 0 else "#ffffff"
+                
+#                 table_html += f'<tr style="background-color: {row_bg};">'
+                
+#                 for col_index, col in enumerate(columns):
+#                     cell_value = item.get(col, "")
+                    
+#                     # Smart styling based on column type and content
+#                     if 'total' in col.lower() or 'required' in col.lower() or 'sum' in col.lower():
+#                         # Highlight total/required columns in green
+#                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center; background-color: #e8f5e8; font-weight: bold;"
+#                     elif col_index == 0:  # First column (usually item name)
+#                         # Check if any store column has a value for this row to highlight the item
+#                         has_store_value = any(
+#                             isinstance(item.get(c, 0), (int, float)) and item.get(c, 0) > 0 
+#                             for c in columns[1:-2] if 'store' in c.lower() or 'location' in c.lower() or 'shop' in c.lower()
+#                         )
+#                         if has_store_value:
+#                             cell_style = "border: 1px solid #ddd; padding: 12px; text-align: left; background-color: #fff3cd;"
+#                         else:
+#                             cell_style = "border: 1px solid #ddd; padding: 12px; text-align: left;"
+#                     elif isinstance(cell_value, (int, float)) and cell_value > 0:
+#                         # Highlight cells with positive values (like store quantities)
+#                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center; background-color: #fff3cd;"
+#                     elif col.lower() in ['unit', 'units', 'type', 'category']:
+#                         # Unit/type columns - center aligned, no highlighting
+#                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center;"
+#                     else:
+#                         # Default styling
+#                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center;"
+                    
+#                     table_html += f'<td style="{cell_style}">{cell_value}</td>'
+                
+#                 table_html += "</tr>"
+            
+#             table_html += """
+#                 </tbody>
+#             </table>
+#             """
+            
+#             return table_html
+
+#         # Generate files
+#         excel_filename = f"production_requirements_{timestamp}.xlsx"
+#         pdf_filename = f"production_requirements_{timestamp}.pdf"
+        
+#         excel_path = create_excel_file(data, excel_filename)
+#         pdf_path = create_pdf_file(data, pdf_filename)
+        
+#         production_table = generate_production_table(data)
+        
+#         # Files are attached to email, no download buttons needed in UI
+        
+#         subject = "Consolidated Production Requirements"
+#         html_body = f"""
+#         <html>
+#         <head>
+#             <style>
+#                 body {{
+#                     font-family: Arial, sans-serif;
+#                     line-height: 1.6;
+#                     color: #333;
+#                     max-width: 1200px;
+#                     margin: 0 auto;
+#                     padding: 20px;
+#                 }}
+#                 .header {{
+#                     background-color: #f8f9fa;
+#                     padding: 20px;
+#                     border-radius: 5px;
+#                     margin-bottom: 20px;
+#                     text-align: center;
+#                 }}
+#                 .footer {{
+#                     margin-top: 30px;
+#                     padding-top: 20px;
+#                     border-top: 1px solid #ddd;
+#                 }}
+#                 .table-container {{
+#                     overflow-x: auto;
+#                 }}
+#                 @media screen and (max-width: 600px) {{
+#                     .table-container {{
+#                         font-size: 12px;
+#                     }}
+#                 }}
+#             </style>
+#         </head>
+#         <body>
+#             <div class="header">
+#                 <h2>Consolidated Production Requirements</h2>
+#             </div>
+            
+#             <h3>Hello {name},</h3>
+#             <p>Please find below the consolidated production requirements for all stores. Excel and PDF versions are attached to this email for your convenience.</p>
+            
+#             <div class="table-container">
+#                 {production_table}
+#             </div>
+            
+#             <div class="footer">
+#                 <p>This report shows the total quantities needed for production across all stores.</p>
+#                 <p><strong>Legend:</strong></p>
+#                 <ul>
+#                     <li>🟡 <strong>Yellow highlighted cells:</strong> Items required by specific stores</li>
+#                     <li>🟢 <strong>Green highlighted columns:</strong> Total/Required quantities</li>
+#                     <li>📊 <strong>Alternating row colors:</strong> For better readability</li>
+#                 </ul>
+#                 <p>This report automatically adapts to your data structure.</p>
+                
+#                 <p>Regards,<br><strong>KPI360.ai Team</strong></p>
+#             </div>
+#         </body>
+#         </html>
+#         """
+
+#         # Create attachments list for your MessageSchema
+#         attachments = []
+        
+#         # Add Excel attachment
+#         if excel_path and os.path.exists(excel_path):
+#             attachments.append(excel_path)
+        
+#         # Add PDF attachment  
+#         if pdf_path and os.path.exists(pdf_path):
+#             attachments.append(pdf_path)
+
+#         # Use your original MessageSchema with attachments
+#         message = MessageSchema(
+#             subject=subject,
+#             recipients=[to],
+#             body=html_body,
+#             subtype="html",
+#             attachments=attachments if attachments else None  # Add attachments if they exist
+#         )
+
+#         async def send():
+#             await fm.send_message(message)
+
+#         asyncio.run(send())
+#         print(f"Production requirements email with downloads sent successfully to {to}")
+        
+#         # Clean up files after sending
+#         if excel_path and os.path.exists(excel_path):
+#             os.remove(excel_path)
+#         if pdf_path and os.path.exists(pdf_path):
+#             os.remove(pdf_path)
+        
+#     except Exception as e:
+#         print(f"Failed to send production requirements email to {to}: {e}")
+#     finally:
+#         db.close()
+        
+        
+
 def send_actual_email(to: str, name: str, company_id: int = None):
     db = SessionLocal()
     try:
@@ -749,6 +1134,74 @@ def send_actual_email(to: str, name: str, company_id: int = None):
         
         data = get_consolidated_production(company_id, db)
         
+        # Custom location ordering function
+        def reorder_data_columns(data):
+            """Reorder the data columns according to the specified location priority"""
+            if not data or 'data' not in data or not data['data']:
+                return data
+            
+            # Define the priority order (case-insensitive matching)
+            priority_locations = [
+                # Priority 1: Midtown East variations
+                ["midtown east", "Midtown East"],
+                # Priority 2: Lenox Hill variations  
+                ["lenox hill", "Lenox Hill", "lenox hills", "Lenox Hills"],
+                # Priority 3: Hell's Kitchen variations
+                ["hells kitchen", "Hells Kitchen", "hell's kitchen", "Hell's Kitchen"],
+                # Priority 4: Union Square variations
+                ["union square", "Union Square", "Union square"],
+                # Priority 5: Flatiron variations
+                ["flatiron", "Flatiron", "FLATIRON"],
+                # Priority 6: Williamsburg variations
+                ["williamsburg", "Williamsburg"]
+            ]
+            
+            # Get original columns
+            original_columns = data.get('columns', [])
+            if not original_columns:
+                return data
+            
+            # Separate fixed columns (Item, Total Required, Unit) from location columns
+            fixed_start = ["Item"]
+            fixed_end = ["Total Required", "Unit"]
+            
+            # Find location columns (everything except fixed columns)
+            location_columns = []
+            for col in original_columns:
+                if col not in fixed_start + fixed_end:
+                    location_columns.append(col)
+            
+            # Function to find matching priority group for a location
+            def get_priority_group(location_name):
+                location_lower = location_name.lower().strip()
+                for i, priority_group in enumerate(priority_locations):
+                    for variant in priority_group:
+                        if variant.lower().strip() == location_lower:
+                            return i
+                return len(priority_locations)  # Return high number for non-priority locations
+            
+            # Sort locations by priority
+            sorted_locations = sorted(location_columns, key=lambda x: (get_priority_group(x), x.lower()))
+            
+            # Create new column order
+            new_columns = fixed_start + sorted_locations + fixed_end
+            
+            # Reorder data rows to match new column order
+            reordered_data = []
+            for row in data['data']:
+                new_row = {}
+                for col in new_columns:
+                    new_row[col] = row.get(col, "")
+                reordered_data.append(new_row)
+            
+            return {
+                "message": data.get('message', ''),
+                "columns": new_columns,
+                "data": reordered_data
+            }
+        
+        # Reorder the data according to custom location priority
+        data = reorder_data_columns(data)
         
         print("This is the data which I want to print:", data)
 
@@ -766,8 +1219,11 @@ def send_actual_email(to: str, name: str, company_id: int = None):
                 return None
             
             try:
-                # Convert data to DataFrame
+                # Convert data to DataFrame - now with reordered columns
                 df = pd.DataFrame(data['data'])
+                # Ensure column order matches our custom order
+                if 'columns' in data:
+                    df = df[data['columns']]
                 
                 # Create Excel file with formatting
                 excel_path = os.path.join(downloads_dir, filename)
@@ -872,7 +1328,7 @@ def send_actual_email(to: str, name: str, company_id: int = None):
                 elements.append(subtitle)
                 elements.append(Spacer(1, 20))
                 
-                # Prepare table data
+                # Prepare table data - now with custom column order
                 columns = data.get('columns', list(data['data'][0].keys()) if data['data'] else [])
                 table_data = [columns]  # Header row
                 
@@ -929,12 +1385,12 @@ def send_actual_email(to: str, name: str, company_id: int = None):
                 print(f"Error creating PDF file: {e}")
                 return None
 
-        # Generate HTML table from the data - DYNAMIC VERSION
+        # Generate HTML table from the data - DYNAMIC VERSION with custom ordering
         def generate_production_table(data):
             if not data or 'data' not in data or not data['data']:
                 return "<p>No production data available.</p>"
             
-            # Get columns dynamically from the data
+            # Get columns dynamically from the reordered data
             columns = data.get('columns', [])
             if not columns and data['data']:
                 # If columns not provided, extract from first row
@@ -984,7 +1440,7 @@ def send_actual_email(to: str, name: str, company_id: int = None):
                         # Check if any store column has a value for this row to highlight the item
                         has_store_value = any(
                             isinstance(item.get(c, 0), (int, float)) and item.get(c, 0) > 0 
-                            for c in columns[1:-2] if 'store' in c.lower() or 'location' in c.lower() or 'shop' in c.lower()
+                            for c in columns[1:-2] if c not in ["Item", "Total Required", "Unit"]
                         )
                         if has_store_value:
                             cell_style = "border: 1px solid #ddd; padding: 12px; text-align: left; background-color: #fff3cd;"
@@ -1077,7 +1533,7 @@ def send_actual_email(to: str, name: str, company_id: int = None):
                     <li>🟢 <strong>Green highlighted columns:</strong> Total/Required quantities</li>
                     <li>📊 <strong>Alternating row colors:</strong> For better readability</li>
                 </ul>
-                <p>This report automatically adapts to your data structure.</p>
+                <p>This report automatically adapts to your data structure with prioritized location ordering.</p>
                 
                 <p>Regards,<br><strong>KPI360.ai Team</strong></p>
             </div>
@@ -1121,9 +1577,8 @@ def send_actual_email(to: str, name: str, company_id: int = None):
         print(f"Failed to send production requirements email to {to}: {e}")
     finally:
         db.close()
-        
-        
 
+        
 # def send_production(to: Union[str, List[str]], name: str, company_id: int = None, is_update: bool = False, is_email_update: bool = False, recent_order_id: int = None):
 #     """
 #     Send production requirements email with attachments
