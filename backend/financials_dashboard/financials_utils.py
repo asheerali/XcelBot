@@ -935,294 +935,6 @@ def weekly_sales_trend(df, df_budget, store='All', start_date=None, end_date=Non
     return result_df
 
 
-# def avg_ticket_by_day(df, df_budget, store='All', start_date=None, end_date=None):
-#     """
-#     Generate an average ticket by day table showing average ticket values by day of the week
-#     comparing This Week, Last Week, Last Year, L4wt (Last 4 weeks trend), and Budget
-    
-#     Parameters:
-#     df: Main dataframe with sales data
-#     df_budget: Budget dataframe
-#     store: Store filter ('All' or specific store(s))
-#     start_date: Start date filter
-#     end_date: End date filter
-    
-#     Returns:
-#     DataFrame with columns: Day, This Week, Last Week, Last Year, L4wt, Bdg
-#     """
-    
-#     import pandas as pd
-#     import numpy as np
-#     from datetime import datetime, timedelta
-    
-#     # Make copies and clean column names
-#     df_copy = df.copy()
-#     budget_copy = df_budget.copy()
-    
-#     df_copy.columns = df_copy.columns.str.strip()
-#     budget_copy.columns = budget_copy.columns.str.strip()
-    
-#     # Rename columns for consistency
-#     df_copy.rename(columns={
-#         'Helper_1': 'Helper 1',
-#         'Tw_Sales': 'Tw Sales',
-#         'Lw_Sales': 'Lw Sales',
-#         'Ly_Sales': 'Ly Sales',
-#         'Tw_Orders': 'Tw Orders',
-#         'Lw_Orders': 'Lw Orders',
-#         'Ly_Orders': 'Ly Orders',
-#         'Tw_Avg_Tckt': 'Tw Avg Tckt',
-#         'Lw_Avg_Tckt': 'Lw Avg Tckt',
-#         'Ly_Avg_Tckt': 'Ly Avg Tckt',
-#         'Helper_4': 'Helper 4'
-#     }, inplace=True)
-    
-#     # Ensure Date column is datetime type
-#     if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
-#         df_copy['Date'] = pd.to_datetime(df_copy['Date'])
-    
-#     if not pd.api.types.is_datetime64_any_dtype(budget_copy['Date']):
-#         budget_copy['Date'] = pd.to_datetime(budget_copy['Date'])
-    
-#     # Convert date filters to pandas datetime
-#     if start_date is not None:
-#         if isinstance(start_date, str):
-#             start_date = pd.to_datetime(start_date)
-    
-#     if end_date is not None:
-#         if isinstance(end_date, str):
-#             end_date = pd.to_datetime(end_date)
-    
-#     # Apply date filters
-#     if start_date is not None:
-#         df_copy = df_copy[df_copy['Date'] >= start_date]
-#         budget_copy = budget_copy[budget_copy['Date'] >= start_date]
-    
-#     if end_date is not None:
-#         df_copy = df_copy[df_copy['Date'] <= end_date]
-#         budget_copy = budget_copy[budget_copy['Date'] <= end_date]
-    
-#     # Apply store filter
-#     if store != 'All':
-#         if isinstance(store, list):
-#             df_copy = df_copy[df_copy['Store'].isin(store)]
-#             budget_copy = budget_copy[budget_copy['Store'].isin(store)]
-#         else:
-#             df_copy = df_copy[df_copy['Store'] == store]
-#             budget_copy = budget_copy[budget_copy['Store'] == store]
-    
-#     # Helper function to clean currency values
-#     def clean_currency(series):
-#         return pd.to_numeric(
-#             series.astype(str).str.replace(r'[\$,]', '', regex=True),
-#             errors='coerce'
-#         ).fillna(0)
-    
-#     # Clean sales and order columns
-#     sales_cols = ['Tw Sales', 'Lw Sales', 'Ly Sales']
-#     order_cols = ['Tw Orders', 'Lw Orders', 'Ly Orders']
-#     avg_ticket_cols = ['Tw Avg Tckt', 'Lw Avg Tckt', 'Ly Avg Tckt']
-    
-#     for col in sales_cols + order_cols + avg_ticket_cols:
-#         if col in df_copy.columns:
-#             df_copy[col] = clean_currency(df_copy[col])
-    
-#     # Clean budget columns
-#     budget_sales_col = None
-#     budget_orders_col = None
-    
-#     for col in ['Net Sales', 'Sales', 'Net Sales ', 'Sales ']:
-#         if col in budget_copy.columns:
-#             budget_copy[col] = clean_currency(budget_copy[col])
-#             budget_sales_col = col
-#             break
-    
-#     for col in ['Orders', 'Order', 'Orders ', 'Order ']:
-#         if col in budget_copy.columns:
-#             budget_copy[col] = clean_currency(budget_copy[col])
-#             budget_orders_col = col
-#             break
-    
-#     # Group by day of week for main data
-#     if 'Helper 1' in df_copy.columns:
-#         day_col = 'Helper 1'
-#     elif 'Day_' in df_copy.columns:
-#         day_col = 'Day_'
-#     else:
-#         # Create day of week from Date if Helper columns don't exist
-#         df_copy['Day_'] = df_copy['Date'].dt.day_name()
-#         day_mapping = {
-#             'Monday': '1 - Monday',
-#             'Tuesday': '2 - Tuesday', 
-#             'Wednesday': '3 - Wednesday',
-#             'Thursday': '4 - Thursday',
-#             'Friday': '5 - Friday',
-#             'Saturday': '6 - Saturday',
-#             'Sunday': '7 - Sunday'
-#         }
-#         df_copy['Day_'] = df_copy['Day_'].map(day_mapping)
-#         day_col = 'Day_'
-    
-#     # Define expected days in order
-#     expected_days = [
-#         '1 - Monday',
-#         '2 - Tuesday',
-#         '3 - Wednesday',
-#         '4 - Thursday',
-#         '5 - Friday',
-#         '6 - Saturday',
-#         '7 - Sunday'
-#     ]
-    
-#     # Group by day of week and sum sales/orders
-#     grouped = df_copy.groupby(day_col)[sales_cols + order_cols].sum().reset_index()
-    
-#     # Calculate average tickets for each period (Sales / Orders)
-#     for period in ['Tw', 'Lw', 'Ly']:
-#         sales_col = f'{period} Sales'
-#         orders_col = f'{period} Orders'
-#         avg_col = f'{period} Avg Ticket'
-        
-#         # Calculate average ticket = sales / orders
-#         grouped[avg_col] = np.where(
-#             grouped[orders_col] > 0,
-#             grouped[sales_col] / grouped[orders_col],
-#             0
-#         )
-    
-#     # Calculate L4wt (Last 4 weeks trend) for average ticket
-#     # Get the reference date for L4wt calculation
-#     if end_date is not None:
-#         l4wt_reference_date = end_date
-#     else:
-#         # Use current date (today) if no end_date is provided
-#         l4wt_reference_date = pd.Timestamp.now().normalize()
-    
-#     l4wt_four_weeks_ago = l4wt_reference_date - timedelta(weeks=4)
-    
-#     # For L4wt, use original (unfiltered by date) dataframe
-#     df_l4wt = df.copy()
-#     df_l4wt.columns = df_l4wt.columns.str.strip()
-    
-#     # Rename columns for consistency in L4wt dataframe
-#     df_l4wt.rename(columns={
-#         'Helper_1': 'Helper 1',
-#         'Tw_Sales': 'Tw Sales',
-#         'Lw_Sales': 'Lw Sales',
-#         'Ly_Sales': 'Ly Sales',
-#         'Tw_Orders': 'Tw Orders',
-#         'Lw_Orders': 'Lw Orders',
-#         'Ly_Orders': 'Ly Orders',
-#         'Helper_4': 'Helper 4'
-#     }, inplace=True)
-    
-#     # Ensure Date column is datetime type for L4wt dataframe
-#     if not pd.api.types.is_datetime64_any_dtype(df_l4wt['Date']):
-#         df_l4wt['Date'] = pd.to_datetime(df_l4wt['Date'])
-    
-#     # Apply only store filter to L4wt data (not date filters)
-#     if store != 'All':
-#         if isinstance(store, list):
-#             df_l4wt = df_l4wt[df_l4wt['Store'].isin(store)]
-#         else:
-#             df_l4wt = df_l4wt[df_l4wt['Store'] == store]
-    
-#     # Clean sales and orders columns for L4wt
-#     for col in ['Tw Sales', 'Tw Orders']:
-#         if col in df_l4wt.columns:
-#             df_l4wt[col] = clean_currency(df_l4wt[col])
-    
-#     # Filter L4wt data for the 4-week window
-#     l4wt_filtered = df_l4wt[(df_l4wt['Date'] >= l4wt_four_weeks_ago) & (df_l4wt['Date'] <= l4wt_reference_date)]
-    
-#     # Get the day column for L4wt
-#     if 'Helper 1' in df_l4wt.columns:
-#         l4wt_day_col = 'Helper 1'
-#     elif 'Day_' in df_l4wt.columns:
-#         l4wt_day_col = 'Day_'
-#     else:
-#         # Create day of week from Date if Helper columns don't exist
-#         df_l4wt['Day_'] = df_l4wt['Date'].dt.day_name()
-#         day_mapping = {
-#             'Monday': '1 - Monday',
-#             'Tuesday': '2 - Tuesday', 
-#             'Wednesday': '3 - Wednesday',
-#             'Thursday': '4 - Thursday',
-#             'Friday': '5 - Friday',
-#             'Saturday': '6 - Saturday',
-#             'Sunday': '7 - Sunday'
-#         }
-#         df_l4wt['Day_'] = df_l4wt['Day_'].map(day_mapping)
-#         l4wt_filtered['Day_'] = l4wt_filtered['Date'].dt.day_name().map(day_mapping)
-#         l4wt_day_col = 'Day_'
-    
-#     # Calculate L4wt average ticket for each day
-#     l4wt_data = []
-#     for day in expected_days:
-#         if l4wt_day_col in l4wt_filtered.columns:
-#             day_data = l4wt_filtered[l4wt_filtered[l4wt_day_col] == day]
-#             if len(day_data) > 0 and 'Tw Sales' in day_data.columns and 'Tw Orders' in day_data.columns:
-#                 # Calculate average ticket for this day over the last 4 weeks
-#                 total_sales = day_data['Tw Sales'].sum()
-#                 total_orders = day_data['Tw Orders'].sum()
-#                 l4wt_avg_ticket = total_sales / total_orders if total_orders > 0 else 0
-#             else:
-#                 l4wt_avg_ticket = 0
-#         else:
-#             l4wt_avg_ticket = 0
-#         l4wt_data.append(l4wt_avg_ticket)
-    
-#     # Create a dictionary mapping day to L4wt values for easy lookup
-#     l4wt_dict = dict(zip(expected_days, l4wt_data))
-    
-#     # Calculate budget average ticket by day
-#     budget_by_day = {}
-#     if not budget_copy.empty and budget_sales_col and budget_orders_col:
-#         # Sum all weekly budgets in the filtered period
-#         total_weekly_sales_budget = budget_copy[budget_sales_col].sum()
-#         total_weekly_orders_budget = budget_copy[budget_orders_col].sum()
-        
-#         # Calculate overall average ticket from budget
-#         budget_avg_ticket = total_weekly_sales_budget / total_weekly_orders_budget if total_weekly_orders_budget > 0 else 0
-        
-#         # For simplicity, use the same average ticket for all days
-#         # You can adjust this if you have day-specific patterns
-#         for day in expected_days:
-#             budget_by_day[day] = budget_avg_ticket
-    
-#     # Create the final result table
-#     result_rows = []
-#     for day in expected_days:
-#         day_data = grouped[grouped[day_col] == day]
-        
-#         if len(day_data) > 0:
-#             tw_avg_ticket = day_data['Tw Avg Ticket'].iloc[0]
-#             lw_avg_ticket = day_data['Lw Avg Ticket'].iloc[0]
-#             ly_avg_ticket = day_data['Ly Avg Ticket'].iloc[0]
-#         else:
-#             tw_avg_ticket = lw_avg_ticket = ly_avg_ticket = 0
-        
-#         # Get L4wt value for this day from our calculated dictionary
-#         l4wt_avg_ticket = l4wt_dict.get(day, 0)
-        
-#         # Get budget value for this day
-#         bdg_avg_ticket = budget_by_day.get(day, 0)
-        
-#         # Round to 1 decimal place to match your demo data (8.4, 8.7, etc.)
-#         result_rows.append({
-#             'Day': day.split(' - ')[1][:3],  # Get first 3 letters (Mon, Tue, etc.)
-#             'This Week': round(tw_avg_ticket, 2),
-#             'Last Week': round(lw_avg_ticket, 2),
-#             'Last Year': round(ly_avg_ticket, 2),
-#             'L4wt': round(l4wt_avg_ticket, 2),
-#             'Bdg': round(bdg_avg_ticket*100, 2)
-#         })
-    
-#     # Create DataFrame
-#     result_df = pd.DataFrame(result_rows)
-    
-#     return result_df
-
 
 def avg_ticket_by_day(df, df_budget, store='All', start_date=None, end_date=None):
     """
@@ -1573,575 +1285,6 @@ def avg_ticket_by_day(df, df_budget, store='All', start_date=None, end_date=None
     return result_df
 
 
-# def kpi_vs_budget(df, df_budget, store='All', start_date=None, end_date=None):
-#     """
-#     Generate a KPI vs Budget comparison table showing key metrics
-#     comparing This Week, Budget, L4wt, and percentage changes
-    
-#     Parameters:
-#     df: Main dataframe with sales data
-#     df_budget: Budget dataframe
-#     store: Store filter ('All' or specific store(s))
-#     start_date: Start date filter
-#     end_date: End date filter
-    
-#     Returns:
-#     DataFrame with columns: Metric, This Week, Budget, L4wt, Bdg, Tw/Bdg (+/-), Percent Change
-#     """
-    
-#     import pandas as pd
-#     import numpy as np
-#     from datetime import datetime, timedelta
-    
-#     # Make copies and clean column names
-#     df_copy = df.copy()
-#     budget_copy = df_budget.copy()
-    
-#     df_copy.columns = df_copy.columns.str.strip()
-#     budget_copy.columns = budget_copy.columns.str.strip()
-    
-#     # Rename columns for consistency
-#     df_copy.rename(columns={
-#         'Helper_1': 'Helper 1',
-#         'Tw_Sales': 'Tw Sales',
-#         'Lw_Sales': 'Lw Sales',
-#         'Ly_Sales': 'Ly Sales',
-#         'Tw_Orders': 'Tw Orders',
-#         'Lw_Orders': 'Lw Orders',
-#         'Ly_Orders': 'Ly Orders',
-#         'TW_Johns': 'TW Johns',
-#         'TW_Terra': 'TW Terra',
-#         'TW_Metro': 'TW Metro',
-#         'TW_Victory': 'TW Victory',
-#         'TW_Central_Kitchen': 'TW Central Kitchen',
-#         'TW_Other': 'TW Other',
-#         'Helper_4': 'Helper 4'
-#     }, inplace=True)
-    
-#     # Ensure Date column is datetime type
-#     if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
-#         df_copy['Date'] = pd.to_datetime(df_copy['Date'])
-    
-#     if not pd.api.types.is_datetime64_any_dtype(budget_copy['Date']):
-#         budget_copy['Date'] = pd.to_datetime(budget_copy['Date'])
-    
-#     # Convert date filters to pandas datetime
-#     if start_date is not None:
-#         if isinstance(start_date, str):
-#             start_date = pd.to_datetime(start_date)
-    
-#     if end_date is not None:
-#         if isinstance(end_date, str):
-#             end_date = pd.to_datetime(end_date)
-    
-#     # Apply date filters
-#     if start_date is not None:
-#         df_copy = df_copy[df_copy['Date'] >= start_date]
-#         budget_copy = budget_copy[budget_copy['Date'] >= start_date]
-    
-#     if end_date is not None:
-#         df_copy = df_copy[df_copy['Date'] <= end_date]
-#         budget_copy = budget_copy[budget_copy['Date'] <= end_date]
-    
-#     # Apply store filter
-#     if store != 'All':
-#         if isinstance(store, list):
-#             df_copy = df_copy[df_copy['Store'].isin(store)]
-#             budget_copy = budget_copy[budget_copy['Store'].isin(store)]
-#         else:
-#             df_copy = df_copy[df_copy['Store'] == store]
-#             budget_copy = budget_copy[budget_copy['Store'] == store]
-    
-#     # Helper function to clean currency values
-#     def clean_currency(series):
-#         return pd.to_numeric(
-#             series.astype(str).str.replace(r'[\$,]', '', regex=True),
-#             errors='coerce'
-#         ).fillna(0)
-    
-#     # Clean main data columns
-#     sales_cols = ['Tw Sales', 'Lw Sales', 'Ly Sales']
-#     order_cols = ['Tw Orders', 'Lw Orders', 'Ly Orders']
-#     food_cost_cols = ['TW Johns', 'TW Terra', 'TW Metro', 'TW Victory', 'TW Central Kitchen', 'TW Other']
-    
-#     for col in sales_cols + order_cols + food_cost_cols:
-#         if col in df_copy.columns:
-#             df_copy[col] = clean_currency(df_copy[col])
-    
-#     # Clean budget columns
-#     budget_sales_col = None
-#     budget_orders_col = None
-#     budget_food_cols = []
-    
-#     # Find budget sales column
-#     for col in ['Net Sales', 'Sales', 'Net Sales ', 'Sales ', "Net_Sales", "net_sales"]:
-#         if col in budget_copy.columns:
-#             budget_copy[col] = clean_currency(budget_copy[col])
-#             budget_sales_col = col
-#             break
-    
-#     # Find budget orders column
-#     for col in ['Orders', 'Order', 'Orders ', 'Order ']:
-#         if col in budget_copy.columns:
-#             budget_copy[col] = clean_currency(budget_copy[col])
-#             budget_orders_col = col
-#             break
-    
-#     # Find budget food cost columns
-#     food_budget_mapping = {
-#         'Johns': 'Johns',
-#         'Terra': 'Terra', 
-#         'Metro': 'Metro',
-#         'Victory': 'Victory',
-#         'Central Kitchen': 'Central Kitchen',
-#         'Other': 'Other'
-#     }
-    
-#     for budget_col, _ in food_budget_mapping.items():
-#         if budget_col in budget_copy.columns:
-#             budget_copy[budget_col] = clean_currency(budget_copy[budget_col])
-#             budget_food_cols.append(budget_col)
-    
-#     # Calculate L4wt (Last 4 weeks trend) values
-#     # Get the reference date for L4wt calculation
-#     if end_date is not None:
-#         l4wt_reference_date = end_date
-#     else:
-#         l4wt_reference_date = pd.Timestamp.now().normalize()
-    
-#     l4wt_four_weeks_ago = l4wt_reference_date - timedelta(weeks=4)
-    
-#     # For L4wt, use original (unfiltered by date) dataframe
-#     df_l4wt = df.copy()
-#     df_l4wt.columns = df_l4wt.columns.str.strip()
-    
-#     # Rename columns for L4wt dataframe
-#     df_l4wt.rename(columns={
-#         'Tw_Sales': 'Tw Sales',
-#         'Tw_Orders': 'Tw Orders',
-#         'TW_Johns': 'TW Johns',
-#         'TW_Terra': 'TW Terra',
-#         'TW_Metro': 'TW Metro',
-#         'TW_Victory': 'TW Victory',
-#         'TW_Central_Kitchen': 'TW Central Kitchen',
-#         'TW_Other': 'TW Other'
-#     }, inplace=True)
-    
-#     # Ensure Date column is datetime type for L4wt dataframe
-#     if not pd.api.types.is_datetime64_any_dtype(df_l4wt['Date']):
-#         df_l4wt['Date'] = pd.to_datetime(df_l4wt['Date'])
-    
-#     # Apply only store filter to L4wt data
-#     if store != 'All':
-#         if isinstance(store, list):
-#             df_l4wt = df_l4wt[df_l4wt['Store'].isin(store)]
-#         else:
-#             df_l4wt = df_l4wt[df_l4wt['Store'] == store]
-    
-#     # Clean L4wt columns
-#     for col in ['Tw Sales', 'Tw Orders'] + food_cost_cols:
-#         if col in df_l4wt.columns:
-#             df_l4wt[col] = clean_currency(df_l4wt[col])
-    
-#     # Filter L4wt data for the 4-week window
-#     l4wt_filtered = df_l4wt[(df_l4wt['Date'] >= l4wt_four_weeks_ago) & (df_l4wt['Date'] <= l4wt_reference_date)]
-    
-#     # Calculate actual values
-#     # This Week values
-#     tw_net_sales = df_copy['Tw Sales'].sum()
-#     tw_orders = df_copy['Tw Orders'].sum()
-#     tw_avg_ticket = tw_net_sales / tw_orders if tw_orders > 0 else 0
-#     tw_food_cost = sum(df_copy[col].sum() for col in food_cost_cols if col in df_copy.columns)
-#     tw_food_cost_pct = (tw_food_cost / tw_net_sales * 100) if tw_net_sales > 0 else 0
-    
-#     # L4wt values
-#     l4wt_net_sales = l4wt_filtered['Tw Sales'].sum() / 4 if not l4wt_filtered.empty and len(l4wt_filtered) > 0 else 0  # Average over 4 weeks
-#     l4wt_orders = l4wt_filtered['Tw Orders'].sum() / 4 if not l4wt_filtered.empty and len(l4wt_filtered) > 0 else 0
-#     l4wt_avg_ticket = l4wt_net_sales / l4wt_orders if l4wt_orders > 0 else 0
-#     l4wt_food_cost = sum(l4wt_filtered[col].sum() for col in food_cost_cols if col in l4wt_filtered.columns) / 4 if not l4wt_filtered.empty else 0
-#     l4wt_food_cost_pct = (l4wt_food_cost / l4wt_net_sales * 100) if l4wt_net_sales > 0 else 0
-    
-#     # Budget values
-#     bdg_net_sales = budget_copy[budget_sales_col].sum() if budget_sales_col else 0
-#     bdg_orders = budget_copy[budget_orders_col].sum() if budget_orders_col else 0
-#     bdg_avg_ticket = bdg_net_sales / bdg_orders if bdg_orders > 0 else 0
-#     bdg_food_cost = sum(budget_copy[col].sum() for col in budget_food_cols if col in budget_copy.columns)
-#     bdg_food_cost_pct = (bdg_food_cost / bdg_net_sales * 100) if bdg_net_sales > 0 else 0
-    
-#     # Helper function to format numbers
-#     def format_number(value, is_percentage=False):
-#         if is_percentage:
-#             return f"{value:.2f}%"
-#         elif value >= 1000000:
-#             return f"{value:,.0f}"
-#         elif value >= 1000:
-#             return f"{value:,.0f}"
-#         else:
-#             return f"{value:.2f}"
-    
-#     # Helper function to calculate percentage change with proper sign
-#     def calc_percentage_change(actual, budget):
-#         if budget == 0:
-#             return "0.00%"
-#         change = ((actual - budget) / budget) * 100
-#         sign = "+" if change >= 0 else ""
-#         return f"{sign}{change:.2f}%"
-    
-#     # # Helper function to calculate Tw/Bdg difference with proper sign
-#     # def calc_tw_bdg_diff(actual, budget):
-#     #     if budget == 0:
-#     #         return "0.00"
-#     #     diff = ((actual - budget) / budget) * 100
-#     #     sign = "+" if diff >= 0 else ""
-#     #     return f"{sign}{diff:.2f}"
-    
-    
-#     def calc_tw_bdg_diff(actual, budget):
-#         if budget == 0:
-#             return "0.00"
-        
-#         diff = ((actual - budget) / budget) * 100
-        
-#         # If difference is above 100%, reverse the calculation
-#         if abs(diff) > 100:
-#             # Calculate how much budget exceeds actual (reverse perspective)
-#             reverse_diff = ((budget - actual) / actual) * 100 if actual != 0 else 0
-#             sign = "-" if diff > 0 else "+"  # Flip the sign
-#             return f"{sign}{abs(reverse_diff):.2f}"
-#         else:
-#             sign = "+" if diff >= 0 else ""
-#             return f"{sign}{diff:.2f}"
-#     # Create result rows
-#     result_rows = [
-#         {
-#             'Metric': 'Net Sales',
-#             'This Week': format_number(tw_net_sales),
-#             'Budget': format_number(bdg_net_sales),
-#             'L4wt': format_number(l4wt_net_sales),
-#             'Bdg': format_number(bdg_net_sales),  # Same as Budget column for consistency
-#             'Tw/Bdg (+/-)': calc_tw_bdg_diff(tw_net_sales, bdg_net_sales),
-#             'Percent Change': calc_percentage_change(tw_net_sales, bdg_net_sales)
-#         },
-#         {
-#             'Metric': 'Orders',
-#             'This Week': format_number(tw_orders),
-#             'Budget': format_number(bdg_orders),
-#             'L4wt': format_number(l4wt_orders),
-#             'Bdg': format_number(bdg_orders),
-#             'Tw/Bdg (+/-)': calc_tw_bdg_diff(tw_orders, bdg_orders),
-#             'Percent Change': calc_percentage_change(tw_orders, bdg_orders)
-#         },
-#         {
-#             'Metric': 'Avg Ticket',
-#             'This Week': format_number(tw_avg_ticket),
-#             'Budget': format_number(bdg_avg_ticket),
-#             'L4wt': format_number(l4wt_avg_ticket),
-#             'Bdg': format_number(bdg_avg_ticket),
-#             'Tw/Bdg (+/-)': calc_tw_bdg_diff(tw_avg_ticket, bdg_avg_ticket),
-#             'Percent Change': calc_percentage_change(tw_avg_ticket, bdg_avg_ticket)
-#         },
-#         {
-#             'Metric': 'Food Cost %',
-#             'This Week': format_number(tw_food_cost_pct, is_percentage=True),
-#             'Budget': format_number(bdg_food_cost_pct, is_percentage=True),
-#             'L4wt': format_number(l4wt_food_cost_pct, is_percentage=True),
-#             'Bdg': format_number(bdg_food_cost_pct, is_percentage=True),
-#             'Tw/Bdg (+/-)': f"{calc_tw_bdg_diff(tw_food_cost_pct, bdg_food_cost_pct)}%",
-#             'Percent Change': calc_percentage_change(tw_food_cost_pct, bdg_food_cost_pct)
-#         }
-#     ]
-    
-#     # Create DataFrame
-#     result_df = pd.DataFrame(result_rows)
-    
-#     return result_df
-
-
-# def kpi_vs_budget(df, df_budget, store='All', start_date=None, end_date=None):
-#     """
-#     Generate a KPI vs Budget comparison table showing key metrics
-#     comparing This Week, Budget, L4wt, and percentage changes
-    
-#     Parameters:
-#     df: Main dataframe with sales data
-#     df_budget: Budget dataframe
-#     store: Store filter ('All' or specific store(s))
-#     start_date: Start date filter
-#     end_date: End date filter
-    
-#     Returns:
-#     DataFrame with columns: Metric, This Week, Budget, L4wt, Bdg, Tw/Bdg (+/-), Percent Change
-#     """
-    
-#     import pandas as pd
-#     import numpy as np
-#     from datetime import datetime, timedelta
-    
-#     # Make copies and clean column names
-#     df_copy = df.copy()
-#     budget_copy = df_budget.copy()
-    
-#     df_copy.columns = df_copy.columns.str.strip()
-#     budget_copy.columns = budget_copy.columns.str.strip()
-    
-#     # Rename columns for consistency
-#     df_copy.rename(columns={
-#         'Helper_1': 'Helper 1',
-#         'Tw_Sales': 'Tw Sales',
-#         'Lw_Sales': 'Lw Sales',
-#         'Ly_Sales': 'Ly Sales',
-#         'Tw_Orders': 'Tw Orders',
-#         'Lw_Orders': 'Lw Orders',
-#         'Ly_Orders': 'Ly Orders',
-#         'TW_Johns': 'TW Johns',
-#         'TW_Terra': 'TW Terra',
-#         'TW_Metro': 'TW Metro',
-#         'TW_Victory': 'TW Victory',
-#         'TW_Central_Kitchen': 'TW Central Kitchen',
-#         'TW_Other': 'TW Other',
-#         'Helper_4': 'Helper 4'
-#     }, inplace=True)
-    
-#     # Ensure Date column is datetime type
-#     if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
-#         df_copy['Date'] = pd.to_datetime(df_copy['Date'])
-    
-#     if not pd.api.types.is_datetime64_any_dtype(budget_copy['Date']):
-#         budget_copy['Date'] = pd.to_datetime(budget_copy['Date'])
-    
-#     # Convert date filters to pandas datetime
-#     if start_date is not None:
-#         if isinstance(start_date, str):
-#             start_date = pd.to_datetime(start_date)
-    
-#     if end_date is not None:
-#         if isinstance(end_date, str):
-#             end_date = pd.to_datetime(end_date)
-    
-#     # Determine reference date for current week calculation
-#     if end_date is not None:
-#         reference_date = end_date
-#     else:
-#         reference_date = pd.Timestamp.now().normalize()
-    
-#     # Calculate current week start and end dates
-#     # Assuming week starts on Monday (weekday 0)
-#     current_week_start = reference_date - timedelta(days=reference_date.weekday())
-#     current_week_end = current_week_start + timedelta(days=6)
-    
-#     # Apply date filters for main data
-#     if start_date is not None:
-#         df_copy = df_copy[df_copy['Date'] >= start_date]
-    
-#     if end_date is not None:
-#         df_copy = df_copy[df_copy['Date'] <= end_date]
-    
-#     # Filter budget data for current week only
-#     budget_copy = budget_copy[
-#         (budget_copy['Date'] >= current_week_start) & 
-#         (budget_copy['Date'] <= current_week_end)
-#     ]
-    
-#     # Apply store filter
-#     if store != 'All':
-#         if isinstance(store, list):
-#             df_copy = df_copy[df_copy['Store'].isin(store)]
-#             budget_copy = budget_copy[budget_copy['Store'].isin(store)]
-#         else:
-#             df_copy = df_copy[df_copy['Store'] == store]
-#             budget_copy = budget_copy[budget_copy['Store'] == store]
-    
-#     # Helper function to clean currency values
-#     def clean_currency(series):
-#         return pd.to_numeric(
-#             series.astype(str).str.replace(r'[\$,]', '', regex=True),
-#             errors='coerce'
-#         ).fillna(0)
-    
-#     # Clean main data columns
-#     sales_cols = ['Tw Sales', 'Lw Sales', 'Ly Sales']
-#     order_cols = ['Tw Orders', 'Lw Orders', 'Ly Orders']
-#     food_cost_cols = ['TW Johns', 'TW Terra', 'TW Metro', 'TW Victory', 'TW Central Kitchen', 'TW Other']
-    
-#     for col in sales_cols + order_cols + food_cost_cols:
-#         if col in df_copy.columns:
-#             df_copy[col] = clean_currency(df_copy[col])
-    
-#     # Clean budget columns
-#     budget_sales_col = None
-#     budget_orders_col = None
-#     budget_food_cols = []
-    
-#     # Find budget sales column
-#     for col in ['Net Sales', 'Sales', 'Net Sales ', 'Sales ', "Net_Sales", "net_sales"]:
-#         if col in budget_copy.columns:
-#             budget_copy[col] = clean_currency(budget_copy[col])
-#             budget_sales_col = col
-#             break
-    
-#     # Find budget orders column
-#     for col in ['Orders', 'Order', 'Orders ', 'Order ']:
-#         if col in budget_copy.columns:
-#             budget_copy[col] = clean_currency(budget_copy[col])
-#             budget_orders_col = col
-#             break
-    
-#     # Find budget food cost columns
-#     food_budget_mapping = {
-#         'Johns': 'Johns',
-#         'Terra': 'Terra', 
-#         'Metro': 'Metro',
-#         'Victory': 'Victory',
-#         'Central Kitchen': 'Central Kitchen',
-#         'Other': 'Other'
-#     }
-    
-#     for budget_col, _ in food_budget_mapping.items():
-#         if budget_col in budget_copy.columns:
-#             budget_copy[budget_col] = clean_currency(budget_copy[budget_col])
-#             budget_food_cols.append(budget_col)
-    
-#     # Calculate L4wt (Last 4 weeks trend) values
-#     l4wt_four_weeks_ago = reference_date - timedelta(weeks=4)
-    
-#     # For L4wt, use original (unfiltered by date) dataframe
-#     df_l4wt = df.copy()
-#     df_l4wt.columns = df_l4wt.columns.str.strip()
-    
-#     # Rename columns for L4wt dataframe
-#     df_l4wt.rename(columns={
-#         'Tw_Sales': 'Tw Sales',
-#         'Tw_Orders': 'Tw Orders',
-#         'TW_Johns': 'TW Johns',
-#         'TW_Terra': 'TW Terra',
-#         'TW_Metro': 'TW Metro',
-#         'TW_Victory': 'TW Victory',
-#         'TW_Central_Kitchen': 'TW Central Kitchen',
-#         'TW_Other': 'TW Other'
-#     }, inplace=True)
-    
-#     # Ensure Date column is datetime type for L4wt dataframe
-#     if not pd.api.types.is_datetime64_any_dtype(df_l4wt['Date']):
-#         df_l4wt['Date'] = pd.to_datetime(df_l4wt['Date'])
-    
-#     # Apply only store filter to L4wt data
-#     if store != 'All':
-#         if isinstance(store, list):
-#             df_l4wt = df_l4wt[df_l4wt['Store'].isin(store)]
-#         else:
-#             df_l4wt = df_l4wt[df_l4wt['Store'] == store]
-    
-#     # Clean L4wt columns
-#     for col in ['Tw Sales', 'Tw Orders'] + food_cost_cols:
-#         if col in df_l4wt.columns:
-#             df_l4wt[col] = clean_currency(df_l4wt[col])
-    
-#     # Filter L4wt data for the 4-week window
-#     l4wt_filtered = df_l4wt[(df_l4wt['Date'] >= l4wt_four_weeks_ago) & (df_l4wt['Date'] <= reference_date)]
-    
-#     # Calculate actual values
-#     # This Week values
-#     tw_net_sales = df_copy['Tw Sales'].sum()
-#     tw_orders = df_copy['Tw Orders'].sum()
-#     tw_avg_ticket = tw_net_sales / tw_orders if tw_orders > 0 else 0
-#     tw_food_cost = sum(df_copy[col].sum() for col in food_cost_cols if col in df_copy.columns)
-#     tw_food_cost_pct = (tw_food_cost / tw_net_sales * 100) if tw_net_sales > 0 else 0
-    
-#     # L4wt values
-#     l4wt_net_sales = l4wt_filtered['Tw Sales'].sum() / 4 if not l4wt_filtered.empty and len(l4wt_filtered) > 0 else 0  # Average over 4 weeks
-#     l4wt_orders = l4wt_filtered['Tw Orders'].sum() / 4 if not l4wt_filtered.empty and len(l4wt_filtered) > 0 else 0
-#     l4wt_avg_ticket = l4wt_net_sales / l4wt_orders if l4wt_orders > 0 else 0
-#     l4wt_food_cost = sum(l4wt_filtered[col].sum() for col in food_cost_cols if col in l4wt_filtered.columns) / 4 if not l4wt_filtered.empty else 0
-#     l4wt_food_cost_pct = (l4wt_food_cost / l4wt_net_sales * 100) if l4wt_net_sales > 0 else 0
-    
-#     # Budget values (now filtered to current week only)
-#     bdg_net_sales = budget_copy[budget_sales_col].sum() if budget_sales_col else 0
-#     bdg_orders = budget_copy[budget_orders_col].sum() if budget_orders_col else 0
-#     bdg_avg_ticket = bdg_net_sales / bdg_orders if bdg_orders > 0 else 0
-#     bdg_food_cost = sum(budget_copy[col].sum() for col in budget_food_cols if col in budget_copy.columns)
-#     bdg_food_cost_pct = (bdg_food_cost / bdg_net_sales * 100) if bdg_net_sales > 0 else 0
-    
-#     # Helper function to format numbers
-#     def format_number(value, is_percentage=False):
-#         if is_percentage:
-#             return f"{value:.2f}%"
-#         elif value >= 1000000:
-#             return f"{value:,.0f}"
-#         elif value >= 1000:
-#             return f"{value:,.0f}"
-#         else:
-#             return f"{value:.2f}"
-    
-#     # Helper function to calculate percentage change with proper formula
-#     def calc_percentage_change(actual, budget):
-#         if budget == 0:
-#             return "0.00%"
-#         change = (actual - budget) / budget  # Without * 100 as per your requirement
-#         sign = "+" if change >= 0 else ""
-#         return f"{sign}{change:.2f}%"
-    
-#     # Helper function to calculate Tw/Bdg difference
-#     def calc_tw_bdg_diff(actual, budget):
-#         if budget == 0:
-#             return "0.00"
-        
-#         diff = (actual - budget) / budget  # Without * 100 as per your requirement
-        
-#         # If difference is above 1.0 (100%), reverse the calculation
-#         if abs(diff) > 1.0:
-#             # Calculate how much budget exceeds actual (reverse perspective)
-#             reverse_diff = (budget - actual) / actual if actual != 0 else 0
-#             sign = "-" if diff > 0 else "+"  # Flip the sign
-#             return f"{sign}{abs(reverse_diff):.2f}"
-#         else:
-#             sign = "+" if diff >= 0 else ""
-#             return f"{sign}{diff:.2f}"
-    
-#     # Create result rows
-#     result_rows = [
-#         {
-#             'Metric': 'Net Sales',
-#             'This Week': format_number(tw_net_sales),
-#             'Budget': format_number(bdg_net_sales),
-#             'L4wt': format_number(l4wt_net_sales),
-#             'Bdg': format_number(bdg_net_sales),  # Same as Budget column for consistency
-#             'Tw/Bdg (+/-)': calc_tw_bdg_diff(tw_net_sales, bdg_net_sales),
-#             'Percent Change': calc_percentage_change(tw_net_sales, bdg_net_sales)
-#         },
-#         {
-#             'Metric': 'Orders',
-#             'This Week': format_number(tw_orders),
-#             'Budget': format_number(bdg_orders),
-#             'L4wt': format_number(l4wt_orders),
-#             'Bdg': format_number(bdg_orders),
-#             'Tw/Bdg (+/-)': calc_tw_bdg_diff(tw_orders, bdg_orders),
-#             'Percent Change': calc_percentage_change(tw_orders, bdg_orders)
-#         },
-#         {
-#             'Metric': 'Avg Ticket',
-#             'This Week': format_number(tw_avg_ticket),
-#             'Budget': format_number(bdg_avg_ticket),
-#             'L4wt': format_number(l4wt_avg_ticket),
-#             'Bdg': format_number(bdg_avg_ticket),
-#             'Tw/Bdg (+/-)': calc_tw_bdg_diff(tw_avg_ticket, bdg_avg_ticket),
-#             'Percent Change': calc_percentage_change(tw_avg_ticket, bdg_avg_ticket)
-#         },
-#         {
-#             'Metric': 'Food Cost %',
-#             'This Week': format_number(tw_food_cost_pct, is_percentage=True),
-#             'Budget': format_number(bdg_food_cost_pct, is_percentage=True),
-#             'L4wt': format_number(l4wt_food_cost_pct, is_percentage=True),
-#             'Bdg': format_number(bdg_food_cost_pct, is_percentage=True),
-#             'Tw/Bdg (+/-)': f"{calc_tw_bdg_diff(tw_food_cost_pct, bdg_food_cost_pct)}%",
-#             'Percent Change': calc_percentage_change(tw_food_cost_pct, bdg_food_cost_pct)
-#         }
-#     ]
-    
-#     # Create DataFrame
-#     result_df = pd.DataFrame(result_rows)
-    
-#     return result_df
-
 
 # def kpi_vs_budget(df, df_budget, store='All', start_date=None, end_date=None):
 #     """
@@ -2339,7 +1482,7 @@ def avg_ticket_by_day(df, df_budget, store='All', start_date=None, end_date=None
 #     # Helper function to format numbers
 #     def format_number(value, is_currency=False):
 #         if is_currency:
-#             return f"${value:,.2f}"
+#             return f"${value:,.2f}"  # Always show 2 decimal places for currency
 #         elif value >= 1000000:
 #             return f"{value:,.0f}"
 #         elif value >= 1000:
@@ -2376,10 +1519,10 @@ def avg_ticket_by_day(df, df_budget, store='All', start_date=None, end_date=None
 #     result_rows = [
 #         {
 #             'Metric': 'Net Sales',
-#             'This Week': format_number(tw_net_sales),
-#             'Budget': format_number(bdg_net_sales),
-#             'L4wt': format_number(l4wt_net_sales),
-#             'Bdg': format_number(bdg_net_sales),  # Same as Budget column for consistency
+#             'This Week': format_number(tw_net_sales, is_currency=True),
+#             'Budget': format_number(bdg_net_sales, is_currency=True),
+#             'L4wt': format_number(l4wt_net_sales, is_currency=True),
+#             'Bdg': format_number(bdg_net_sales, is_currency=True),  # Same as Budget column for consistency
 #             'Tw/Bdg (+/-)': calc_tw_bdg_diff(tw_net_sales, bdg_net_sales),
 #             'Percent Change': calc_percentage_change(tw_net_sales, bdg_net_sales)
 #         },
@@ -2394,10 +1537,10 @@ def avg_ticket_by_day(df, df_budget, store='All', start_date=None, end_date=None
 #         },
 #         {
 #             'Metric': 'Avg Ticket',
-#             'This Week': format_number(tw_avg_ticket),
-#             'Budget': format_number(bdg_avg_ticket),
-#             'L4wt': format_number(l4wt_avg_ticket),
-#             'Bdg': format_number(bdg_avg_ticket),
+#             'This Week': format_number(tw_avg_ticket, is_currency=True),
+#             'Budget': format_number(bdg_avg_ticket, is_currency=True),
+#             'L4wt': format_number(l4wt_avg_ticket, is_currency=True),
+#             'Bdg': format_number(bdg_avg_ticket, is_currency=True),
 #             'Tw/Bdg (+/-)': calc_tw_bdg_diff(tw_avg_ticket, bdg_avg_ticket),
 #             'Percent Change': calc_percentage_change(tw_avg_ticket, bdg_avg_ticket)
 #         },
@@ -2417,94 +1560,442 @@ def avg_ticket_by_day(df, df_budget, store='All', start_date=None, end_date=None
     
 #     return result_df
 
+
+# def kpi_vs_budget(df, df_budget, store='All', start_date=None, end_date=None):
+#     print("i am here in the financial utils kpi_vs_budget function dfbudget.head,",store, "head" , df_budget.head())
+#     print("i am here in the financial utils kpi_vs_budget function dfbudget.columns,",store, "columns" , df_budget.columns)
+#     print("i am here in the financial utils kpi_vs_budget function df.columns,",store, "columns" , df.columns)
+#     print("i am here in the financial utils budget_netsales",df_budget["Net_Sales"], df_budget['Net_Sales'].sum())
+    
+#     """
+#     Generate a KPI vs Budget comparison table showing key metrics
+#     comparing This Week, Budget, L4wt, and percentage changes
+    
+#     Parameters:
+#     df: Main dataframe with sales data
+#     df_budget: Budget dataframe
+#     store: Store filter ('All' or specific store(s))
+#     start_date: Start date filter
+#     end_date: End date filter
+    
+#     Returns:
+#     DataFrame with columns: Metric, This Week, Budget, L4wt, Bdg, Tw/Bdg (+/-), Percent Change
+#     """
+    
+#     import pandas as pd
+#     import numpy as np
+#     from datetime import datetime, timedelta
+    
+#     df_copy = df.copy()
+#     budget_copy = df_budget.copy()
+    
+#     df_copy.columns = df_copy.columns.str.strip()
+#     budget_copy.columns = budget_copy.columns.str.strip()
+    
+#     df_copy.rename(columns={
+#         'Helper_1': 'Helper 1',
+#         'Tw_Sales': 'Tw Sales',
+#         'Lw_Sales': 'Lw Sales',
+#         'Ly_Sales': 'Ly Sales',
+#         'Tw_Orders': 'Tw Orders',
+#         'Lw_Orders': 'Lw Orders',
+#         'Ly_Orders': 'Ly Orders',
+#         'Tw_Avg_Tckt': 'Tw Avg Tckt',
+#         'Tw_Reg_Pay': 'Tw Reg Pay',
+#         'TW_Johns': 'TW Johns',
+#         'TW_Terra': 'TW Terra',
+#         'TW_Metro': 'TW Metro',
+#         'TW_Victory': 'TW Victory',
+#         'TW_Central_Kitchen': 'TW Central Kitchen',
+#         'TW_Other': 'TW Other',
+#         'Helper_4': 'Helper 4'
+#     }, inplace=True)
+    
+#     if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
+#         df_copy['Date'] = pd.to_datetime(df_copy['Date'])
+    
+#     if not pd.api.types.is_datetime64_any_dtype(budget_copy['Date']):
+#         budget_copy['Date'] = pd.to_datetime(budget_copy['Date'])
+    
+#     if start_date is not None:
+#         if isinstance(start_date, str):
+#             start_date = pd.to_datetime(start_date)
+    
+#     if end_date is not None:
+#         if isinstance(end_date, str):
+#             end_date = pd.to_datetime(end_date)
+    
+#     if end_date is not None:
+#         reference_date = end_date
+#     else:
+#         reference_date = pd.Timestamp.now().normalize()
+    
+#     current_week_start = reference_date - timedelta(days=reference_date.weekday())
+#     current_week_end = current_week_start + timedelta(days=6)
+    
+#     if start_date is not None:
+#         df_copy = df_copy[df_copy['Date'] >= start_date]
+    
+#     if end_date is not None:
+#         df_copy = df_copy[df_copy['Date'] <= end_date]
+    
+#     budget_copy = budget_copy[
+#         (budget_copy['Date'] >= current_week_start) & 
+#         (budget_copy['Date'] <= current_week_end)
+#     ]
+    
+#     if store != 'All':
+#         if isinstance(store, list):
+#             df_copy = df_copy[df_copy['Store'].isin(store)]
+#             budget_copy = budget_copy[budget_copy['Store'].isin(store)]
+#         else:
+#             df_copy = df_copy[df_copy['Store'] == store]
+#             budget_copy = budget_copy[budget_copy['Store'] == store]
+    
+#     def clean_currency(series):
+#         return pd.to_numeric(
+#             series.astype(str).str.replace(r'[\$,]', '', regex=True),
+#             errors='coerce'
+#         ).fillna(0)
+        
+        
+    
+#     sales_cols = ['Tw Sales', 'Lw Sales', 'Ly Sales']
+#     order_cols = ['Tw Orders', 'Lw Orders', 'Ly Orders']
+#     avg_ticket_cols = ['Tw Avg Tckt']
+    
+#     for col in sales_cols + order_cols + avg_ticket_cols:
+#         if col in df_copy.columns:
+#             df_copy[col] = clean_currency(df_copy[col])
+    
+#     budget_sales_col = None
+#     budget_orders_col = None
+#     print("i am here in the financial utils budget columns", budget_copy.columns)
+
+#     print("i am here in the financial utils budget_netsales", budget_sales_col)
+#     print("i am here in the financial utils budget_copy_netsales",budget_copy["Net_Sales"], budget_copy['Net_Sales'].sum())
+    
+#     for col in ['Net Sales', 'Sales', 'Net Sales ', 'Sales ', "net_sales", 'Net_Sales']:
+#         if col in budget_copy.columns:
+#             budget_copy[col] = clean_currency(budget_copy[col])
+#             budget_sales_col = col
+#             break
+    
+#     for col in ['Orders', 'Order', 'Orders ', 'Order ']:
+#         if col in budget_copy.columns:
+#             budget_copy[col] = clean_currency(budget_copy[col])
+#             budget_orders_col = col
+#             break
+    
+#     l4wt_four_weeks_ago = reference_date - timedelta(weeks=4)
+#     df_l4wt = df.copy()
+#     df_l4wt.columns = df_l4wt.columns.str.strip()
+#     df_l4wt.rename(columns={
+#         'Tw_Sales': 'Tw Sales',
+#         'Tw_Orders': 'Tw Orders',
+#         'Tw_Avg_Tckt': 'Tw Avg Tckt'
+#     }, inplace=True)
+    
+#     if not pd.api.types.is_datetime64_any_dtype(df_l4wt['Date']):
+#         df_l4wt['Date'] = pd.to_datetime(df_l4wt['Date'])
+    
+#     if store != 'All':
+#         if isinstance(store, list):
+#             df_l4wt = df_l4wt[df_l4wt['Store'].isin(store)]
+#         else:
+#             df_l4wt = df_l4wt[df_l4wt['Store'] == store]
+    
+#     for col in ['Tw Sales', 'Tw Orders', 'Tw Avg Tckt']:
+#         if col in df_l4wt.columns:
+#             df_l4wt[col] = clean_currency(df_l4wt[col])
+    
+#     l4wt_filtered = df_l4wt[(df_l4wt['Date'] >= l4wt_four_weeks_ago) & (df_l4wt['Date'] <= reference_date)]
+    
+#     tw_net_sales = df_copy['Tw Sales'].sum()
+#     tw_orders = df_copy['Tw Orders'].sum()
+#     tw_avg_ticket = df_copy['Tw Avg Tckt'].sum() if 'Tw Avg Tckt' in df_copy.columns else (tw_net_sales / tw_orders if tw_orders > 0 else 0)
+    
+#     l4wt_net_sales = l4wt_filtered['Tw Sales'].sum() / 4 if not l4wt_filtered.empty else 0
+#     l4wt_orders = l4wt_filtered['Tw Orders'].sum() / 4 if not l4wt_filtered.empty else 0
+#     l4wt_avg_ticket = l4wt_filtered['Tw Avg Tckt'].sum() / 4 if not l4wt_filtered.empty else (l4wt_net_sales / l4wt_orders if l4wt_orders > 0 else 0)
+    
+#     bdg_net_sales = budget_copy[budget_sales_col].sum() if budget_sales_col else 0
+#     bdg_orders = budget_copy[budget_orders_col].sum() if budget_orders_col else 0
+#     bdg_avg_ticket = bdg_net_sales / bdg_orders if bdg_orders > 0 else 0
+    
+#     def format_number(value, is_currency=False):
+#         if is_currency:
+#             return f"${value:,.2f}"
+#         elif value >= 1000:
+#             return f"{value:,.0f}"
+#         else:
+#             return f"{value:.2f}"
+    
+#     def calc_percentage_change(actual, budget):
+#         if budget == 0:
+#             return "0.00%"
+#         change = (actual - budget) / budget
+#         sign = "+" if change >= 0 else ""
+#         return f"{sign}{change:.2f}%"
+    
+#     def calc_tw_bdg_diff(actual, budget):
+#         if budget == 0:
+#             return "0.00"
+#         diff = (actual - budget) / budget
+#         if abs(diff) > 1.0:
+#             reverse_diff = (budget - actual) / actual if actual != 0 else 0
+#             sign = "-" if diff > 0 else "+"
+#             return f"{sign}{abs(reverse_diff):.2f}"
+#         else:
+#             sign = "+" if diff >= 0 else ""
+#             return f"{sign}{diff:.2f}"
+#     print("i am here in the financial utils budget_netsales", bdg_net_sales)
+#     result_rows = [
+#         {
+#             'Metric': 'Net Sales',
+#             'This Week': format_number(tw_net_sales, is_currency=True),
+#             'Budget': format_number(bdg_net_sales, is_currency=True),
+#             'L4wt': format_number(l4wt_net_sales, is_currency=True),
+#             'Bdg': format_number(bdg_net_sales, is_currency=True),
+#             'Tw/Bdg (+/-)': calc_tw_bdg_diff(tw_net_sales, bdg_net_sales),
+#             'Percent Change': calc_percentage_change(tw_net_sales, bdg_net_sales)
+#         },
+#         {
+#             'Metric': 'Orders',
+#             'This Week': format_number(tw_orders),
+#             'Budget': format_number(bdg_orders),
+#             'L4wt': format_number(l4wt_orders),
+#             'Bdg': format_number(bdg_orders),
+#             'Tw/Bdg (+/-)': calc_tw_bdg_diff(tw_orders, bdg_orders),
+#             'Percent Change': calc_percentage_change(tw_orders, bdg_orders)
+#         },
+#         {
+#             'Metric': 'Avg Ticket',
+#             'This Week': format_number(tw_avg_ticket, is_currency=True),
+#             'Budget': format_number(bdg_avg_ticket, is_currency=True),
+#             'L4wt': format_number(l4wt_avg_ticket, is_currency=True),
+#             'Bdg': format_number(bdg_avg_ticket, is_currency=True),
+#             'Tw/Bdg (+/-)': calc_tw_bdg_diff(tw_avg_ticket, bdg_avg_ticket),
+#             'Percent Change': calc_percentage_change(tw_avg_ticket, bdg_avg_ticket)
+#         }
+#     ]
+    
+#     return pd.DataFrame(result_rows)
+
+
+# def kpi_vs_budget(df, df_budget, store='All', start_date=None, end_date=None):
+#     import pandas as pd
+#     import numpy as np
+#     from datetime import timedelta
+
+#     # Work on copies to avoid mutating inputs
+#     df_copy = df.copy()
+#     budget_copy = df_budget.copy()
+    
+#     print("i am here in the financial utils kpi_vs_budget function df.head,",store, "head" , df_copy.head())
+#     print("i am here in the financial utils kpi_vs_budget function dfbudget.head,",store, "head" , budget_copy.head())
+#     print("i am here in the financial utils net sales,",budget_copy["Net_Sales"], "net sales" , budget_copy["Net_Sales"].sum())
+
+#     # Ensure Date dtype without touching column names
+#     if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
+#         df_copy['Date'] = pd.to_datetime(df_copy['Date'], errors='coerce')
+#     if not pd.api.types.is_datetime64_any_dtype(budget_copy['Date']):
+#         budget_copy['Date'] = pd.to_datetime(budget_copy['Date'], errors='coerce')
+
+#     # Parse optional boundaries
+#     if isinstance(start_date, str):
+#         start_date = pd.to_datetime(start_date, errors='coerce')
+#     if isinstance(end_date, str):
+#         end_date = pd.to_datetime(end_date, errors='coerce')
+
+#     reference_date = end_date if end_date is not None else pd.Timestamp.now().normalize()
+#     current_week_start = reference_date - timedelta(days=reference_date.weekday())
+#     current_week_end = current_week_start + timedelta(days=6)
+
+#     # Filter main df by date range
+#     if start_date is not None:
+#         df_copy = df_copy[df_copy['Date'] >= start_date]
+#     if end_date is not None:
+#         df_copy = df_copy[df_copy['Date'] <= end_date]
+
+#     # Filter budget to current week
+#     budget_copy = budget_copy[
+#         (budget_copy['Date'] >= current_week_start) &
+#         (budget_copy['Date'] <= current_week_end)
+#     ]
+
+#     # Store filter
+#     if store != 'All':
+#         if isinstance(store, list):
+#             df_copy = df_copy[df_copy['Store'].isin(store)]
+#             budget_copy = budget_copy[budget_copy['Store'].isin(store)]
+#         else:
+#             df_copy = df_copy[df_copy['Store'] == store]
+#             budget_copy = budget_copy[budget_copy['Store'] == store]
+
+#     def clean_number(series):
+#         # Do not alter column names. Only convert values.
+#         return pd.to_numeric(series.astype(str).str.replace(r'[\$,]', '', regex=True), errors='coerce').fillna(0)
+
+#     # Exact column names from your data
+#     sales_cols = ['Tw_Sales', 'Lw_Sales', 'Ly_Sales']
+#     order_cols = ['Tw_Orders', 'Lw_Orders', 'Ly_Orders']
+#     avg_ticket_col = 'Tw_Avg_Tckt'
+
+#     for col in sales_cols + order_cols + [avg_ticket_col]:
+#         if col in df_copy.columns:
+#             df_copy[col] = clean_number(df_copy[col])
+
+#     # Budget exact columns
+#     if 'Net_Sales' in budget_copy.columns:
+#         budget_copy['Net_Sales'] = clean_number(budget_copy['Net_Sales'])
+#     else:
+#         raise KeyError("Expected budget column 'Net_Sales' not found")
+
+#     if 'Orders' in budget_copy.columns:
+#         budget_copy['Orders'] = clean_number(budget_copy['Orders'])
+#     else:
+#         raise KeyError("Expected budget column 'Orders' not found")
+
+#     # Build L4wt window from the same df without renaming
+#     l4wt_four_weeks_ago = reference_date - timedelta(weeks=4)
+#     df_l4wt = df.copy()
+#     if not pd.api.types.is_datetime64_any_dtype(df_l4wt['Date']):
+#         df_l4wt['Date'] = pd.to_datetime(df_l4wt['Date'], errors='coerce')
+#     if store != 'All':
+#         if isinstance(store, list):
+#             df_l4wt = df_l4wt[df_l4wt['Store'].isin(store)]
+#         else:
+#             df_l4wt = df_l4wt[df_l4wt['Store'] == store]
+#     for col in ['Tw_Sales', 'Tw_Orders', 'Tw_Avg_Tckt']:
+#         if col in df_l4wt.columns:
+#             df_l4wt[col] = clean_number(df_l4wt[col])
+#     l4wt_filtered = df_l4wt[(df_l4wt['Date'] >= l4wt_four_weeks_ago) & (df_l4wt['Date'] <= reference_date)]
+
+#     # This Week
+#     tw_net_sales = df_copy['Tw_Sales'].sum() if 'Tw_Sales' in df_copy.columns else 0
+#     tw_orders = df_copy['Tw_Orders'].sum() if 'Tw_Orders' in df_copy.columns else 0
+#     if avg_ticket_col in df_copy.columns:
+#         tw_avg_ticket = df_copy[avg_ticket_col].sum()
+#     else:
+#         tw_avg_ticket = (tw_net_sales / tw_orders) if tw_orders > 0 else 0
+
+#     # L4wt averages
+#     if not l4wt_filtered.empty:
+#         l4wt_net_sales = l4wt_filtered['Tw_Sales'].sum() / 4 if 'Tw_Sales' in l4wt_filtered.columns else 0
+#         l4wt_orders = l4wt_filtered['Tw_Orders'].sum() / 4 if 'Tw_Orders' in l4wt_filtered.columns else 0
+#         if 'Tw_Avg_Tckt' in l4wt_filtered.columns and l4wt_filtered['Tw_Avg_Tckt'].notna().any():
+#             l4wt_avg_ticket = l4wt_filtered['Tw_Avg_Tckt'].sum() / 4
+#         else:
+#             l4wt_avg_ticket = (l4wt_net_sales / l4wt_orders) if l4wt_orders > 0 else 0
+#     else:
+#         l4wt_net_sales = 0
+#         l4wt_orders = 0
+#         l4wt_avg_ticket = 0
+
+#     # Budget
+#     bdg_net_sales = budget_copy['Net_Sales'].sum()
+#     bdg_orders = budget_copy['Orders'].sum()
+#     bdg_avg_ticket = (bdg_net_sales / bdg_orders) if bdg_orders > 0 else 0
+
+#     def format_number(value, is_currency=False):
+#         if is_currency:
+#             return f"${value:,.2f}"
+#         return f"{value:,.0f}" if value >= 1000 else f"{value:.2f}"
+
+#     def pct_change(actual, budget):
+#         if budget == 0:
+#             return "0.00%"
+#         change = (actual - budget) / budget
+#         sign = "+" if change >= 0 else ""
+#         return f"{sign}{change:.2f}%"
+
+#     def tw_bdg_diff(actual, budget):
+#         if budget == 0:
+#             return "0.00"
+#         diff = (actual - budget) / budget
+#         if abs(diff) > 1.0:
+#             reverse_diff = (budget - actual) / actual if actual != 0 else 0
+#             sign = "-" if diff > 0 else "+"
+#             return f"{sign}{abs(reverse_diff):.2f}"
+#         sign = "+" if diff >= 0 else ""
+#         return f"{sign}{diff:.2f}"
+
+#     result_rows = [
+#         {
+#             'Metric': 'Net Sales',
+#             'This Week': format_number(tw_net_sales, is_currency=True),
+#             'Budget': format_number(bdg_net_sales, is_currency=True),
+#             'L4wt': format_number(l4wt_net_sales, is_currency=True),
+#             'Bdg': format_number(bdg_net_sales, is_currency=True),
+#             'Tw/Bdg (+/-)': tw_bdg_diff(tw_net_sales, bdg_net_sales),
+#             'Percent Change': pct_change(tw_net_sales, bdg_net_sales),
+#         },
+#         {
+#             'Metric': 'Orders',
+#             'This Week': format_number(tw_orders),
+#             'Budget': format_number(bdg_orders),
+#             'L4wt': format_number(l4wt_orders),
+#             'Bdg': format_number(bdg_orders),
+#             'Tw/Bdg (+/-)': tw_bdg_diff(tw_orders, bdg_orders),
+#             'Percent Change': pct_change(tw_orders, bdg_orders),
+#         },
+#         {
+#             'Metric': 'Avg Ticket',
+#             'This Week': format_number(tw_avg_ticket, is_currency=True),
+#             'Budget': format_number(bdg_avg_ticket, is_currency=True),
+#             'L4wt': format_number(l4wt_avg_ticket, is_currency=True),
+#             'Bdg': format_number(bdg_avg_ticket, is_currency=True),
+#             'Tw/Bdg (+/-)': tw_bdg_diff(tw_avg_ticket, bdg_avg_ticket),
+#             'Percent Change': pct_change(tw_avg_ticket, bdg_avg_ticket),
+#         },
+#     ]
+
+#     return pd.DataFrame(result_rows)
+
+
 def kpi_vs_budget(df, df_budget, store='All', start_date=None, end_date=None):
-    """
-    Generate a KPI vs Budget comparison table showing key metrics
-    comparing This Week, Budget, L4wt, and percentage changes
-    
-    Parameters:
-    df: Main dataframe with sales data
-    df_budget: Budget dataframe
-    store: Store filter ('All' or specific store(s))
-    start_date: Start date filter
-    end_date: End date filter
-    
-    Returns:
-    DataFrame with columns: Metric, This Week, Budget, L4wt, Bdg, Tw/Bdg (+/-), Percent Change
-    """
-    
     import pandas as pd
     import numpy as np
-    from datetime import datetime, timedelta
-    
-    # Make copies and clean column names
+    from datetime import timedelta
+
+    # Work on copies to avoid mutating inputs
     df_copy = df.copy()
     budget_copy = df_budget.copy()
-    
-    df_copy.columns = df_copy.columns.str.strip()
-    budget_copy.columns = budget_copy.columns.str.strip()
-    
-    # Rename columns for consistency
-    df_copy.rename(columns={
-        'Helper_1': 'Helper 1',
-        'Tw_Sales': 'Tw Sales',
-        'Lw_Sales': 'Lw Sales',
-        'Ly_Sales': 'Ly Sales',
-        'Tw_Orders': 'Tw Orders',
-        'Lw_Orders': 'Lw Orders',
-        'Ly_Orders': 'Ly Orders',
-        'Tw_Avg_Tckt': 'Tw Avg Tckt',
-        'Tw_Reg_Pay': 'Tw Reg Pay',
-        'TW_Johns': 'TW Johns',
-        'TW_Terra': 'TW Terra',
-        'TW_Metro': 'TW Metro',
-        'TW_Victory': 'TW Victory',
-        'TW_Central_Kitchen': 'TW Central Kitchen',
-        'TW_Other': 'TW Other',
-        'Helper_4': 'Helper 4'
-    }, inplace=True)
-    
-    # Ensure Date column is datetime type
+
+    print("i am here in the financial utils kpi_vs_budget function df.head,", store, "head", df_copy.head())
+    print("i am here in the financial utils kpi_vs_budget function dfbudget.head,", store, "head", budget_copy.head())
+    print("i am here in the financial utils net sales,", budget_copy["Net_Sales"], "net sales", budget_copy["Net_Sales"].sum())
+
+    # Ensure Date dtype without touching column names
     if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
-        df_copy['Date'] = pd.to_datetime(df_copy['Date'])
-    
+        df_copy['Date'] = pd.to_datetime(df_copy['Date'], errors='coerce')
     if not pd.api.types.is_datetime64_any_dtype(budget_copy['Date']):
-        budget_copy['Date'] = pd.to_datetime(budget_copy['Date'])
-    
-    # Convert date filters to pandas datetime
-    if start_date is not None:
-        if isinstance(start_date, str):
-            start_date = pd.to_datetime(start_date)
-    
-    if end_date is not None:
-        if isinstance(end_date, str):
-            end_date = pd.to_datetime(end_date)
-    
-    # Determine reference date for current week calculation
-    if end_date is not None:
-        reference_date = end_date
-    else:
-        reference_date = pd.Timestamp.now().normalize()
-    
-    # Calculate current week start and end dates
-    # Assuming week starts on Monday (weekday 0)
+        budget_copy['Date'] = pd.to_datetime(budget_copy['Date'], errors='coerce')
+
+    # Parse optional boundaries
+    if isinstance(start_date, str):
+        start_date = pd.to_datetime(start_date, errors='coerce')
+    if isinstance(end_date, str):
+        end_date = pd.to_datetime(end_date, errors='coerce')
+
+    reference_date = end_date if end_date is not None else pd.Timestamp.now().normalize()
     current_week_start = reference_date - timedelta(days=reference_date.weekday())
     current_week_end = current_week_start + timedelta(days=6)
-    
-    # Apply date filters for main data
+
+    # Filter main df by date range
     if start_date is not None:
         df_copy = df_copy[df_copy['Date'] >= start_date]
-    
     if end_date is not None:
         df_copy = df_copy[df_copy['Date'] <= end_date]
-    
-    # Filter budget data for current week only
+
+    # Filter budget to current week
     budget_copy = budget_copy[
-        (budget_copy['Date'] >= current_week_start) & 
+        (budget_copy['Date'] >= current_week_start) &
         (budget_copy['Date'] <= current_week_end)
     ]
-    
-    # Apply store filter
+
+    # Store filter
     if store != 'All':
         if isinstance(store, list):
             df_copy = df_copy[df_copy['Store'].isin(store)]
@@ -2512,150 +2003,90 @@ def kpi_vs_budget(df, df_budget, store='All', start_date=None, end_date=None):
         else:
             df_copy = df_copy[df_copy['Store'] == store]
             budget_copy = budget_copy[budget_copy['Store'] == store]
-    
-    # Helper function to clean currency values
-    def clean_currency(series):
-        return pd.to_numeric(
-            series.astype(str).str.replace(r'[\$,]', '', regex=True),
-            errors='coerce'
-        ).fillna(0)
-    
-    # Clean main data columns
-    sales_cols = ['Tw Sales', 'Lw Sales', 'Ly Sales']
-    order_cols = ['Tw Orders', 'Lw Orders', 'Ly Orders']
-    avg_ticket_cols = ['Tw Avg Tckt']
-    food_cost_cols = ['Tw Reg Pay']  # Food Cost % comes from Tw_Reg_Pay
-    
-    for col in sales_cols + order_cols + avg_ticket_cols + food_cost_cols:
-        if col in df_copy.columns:
-            df_copy[col] = clean_currency(df_copy[col])
-    
-    # Clean budget columns
-    budget_sales_col = None
-    budget_orders_col = None
-    budget_food_cols = []
-    
-    # Find budget sales column
-    for col in ['Net Sales', 'Sales', 'Net Sales ', 'Sales ', "Net_Sales", "net_sales"]:
-        if col in budget_copy.columns:
-            budget_copy[col] = clean_currency(budget_copy[col])
-            budget_sales_col = col
-            break
-    
-    # Find budget orders column
-    for col in ['Orders', 'Order', 'Orders ', 'Order ']:
-        if col in budget_copy.columns:
-            budget_copy[col] = clean_currency(budget_copy[col])
-            budget_orders_col = col
-            break
-    
-    # Find budget food cost column
-    budget_food_cost_col = None
-    for col in ['Food_Cost', 'Food Cost', 'food_cost', 'FOOD_COST']:
-        if col in budget_copy.columns:
-            budget_copy[col] = clean_currency(budget_copy[col])
-            budget_food_cost_col = col
-            break
-    
-    # Calculate L4wt (Last 4 weeks trend) values
+
+    # Local helper that converts values to numeric only when needed
+    def as_number(series):
+        return pd.to_numeric(series.astype(str).str.replace(r'[\$,]', '', regex=True),
+                             errors='coerce').fillna(0)
+
+    # Build L4wt window without altering original frames
     l4wt_four_weeks_ago = reference_date - timedelta(weeks=4)
-    
-    # For L4wt, use original (unfiltered by date) dataframe
     df_l4wt = df.copy()
-    df_l4wt.columns = df_l4wt.columns.str.strip()
-    
-    # Rename columns for L4wt dataframe
-    df_l4wt.rename(columns={
-        'Tw_Sales': 'Tw Sales',
-        'Tw_Orders': 'Tw Orders',
-        'Tw_Avg_Tckt': 'Tw Avg Tckt',
-        'Tw_Reg_Pay': 'Tw Reg Pay'
-    }, inplace=True)
-    
-    # Ensure Date column is datetime type for L4wt dataframe
     if not pd.api.types.is_datetime64_any_dtype(df_l4wt['Date']):
-        df_l4wt['Date'] = pd.to_datetime(df_l4wt['Date'])
-    
-    # Apply only store filter to L4wt data
+        df_l4wt['Date'] = pd.to_datetime(df_l4wt['Date'], errors='coerce')
     if store != 'All':
         if isinstance(store, list):
             df_l4wt = df_l4wt[df_l4wt['Store'].isin(store)]
         else:
             df_l4wt = df_l4wt[df_l4wt['Store'] == store]
-    
-    # Clean L4wt columns
-    for col in ['Tw Sales', 'Tw Orders', 'Tw Avg Tckt', 'Tw Reg Pay']:
-        if col in df_l4wt.columns:
-            df_l4wt[col] = clean_currency(df_l4wt[col])
-    
-    # Filter L4wt data for the 4-week window
     l4wt_filtered = df_l4wt[(df_l4wt['Date'] >= l4wt_four_weeks_ago) & (df_l4wt['Date'] <= reference_date)]
-    
-    # Calculate actual values
-    # This Week values
-    tw_net_sales = df_copy['Tw Sales'].sum()
-    tw_orders = df_copy['Tw Orders'].sum()
-    tw_avg_ticket = df_copy['Tw Avg Tckt'].sum() if 'Tw Avg Tckt' in df_copy.columns else (tw_net_sales / tw_orders if tw_orders > 0 else 0)
-    tw_food_cost = df_copy['Tw Reg Pay'].sum() if 'Tw Reg Pay' in df_copy.columns else 0  # Food Cost from Tw_Reg_Pay (not as percentage)
-    
-    # L4wt values
-    l4wt_net_sales = l4wt_filtered['Tw Sales'].sum() / 4 if not l4wt_filtered.empty and len(l4wt_filtered) > 0 else 0  # Average over 4 weeks
-    l4wt_orders = l4wt_filtered['Tw Orders'].sum() / 4 if not l4wt_filtered.empty and len(l4wt_filtered) > 0 else 0
-    l4wt_avg_ticket = l4wt_filtered['Tw Avg Tckt'].sum() / 4 if not l4wt_filtered.empty and 'Tw Avg Tckt' in l4wt_filtered.columns else (l4wt_net_sales / l4wt_orders if l4wt_orders > 0 else 0)
-    l4wt_food_cost = l4wt_filtered['Tw Reg Pay'].sum() / 4 if not l4wt_filtered.empty and 'Tw Reg Pay' in l4wt_filtered.columns else 0
-    
-    # Budget values (now filtered to current week only)
-    bdg_net_sales = budget_copy[budget_sales_col].sum() if budget_sales_col else 0
-    bdg_orders = budget_copy[budget_orders_col].sum() if budget_orders_col else 0
-    bdg_avg_ticket = bdg_net_sales / bdg_orders if bdg_orders > 0 else 0
-    bdg_food_cost = budget_copy[budget_food_cost_col].sum() if budget_food_cost_col else 0  # Food Cost from Food_Cost column
-    
-    # Helper function to format numbers
+
+    # This Week calculations using on-the-fly numeric conversion
+    tw_net_sales = as_number(df_copy['Tw_Sales']).sum() if 'Tw_Sales' in df_copy.columns else 0
+    tw_orders = as_number(df_copy['Tw_Orders']).sum() if 'Tw_Orders' in df_copy.columns else 0
+    if 'Tw_Avg_Tckt' in df_copy.columns:
+        tw_avg_ticket = as_number(df_copy['Tw_Avg_Tckt']).sum()
+    else:
+        tw_avg_ticket = (tw_net_sales / tw_orders) if tw_orders > 0 else 0
+
+    # L4wt averages
+    if not l4wt_filtered.empty:
+        l4wt_net_sales = as_number(l4wt_filtered['Tw_Sales']).sum() / 4 if 'Tw_Sales' in l4wt_filtered.columns else 0
+        l4wt_orders = as_number(l4wt_filtered['Tw_Orders']).sum() / 4 if 'Tw_Orders' in l4wt_filtered.columns else 0
+        if 'Tw_Avg_Tckt' in l4wt_filtered.columns and l4wt_filtered['Tw_Avg_Tckt'].notna().any():
+            l4wt_avg_ticket = as_number(l4wt_filtered['Tw_Avg_Tckt']).sum() / 4
+        else:
+            l4wt_avg_ticket = (l4wt_net_sales / l4wt_orders) if l4wt_orders > 0 else 0
+    else:
+        l4wt_net_sales = 0
+        l4wt_orders = 0
+        l4wt_avg_ticket = 0
+
+    # Budget using on-the-fly numeric conversion
+    if 'Net_Sales' not in budget_copy.columns:
+        raise KeyError("Expected budget column 'Net_Sales' not found")
+    if 'Orders' not in budget_copy.columns:
+        raise KeyError("Expected budget column 'Orders' not found")
+
+    bdg_net_sales = as_number(budget_copy['Net_Sales']).sum()
+    bdg_orders = as_number(budget_copy['Orders']).sum()
+    bdg_avg_ticket = (bdg_net_sales / bdg_orders) if bdg_orders > 0 else 0
+
+    print("i am here in the financial utils net sales,", budget_copy["Net_Sales"], "net sales", bdg_net_sales)
+
+    # Formatting and final table
     def format_number(value, is_currency=False):
         if is_currency:
-            return f"${value:,.2f}"  # Always show 2 decimal places for currency
-        elif value >= 1000000:
-            return f"{value:,.0f}"
-        elif value >= 1000:
-            return f"{value:,.0f}"
-        else:
-            return f"{value:.2f}"
-    
-    # Helper function to calculate percentage change with proper formula
-    def calc_percentage_change(actual, budget):
+            return f"${value:,.2f}"
+        return f"{value:,.0f}" if value >= 1000 else f"{value:.2f}"
+
+    def pct_change(actual, budget):
         if budget == 0:
             return "0.00%"
-        change = (actual - budget) / budget  # Without * 100 as per your requirement
+        change = (actual - budget) / budget
         sign = "+" if change >= 0 else ""
         return f"{sign}{change:.2f}%"
-    
-    # Helper function to calculate Tw/Bdg difference
-    def calc_tw_bdg_diff(actual, budget):
+
+    def tw_bdg_diff(actual, budget):
         if budget == 0:
             return "0.00"
-        
-        diff = (actual - budget) / budget  # Without * 100 as per your requirement
-        
-        # If difference is above 1.0 (100%), reverse the calculation
+        diff = (actual - budget) / budget
         if abs(diff) > 1.0:
-            # Calculate how much budget exceeds actual (reverse perspective)
             reverse_diff = (budget - actual) / actual if actual != 0 else 0
-            sign = "-" if diff > 0 else "+"  # Flip the sign
+            sign = "-" if diff > 0 else "+"
             return f"{sign}{abs(reverse_diff):.2f}"
-        else:
-            sign = "+" if diff >= 0 else ""
-            return f"{sign}{diff:.2f}"
-    
-    # Create result rows
+        sign = "+" if diff >= 0 else ""
+        return f"{sign}{diff:.2f}"
+
     result_rows = [
         {
             'Metric': 'Net Sales',
             'This Week': format_number(tw_net_sales, is_currency=True),
             'Budget': format_number(bdg_net_sales, is_currency=True),
             'L4wt': format_number(l4wt_net_sales, is_currency=True),
-            'Bdg': format_number(bdg_net_sales, is_currency=True),  # Same as Budget column for consistency
-            'Tw/Bdg (+/-)': calc_tw_bdg_diff(tw_net_sales, bdg_net_sales),
-            'Percent Change': calc_percentage_change(tw_net_sales, bdg_net_sales)
+            'Bdg': format_number(bdg_net_sales, is_currency=True),
+            'Tw/Bdg (+/-)': tw_bdg_diff(tw_net_sales, bdg_net_sales),
+            'Percent Change': pct_change(tw_net_sales, bdg_net_sales),
         },
         {
             'Metric': 'Orders',
@@ -2663,8 +2094,8 @@ def kpi_vs_budget(df, df_budget, store='All', start_date=None, end_date=None):
             'Budget': format_number(bdg_orders),
             'L4wt': format_number(l4wt_orders),
             'Bdg': format_number(bdg_orders),
-            'Tw/Bdg (+/-)': calc_tw_bdg_diff(tw_orders, bdg_orders),
-            'Percent Change': calc_percentage_change(tw_orders, bdg_orders)
+            'Tw/Bdg (+/-)': tw_bdg_diff(tw_orders, bdg_orders),
+            'Percent Change': pct_change(tw_orders, bdg_orders),
         },
         {
             'Metric': 'Avg Ticket',
@@ -2672,24 +2103,14 @@ def kpi_vs_budget(df, df_budget, store='All', start_date=None, end_date=None):
             'Budget': format_number(bdg_avg_ticket, is_currency=True),
             'L4wt': format_number(l4wt_avg_ticket, is_currency=True),
             'Bdg': format_number(bdg_avg_ticket, is_currency=True),
-            'Tw/Bdg (+/-)': calc_tw_bdg_diff(tw_avg_ticket, bdg_avg_ticket),
-            'Percent Change': calc_percentage_change(tw_avg_ticket, bdg_avg_ticket)
+            'Tw/Bdg (+/-)': tw_bdg_diff(tw_avg_ticket, bdg_avg_ticket),
+            'Percent Change': pct_change(tw_avg_ticket, bdg_avg_ticket),
         },
-        {
-            'Metric': 'Food Cost',
-            'This Week': format_number(tw_food_cost, is_currency=True),
-            'Budget': format_number(bdg_food_cost, is_currency=True),
-            'L4wt': format_number(l4wt_food_cost, is_currency=True),
-            'Bdg': format_number(bdg_food_cost, is_currency=True),
-            'Tw/Bdg (+/-)': calc_tw_bdg_diff(tw_food_cost, bdg_food_cost),
-            'Percent Change': calc_percentage_change(tw_food_cost, bdg_food_cost)
-        }
     ]
-    
-    # Create DataFrame
-    result_df = pd.DataFrame(result_rows)
-    
-    return result_df
+
+    return pd.DataFrame(result_rows)
+
+
 
 def financial_sales_df(df, df_budget, store='All', start_date=None, end_date=None):
     """
@@ -3372,290 +2793,6 @@ def financial_sales_df_modified(df, df_budget, store='All', start_date=None, end
 
 
 
-# def financials_food_cost_modified(df, df_budget, store='All', start_date=None, end_date=None):
-#     """
-#     Generate a food cost analysis table showing food costs by supplier
-#     comparing This Week (Tw), Last Week (Lw), Last 4 weeks trend (L4wt), Last Year (Ly), and Budget (Bdg)
-    
-#     Parameters:
-#     df: Main dataframe with sales data
-#     df_budget: Budget dataframe
-#     store: Store filter ('All' or specific store(s))
-#     start_date: Start date filter
-#     end_date: End date filter
-    
-#     Returns:
-#     DataFrame with columns: TIME PERIOD, JOHNS, % (+/-), TERRA, % (+/-), METRO, % (+/-), VICTORY, CK
-#     """
-    
-#     import pandas as pd
-#     import numpy as np
-#     from datetime import datetime, timedelta
-    
-#     # Make copies and clean column names
-#     df_copy = df.copy()
-#     budget_copy = df_budget.copy()
-    
-#     df_copy.columns = df_copy.columns.str.strip()
-#     budget_copy.columns = budget_copy.columns.str.strip()
-    
-#     # Ensure Date column is datetime type
-#     if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
-#         df_copy['Date'] = pd.to_datetime(df_copy['Date'])
-    
-#     if not pd.api.types.is_datetime64_any_dtype(budget_copy['Date']):
-#         budget_copy['Date'] = pd.to_datetime(budget_copy['Date'])
-    
-#     # Convert date filters to pandas datetime
-#     if start_date is not None:
-#         if isinstance(start_date, str):
-#             start_date = pd.to_datetime(start_date)
-    
-#     if end_date is not None:
-#         if isinstance(end_date, str):
-#             end_date = pd.to_datetime(end_date)
-    
-#     # Apply date filters
-#     if start_date is not None:
-#         df_copy = df_copy[df_copy['Date'] >= start_date]
-#         budget_copy = budget_copy[budget_copy['Date'] >= start_date]
-    
-#     if end_date is not None:
-#         df_copy = df_copy[df_copy['Date'] <= end_date]
-#         budget_copy = budget_copy[budget_copy['Date'] <= end_date]
-    
-#     # Apply store filter
-#     if store != 'All':
-#         if isinstance(store, list):
-#             df_copy = df_copy[df_copy['Store'].isin(store)]
-#             budget_copy = budget_copy[budget_copy['Store'].isin(store)]
-#         else:
-#             df_copy = df_copy[df_copy['Store'] == store]
-#             budget_copy = budget_copy[budget_copy['Store'] == store]
-    
-#     # Helper function to clean currency values
-#     def clean_currency(series):
-#         return pd.to_numeric(
-#             series.astype(str).str.replace(r'[\$,]', '', regex=True),
-#             errors='coerce'
-#         ).fillna(0)
-    
-#     # Define food cost columns for This Week and Last Week
-#     food_suppliers = ['Johns', 'Terra', 'Metro', 'Victory', 'Central_Kitchen']
-    
-#     # Map column names (TW_Central_Kitchen -> Central_Kitchen for easier processing)
-#     food_cols_tw = ['TW_Johns', 'TW_Terra', 'TW_Metro', 'TW_Victory', 'TW_Central_Kitchen']
-#     food_cols_lw = ['LW_Johns', 'LW_Terra', 'LW_Metro', 'LW_Victory', 'LW_Central_Kitchen']
-    
-#     # Clean food cost columns
-#     for col in food_cols_tw + food_cols_lw:
-#         if col in df_copy.columns:
-#             df_copy[col] = clean_currency(df_copy[col])
-    
-#     # Get total sales for percentage calculations
-#     tw_total = df_copy['Tw_Sales'].sum() if 'Tw_Sales' in df_copy.columns else 0
-#     lw_total = df_copy['Lw_Sales'].sum() if 'Lw_Sales' in df_copy.columns else 0
-    
-#     if 'Tw_Sales' in df_copy.columns:
-#         df_copy['Tw_Sales'] = clean_currency(df_copy['Tw_Sales'])
-#         tw_total = df_copy['Tw_Sales'].sum()
-    
-#     if 'Lw_Sales' in df_copy.columns:
-#         df_copy['Lw_Sales'] = clean_currency(df_copy['Lw_Sales'])
-#         lw_total = df_copy['Lw_Sales'].sum()
-    
-#     # Calculate food costs for each supplier
-#     # This Week values
-#     tw_johns = df_copy['TW_Johns'].sum() if 'TW_Johns' in df_copy.columns else 0
-#     tw_terra = df_copy['TW_Terra'].sum() if 'TW_Terra' in df_copy.columns else 0
-#     tw_metro = df_copy['TW_Metro'].sum() if 'TW_Metro' in df_copy.columns else 0
-#     tw_victory = df_copy['TW_Victory'].sum() if 'TW_Victory' in df_copy.columns else 0
-#     tw_ck = df_copy['TW_Central_Kitchen'].sum() if 'TW_Central_Kitchen' in df_copy.columns else 0
-    
-#     # Last Week values
-#     lw_johns = df_copy['LW_Johns'].sum() if 'LW_Johns' in df_copy.columns else 0
-#     lw_terra = df_copy['LW_Terra'].sum() if 'LW_Terra' in df_copy.columns else 0
-#     lw_metro = df_copy['LW_Metro'].sum() if 'LW_Metro' in df_copy.columns else 0
-#     lw_victory = df_copy['LW_Victory'].sum() if 'LW_Victory' in df_copy.columns else 0
-#     lw_ck = df_copy['LW_Central_Kitchen'].sum() if 'LW_Central_Kitchen' in df_copy.columns else 0
-    
-#     # L4wt and Ly values (set to 0 as requested)
-#     l4wt_johns = l4wt_terra = l4wt_metro = l4wt_victory = l4wt_ck = 0
-#     ly_johns = ly_terra = ly_metro = ly_victory = ly_ck = 0
-    
-#     # Budget values - check if budget has food cost breakdown
-#     budget_johns = 0
-#     budget_terra = 0
-#     budget_metro = 0
-#     budget_victory = 0
-#     budget_ck = 0
-    
-#     # Try to find budget columns (check various possible names)
-#     budget_mapping = {
-#         'Johns': ['Johns', 'johns', 'JOHNS'],
-#         'Terra': ['Terra', 'terra', 'TERRA'],
-#         'Metro': ['Metro', 'metro', 'METRO'],
-#         'Victory': ['Victory', 'victory', 'VICTORY'],
-#         'Central_Kitchen': ['Central Kitchen', 'Central_Kitchen', 'CK', 'ck']
-#     }
-    
-#     for supplier, possible_names in budget_mapping.items():
-#         for name in possible_names:
-#             if name in budget_copy.columns:
-#                 budget_copy[name] = clean_currency(budget_copy[name])
-#                 if supplier == 'Johns':
-#                     budget_johns = budget_copy[name].sum()
-#                 elif supplier == 'Terra':
-#                     budget_terra = budget_copy[name].sum()
-#                 elif supplier == 'Metro':
-#                     budget_metro = budget_copy[name].sum()
-#                 elif supplier == 'Victory':
-#                     budget_victory = budget_copy[name].sum()
-#                 elif supplier == 'Central_Kitchen':
-#                     budget_ck = budget_copy[name].sum()
-#                 break
-    
-#     # Helper function to calculate percentage of sales
-#     def calc_percentage_of_sales(cost, total_sales):
-#         if total_sales == 0:
-#             return "0.00%"
-#         percentage = (cost / total_sales) * 100
-#         return f"{percentage:.2f}%"
-    
-#     # Helper function to calculate delta between current and previous period
-#     def calc_delta(current_pct_str, previous_pct_str):
-#         # Extract numeric values from percentage strings
-#         try:
-#             current_val = float(current_pct_str.replace('%', ''))
-#             previous_val = float(previous_pct_str.replace('%', ''))
-#             delta = current_val - previous_val
-#             sign = "+" if delta > 0 else ""
-#             return f"{sign}{delta:.2f}%"
-#         except:
-#             return "0.00%"
-    
-#     # Build the result rows
-#     result_rows = []
-    
-#     # This Week row
-#     tw_johns_pct = calc_percentage_of_sales(tw_johns, tw_total)
-#     tw_terra_pct = calc_percentage_of_sales(tw_terra, tw_total)
-#     tw_metro_pct = calc_percentage_of_sales(tw_metro, tw_total)
-#     tw_victory_pct = calc_percentage_of_sales(tw_victory, tw_total)
-#     tw_ck_pct = calc_percentage_of_sales(tw_ck, tw_total)
-    
-#     # Last Week row
-#     lw_johns_pct = calc_percentage_of_sales(lw_johns, lw_total)
-#     lw_terra_pct = calc_percentage_of_sales(lw_terra, lw_total)
-#     lw_metro_pct = calc_percentage_of_sales(lw_metro, lw_total)
-#     lw_victory_pct = calc_percentage_of_sales(lw_victory, lw_total)
-#     lw_ck_pct = calc_percentage_of_sales(lw_ck, lw_total)
-    
-#     # L4wt row (set to 0 as requested)
-#     l4wt_johns_pct = l4wt_terra_pct = l4wt_metro_pct = l4wt_victory_pct = l4wt_ck_pct = "0.00%"
-    
-#     # Ly row (set to 0 as requested)
-#     ly_johns_pct = ly_terra_pct = ly_metro_pct = ly_victory_pct = ly_ck_pct = "0.00%"
-    
-#     # Budget row
-#     bdg_total = budget_copy['Net_Sales'].sum() if 'Net_Sales' in budget_copy.columns else (
-#         budget_copy['Sales'].sum() if 'Sales' in budget_copy.columns else 1)  # Avoid division by zero
-    
-#     if bdg_total == 0:
-#         bdg_total = 1  # Avoid division by zero
-        
-#     bdg_johns_pct = calc_percentage_of_sales(budget_johns, bdg_total)
-#     bdg_terra_pct = calc_percentage_of_sales(budget_terra, bdg_total)
-#     bdg_metro_pct = calc_percentage_of_sales(budget_metro, bdg_total)
-#     bdg_victory_pct = calc_percentage_of_sales(budget_victory, bdg_total)
-#     bdg_ck_pct = calc_percentage_of_sales(budget_ck, bdg_total)
-    
-#     # This Week row
-#     tw_row = {
-#         "TIME PERIOD": "Tw",
-#         "JOHNS": tw_johns_pct,
-#         "% (+/-)": calc_delta(tw_johns_pct, lw_johns_pct),
-#         "TERRA": tw_terra_pct,
-#         "% (+/-)_TERRA": calc_delta(tw_terra_pct, lw_terra_pct),
-#         "METRO": tw_metro_pct,
-#         "% (+/-)_METRO": calc_delta(tw_metro_pct, lw_metro_pct),
-#         "VICTORY": tw_victory_pct,
-#         "CK": tw_ck_pct
-#     }
-#     result_rows.append(tw_row)
-    
-#     # Last Week row (baseline - all deltas are 0)
-#     lw_row = {
-#         "TIME PERIOD": "Lw",
-#         "JOHNS": lw_johns_pct,
-#         "% (+/-)": "0.00%",  # Base comparison
-#         "TERRA": lw_terra_pct,
-#         "% (+/-)_TERRA": "0.00%",
-#         "METRO": lw_metro_pct,
-#         "% (+/-)_METRO": "0.00%",
-#         "VICTORY": lw_victory_pct,
-#         "CK": lw_ck_pct
-#     }
-#     result_rows.append(lw_row)
-    
-#     # L4wt row (set to 0 as requested)
-#     l4wt_row = {
-#         "TIME PERIOD": "L4wt",
-#         "JOHNS": l4wt_johns_pct,
-#         "% (+/-)": calc_delta(l4wt_johns_pct, lw_johns_pct),
-#         "TERRA": l4wt_terra_pct,
-#         "% (+/-)_TERRA": calc_delta(l4wt_terra_pct, lw_terra_pct),
-#         "METRO": l4wt_metro_pct,
-#         "% (+/-)_METRO": calc_delta(l4wt_metro_pct, lw_metro_pct),
-#         "VICTORY": l4wt_victory_pct,
-#         "CK": l4wt_ck_pct
-#     }
-#     result_rows.append(l4wt_row)
-    
-#     # Last Year row (set to 0 as requested)
-#     ly_row = {
-#         "TIME PERIOD": "Ly",
-#         "JOHNS": ly_johns_pct,
-#         "% (+/-)": calc_delta(ly_johns_pct, lw_johns_pct),
-#         "TERRA": ly_terra_pct,
-#         "% (+/-)_TERRA": calc_delta(ly_terra_pct, lw_terra_pct),
-#         "METRO": ly_metro_pct,
-#         "% (+/-)_METRO": calc_delta(ly_metro_pct, lw_metro_pct),
-#         "VICTORY": ly_victory_pct,
-#         "CK": ly_ck_pct
-#     }
-#     result_rows.append(ly_row)
-    
-#     # Budget row
-#     bdg_row = {
-#         "TIME PERIOD": "Bdg",
-#         "JOHNS": bdg_johns_pct,
-#         "% (+/-)": calc_delta(bdg_johns_pct, lw_johns_pct),
-#         "TERRA": bdg_terra_pct,
-#         "% (+/-)_TERRA": calc_delta(bdg_terra_pct, lw_terra_pct),
-#         "METRO": bdg_metro_pct,
-#         "% (+/-)_METRO": calc_delta(bdg_metro_pct, lw_metro_pct),
-#         "VICTORY": bdg_victory_pct,
-#         "CK": bdg_ck_pct
-#     }
-#     result_rows.append(bdg_row)
-    
-#     # Create DataFrame with proper column order
-#     columns = [
-#         "TIME PERIOD",
-#         "JOHNS", "% (+/-)",
-#         "TERRA", "% (+/-)_TERRA", 
-#         "METRO", "% (+/-)_METRO",
-#         "VICTORY",
-#         "CK"
-#     ]
-    
-#     result_df = pd.DataFrame(result_rows, columns=columns)
-    
-#     return result_df
-
-
-
 def financials_food_cost_modified(df, df_budget, store='All', start_date=None, end_date=None):
     """
     Generate a food cost analysis table showing food costs by supplier
@@ -4099,15 +3236,23 @@ def financials_labour_cost_modified(df, df_budget, store='All', start_date=None,
     tw_hours = df_copy['Tw_Labor_Hrs'].sum() if 'Tw_Labor_Hrs' in df_copy.columns else 0
     tw_payroll = df_copy['Tw_Reg_Pay'].sum() if 'Tw_Reg_Pay' in df_copy.columns else 0
     tw_sales = df_copy['Tw_Sales'].sum() if 'Tw_Sales' in df_copy.columns else 1
-    tw_spmh = df_copy['Tw_SPMH'].sum() if 'Tw_SPMH' in df_copy.columns else 0
+    # tw_spmh = df_copy['Tw_SPMH'].sum() if 'Tw_SPMH' in df_copy.columns else 0
+    # Sales per man-hour = total sales / total labor hours
+    tw_spmh = (tw_sales / tw_hours) if tw_hours > 0 else 0
     tw_lpmh = df_copy['Tw_LPMH'].sum() if 'Tw_LPMH' in df_copy.columns else 0
+    # Labor cost per man-hour = total regular pay / total labor hours
+    tw_lpmh = (tw_payroll / tw_hours) if tw_hours > 0 else 0
+
     
     # Calculate Last Week values
     lw_hours = df_copy['Lw_Labor_Hrs'].sum() if 'Lw_Labor_Hrs' in df_copy.columns else 0
     lw_payroll = df_copy['Lw_Reg_Pay'].sum() if 'Lw_Reg_Pay' in df_copy.columns else 0
     lw_sales = df_copy['Lw_Sales'].sum() if 'Lw_Sales' in df_copy.columns else 1
-    lw_spmh = df_copy['Lw_SPMH'].sum() if 'Lw_SPMH' in df_copy.columns else 0
-    lw_lpmh = df_copy['Lw_LPMH'].sum() if 'Lw_LPMH' in df_copy.columns else 0
+    # lw_spmh = df_copy['Lw_SPMH'].sum() if 'Lw_SPMH' in df_copy.columns else 0
+    lw_spmh   = (lw_sales / lw_hours)     if lw_hours > 0 else 0
+    # lw_lpmh = df_copy['Lw_LPMH'].sum() if 'Lw_LPMH' in df_copy.columns else 0
+    lw_lpmh   = (lw_payroll / lw_hours)     if lw_hours > 0 else 0
+
     
     # L4wt (Last 4 weeks) - calculate from current data
     # If end_date is not provided, use the latest date in the data
@@ -4124,8 +3269,10 @@ def financials_labour_cost_modified(df, df_budget, store='All', start_date=None,
     l4wt_hours = l4w_data['Tw_Labor_Hrs'].sum() if 'Tw_Labor_Hrs' in l4w_data.columns else 0
     l4wt_payroll = l4w_data['Tw_Reg_Pay'].sum() if 'Tw_Reg_Pay' in l4w_data.columns else 0
     l4wt_sales = l4w_data['Tw_Sales'].sum() if 'Tw_Sales' in l4w_data.columns else 1
-    l4wt_spmh = l4w_data['Tw_SPMH'].mean() if 'Tw_SPMH' in l4w_data.columns else 0
-    l4wt_lpmh = l4w_data['Tw_LPMH'].mean() if 'Tw_LPMH' in l4w_data.columns else 0
+    # l4wt_spmh = l4w_data['Tw_SPMH'].mean() if 'Tw_SPMH' in l4w_data.columns else 0
+    l4wt_spmh = (l4wt_sales / l4wt_hours) if l4wt_hours > 0 else 0
+    # l4wt_lpmh = l4w_data['Tw_LPMH'].mean() if 'Tw_LPMH' in l4w_data.columns else 0
+    l4wt_lpmh = (l4wt_payroll / l4wt_hours) if l4wt_hours > 0 else 0
     
     # Ly values (set to 0 as requested in previous function)
     ly_hours = ly_payroll = ly_sales = ly_spmh = ly_lpmh = 0
@@ -4134,9 +3281,11 @@ def financials_labour_cost_modified(df, df_budget, store='All', start_date=None,
     bdg_hours = budget_copy['LB_Hours'].sum() if 'LB_Hours' in budget_copy.columns else 0
     bdg_payroll = budget_copy['Labor_Cost'].sum() if 'Labor_Cost' in budget_copy.columns else 0
     bdg_sales = budget_copy['Net_Sales'].sum() if 'Net_Sales' in budget_copy.columns else 1
-    bdg_spmh = budget_copy['SPMH'].sum() if 'SPMH' in budget_copy.columns else 0
-    bdg_lpmh = budget_copy['LPMH'].sum() if 'LPMH' in budget_copy.columns else 0
-    
+    # bdg_spmh = budget_copy['SPMH'].sum() if 'SPMH' in budget_copy.columns else 0
+    bdg_spmh  = (bdg_sales / bdg_hours)   if bdg_hours > 0 else 0
+    # bdg_lpmh = budget_copy['LPMH'].sum() if 'LPMH' in budget_copy.columns else 0
+    bdg_lpmh  = (bdg_payroll / bdg_hours) if bdg_hours > 0 else 0
+
     # Helper function to calculate percentage of sales
     def calc_percentage_of_sales(cost, total_sales):
         if total_sales == 0:

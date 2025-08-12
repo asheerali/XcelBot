@@ -351,6 +351,7 @@ async def filter_financials_data(
         # print("financials_food_cost_df", financials_food_cost_df)
             # Ensure the 'Metric' column is set as index
         tw_lw_bdg_df = financials_tw_lw_bdg_table.set_index("Metric")
+        # print("i am here in the financials filter endpoint printing the tw_lw_bdg_df", tw_lw_bdg_df)
         financials_result = {
        "table1": [{
         "financials_sales": float(tw_lw_bdg_df.loc["Net Sales", "This Week"]),
@@ -360,6 +361,7 @@ async def filter_financials_data(
         "financials_food_cost": float(tw_lw_bdg_df.loc["Food Cost %", "This Week"]),
         "financials_spmh": float(tw_lw_bdg_df.loc["SPMH", "This Week"]),
         "financials_lmph": float(tw_lw_bdg_df.loc["LPMH", "This Week"]),
+        "financials_lbr_percent" : float(tw_lw_bdg_df.loc["Lbr %", "This Week"]),
         }],
        "table2": financials_sales_table.to_dict(orient='records'),
             "table3": financials_orders_table.to_dict(orient='records'),

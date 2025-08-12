@@ -11,6 +11,7 @@ interface FinancialDashboardProps {
       financials_prime_cost?: number;
       financials_sales?: number;
       financials_spmh?: number;
+      financials_lbr_percent?: number; // Added labor percentage
     }>;
     table6?: any[]; // Sales data
     table7?: any[]; // Labor cost data
@@ -1578,10 +1579,13 @@ const ComprehensiveFinancialDashboard: React.FC<FinancialDashboardProps> = ({
   const mainFoodCostValue = formatPercentage(
     table1Data.financials_food_cost || 0
   );
-
+  const mainLaborPercentValue = formatPercentage(
+    table1Data.financials_lbr_percent || 0
+  );
   const mainLaborCostValue = `$${(
     table1Data.financials_labor_cost || 0
   ).toLocaleString()}`;
+
   const mainAvgTicketValue = `$${(
     table1Data.financials_avg_ticket || 0
   ).toLocaleString()}`;
@@ -1766,7 +1770,7 @@ const ComprehensiveFinancialDashboard: React.FC<FinancialDashboardProps> = ({
 
         <ResponsiveFinancialTable
           title="Labor Cost"
-          mainValue={mainLaborCostValue}
+          mainValue={mainLaborPercentValue}
           data={laborCostData}
           columns={laborColumns}
         />

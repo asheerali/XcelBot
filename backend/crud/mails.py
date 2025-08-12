@@ -1,5 +1,4 @@
 # crud/mails.py
-
 from datetime import time
 from typing import List
 from fastapi import HTTPException
@@ -617,5 +616,45 @@ def update_mail(db: Session, mail_id: int, update_data: MailUpdate):
     return mail_record
 
 
+
+
+def update_receiving_time_for_company(
+    db: Session,
+    company_id: int,
+    receiving_time: time  # The receiving time is now passed as a time object
+):
+    """Update receiving time for all mails associated with the specified company_id"""
+    
+    # Ensure the company exists
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    # Get all mails associated with the company_id
+    mails = db.query(Mail).filter(Mail.company_id == company_id).all()
+    
+    if not mails:
+        raise HTTPException(status_code=404, detail="No mails found for this company")
+    
+    # Update the receiving time for each mail
+    for mail in mails:
+        mail.receiving_time = receiving_time
+        db.commit()
+        db.refresh(mail)
+    
+    return mails
+
+
+def get_global_time_for_company(db: Session, company_id: int) -> str:
+    """Get the receiving_time (global time) for the first mail record associated with a company"""
+    # Try to get the first mail record for the given company_id
+    mail = db.query(Mail).filter(Mail.company_id == company_id).first()
+
+    if mail:
+        # If a mail record is found, return the receiving_time
+        return mail.receiving_time.strftime("%H:%M")
+    
+    # If no mail record is found, return default time
+    return "10:45"
 
 

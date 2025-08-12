@@ -41,7 +41,7 @@ import {
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
 
-import { API_URL_Local } from "../constants"; // Import API base URL
+import apiClient from "../api/axiosConfig"; // Import the consistent API client
 
 // Interfaces
 interface ScheduledEmail {
@@ -97,8 +97,183 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
   const [selectAll, setSelectAll] = useState(false);
   const [globalScheduledTime, setGlobalScheduledTime] = useState("10:45");
   const [localError, setLocalError] = useState<string | null>(null);
+  const [setGlobalTimeLoading, setSetGlobalTimeLoading] = useState(false);
+  const [fetchingGlobalTime, setFetchingGlobalTime] = useState(false);
 
-  // Email Scheduler functions
+  // API function to get global time
+  const fetchGlobalTimeAPI = async (companyId: string) => {
+    try {
+      console.log(
+        "🕐 Fetching global time via apiClient for company:",
+        companyId
+      );
+
+      const response = await apiClient.get(`/mails/globaltime/${companyId}`);
+      console.log("✅ Global time fetched:", response.data);
+
+      return response.data; // This should be a string like "11:30"
+    } catch (error: any) {
+      console.error("❌ Error fetching global time via apiClient:", error);
+
+      // Handle axios error response
+      if (error.response) {
+        if (error.response.status === 404) {
+          console.log("ℹ️ No global time set for this company, using default");
+          return null; // No global time set, will use default
+        }
+        throw new Error(
+          error.response.data?.detail ||
+            `HTTP error! status: ${error.response.status}`
+        );
+      } else if (error.request) {
+        throw new Error(
+          "No response from server. Please check if the backend is running."
+        );
+      } else {
+        throw new Error(error.message || "Unknown error occurred");
+      }
+    }
+  };
+
+  // Function to fetch and set global time
+  const fetchAndSetGlobalTime = async (companyId: string) => {
+    if (!companyId) {
+      console.log("⚠️ No company ID provided, skipping global time fetch");
+      return;
+    }
+
+    setFetchingGlobalTime(true);
+    try {
+      const globalTime = await fetchGlobalTimeAPI(companyId);
+
+      if (globalTime) {
+        console.log("🕐 Setting global time from API:", globalTime);
+        setGlobalScheduledTime(globalTime);
+      } else {
+        console.log(
+          "🕐 No global time returned, keeping default:",
+          globalScheduledTime
+        );
+      }
+    } catch (error: any) {
+      console.error("❌ Error fetching global time:", error);
+      // Don't show error to user for this non-critical operation
+      // Just keep the default time
+      console.log("🕐 Using default time due to error:", globalScheduledTime);
+    } finally {
+      setFetchingGlobalTime(false);
+    }
+  };
+
+  // API function to set global time using apiClient
+  const setGlobalTimeAPI = async (companyId: string, globalTime: string) => {
+    try {
+      console.log("🌐 Setting global time via apiClient:", {
+        companyId,
+        globalTime,
+        endpoint: "/mails/set_global_time",
+      });
+
+      const response = await apiClient.post("/mails/set_global_time", {
+        company_id: parseInt(companyId),
+        global_time: globalTime,
+      });
+
+      console.log("✅ Global time API response:", response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ Error setting global time via apiClient:", error);
+
+      // Handle axios error response
+      if (error.response) {
+        throw new Error(
+          error.response.data?.detail ||
+            `HTTP error! status: ${error.response.status}`
+        );
+      } else if (error.request) {
+        throw new Error(
+          "No response from server. Please check if the backend is running."
+        );
+      } else {
+        throw new Error(error.message || "Unknown error occurred");
+      }
+    }
+  };
+
+  // Handle get global time button click
+  const handleGetGlobalTime = async () => {
+    if (selectedCompanies.length === 0) {
+      setLocalError("Please select a company first");
+      return;
+    }
+
+    try {
+      setLocalError(null);
+      await fetchAndSetGlobalTime(selectedCompanies[0]);
+
+      // Show success message
+      console.log("✅ Global time fetched successfully via button click");
+    } catch (error: any) {
+      console.error("❌ Error fetching global time via button:", error);
+      setLocalError(`Failed to fetch global time: ${error.message}`);
+    }
+  };
+
+  // Handle set global time
+  const handleSetGlobalTime = async () => {
+    if (selectedCompanies.length === 0) {
+      setLocalError("Please select a company first");
+      return;
+    }
+
+    if (!globalScheduledTime) {
+      setLocalError("Please set a global time");
+      return;
+    }
+
+    try {
+      setSetGlobalTimeLoading(true);
+      setLocalError(null);
+
+      const result = await setGlobalTimeAPI(
+        selectedCompanies[0],
+        globalScheduledTime
+      );
+
+      // Show success message with the returned global time
+      alert(
+        `${result.message}\nReturned Global Time: ${result.global_time}\nYour Role: ${result.user_role}`
+      );
+
+      // Update the UI with the returned time from the API (11:30)
+      setGlobalScheduledTime(result.global_time);
+
+      console.log("Global time set successfully:", result);
+
+      // 🔄 REFRESH: Automatically fetch scheduled emails to show updated times
+      console.log(
+        "🔄 Refreshing scheduled emails after setting global time..."
+      );
+      await fetchScheduledEmails();
+      console.log("✅ Scheduled emails refreshed successfully");
+    } catch (error: any) {
+      // Handle permission denied or other errors
+      if (
+        error.message.includes("not allowed to set") ||
+        error.message.includes("Permission denied")
+      ) {
+        setLocalError(
+          "Access denied: You don't have permission to set global time. Only superuser or admin can perform this action."
+        );
+      } else {
+        setLocalError(`Failed to set global time: ${error.message}`);
+      }
+    } finally {
+      setSetGlobalTimeLoading(false);
+    }
+  };
+
+  // Email Scheduler functions using apiClient
   const fetchScheduledEmails = async () => {
     if (selectedCompanies.length === 0) {
       setLocalError("Please select a company first");
@@ -108,15 +283,34 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
     setEmailSchedulerLoading(true);
     try {
       const companyId = selectedCompanies[0];
-      const response = await fetch(`${API_URL_Local}/mails/${companyId}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const emails: ScheduledEmail[] = await response.json();
+      console.log(
+        "📧 Fetching scheduled emails via apiClient for company:",
+        companyId
+      );
+
+      const response = await apiClient.get(`/mails/${companyId}`);
+      console.log("✅ Scheduled emails fetched:", response.data);
+
+      const emails: ScheduledEmail[] = response.data;
       setScheduledEmails(emails);
-    } catch (err) {
-      console.error("Error fetching scheduled emails:", err);
-      setLocalError("Failed to fetch scheduled emails");
+    } catch (err: any) {
+      console.error("❌ Error fetching scheduled emails via apiClient:", err);
+
+      let errorMessage = "Failed to fetch scheduled emails";
+      if (err.response) {
+        if (err.response.status === 401) {
+          errorMessage = "Authentication failed. Please log in again.";
+        } else {
+          errorMessage = `Server error: ${
+            err.response.data?.detail || err.response.status
+          }`;
+        }
+      } else if (err.request) {
+        errorMessage =
+          "No response from server. Please check if the backend is running.";
+      }
+
+      setLocalError(errorMessage);
     } finally {
       setEmailSchedulerLoading(false);
     }
@@ -132,22 +326,27 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
     }
 
     try {
-      const response = await fetch(
-        `${API_URL_Local}/mails/deleteschedule/${email}`,
-        {
-          method: "DELETE",
-        }
-      );
+      console.log("🗑️ Deleting scheduled email via apiClient:", email);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      await apiClient.delete(`/mails/deleteschedule/${email}`);
+      console.log("✅ Scheduled email deleted successfully");
 
       // Refresh the list
       await fetchScheduledEmails();
-    } catch (err) {
-      console.error("Error deleting scheduled email:", err);
-      setLocalError("Failed to delete scheduled email");
+    } catch (err: any) {
+      console.error("❌ Error deleting scheduled email via apiClient:", err);
+
+      let errorMessage = "Failed to delete scheduled email";
+      if (err.response) {
+        errorMessage = `Server error: ${
+          err.response.data?.detail || err.response.status
+        }`;
+      } else if (err.request) {
+        errorMessage =
+          "No response from server. Please check if the backend is running.";
+      }
+
+      setLocalError(errorMessage);
     }
   };
 
@@ -165,44 +364,52 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
         ...updatedData,
       };
 
-      const updateUrl = `${API_URL_Local}/mails/updatemail/${mailId}`;
-      console.log("Update URL:", updateUrl);
-      console.log("Request Body:", requestBody);
-
-      const response = await fetch(updateUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
+      console.log("✏️ Updating scheduled email via apiClient:", {
+        mailId,
+        requestBody,
       });
 
-      if (!response.ok) {
-        console.error("Response status:", response.status);
-        console.error("Response statusText:", response.statusText);
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      const response = await apiClient.put(
+        `/mails/updatemail/${mailId}`,
+        requestBody
+      );
+      console.log("✅ Scheduled email updated successfully:", response.data);
 
       // Refresh the list
       await fetchScheduledEmails();
       setEditEmailDialog({ open: false, email: null });
-    } catch (err) {
-      console.error("Error updating scheduled email:", err);
-      setLocalError("Failed to update scheduled email");
+    } catch (err: any) {
+      console.error("❌ Error updating scheduled email via apiClient:", err);
+
+      let errorMessage = "Failed to update scheduled email";
+      if (err.response) {
+        errorMessage = `Server error: ${
+          err.response.data?.detail || err.response.status
+        }`;
+      } else if (err.request) {
+        errorMessage =
+          "No response from server. Please check if the backend is running.";
+      }
+
+      setLocalError(errorMessage);
     }
   };
 
-  // Create Mails functions
+  // Create Mails functions using apiClient
   const fetchEmailsList = async (companyId: string) => {
     setCreateMailsLoading(true);
     try {
-      const response = await fetch(
-        `${API_URL_Local}/mails/remainingmails/${companyId}`
+      console.log(
+        "📋 Fetching emails list via apiClient for company:",
+        companyId
       );
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const emails: string[] = await response.json();
+
+      const response = await apiClient.get(
+        `/mails/remainingmails/${companyId}`
+      );
+      console.log("✅ Emails list fetched:", response.data);
+
+      const emails: string[] = response.data;
       setEmailsList(emails);
 
       // Initialize email list items WITHOUT individual time fields
@@ -213,9 +420,20 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
         nameMode: "auto",
       }));
       setEmailListItems(items);
-    } catch (err) {
-      console.error("Error fetching emails list:", err);
-      setLocalError("Failed to fetch emails list");
+    } catch (err: any) {
+      console.error("❌ Error fetching emails list via apiClient:", err);
+
+      let errorMessage = "Failed to fetch emails list";
+      if (err.response) {
+        errorMessage = `Server error: ${
+          err.response.data?.detail || err.response.status
+        }`;
+      } else if (err.request) {
+        errorMessage =
+          "No response from server. Please check if the backend is running.";
+      }
+
+      setLocalError(errorMessage);
     } finally {
       setCreateMailsLoading(false);
     }
@@ -325,31 +543,16 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
         company_id: parseInt(companyId), // Convert to integer as expected by backend
       }));
 
-      console.log("=== CREATE MAILS REQUEST ===");
-      console.log("URL:", `${API_URL_Local}/mails/createmails`);
+      console.log("=== CREATE MAILS REQUEST VIA APICLIENT ===");
+      console.log("Endpoint: /mails/createmails");
       console.log("Request Body:", JSON.stringify(mailsData, null, 2));
       console.log("Company ID:", companyId);
       console.log("Global Scheduled Time Applied:", globalScheduledTime);
 
-      const response = await fetch(`${API_URL_Local}/mails/createmails`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(mailsData),
-      });
+      const response = await apiClient.post("/mails/createmails", mailsData);
 
-      console.log("=== CREATE MAILS RESPONSE ===");
-      console.log("Response Status:", response.status);
-      console.log("Response StatusText:", response.statusText);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      // Log response body
-      const responseData = await response.json();
-      console.log("Response Body:", responseData);
+      console.log("=== CREATE MAILS RESPONSE VIA APICLIENT ===");
+      console.log("Response Data:", response.data);
 
       // Success
       setCreateMailsDialog(false);
@@ -362,11 +565,30 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
       await fetchScheduledEmails();
 
       alert(
-        `Successfully created ${selectedItems.length} scheduled emails at ${globalScheduledTime} for company ${getCompanyName(companyId)}!`
+        `Successfully created ${
+          selectedItems.length
+        } scheduled emails at ${globalScheduledTime} for company ${getCompanyName(
+          companyId
+        )}!`
       );
-    } catch (err) {
-      console.error("Error creating mails:", err);
-      setLocalError("Failed to create scheduled emails");
+    } catch (err: any) {
+      console.error("❌ Error creating mails via apiClient:", err);
+
+      let errorMessage = "Failed to create scheduled emails";
+      if (err.response) {
+        if (err.response.status === 401) {
+          errorMessage = "Authentication failed. Please log in again.";
+        } else {
+          errorMessage = `Server error: ${
+            err.response.data?.detail || err.response.status
+          }`;
+        }
+      } else if (err.request) {
+        errorMessage =
+          "No response from server. Please check if the backend is running.";
+      }
+
+      setLocalError(errorMessage);
     } finally {
       setCreateMailsLoading(false);
     }
@@ -378,6 +600,20 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
       fetchScheduledEmails();
     }
   }, [open, selectedCompanies]);
+
+  // Fetch global time when dialog opens or company changes
+  useEffect(() => {
+    if (open && selectedCompanies.length > 0) {
+      fetchAndSetGlobalTime(selectedCompanies[0]);
+    }
+  }, [open, selectedCompanies]);
+
+  // Also fetch global time when create mails dialog opens
+  useEffect(() => {
+    if (createMailsDialog && selectedCompanies.length > 0) {
+      fetchAndSetGlobalTime(selectedCompanies[0]);
+    }
+  }, [createMailsDialog, selectedCompanies]);
 
   // Reset states when dialog closes
   const handleClose = () => {
@@ -527,7 +763,7 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
               color="secondary"
               disabled={selectedCompanies.length === 0}
             >
-              Create New Mails
+              Create New Mails / Set Global Time
             </Button>
             <Box sx={{ display: "flex", gap: 1 }}>
               <Button onClick={handleClose} variant="outlined">
@@ -600,7 +836,7 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
             </Box>
           ) : (
             <Box>
-              {/* Global Time Scheduler Section */}
+              {/* Enhanced Global Time Scheduler Section */}
               <Box
                 sx={{
                   mb: 3,
@@ -621,9 +857,16 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
                   }}
                 >
                   <AccessTimeIcon color="primary" />
-                  Global Scheduled Time
+                  Global Scheduled Time Management
                 </Typography>
-                <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 2,
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
                   <TextField
                     label="Scheduled Time"
                     type="time"
@@ -635,12 +878,82 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
                       shrink: true,
                     }}
                     helperText="This time will be applied to all selected emails"
+                    disabled={fetchingGlobalTime}
+                    InputProps={{
+                      endAdornment: fetchingGlobalTime ? (
+                        <CircularProgress size={16} sx={{ mr: 1 }} />
+                      ) : null,
+                    }}
                   />
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    onClick={handleGetGlobalTime}
+                    disabled={
+                      fetchingGlobalTime || selectedCompanies.length === 0
+                    }
+                    startIcon={
+                      fetchingGlobalTime ? (
+                        <CircularProgress size={16} />
+                      ) : (
+                        <RefreshIcon />
+                      )
+                    }
+                    sx={{ minWidth: 140 }}
+                  >
+                    {fetchingGlobalTime ? "Fetching..." : "Get Global Time"}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    onClick={handleSetGlobalTime}
+                    disabled={
+                      setGlobalTimeLoading ||
+                      selectedCompanies.length === 0 ||
+                      !globalScheduledTime
+                    }
+                    startIcon={
+                      setGlobalTimeLoading ? (
+                        <CircularProgress size={16} />
+                      ) : (
+                        <AccessTimeIcon />
+                      )
+                    }
+                    sx={{ minWidth: 120 }}
+                  >
+                    {setGlobalTimeLoading ? "Setting..." : "Set Global Time"}
+                  </Button>
                   <Typography variant="body2" color="text.secondary">
-                    All selected emails will be scheduled at{" "}
-                    <strong>{globalScheduledTime}</strong>
+                    Current time: <strong>{globalScheduledTime}</strong>
+                    {selectedCompanies.length > 0 && (
+                      <>
+                        {" "}
+                        for{" "}
+                        <strong>{getCompanyName(selectedCompanies[0])}</strong>
+                      </>
+                    )}
+                    {fetchingGlobalTime && (
+                      <>
+                        {" "}
+                        <em>(loading...)</em>
+                      </>
+                    )}
                   </Typography>
                 </Box>
+                <Typography
+                  variant="caption"
+                  color="primary"
+                  sx={{ mt: 1, display: "block" }}
+                >
+                  💡 Click "Get Global Time" to fetch current time | Only
+                  superusers and admins can set global time
+                  {fetchingGlobalTime && (
+                    <>
+                      <br />
+                      🕐 Fetching current global time from server...
+                    </>
+                  )}
+                </Typography>
               </Box>
 
               {/* Add Custom Email Section */}
@@ -903,16 +1216,17 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
               <TextField
                 fullWidth
                 label="Receiving Time"
-                type="time"
-                defaultValue={formatTimeToHHMM(
-                  editEmailDialog.email.receiving_time
-                )}
+                value={formatTimeToHHMM(editEmailDialog.email.receiving_time)}
                 sx={{ mb: 2 }}
                 id="edit-receiving-time"
-                helperText="Format: HH:MM (24-hour format)"
+                helperText="Time cannot be edited. Use 'Set Global Time' to change scheduled times."
+                InputProps={{
+                  readOnly: true,
+                }}
                 InputLabelProps={{
                   shrink: true,
                 }}
+                disabled
               />
             </Box>
           )}
@@ -933,21 +1247,12 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
                 const emailInput = document.getElementById(
                   "edit-receiver-email"
                 ) as HTMLInputElement;
-                const timeInput = document.getElementById(
-                  "edit-receiving-time"
-                ) as HTMLInputElement;
 
-                // Convert HH:MM to HH:MM:SS format if needed
-                const timeValue = timeInput.value;
-                const formattedTime =
-                  timeValue.includes(":") && timeValue.split(":").length === 2
-                    ? `${timeValue}:00`
-                    : timeValue;
-
+                // Only update name and email, keep the original time
                 const updatedData = {
                   receiver_name: nameInput.value,
                   receiver_email: emailInput.value,
-                  receiving_time: formattedTime,
+                  receiving_time: editEmailDialog.email.receiving_time, // Keep original time
                 };
 
                 handleUpdateScheduledEmail(

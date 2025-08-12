@@ -560,163 +560,6 @@ def create_new_order_items(
 
 
 
-# @router.post("/orderitems")
-# def create_new_order_items(
-#     request: OrderItemsRequest,
-#     background_tasks: BackgroundTasks,
-#     db: Session = Depends(get_db),
-#     current_user: User = Depends(get_current_active_user),
-# ):
-#     """Create new store orders entry every time"""
-#     print("Received request to create new order:", request.model_dump())
-#     print("dates", request.start_date, request.end_date)
-
-#     try:
-#         # Query and print first email entry for this company
-#         first_company_email = db.query(Mail).filter(Mail.company_id == request.company_id).first()
-        
-#         # Extract global time from the first email entry
-#         global_time = None
-#         if first_company_email and first_company_email.receiving_time:
-#             global_time = first_company_email.receiving_time
-#             print(f"\n=== GLOBAL TIME SET FROM COMPANY EMAIL ===")
-#             print(f"Global time extracted: {global_time}")
-        
-#         print(f"\n=== FIRST EMAIL ENTRY FOR COMPANY ID {request.company_id} ===")
-#         if first_company_email:
-#             print(f"Found first email for company ID {request.company_id}:")
-#             print(f"  - ID: {first_company_email.id}")
-#             print(f"    Receiver Name: {first_company_email.receiver_name}")
-#             print(f"    Receiver Email: {first_company_email.receiver_email}")
-#             print(f"    Receiving Time: {first_company_email.receiving_time}")
-#             print(f"    Company ID: {first_company_email.company_id}")
-#         else:
-#             print(f"No email entries found for company ID {request.company_id}")
-#         print("=" * 50 + "\n")
-
-#         # Default created_at is the order_date or current time
-#         order_date = pd.to_datetime(request.order_date).replace(tzinfo=None) if request.order_date else datetime.utcnow()
-#         created_at = order_date  # default
-
-#         # Handle start_date logic first
-#         if request.start_date:
-#             # Convert start_date to date and combine with order time
-#             start_date_only = pd.to_datetime(request.start_date).date()
-#             order_time = order_date.time()
-#             start_date_with_time = datetime.combine(start_date_only, order_time)
-
-#             print("Computed start_date_with_time:", start_date_with_time)
-#             print("Order date:", order_date)
-
-#             if order_date > start_date_with_time:
-#                 raise HTTPException(
-#                     status_code=400,
-#                     detail=f"Order date {order_date.isoformat()} is before allowed start date {start_date_with_time.isoformat()}"
-#                 )
-#             else:
-#                 created_at = start_date_with_time
-
-#         # NOW check if this is a future order and adjust time if global_time exists
-#         current_time = datetime.utcnow()
-#         is_future_order = created_at > current_time
-        
-#         if is_future_order and global_time:
-#             print(f"\n=== FUTURE ORDER DETECTED ===")
-#             print(f"Final calculated order time: {created_at}")
-#             print(f"Current time: {current_time}")
-#             print(f"Global time from email: {global_time}")
-            
-#             # Convert global_time to datetime for calculation (using the created_at date)
-#             global_datetime = datetime.combine(created_at.date(), global_time)
-            
-#             # Calculate one hour before global time
-#             adjusted_time = global_datetime - timedelta(hours=1)
-            
-#             print(f"Original scheduled time would be: {created_at}")
-#             print(f"Adjusted time (global_time - 1 hour): {adjusted_time}")
-            
-#             # Update created_at to the adjusted time
-#             created_at = adjusted_time
-#             print(f"Final order time set to: {created_at}")
-#             print("=" * 50 + "\n")
-#         elif is_future_order:
-#             print(f"\n=== FUTURE ORDER DETECTED BUT NO GLOBAL TIME ===")
-#             print(f"Future order detected but no global time available from emails")
-#             print(f"Final order time: {created_at}")
-#             print("=" * 50 + "\n")
-
-#         # Prepare the items_ordered data
-#         items_ordered_data = {
-#             "total_items": len(request.items),
-#             "items": request.items,
-#         }
-
-#         # Create store order entry
-#         create_obj = storeorders_schema.StoreOrdersCreate(
-#             company_id=request.company_id,
-#             location_id=request.location_id,
-#             created_at=created_at.isoformat(),
-#             items_ordered=items_ordered_data
-#         )
-
-#         print(f"Creating new store items ordered with data: {items_ordered_data}")
-#         new_order = storeorders_crud.create_storeorders(db, create_obj)
-
-#         # Modified: Send production requirements email instead of order confirmation
-#         if request.email_order:
-#             user_details = get_user(db, current_user.id)
-#             if user_details and user_details.email:
-#                 # Check if email is being sent after global time
-#                 current_time_for_email = datetime.utcnow()
-#                 is_email_after_global_time = False
-#                 order_id_to_send = None
-                
-#                 if global_time:
-#                     # Get today's date to combine with global_time
-#                     today = current_time_for_email.date()
-#                     global_datetime_today = datetime.combine(today, global_time)
-                    
-#                     if current_time_for_email > global_datetime_today:
-#                         is_email_after_global_time = True
-#                         order_id_to_send = new_order.id
-#                         print(f"Email being sent after global time. Order ID {new_order.id} will be specially highlighted.")
-                
-#                 background_tasks.add_task(
-    
-    
-#                     send_production,
-#                     user_details.email,
-#                     user_details.first_name,
-#                     request.company_id,
-#                     False,  # is_update = False (this is for general updates, not new orders)
-#                     is_email_after_global_time,  # is_email_update = True if email sent after global time
-#                     order_id_to_send  # recent_order_id = order ID if email sent after global time
-#                 )
-#                 print(f"Production requirements email queued for {user_details.email} (email after global time: {is_email_after_global_time}, order ID: {order_id_to_send})")
-#             else:
-#                 print("Warning: Could not find user email for production requirements")
-
-#         return {
-#             "message": "New store orders created successfully",
-#             "store_orders_id": new_order.id,
-#             "received_data": request.model_dump(),
-#             "items_ordered": items_ordered_data,
-#             "created_at": new_order.created_at.isoformat(),
-#             "global_time": str(global_time) if global_time else None,
-#             "is_future_order": is_future_order,
-#             "adjusted_time_applied": is_future_order and global_time is not None
-#         }
-
-#     except HTTPException as http_exc:
-#         raise http_exc  # re-raise expected errors
-
-#     except Exception as e:
-#         print(f"Error creating new order: {str(e)}")
-#         import traceback
-#         print(traceback.format_exc())
-#         raise HTTPException(status_code=500, detail=f"Error creating order: {str(e)}")
-
-
 
 
 # Updated router endpoint
@@ -838,7 +681,118 @@ def get_recent_storeorders_details_by_location(
     }
 
 
-# Updated function to update order by ID
+# # Updated function to update order by ID
+# @router.post("/orderupdate")
+# def update_storeorders_by_id(
+#     request: UpdateStoreOrdersRequest,
+#     background_tasks: BackgroundTasks,
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(get_current_active_user),
+# ):
+#     """Update items_ordered for a specific store orders record by ID"""
+
+#     print(f"Received request to update store order request.order_id:", request.model_dump(), "date:", request.updated_date)
+#     try:
+#         # First, check if the order exists
+#         existing_order = storeorders_crud.get_storeorders(db, request.order_id)
+#         print(f"Checking existing order with ID:", existing_order)    
+        
+        
+#         if not existing_order:
+#             raise HTTPException(
+#                 status_code=404, 
+#                 detail=f"Store order with ID {request.order_id} not found"
+#             )
+
+#         # Optional: Verify that the order belongs to the specified company and location
+#         if existing_order.company_id != request.company_id or existing_order.location_id != request.location_id:
+#             raise HTTPException(
+#                 status_code=400,
+#                 detail=f"Order ID {request.order_id} does not belong to company {request.company_id} and location {request.location_id}"
+#             )
+        
+#         print(f"Found existing order with ID: {existing_order.id}")
+#         print(f"Current items_ordered: {existing_order.items_ordered}")
+        
+        
+#         # Prepare the items_ordered data
+#         new_items_ordered_data = {
+#             "total_items": len(request.items),
+#             "items": request.items,
+#         }
+#         print(f"New items_ordered: {new_items_ordered_data}")
+        
+#         # Create update object
+#         update_obj = storeorders_schema.StoreOrdersUpdate(items_ordered=new_items_ordered_data)
+
+#         # updated_at_date = request.updated_date if request.updated_date else datetime.utcnow().isoformat()
+        
+#         if request.updated_date:
+#             # Remove 'Z' and convert
+#             updated_at_date = datetime.fromisoformat(request.updated_date.rstrip('Z'))
+#         else:
+#             updated_at_date = datetime.utcnow()
+#         # Update by order ID (this will automatically move current to prev and set new items)
+#         updated_storeorders = storeorders_crud.update_storeorders(db, request.order_id, update_obj, updated_at_date=updated_at_date)
+
+#         if not updated_storeorders:
+#             raise HTTPException(status_code=500, detail="Failed to update store order")
+            
+#         print("Successfully updated store order in database")
+#         print(f"New items_ordered: {updated_storeorders.items_ordered}")
+#         print(f"Previous items_ordered: {updated_storeorders.prev_items_ordered}")
+        
+#         # Handle email notification AFTER successful update
+#         if request.email_order:
+#             company_id = request.company_id
+#             current_user_id = current_user.id   
+#             print("Email order is enabled. Company ID:", company_id, "Current User ID:", current_user_id)
+            
+#             # Get user details from user ID
+#             user_details = get_user(db, current_user_id)
+            
+#             if user_details and user_details.email:
+#                 # Send order confirmation email in background
+#                 background_tasks.add_task(
+#                     send_order_confirmation_email,
+#                     user_details.email,
+#                     user_details.first_name,
+#                     updated_storeorders.id,  # Use the order ID instead of new_items_ordered_data
+#                     new_items_ordered_data,
+#                     updated_storeorders.updated_at,  # Use updated_at instead of created_at
+#                     True
+#                 )
+#                 print(f"Order confirmation email queued for {user_details.email}")
+#             else:
+#                 print("Warning: Could not find user email for order confirmation")
+        
+#         # Return the response
+#         return {
+#             "status": "success", 
+#             "message": f"Store order {request.order_id} updated successfully",
+#             "order_id": updated_storeorders.id,
+#             "company_id": updated_storeorders.company_id,
+#             "location_id": updated_storeorders.location_id,
+#             "updated_at": updated_storeorders.updated_at.isoformat() if updated_storeorders.updated_at else None,
+#             "created_at": updated_storeorders.created_at.isoformat() if updated_storeorders.created_at else None,
+#             "items_ordered": updated_storeorders.items_ordered,
+#             "prev_items_ordered": updated_storeorders.prev_items_ordered,
+#             "update_summary": {
+#                 "previous_items_preserved": True if updated_storeorders.prev_items_ordered else False,
+#                 # "new_items_count": len(request.items_ordered.get('items', [])) if 'items' in request.items_ordered else 0
+#             }
+#         }
+        
+#     except HTTPException:
+#         # Re-raise HTTP exceptions as-is
+#         raise
+#     except Exception as e:
+#         print(f"Error in update_storeorders_by_id: {str(e)}")
+#         print(traceback.format_exc())
+#         raise HTTPException(status_code=500, detail=f"Error updating store order: {str(e)}")
+    
+
+# Updated function to update order by ID - Modified to use send_production
 @router.post("/orderupdate")
 def update_storeorders_by_id(
     request: UpdateStoreOrdersRequest,
@@ -899,29 +853,54 @@ def update_storeorders_by_id(
         print(f"New items_ordered: {updated_storeorders.items_ordered}")
         print(f"Previous items_ordered: {updated_storeorders.prev_items_ordered}")
         
-        # Handle email notification AFTER successful update
+        # Handle email notification AFTER successful update - Modified to use send_production
         if request.email_order:
             company_id = request.company_id
             current_user_id = current_user.id   
             print("Email order is enabled. Company ID:", company_id, "Current User ID:", current_user_id)
             
+            # Query and get user emails for this company (similar to create function)
+            users_mails = db.query(Mail).filter(Mail.company_id == request.company_id).all()
+            user_emails = [mail.receiver_email for mail in users_mails]
+            print(f"User emails for company_ID {user_emails}")
+            
+            # Query global time from first email entry for this company
+            first_company_email = db.query(Mail).filter(Mail.company_id == request.company_id).first()
+            global_time = None
+            if first_company_email and first_company_email.receiving_time:
+                global_time = first_company_email.receiving_time
+                print(f"Global time extracted: {global_time}")
+            
             # Get user details from user ID
             user_details = get_user(db, current_user_id)
             
             if user_details and user_details.email:
-                # Send order confirmation email in background
+                # Check if email is being sent after global time (similar to create function)
+                current_time_for_email = datetime.utcnow()
+                is_email_after_global_time = False
+                
+                if global_time:
+                    # Get today's date to combine with global_time
+                    today = current_time_for_email.date()
+                    global_datetime_today = datetime.combine(today, global_time)
+                    
+                    if current_time_for_email > global_datetime_today:
+                        is_email_after_global_time = True
+                        print(f"Email being sent after global time. Order ID {updated_storeorders.id} will be specially highlighted.")
+                
+                # Send production requirements email using send_production
                 background_tasks.add_task(
-                    send_order_confirmation_email,
-                    user_details.email,
+                    send_production,
+                    user_emails,
                     user_details.first_name,
-                    updated_storeorders.id,  # Use the order ID instead of new_items_ordered_data
-                    new_items_ordered_data,
-                    updated_storeorders.updated_at,  # Use updated_at instead of created_at
-                    True
+                    request.company_id,
+                    True,  # is_update = True (this is an order update)
+                    is_email_after_global_time,  # is_email_update = True if email sent after global time
+                    updated_storeorders.id  
                 )
-                print(f"Order confirmation email queued for {user_details.email}")
+                print(f"Production requirements email queued for {user_emails} (email after global time: {is_email_after_global_time}, order ID: {updated_storeorders.id})")
             else:
-                print("Warning: Could not find user email for order confirmation")
+                print("Warning: Could not find user email for production requirements")
         
         # Return the response
         return {
@@ -934,6 +913,8 @@ def update_storeorders_by_id(
             "created_at": updated_storeorders.created_at.isoformat() if updated_storeorders.created_at else None,
             "items_ordered": updated_storeorders.items_ordered,
             "prev_items_ordered": updated_storeorders.prev_items_ordered,
+            "global_time": str(global_time) if global_time else None,
+            "is_email_after_global_time": is_email_after_global_time if request.email_order else None,
             "update_summary": {
                 "previous_items_preserved": True if updated_storeorders.prev_items_ordered else False,
                 # "new_items_count": len(request.items_ordered.get('items', [])) if 'items' in request.items_ordered else 0
@@ -947,9 +928,6 @@ def update_storeorders_by_id(
         print(f"Error in update_storeorders_by_id: {str(e)}")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error updating store order: {str(e)}")
-    
-
-
 
 @router.get("/analytics/{company_id}/{location_id}")
 def get_avg_daily_orders(
