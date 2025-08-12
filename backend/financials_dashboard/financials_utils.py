@@ -1956,7 +1956,6 @@ def avg_ticket_by_day(df, df_budget, store='All', start_date=None, end_date=None
 
 def kpi_vs_budget(df, df_budget, store='All', start_date=None, end_date=None):
     import pandas as pd
-    import numpy as np
     from datetime import timedelta
 
     # Work on copies to avoid mutating inputs

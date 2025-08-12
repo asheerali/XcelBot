@@ -1124,8 +1124,6 @@ def send_actual_email(to: str, name: str, company_id: int = None):
         
         
 
-
-
 # def send_production(to: Union[str, List[str]], name: str, company_id: int = None, is_update: bool = False, is_email_update: bool = False, recent_order_id: int = None):
 #     """
 #     Send production requirements email with attachments
@@ -1294,18 +1292,16 @@ def send_actual_email(to: str, name: str, company_id: int = None):
 #                             item_name = worksheet.cell(row=row_num, column=item_name_col).value
 #                             item_name_str = str(item_name)
 #                             is_current_order_item = item_name_str in current_order_items
-#                             is_recent_item = item_name_str in recent_order_items and not is_current_order_item
+#                             # Recent items include ALL items ordered after global time (including current order)
+#                             is_recent_item = item_name_str in recent_order_items
                         
 #                         for col_num, column in enumerate(df.columns, 1):
 #                             cell = worksheet.cell(row=row_num, column=col_num)
 #                             cell.border = thin_border
 #                             cell.alignment = Alignment(horizontal="center", vertical="center")
                             
-#                             # Priority: Current order > Recent orders > Total columns > Positive values
-#                             if is_current_order_item:
-#                                 cell.fill = current_order_fill
-#                                 cell.font = Font(bold=True, color="990000")  # Dark red bold text
-#                             elif is_recent_item:
+#                             # Apply base effects first: 1) Recent orders (red), 2) Totals (green), 3) Positive values (yellow)
+#                             if is_recent_item:
 #                                 cell.fill = recent_order_fill
 #                                 cell.font = Font(bold=True, color="CC0000")  # Red bold text
 #                             elif 'total' in column.lower() or 'required' in column.lower():
@@ -1314,6 +1310,25 @@ def send_actual_email(to: str, name: str, company_id: int = None):
 #                             elif ('total' not in column.lower() and 'required' not in column.lower() 
 #                                 and isinstance(cell.value, (int, float)) and cell.value > 0):
 #                                 cell.fill = highlight_fill
+                            
+#                             # Final layer: Apply bold border and underline for current order items (keep existing formatting)
+#                             if is_current_order_item:
+#                                 # Keep existing font but add underline
+#                                 current_font = cell.font
+#                                 cell.font = Font(
+#                                     bold=current_font.bold,
+#                                     color=current_font.color,
+#                                     italic=False,  # No italic
+#                                     underline='single'
+#                                 )
+#                                 # Add medium border for current order items
+#                                 medium_border = Border(
+#                                     left=Side(style='medium'),
+#                                     right=Side(style='medium'),
+#                                     top=Side(style='medium'),
+#                                     bottom=Side(style='medium')
+#                                 )
+#                                 cell.border = medium_border
                     
 #                     # Auto-adjust column widths
 #                     for column in worksheet.columns:
@@ -1478,12 +1493,11 @@ def send_actual_email(to: str, name: str, company_id: int = None):
 #                     item_name = list(item.values())[item_name_col] if item_name_col < len(item) else None
 #                     item_name_str = str(item_name)
 #                     is_current_order_item = item_name_str in current_order_items
-#                     is_recent_item = item_name_str in recent_order_items and not is_current_order_item
+#                     # Recent items include ALL items ordered after global time (including current order)
+#                     is_recent_item = item_name_str in recent_order_items
                 
 #                 # Alternate row colors for better readability, with special highlighting for orders
-#                 if is_current_order_item:
-#                     row_bg = "#ff9999"  # Darker red for current order
-#                 elif is_recent_item:
+#                 if is_recent_item:
 #                     row_bg = "#ffe6e6"  # Light red for recent orders
 #                 else:
 #                     row_bg = "#f9f9f9" if row_index % 2 == 0 else "#ffffff"
@@ -1493,14 +1507,8 @@ def send_actual_email(to: str, name: str, company_id: int = None):
 #                 for col_index, col in enumerate(columns):
 #                     cell_value = item.get(col, "")
                     
-#                     # Smart styling based on column type and content
-#                     if is_current_order_item and col_index == item_name_col:
-#                         # Current order item name - bold dark red text
-#                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: left; background-color: #ff9999; font-weight: bold; color: #990000;"
-#                     elif is_current_order_item:
-#                         # Current order other columns - bold dark red text
-#                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center; background-color: #ff9999; font-weight: bold; color: #990000;"
-#                     elif is_recent_item and col_index == item_name_col:
+#                     # Apply base effects first: 1) Recent orders (red), 2) Totals (green), 3) Positive values (yellow)
+#                     if is_recent_item and col_index == item_name_col:
 #                         # Recent item name - bold red text
 #                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: left; background-color: #ffe6e6; font-weight: bold; color: #cc0000;"
 #                     elif is_recent_item:
@@ -1528,6 +1536,11 @@ def send_actual_email(to: str, name: str, company_id: int = None):
 #                     else:
 #                         # Default styling
 #                         cell_style = "border: 1px solid #ddd; padding: 12px; text-align: center;"
+                    
+#                     # Final layer: Apply medium border and underline for current order items (keep base effects)
+#                     if is_current_order_item:
+#                         # Add underline and medium border to existing styling
+#                         cell_style += " text-decoration: underline; border: 2px solid #333;"
                     
 #                     table_html += f'<td style="{cell_style}">{cell_value}</td>'
                 
@@ -1613,7 +1626,7 @@ def send_actual_email(to: str, name: str, company_id: int = None):
             
 #             {"<div class='update-notice'><strong>📋 Update Notice:</strong> This is an updated version of the production requirements.</div>" if is_update else ""}
             
-#             {"<div class='update-notice'><strong>🔔 New Orders Alert:</strong> Some items were ordered after the global time and are highlighted in red." + (f" Order ID #{recent_order_id} is highlighted in darker red." if recent_order_id else "") + "</div>" if is_email_update else ""}
+#             {"<div class='update-notice'><strong>🔔 New Orders Alert:</strong> Some items were ordered after the global time and are highlighted in red." + (f" Items from Order ID #{recent_order_id} also have medium borders and underlines." if recent_order_id else "") + "</div>" if is_email_update else ""}
             
 #             <p>{intro_text} Excel and PDF versions are attached to this email for your convenience.</p>
             
@@ -1625,11 +1638,11 @@ def send_actual_email(to: str, name: str, company_id: int = None):
 #                 <p>This report shows the total quantities needed for production across all stores.</p>
 #                 <p><strong>Legend:</strong></p>
 #                 <ul>
-#                     {"<li>🔴 <strong>Dark red highlighted rows:</strong> Items from current order (Order #" + str(recent_order_id) + ")</li>" if recent_order_id else ""}
 #                     <li>🔴 <strong>Red highlighted rows:</strong> Items ordered after global time (recent orders)</li>
 #                     <li>🟡 <strong>Yellow highlighted cells:</strong> Items required by specific stores</li>
 #                     <li>🟢 <strong>Green highlighted columns:</strong> Total/Required quantities</li>
 #                     <li>📊 <strong>Alternating row colors:</strong> For better readability</li>
+#                     {f"<li>🔲 <strong><u>Medium borders and underlined:</u></strong> Items from current order (Order #{recent_order_id})</li>" if recent_order_id else ""}
 #                 </ul>
 #                 <p>This report automatically adapts to your data structure.</p>
                 
@@ -1696,7 +1709,6 @@ def send_actual_email(to: str, name: str, company_id: int = None):
 #         db.close()
 
 
-
 def send_production(to: Union[str, List[str]], name: str, company_id: int = None, is_update: bool = False, is_email_update: bool = False, recent_order_id: int = None):
     """
     Send production requirements email with attachments
@@ -1709,6 +1721,60 @@ def send_production(to: Union[str, List[str]], name: str, company_id: int = None
         is_email_update: Boolean flag to indicate if items were ordered after global time
         recent_order_id: ID of the recent order to highlight (when email sent after global time)
     """
+    
+    def sort_columns_by_location_priority(columns):
+        """
+        Sort columns to put locations in the specified order
+        Returns reordered columns list
+        """
+        # Define location priority order with all variations
+        location_priority = {
+            # Midtown East variations - Priority 1
+            'midtown east': 1, 'Midtown East': 1,
+            # Lenox Hill variations - Priority 2  
+            'lenox hill': 2, 'Lenox Hill': 2, 'lenox hills': 2, 'Lenox Hills': 2,
+            # Hell's Kitchen variations - Priority 3
+            'hells kitchen': 3, 'Hells Kitchen': 3, "hell's kitchen": 3, "Hell's Kitchen": 3,
+            # Union Square variations - Priority 4
+            'union square': 4, 'Union Square': 4, 'Union square': 4,
+            # Flatiron variations - Priority 5
+            'flatiron': 5, 'Flatiron': 5, 'FLATIRON': 5,
+            # Williamsburg variations - Priority 6
+            'williamsburg': 6, 'Williamsburg': 6
+        }
+        
+        def get_column_priority(col):
+            """Get sorting priority for a column"""
+            col_lower = col.lower()
+            
+            # Check if it's a location column (contains 'store', 'location', 'shop' or matches known locations)
+            is_location_col = any(keyword in col_lower for keyword in ['store', 'location', 'shop']) or col in location_priority
+            
+            if not is_location_col:
+                # Non-location columns get priority 0 (first) or 1000 (last) depending on column type
+                if col_lower in ['item', 'item_name', 'name', 'product']:
+                    return (0, col)  # Item columns first
+                elif any(keyword in col_lower for keyword in ['total', 'required', 'sum']):
+                    return (1000, col)  # Total columns last
+                else:
+                    return (999, col)  # Other columns near the end
+            
+            # For location columns, check direct match first
+            if col in location_priority:
+                return (100 + location_priority[col], col)
+            
+            # Check for partial matches in column name
+            for location, priority in location_priority.items():
+                if location.lower() in col_lower:
+                    return (100 + priority, col)
+            
+            # Unknown location gets priority after known locations
+            return (200, col)
+        
+        # Sort columns by priority, then alphabetically within same priority
+        sorted_columns = sorted(columns, key=get_column_priority)
+        return sorted_columns
+    
     db = SessionLocal()
     try:
         # Handle both single email and list of emails
@@ -1743,6 +1809,14 @@ def send_production(to: Union[str, List[str]], name: str, company_id: int = None
         if not data:
             print("WARNING: No production data available")
             return  # Exit early if no data
+        
+        # APPLY COLUMN SORTING HERE - Sort columns by location priority
+        if data and 'data' in data and data['data']:
+            original_columns = data.get('columns', list(data['data'][0].keys()) if data['data'] else [])
+            if original_columns:
+                sorted_columns = sort_columns_by_location_priority(original_columns)
+                data['columns'] = sorted_columns
+                print(f"Columns reordered: {sorted_columns}")
         
         # Get recent orders (after global time) for highlighting
         if global_time:
@@ -1806,8 +1880,16 @@ def send_production(to: Union[str, List[str]], name: str, company_id: int = None
                 return None
             
             try:
-                # Convert data to DataFrame
-                df = pd.DataFrame(data['data'])
+                # Use sorted columns for DataFrame creation
+                columns = data.get('columns', list(data['data'][0].keys()) if data['data'] else [])
+                
+                # Create DataFrame with ordered columns
+                df_data = []
+                for item in data['data']:
+                    ordered_row = {col: item.get(col, "") for col in columns}
+                    df_data.append(ordered_row)
+                
+                df = pd.DataFrame(df_data, columns=columns)
                 
                 # Create Excel file with formatting
                 excel_path = os.path.join(downloads_dir, filename)
@@ -1956,11 +2038,11 @@ def send_production(to: Union[str, List[str]], name: str, company_id: int = None
                 elements.append(subtitle)
                 elements.append(Spacer(1, 20))
                 
-                # Prepare table data
+                # Prepare table data with sorted columns
                 columns = data.get('columns', list(data['data'][0].keys()) if data['data'] else [])
                 table_data = [columns]  # Header row
                 
-                # Add data rows
+                # Add data rows with ordered columns
                 for item in data['data']:
                     row = [str(item.get(col, "")) for col in columns]
                     table_data.append(row)
@@ -2013,16 +2095,16 @@ def send_production(to: Union[str, List[str]], name: str, company_id: int = None
                 print(f"Error creating PDF file: {e}")
                 return None
 
-        # Generate HTML table from the data - DYNAMIC VERSION
+        # Generate HTML table from the data - DYNAMIC VERSION with sorted columns
         def generate_production_table(data):
             if not data or 'data' not in data or not data['data']:
                 return "<p>No production data available.</p>"
             
-            # Get columns dynamically from the data
+            # Get sorted columns from the data
             columns = data.get('columns', [])
             if not columns and data['data']:
-                # If columns not provided, extract from first row
-                columns = list(data['data'][0].keys())
+                # If columns not provided, extract from first row and sort them
+                columns = sort_columns_by_location_priority(list(data['data'][0].keys()))
             
             if not columns:
                 return "<p>No columns found in data.</p>"
@@ -2041,7 +2123,7 @@ def send_production(to: Union[str, List[str]], name: str, company_id: int = None
                     <tr style="background-color: #f8f9fa;">
             """
             
-            # Generate header row dynamically
+            # Generate header row dynamically with sorted columns
             for col in columns:
                 # Special styling for specific column types
                 if 'total' in col.lower() or 'required' in col.lower() or 'sum' in col.lower():
@@ -2057,13 +2139,13 @@ def send_production(to: Union[str, List[str]], name: str, company_id: int = None
                 <tbody>
             """
             
-            # Generate data rows dynamically
+            # Generate data rows dynamically with sorted columns
             for row_index, item in enumerate(data['data']):
                 # Check if this item is a recent order or current order
                 is_recent_item = False
                 is_current_order_item = False
                 if item_name_col is not None and (recent_order_items or current_order_items):
-                    item_name = list(item.values())[item_name_col] if item_name_col < len(item) else None
+                    item_name = list(item.get(col, "") for col in columns)[item_name_col] if item_name_col < len(columns) else None
                     item_name_str = str(item_name)
                     is_current_order_item = item_name_str in current_order_items
                     # Recent items include ALL items ordered after global time (including current order)
@@ -2217,7 +2299,7 @@ def send_production(to: Union[str, List[str]], name: str, company_id: int = None
                     <li>📊 <strong>Alternating row colors:</strong> For better readability</li>
                     {f"<li>🔲 <strong><u>Medium borders and underlined:</u></strong> Items from current order (Order #{recent_order_id})</li>" if recent_order_id else ""}
                 </ul>
-                <p>This report automatically adapts to your data structure.</p>
+                <p>This report automatically adapts to your data structure and orders locations by priority: Midtown East, Lenox Hill, Hell's Kitchen, Union Square, Flatiron, Williamsburg, then others.</p>
                 
                 <p>Regards,<br><strong>KPI360.ai Team</strong></p>
             </div>
@@ -2280,5 +2362,6 @@ def send_production(to: Union[str, List[str]], name: str, company_id: int = None
         print(f"Failed to send production requirements email to {recipient_list if 'recipient_list' in locals() else to}: {e}")
     finally:
         db.close()
+
 
 
