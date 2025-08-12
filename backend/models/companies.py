@@ -21,4 +21,26 @@ class Company(Base):
     website = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    locations = relationship("CompanyLocation", backref="company", cascade="all, delete-orphan")
+    # locations = relationship("CompanyLocation", backref="company", cascade="all, delete-orphan")
+    # mails = relationship(
+    #     "Mail", 
+    #     back_populates="company", 
+    #     cascade="all, delete-orphan"
+    # )
+    
+        # Define all relationships properly
+    locations = relationship(
+        "CompanyLocation", 
+        back_populates="company", 
+        cascade="all, delete-orphan"
+    )
+    stores = relationship(
+        "Store", 
+        back_populates="company", 
+        cascade="all, delete-orphan"
+    )
+    mails = relationship(
+        "Mail", 
+        back_populates="company", 
+        cascade="all, delete-orphan"
+    )

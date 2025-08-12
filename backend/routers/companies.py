@@ -31,8 +31,10 @@ def update_company(company_id: int, company: company_schema.CompanyCreate, db: S
         raise HTTPException(status_code=404, detail="Company not found")
     return updated
 
+
 @router.delete("/{company_id}")
 def delete_company(company_id: int, db: Session = Depends(get_db)):  # CHANGED
+    
     success = company_crud.delete_company(db, company_id)
     if not success:
         raise HTTPException(status_code=404, detail="Company not found")

@@ -32,7 +32,8 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     # company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=True)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)  # Ensure this matches the type in Company model
+    # company_id = Column(Integer, ForeignKey("companies.id"), nullable=True)  # Ensure this matches the type in Company model
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete='CASCADE'), nullable=True)  # Added CASCADE
 
 
     uploaded_files = relationship("UploadedFile", back_populates="uploader", cascade="all, delete-orphan")

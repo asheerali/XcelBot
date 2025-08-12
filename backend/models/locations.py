@@ -1,3 +1,5 @@
+
+# models/locations.py
 from datetime import datetime
 from sqlalchemy import Column, DateTime, Integer, String, ForeignKey
 from database import Base
@@ -17,11 +19,16 @@ class Store(Base):
     phone = Column(String(20), nullable=False)
     email = Column(String(255), nullable=False)
     # company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)  # Ensure this matches the type in Company model
+    # company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)  # Ensure this matches the type in Company model
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete='CASCADE'), nullable=False)  # Added CASCADE
 
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    company_locations = relationship("CompanyLocation", backref="store", cascade="all, delete-orphan")
+    # company_locations = relationship("CompanyLocation", backref="store", cascade="all, delete-orphan")
 
+
+    # Fix the relationships
+    company = relationship("Company", back_populates="stores")
+    company_locations = relationship("CompanyLocation", back_populates="location", cascade="all, delete-orphan")

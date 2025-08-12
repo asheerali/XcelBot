@@ -7,7 +7,9 @@ class FinancialsCompanyWide(Base):
     __tablename__ = "financials_company_wide"
     
     id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
+    # company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete='CASCADE'), nullable=False, index=True)  # Added CASCADE
+
     
         # New columns
     file_name = Column(String(255), nullable=True, index=True)  # For storing filename

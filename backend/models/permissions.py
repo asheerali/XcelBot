@@ -7,7 +7,9 @@ class Permission(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     # company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
+    # company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete='CASCADE'), nullable=False)  # Added CASCADE
+
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
     upload_excel = Column(Boolean, default=False)

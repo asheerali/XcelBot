@@ -7,7 +7,9 @@ class StoreOrders(Base):
     __tablename__ = "storeorders"
 
     id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
+    # company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id", ondelete='CASCADE'), nullable=False, index=True)  # Added CASCADE
+
     location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=True, onupdate=datetime.utcnow)

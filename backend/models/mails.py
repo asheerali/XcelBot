@@ -1,19 +1,45 @@
-# models/mails.py
+# # The `Mail` class represents a model for storing information about emails, including receiver
+# # details, receiving time, and optional association with a company.
+# # models/mails.py
 
+# from sqlalchemy import Column, Integer, String, Time, ForeignKey
+# from datetime import time
+# from database import Base
+# from sqlalchemy.orm import relationship
+
+
+# class Mail(Base):
+#     __tablename__ = "mails"
+
+#     id = Column(Integer, primary_key=True, index=True)
+#     receiver_name = Column(String(255), nullable=False)  # Can be username or company name
+#     receiver_email = Column(String(255), nullable=False)
+#     receiving_time = Column(Time, nullable=False)  # Time when user will receive the mail
+#     # company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)  # Optional company association
+#     company_id = Column(Integer, ForeignKey("companies.id", ondelete='CASCADE'), nullable=False)  # Cascade delete
+
+    
+#     # Relationship to Company
+#     company = relationship("Company", backref="mails")
+
+
+# models/mails.py
 from sqlalchemy import Column, Integer, String, Time, ForeignKey
-from datetime import time
 from database import Base
 from sqlalchemy.orm import relationship
-
 
 class Mail(Base):
     __tablename__ = "mails"
 
     id = Column(Integer, primary_key=True, index=True)
-    receiver_name = Column(String(255), nullable=False)  # Can be username or company name
+    receiver_name = Column(String(255), nullable=False)
     receiver_email = Column(String(255), nullable=False)
-    receiving_time = Column(Time, nullable=False)  # Time when user will receive the mail
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)  # Optional company association
+    receiving_time = Column(Time, nullable=False)
+    company_id = Column(
+        Integer, 
+        ForeignKey("companies.id", ondelete='CASCADE'), 
+        nullable=False
+    )
     
-    # Relationship to Company
-    company = relationship("Company", backref="mails")
+    # Define the relationship properly
+    company = relationship("Company", back_populates="mails")
