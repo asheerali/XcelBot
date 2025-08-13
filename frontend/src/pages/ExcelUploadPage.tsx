@@ -1,4 +1,4 @@
-// ExcelUploadPage.tsx - Updated with company-locations API and responsive location handling
+// ExcelUploadPage.tsx - Updated with company-locations API, responsive location handling, and CSV support
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
@@ -364,7 +364,7 @@ const extractLocationsFromResponse = (response: any): string[] => {
         // Extract from fileName if no explicit location
         if (dashboardData.fileName && locations.length === 0) {
           const locationFromFileName = dashboardData.fileName.replace(
-            /\.(xlsx|xls)$/i,
+            /\.(xlsx|xls|csv)$/i,
             ""
           );
           locations.push(locationFromFileName);
@@ -387,7 +387,7 @@ const extractLocationsFromResponse = (response: any): string[] => {
       // Fallback to fileName
       if (response.fileName && locations.length === 0) {
         const locationFromFileName = response.fileName.replace(
-          /\.(xlsx|xls)$/i,
+          /\.(xlsx|xls|csv)$/i,
           ""
         );
         locations.push(locationFromFileName);
@@ -503,14 +503,15 @@ const ExcelUploadPage: React.FC = () => {
   // UPDATED: Redux state management for company selection
   const dispatch = useDispatch();
   const appDispatch = useAppDispatch();
-  
+
   // Get current selections from Redux
   const selectedCompanies = useSelector(selectSelectedCompanies);
   const selectedLocations = useSelector(selectSelectedLocations);
-  
+
   // Convert to single values for dropdowns
-  const selectedCompanyId = selectedCompanies.length > 0 ? selectedCompanies[0] : '';
-  
+  const selectedCompanyId =
+    selectedCompanies.length > 0 ? selectedCompanies[0] : "";
+
   // UPDATED: Company state management for API fetching
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
@@ -528,14 +529,16 @@ const ExcelUploadPage: React.FC = () => {
   // UPDATED: Sync local selectedCompany with Redux state
   useEffect(() => {
     if (selectedCompanyId && companies.length > 0) {
-      const company = companies.find(c => c.company_id.toString() === selectedCompanyId);
+      const company = companies.find(
+        (c) => c.company_id.toString() === selectedCompanyId
+      );
       if (company && company !== selectedCompany) {
         setSelectedCompany(company);
-        console.log('🔄 Synced selectedCompany from Redux:', company);
+        console.log("🔄 Synced selectedCompany from Redux:", company);
       }
     } else if (!selectedCompanyId && selectedCompany) {
       setSelectedCompany(null);
-      console.log('🔄 Cleared selectedCompany from Redux');
+      console.log("🔄 Cleared selectedCompany from Redux");
     }
   }, [selectedCompanyId, companies, selectedCompany]);
 
@@ -545,12 +548,18 @@ const ExcelUploadPage: React.FC = () => {
       setCompaniesLoading(true);
       setCompaniesError(null);
 
-      console.log("🏢 Fetching companies and locations from:", COMPANY_LOCATIONS_API_URL);
+      console.log(
+        "🏢 Fetching companies and locations from:",
+        COMPANY_LOCATIONS_API_URL
+      );
       const response = await apiClient.get("/company-locations/all");
 
       if (response.data && Array.isArray(response.data)) {
         setCompanies(response.data);
-        console.log("✅ Companies with locations fetched successfully:", response.data);
+        console.log(
+          "✅ Companies with locations fetched successfully:",
+          response.data
+        );
       } else {
         throw new Error("Invalid response format");
       }
@@ -562,7 +571,7 @@ const ExcelUploadPage: React.FC = () => {
     }
   };
 
-  // Existing event handlers (keeping them the same)
+  // UPDATED: Event handlers with CSV support
   const handleDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
@@ -570,16 +579,21 @@ const ExcelUploadPage: React.FC = () => {
 
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         const droppedFiles = Array.from(e.dataTransfer.files);
-        const excelFiles = droppedFiles.filter(
-          (file) => file.name.endsWith(".xlsx") || file.name.endsWith(".xls")
+        const validFiles = droppedFiles.filter(
+          (file) =>
+            file.name.endsWith(".xlsx") ||
+            file.name.endsWith(".xls") ||
+            file.name.endsWith(".csv")
         );
 
-        if (excelFiles.length === 0) {
-          setGeneralError("Please upload only Excel files (.xlsx or .xls)");
+        if (validFiles.length === 0) {
+          setGeneralError(
+            "Please upload only Excel files (.xlsx, .xls) or CSV files (.csv)"
+          );
           return;
         }
 
-        const newFiles = excelFiles.map((file) => ({
+        const newFiles = validFiles.map((file) => ({
           file,
           status: "pending" as FileStatus,
           progress: 0,
@@ -607,16 +621,21 @@ const ExcelUploadPage: React.FC = () => {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files.length > 0) {
         const selectedFiles = Array.from(e.target.files);
-        const excelFiles = selectedFiles.filter(
-          (file) => file.name.endsWith(".xlsx") || file.name.endsWith(".xls")
+        const validFiles = selectedFiles.filter(
+          (file) =>
+            file.name.endsWith(".xlsx") ||
+            file.name.endsWith(".xls") ||
+            file.name.endsWith(".csv")
         );
 
-        if (excelFiles.length === 0) {
-          setGeneralError("Please upload only Excel files (.xlsx or .xls)");
+        if (validFiles.length === 0) {
+          setGeneralError(
+            "Please upload only Excel files (.xlsx, .xls) or CSV files (.csv)"
+          );
           return;
         }
 
-        const newFiles = excelFiles.map((file) => ({
+        const newFiles = validFiles.map((file) => ({
           file,
           status: "pending" as FileStatus,
           progress: 0,
@@ -641,19 +660,21 @@ const ExcelUploadPage: React.FC = () => {
   // UPDATED: Company selection handler with Redux integration
   const handleCompanyChange = (event: any, newValue: Company | null) => {
     console.log("🏢 Company selection changed:", newValue);
-    
+
     // Update local state
     setSelectedCompany(newValue);
-    
+
     // Update Redux state
     if (newValue) {
       dispatch(setSelectedCompanies([newValue.company_id.toString()]));
       dispatch(setSelectedLocations([])); // Clear locations when company changes
-      console.log('📦 Updated Redux: selectedCompanies =', [newValue.company_id.toString()]);
+      console.log("📦 Updated Redux: selectedCompanies =", [
+        newValue.company_id.toString(),
+      ]);
     } else {
       dispatch(setSelectedCompanies([]));
       dispatch(setSelectedLocations([]));
-      console.log('📦 Cleared Redux: selectedCompanies and selectedLocations');
+      console.log("📦 Cleared Redux: selectedCompanies and selectedLocations");
     }
   };
 
@@ -754,7 +775,10 @@ const ExcelUploadPage: React.FC = () => {
           primaryLocation = extractedLocations[0];
         } else {
           // Fallback to filename
-          primaryLocation = fileInfo.file.name.replace(/\.(xlsx|xls)$/i, "");
+          primaryLocation = fileInfo.file.name.replace(
+            /\.(xlsx|xls|csv)$/i,
+            ""
+          );
           extractedLocations.push(primaryLocation);
         }
 
@@ -1325,13 +1349,13 @@ const ExcelUploadPage: React.FC = () => {
               <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
                 {!selectedCompany
                   ? "Select a Company First"
-                  : "Drag & Drop Excel Files Here"}
+                  : "Drag & Drop Excel or CSV Files Here"}
               </Typography>
 
               <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
                 {!selectedCompany
                   ? "Choose a company before uploading files"
-                  : "or click to browse files"}
+                  : "Supports .xlsx, .xls, and .csv files"}
               </Typography>
 
               {selectedCompany && (
@@ -1348,7 +1372,7 @@ const ExcelUploadPage: React.FC = () => {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".xlsx,.xls"
+                accept=".xlsx,.xls,.csv"
                 multiple
                 onChange={handleFileChange}
                 style={{ display: "none" }}
@@ -1422,7 +1446,8 @@ const ExcelUploadPage: React.FC = () => {
                 >
                   <BusinessIcon color="primary" />
                   <Typography variant="body1" fontWeight={500}>
-                    Uploading for: {selectedCompany.company_name} (ID: {selectedCompany.company_id})
+                    Uploading for: {selectedCompany.company_name} (ID:{" "}
+                    {selectedCompany.company_id})
                   </Typography>
                 </Box>
               )}
