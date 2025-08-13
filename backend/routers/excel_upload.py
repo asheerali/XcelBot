@@ -366,7 +366,7 @@ async def upload_excel(
             print('Location:', request.location)
             print("Dashboard:", request.dashboard) 
 
-        # excel_data_copy = io.BytesIO(file_content)
+        # excel_data = io.BytesIO(file_content)
 
         if request.dashboard == "Sales Split and Product Mix" or request.dashboard == "Product Mix" or request.dashboard == "Sales Split":
             # Process the dashboard data using the separate module
@@ -393,7 +393,7 @@ async def upload_excel(
             else:   
                 excel_data = io.BytesIO(file_content)
                 df = pd.read_excel(excel_data)
-                # df = pd.read_excel(excel_data_copy)
+                # df = pd.read_excel(excel_data)
                 
             df.columns = df.columns.str.strip()
             
@@ -515,16 +515,17 @@ async def upload_excel(
             if file_type == "csv":
                raise ValueError("CSV format currently not supported")
             else:  # if it's not csv, assume it's excel
-                pass
+                excel_data = io.BytesIO(file_content)
+                # df = pd.read_excel(excel_data)
             try:
-                if isinstance(excel_data_copy, io.BytesIO):
-                    excel_data_copy.seek(0)
+                if isinstance(excel_data, io.BytesIO):
+                    excel_data.seek(0)
                     print("Reading Excel from BytesIO object.")
                     # df = pd.read_excel(file_data, sheet_name="Database")
-                    df = pd.read_excel(excel_data_copy, sheet_name="Actuals")
-                    excel_data_copy.seek(0)
+                    df = pd.read_excel(excel_data, sheet_name="Actuals")
+                    excel_data.seek(0)
                     # df_budget = pd.read_excel(file_data, sheet_name="Budget")
-                    df_budget = pd.read_excel(excel_data_copy, sheet_name="Budget", header=1)
+                    df_budget = pd.read_excel(excel_data, sheet_name="Budget", header=1)
                     
 
                 if df.empty:
