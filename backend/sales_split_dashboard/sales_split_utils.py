@@ -197,6 +197,194 @@ pd.set_option('future.no_silent_downcasting', True)
 #     }
 
 
+# def create_sales_pivot_tables(df, location_filter='All', start_date=None, end_date=None, categories_filter='All'):
+  
+#     # Make a copy of the dataframe
+#     filtered_df = df.copy()
+    
+#     # Apply location filter
+#     if location_filter != 'All':
+#         if isinstance(location_filter, list):
+#             filtered_df = filtered_df[filtered_df['Location'].isin(location_filter)]
+#         else:
+#             filtered_df = filtered_df[filtered_df['Location'] == location_filter]
+    
+#     # Apply category filter
+#     if categories_filter != 'All':
+#         if isinstance(categories_filter, list):
+#             filtered_df = filtered_df[filtered_df['Category'].isin(categories_filter)]
+#         else:
+#             filtered_df = filtered_df[filtered_df['Category'] == categories_filter]
+    
+#     # Apply date range filter - convert string dates to datetime.date objects
+#     if start_date is not None:
+#         if isinstance(start_date, str):
+#             start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+#         filtered_df = filtered_df[filtered_df['Date'] >= start_date]
+    
+#     if end_date is not None:
+#         if isinstance(end_date, str):
+#             end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+#         filtered_df = filtered_df[filtered_df['Date'] <= end_date]
+    
+#     # If no date range is provided, filter for the last 4 weeks
+#     if start_date is None and end_date is None:
+#         end_date_dt = filtered_df['Date'].max()
+#         start_date_dt = end_date_dt - timedelta(weeks=4)
+#         filtered_df = filtered_df[
+#             (filtered_df['Date'] >= start_date_dt) & 
+#             (filtered_df['Date'] <= end_date_dt)
+#         ]
+    
+#     # If the dataframe is empty after filtering, return empty tables
+#     if filtered_df.empty:
+#         return {
+#             'pivot_table': pd.DataFrame(),
+#             'in_house_table': pd.DataFrame(),
+#             'week_over_week_table': pd.DataFrame(),
+#             'category_summary_table': pd.DataFrame()
+#         }
+
+#     # Create a pivot table using Category for columns
+#     sales_pivot = filtered_df.pivot_table(
+#         index='Week',
+#         columns='Category',
+#         values='Net_Price',  # Updated column name
+#         aggfunc='sum',
+#         fill_value=0
+#     )
+    
+#     # Handle missing category columns
+#     expected_categories = ['1P', 'In-House', 'Catering', 'DD', 'GH', 'UB']
+    
+#     # Add missing categories as columns with zeros
+#     for category in expected_categories:
+#         if category not in sales_pivot.columns:
+#             sales_pivot[category] = 0
+    
+#     # Reorder columns to match expected order
+#     ordered_columns = [col for col in expected_categories if col in sales_pivot.columns]
+#     other_columns = [col for col in sales_pivot.columns if col not in expected_categories and col != 'Grand Total']
+#     sales_pivot = sales_pivot[ordered_columns + other_columns]
+    
+#     # Add a Grand Total column
+#     sales_pivot['Grand Total'] = sales_pivot.sum(axis=1)
+    
+#     # Sort by week
+#     sales_pivot = sales_pivot.sort_index()
+    
+#     # Create a copy for numeric values before formatting
+#     numeric_sales_pivot = sales_pivot.copy()
+    
+#     # 1. Create percentage change table
+#     pct_change = numeric_sales_pivot.pct_change() * 100
+    
+#     # Replace NaN in first row with zeros
+#     pct_change.iloc[0] = 0
+    
+#     # Replace inf and -inf values with 0
+#     pct_change = pct_change.replace([np.inf, -np.inf], 0)
+#     pct_change = pct_change.fillna(0)
+    
+#     # 2. Create category percentage of total table
+#     category_pct_of_total = pd.DataFrame(index=numeric_sales_pivot.index, 
+#                                         columns=numeric_sales_pivot.columns)
+    
+#     # Calculate each category as percentage of grand total for each week
+#     for week in numeric_sales_pivot.index:
+#         grand_total = numeric_sales_pivot.loc[week, 'Grand Total']
+        
+#         if grand_total > 0:  # Avoid division by zero
+#             for category in numeric_sales_pivot.columns:
+#                 if category != 'Grand Total':  # Skip calculating percentage for Grand Total
+#                     category_value = numeric_sales_pivot.loc[week, category]
+#                     category_pct_of_total.loc[week, category] = (category_value / grand_total) * 100
+    
+#     # Fill NaN values with 0
+#     category_pct_of_total = category_pct_of_total.fillna(0)
+    
+#     # Drop the Grand Total column as it will always be 100%
+#     if 'Grand Total' in category_pct_of_total.columns:
+#         category_pct_of_total = category_pct_of_total.drop('Grand Total', axis=1)
+    
+#     # 3. Create category summary table with week-over-week differences and calculated columns
+#     category_summary = pd.DataFrame(index=numeric_sales_pivot.index)
+    
+#     # Add the core category columns
+#     for category in expected_categories:
+#         if category in category_pct_of_total.columns:
+#             category_summary[category] = 0.0  # Initialize with zeros
+    
+#     # Calculate the week-over-week differences of category percentages
+#     for i, week in enumerate(numeric_sales_pivot.index):
+#         if i == 0:  # First week, no differences
+#             for category in expected_categories:
+#                 if category in category_pct_of_total.columns:
+#                     # First row uses the actual percentage value
+#                     category_summary.at[week, category] = 0.0
+#         else:
+#             prev_week = numeric_sales_pivot.index[i-1]
+#             for category in expected_categories:
+#                 if category in category_pct_of_total.columns:
+#                     # Calculate week-over-week difference using category percentages
+#                     current_pct = category_pct_of_total.loc[week, category]
+#                     prev_pct = category_pct_of_total.loc[prev_week, category]
+#                     category_summary.at[week, category] = current_pct - prev_pct
+    
+#     # Add the 3P column (computed value) - sum of the delivery service percentages
+#     category_summary['3P'] = 0.0
+    
+#     # Calculate 3P values - the sum of percentages for delivery services (Catering, DD, GH)
+#     for i, week in enumerate(numeric_sales_pivot.index):
+#         if i == 0:  # First week
+#             category_summary.at[week, '3P'] = sum(category_pct_of_total.loc[week, cat] for cat in ['UB', 'DD', 'GH'] 
+#                                               if cat in category_pct_of_total.columns)
+#         else:
+#             category_summary.at[week, '3P'] = sum(category_pct_of_total.loc[week, cat] for cat in ['UB', 'DD', 'GH'] 
+#                                               if cat in category_pct_of_total.columns)
+    
+#     # Add the 1P/3P column - sum of 1P percentage and 3P value
+#     category_summary['1P/3P'] = 0.0
+    
+#     # Calculate 1P/3P values - combines first-party and third-party percentages
+#     for i, week in enumerate(numeric_sales_pivot.index):
+#         if i == 0:  # First week
+#             first_p = category_pct_of_total.loc[week, '1P'] if '1P' in category_pct_of_total.columns else 0
+#             category_summary.at[week, '1P/3P'] = first_p + category_summary.at[week, '3P']
+#         else:
+#             first_p = category_pct_of_total.loc[week, '1P'] if '1P' in category_pct_of_total.columns else 0
+#             category_summary.at[week, '1P/3P'] = first_p + category_summary.at[week, '3P']
+    
+#     # Format numeric_sales_pivot to 2 decimal places (no percent sign)
+#     formatted_numeric_sales_pivot = numeric_sales_pivot.copy()
+#     for col in formatted_numeric_sales_pivot.columns:
+#         formatted_numeric_sales_pivot[col] = formatted_numeric_sales_pivot[col].apply(lambda x: f"{x:.2f}")
+    
+#     # Format pct_change with 2 decimal places and percent sign
+#     formatted_pct_change = pct_change.copy()
+#     for col in formatted_pct_change.columns:
+#         formatted_pct_change[col] = formatted_pct_change[col].apply(lambda x: f"{x:.2f}%")
+    
+#     # Format category_pct_of_total with 2 decimal places and percent sign
+#     formatted_category_pct_of_total = category_pct_of_total.copy()
+#     for col in formatted_category_pct_of_total.columns:
+#         formatted_category_pct_of_total[col] = formatted_category_pct_of_total[col].apply(lambda x: f"{x:.2f}%")
+    
+#     # Format category_summary with 2 decimal places and percent sign
+#     formatted_category_summary = category_summary.copy()
+#     for col in formatted_category_summary.columns:
+#         formatted_category_summary[col] = formatted_category_summary[col].apply(lambda x: f"{x:.2f}%")
+    
+#     # Return all tables in a dictionary with formatting applied
+#     return {
+#         'pivot_table': formatted_numeric_sales_pivot.reset_index(),
+#         'in_house_table': formatted_pct_change.reset_index(),
+#         'week_over_week_table': formatted_category_pct_of_total.reset_index(),
+#         'category_summary_table': formatted_category_summary.reset_index()
+#     }
+
+
+
 def create_sales_pivot_tables(df, location_filter='All', start_date=None, end_date=None, categories_filter='All'):
   
     # Make a copy of the dataframe
@@ -231,6 +419,10 @@ def create_sales_pivot_tables(df, location_filter='All', start_date=None, end_da
     if start_date is None and end_date is None:
         end_date_dt = filtered_df['Date'].max()
         start_date_dt = end_date_dt - timedelta(weeks=4)
+        
+        # Debug print to show the selected date range
+        print(f"Selected Date Range: Start Date = {start_date_dt}, End Date = {end_date_dt}")
+        
         filtered_df = filtered_df[
             (filtered_df['Date'] >= start_date_dt) & 
             (filtered_df['Date'] <= end_date_dt)
@@ -382,10 +574,6 @@ def create_sales_pivot_tables(df, location_filter='All', start_date=None, end_da
         'week_over_week_table': formatted_category_pct_of_total.reset_index(),
         'category_summary_table': formatted_category_summary.reset_index()
     }
-
-
-from datetime import datetime, timedelta
-import pandas as pd
 
 
 
@@ -611,8 +799,32 @@ def sales_analysis_tables(df, location_filter='All', start_date=None, end_date=N
     
     # If no date range is provided, use the last 4 weeks
     if start_date is None and end_date is None:
-        end_date_dt = filtered_df['Date'].max()
+        # end_date_dt = filtered_df['Date'].max()
+        current_date = datetime.now().date()  
+        
+        # # Calculate the date of previous Sunday of the current week
+        # days_to_sunday = (current_date.weekday() + 1) % 7  # 0 for Monday, 6 for Sunday
+        # sunday_date = current_date - timedelta(days=days_to_sunday)
+        # print(f"Sunday of this week: {sunday_date}")
+        
+        # Calculate the number of days until the next Sunday
+        days_to_next_sunday = (6 - current_date.weekday()) % 7
+        if days_to_next_sunday == 0:
+            days_to_next_sunday = 7  # If today is Sunday, find the next Sunday (not the current one)
+
+        # Calculate the next Sunday
+        end_date_dt = current_date + timedelta(days=days_to_next_sunday)
+        print(f"Next Sunday: {end_date_dt}")
+
         start_date_dt = end_date_dt - timedelta(weeks=4)
+        
+        print("------------------------------------------")
+        print("------------------------------------------")
+        print("i am here in the sales split printing startdate dt and enddate dt",start_date_dt, 
+              end_date_dt, "\n")
+        print("------------------------------------------")
+        print("------------------------------------------")
+        
         filtered_df = filtered_df[
             (filtered_df['Date'] >= start_date_dt) & 
             (filtered_df['Date'] <= end_date_dt)
