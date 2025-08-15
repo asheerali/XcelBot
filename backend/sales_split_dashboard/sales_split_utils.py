@@ -415,18 +415,53 @@ def create_sales_pivot_tables(df, location_filter='All', start_date=None, end_da
             end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
         filtered_df = filtered_df[filtered_df['Date'] <= end_date]
     
-    # If no date range is provided, filter for the last 4 weeks
+    
+        # If no date range is provided, use the last 4 weeks
     if start_date is None and end_date is None:
-        end_date_dt = filtered_df['Date'].max()
+        # end_date_dt = filtered_df['Date'].max()
+        current_date = datetime.now().date()  
+        
+        # # Calculate the date of previous Sunday of the current week
+        # days_to_sunday = (current_date.weekday() + 1) % 7  # 0 for Monday, 6 for Sunday
+        # sunday_date = current_date - timedelta(days=days_to_sunday)
+        # print(f"Sunday of this week: {sunday_date}")
+        
+        # Calculate the number of days until the next Sunday
+        days_to_next_sunday = (6 - current_date.weekday()) % 7
+        if days_to_next_sunday == 0:
+            days_to_next_sunday = 7  # If today is Sunday, find the next Sunday (not the current one)
+
+        # Calculate the next Sunday
+        end_date_dt = current_date + timedelta(days=days_to_next_sunday)
+        print(f"Next Sunday: {end_date_dt}")
+
         start_date_dt = end_date_dt - timedelta(weeks=4)
         
-        # Debug print to show the selected date range
-        print(f"Selected Date Range: Start Date = {start_date_dt}, End Date = {end_date_dt}")
+        print("------------------------------------------")
+        print("------------------------------------------")
+        print("i am here in the sales split sales_analysis_tables printing startdate dt and enddate dt",start_date_dt, 
+              end_date_dt, "\n")
+        print("------------------------------------------")
+        print("------------------------------------------")
         
         filtered_df = filtered_df[
             (filtered_df['Date'] >= start_date_dt) & 
             (filtered_df['Date'] <= end_date_dt)
         ]
+    
+
+    # # If no date range is provided, filter for the last 4 weeks
+    # if start_date is None and end_date is None:
+    #     end_date_dt = filtered_df['Date'].max()
+    #     start_date_dt = end_date_dt - timedelta(weeks=4)
+        
+    #     # Debug print to show the selected date range
+    #     print(f"Selected Date Range: Start Date = {start_date_dt}, End Date = {end_date_dt}")
+        
+    #     filtered_df = filtered_df[
+    #         (filtered_df['Date'] >= start_date_dt) & 
+    #         (filtered_df['Date'] <= end_date_dt)
+    #     ]
     
     # If the dataframe is empty after filtering, return empty tables
     if filtered_df.empty:
@@ -820,7 +855,7 @@ def sales_analysis_tables(df, location_filter='All', start_date=None, end_date=N
         
         print("------------------------------------------")
         print("------------------------------------------")
-        print("i am here in the sales split printing startdate dt and enddate dt",start_date_dt, 
+        print("i am here in the sales split sales_analysis_tables printing startdate dt and enddate dt",start_date_dt, 
               end_date_dt, "\n")
         print("------------------------------------------")
         print("------------------------------------------")
