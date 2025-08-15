@@ -84,7 +84,7 @@ def process_financials_file(df1, df2, year="All", week_range="All", location="Al
     
     # print("i am here in the financials processor printing the financials_labour_cost_modified", financials_labour_cost_modified_df)
     
-
+    print("printing the table kpi vs budget", kpi_vs_budget_df)
     return (financials_weeks, financials_years, financials_stores, 
             financials_sales_table, financials_orders_table, 
             financials_avg_ticket_table, financials_tw_lw_bdg_table, 
@@ -93,8 +93,6 @@ def process_financials_file(df1, df2, year="All", week_range="All", location="Al
             kpi_vs_budget_df, financial_sales_table_df, financials_food_cost_modified_df,
             financials_labour_cost_modified_df
             )
-
-
 
 
 

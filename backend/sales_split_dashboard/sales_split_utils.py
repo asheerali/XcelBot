@@ -197,206 +197,10 @@ def create_sales_pivot_tables(df, location_filter='All', start_date=None, end_da
     }
 
 
-# def sales_analysis_tables(df, location_filter='All', start_date=None, end_date=None, categories_filter='All', moving_avg_window=7):
-  
-#     # Make a copy of the dataframe
-#     filtered_df = df.copy()
-    
-#     # Apply location filter
-#     if location_filter != 'All':
-#         if isinstance(location_filter, list):
-#             filtered_df = filtered_df[filtered_df['Location'].isin(location_filter)]
-#         else:
-#             filtered_df = filtered_df[filtered_df['Location'] == location_filter]
-    
-#     # Apply category filter
-#     if categories_filter != 'All':
-#         if isinstance(categories_filter, list):
-#             filtered_df = filtered_df[filtered_df['Category'].isin(categories_filter)]
-#         else:
-#             filtered_df = filtered_df[filtered_df['Category'] == categories_filter]
-            
-#     # Apply date range filter - convert string dates to datetime.date objects
-#     if start_date is not None:
-#         if isinstance(start_date, str):
-#             start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-#         filtered_df = filtered_df[filtered_df['Date'] >= start_date]
-    
-#     if end_date is not None:
-#         if isinstance(end_date, str):
-#             end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-#         filtered_df = filtered_df[filtered_df['Date'] <= end_date]
-    
-#     # If the dataframe is empty after filtering, return empty tables
-#     if filtered_df.empty:
-#         return {
-#             'sales_by_week': pd.DataFrame(columns=['Week', 'Sales', 'Orders', 'Moving_Avg']),
-#             'sales_by_day': pd.DataFrame(columns=['Day', 'Sales', 'Orders', 'Moving_Avg']),
-#             'sales_by_time': pd.DataFrame(columns=['Time Range', 'Sales', 'Orders', 'Moving_Avg'])
-#         }
-    
-#     # -------------------------------------------------------
-#     # 1. Sales by Week
-#     # -------------------------------------------------------
-#     sales_by_week = filtered_df.groupby(['Year', 'Week']).agg({
-#         'Net_Price': 'sum',  # Updated column name
-#         'Sent_Date': pd.Series.nunique  # Updated column name
-#     }).reset_index()
-    
-#     # Format week label
-#     sales_by_week['Week Label'] = sales_by_week.apply(
-#         lambda row: f"Week {int(row['Week'])}", axis=1
-#     )
-    
-#     # Final table format
-#     sales_by_week = sales_by_week[['Week Label', 'Net_Price', 'Sent_Date', 'Year', 'Week']]
-#     sales_by_week.columns = ['Week', 'Sales', 'Orders', 'Year', 'Week_Num']
-    
-#     # Sort by year and week for proper moving average calculation
-#     sales_by_week = sales_by_week.sort_values(['Year', 'Week_Num'])
-    
-#     # Calculate moving average for sales
-#     sales_by_week['Moving_Avg'] = sales_by_week['Sales'].rolling(
-#         window=moving_avg_window, 
-#         min_periods=1
-#     ).mean()
-    
-#     # Round values
-#     sales_by_week['Sales'] = sales_by_week['Sales'].round(2)
-#     sales_by_week['Moving_Avg'] = sales_by_week['Moving_Avg'].round(2)
-    
-#     # Remove helper columns
-#     sales_by_week = sales_by_week[['Week', 'Sales', 'Orders', 'Moving_Avg']]
-    
-#     # -------------------------------------------------------
-#     # 2. Sales by Day
-#     # -------------------------------------------------------
-#     # Step 1: Create a mapping from full day name to short form
-#     day_mapping = {
-#         'Monday': 'Mon',
-#         'Tuesday': 'Tue',
-#         'Wednesday': 'Wed',
-#         'Thursday': 'Thu',
-#         'Friday': 'Fri',
-#         'Saturday': 'Sat',
-#         'Sunday': 'Sun'
-#     }
-
-#     # Step 2: Apply the mapping
-#     filtered_df['Day'] = filtered_df['Day'].map(day_mapping)
-
-#     # Step 3: Create categorical type with custom order
-#     day_order = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-#     filtered_df['Day'] = pd.Categorical(filtered_df['Day'], categories=day_order, ordered=True)
-
-#     # Step 4: Group and aggregate
-#     sales_by_day = filtered_df.groupby('Day', observed=False).agg({
-#         'Net_Price': 'sum',  # Updated column name
-#         'Sent_Date': pd.Series.nunique  # Updated column name
-#     }).reset_index()
-
-#     # Step 5: Rename columns
-#     sales_by_day.columns = ['Day', 'Sales', 'Orders']
-    
-#     # Sort by custom day order
-#     sales_by_day = sales_by_day.sort_values('Day')
-    
-#     # Calculate moving average for sales by day
-#     sales_by_day['Moving_Avg'] = sales_by_day['Sales'].rolling(
-#         window=min(moving_avg_window, len(sales_by_day)), 
-#         min_periods=1
-#     ).mean()
-    
-#     # Round values
-#     sales_by_day['Sales'] = sales_by_day['Sales'].round(2)
-#     sales_by_day['Moving_Avg'] = sales_by_day['Moving_Avg'].round(2)
-
-#     # -------------------------------------------------------
-#     # 3. Sales by Time
-#     # -------------------------------------------------------
-#     # Create time bins
-#     def categorize_time(time_str):
-#         # Check if time_str is already a string
-#         if not isinstance(time_str, str):
-#             time_str = str(time_str)
-            
-#         # Handle different time formats
-#         if ':' in time_str:
-#             hour = int(time_str.split(':')[0])
-#         else:
-#             # If time is stored as a float or other format
-#             try:
-#                 hour = int(float(time_str))
-#             except:
-#                 return 'Unknown'
-        
-#         if hour < 6:
-#             return '12AM-6AM'
-#         elif hour < 11:
-#             return '6AM-11AM'
-#         elif hour < 14:
-#             return '11AM-2PM'
-#         elif hour < 17:
-#             return '2PM-5PM'
-#         elif hour < 20:
-#             return '5PM-8PM'
-#         elif hour < 24:
-#             return '8PM-12AM'
-#         else:
-#             return 'Unknown'
-    
-#     # Apply time categorization
-#     filtered_df['Time Range'] = filtered_df['Time'].apply(categorize_time)
-    
-#     # Define the order of time ranges
-#     time_order = [
-#         '6AM-11AM', 
-#         '11AM-2PM', 
-#         '2PM-5PM', 
-#         '5PM-8PM', 
-#         '8PM-12AM', 
-#         '12AM-6AM'
-#     ]
-    
-#     # Convert to categorical with the defined order
-#     filtered_df['Time Range'] = pd.Categorical(
-#         filtered_df['Time Range'], 
-#         categories=time_order, 
-#         ordered=True
-#     )
-    
-#     # Group and aggregate
-#     sales_by_time = filtered_df.groupby('Time Range', observed=False).agg({
-#         'Net_Price': 'sum',  # Updated column name
-#         'Sent_Date': pd.Series.nunique  # Updated column name
-#     }).reset_index()
-    
-#     sales_by_time.columns = ['Time Range', 'Sales', 'Orders']
-    
-#     # Sort by the time range order
-#     sales_by_time = sales_by_time.sort_values('Time Range')
-    
-#     # Calculate moving average for sales by time
-#     sales_by_time['Moving_Avg'] = sales_by_time['Sales'].rolling(
-#         window=min(moving_avg_window, len(sales_by_time)), 
-#         min_periods=1
-#     ).mean()
-    
-#     # Round values
-#     sales_by_time['Sales'] = sales_by_time['Sales'].round(2)
-#     sales_by_time['Moving_Avg'] = sales_by_time['Moving_Avg'].round(2)
-    
-#     print ("i am here in sales_split_utils printing sales_by_week", sales_by_week)
-#     # Return all tables in a dictionary
-#     return {
-#         'sales_by_week': sales_by_week,
-#         'sales_by_day': sales_by_day,
-#         'sales_by_time': sales_by_time
-#     }
-
-
 from datetime import datetime, timedelta
 import pandas as pd
+
+
 
 # def sales_analysis_tables(df, location_filter='All', start_date=None, end_date=None, categories_filter='All', moving_avg_window=7):
   
@@ -448,29 +252,40 @@ import pandas as pd
 #     else:
 #         end_date_dt = filtered_df_week['Date'].max()
 
-#     start_4_weeks_ago = end_date_dt - timedelta(weeks=4)
+#     # Trim to 8 weeks to have a buffer for rolling average
+#     start_8_weeks_ago = end_date_dt - timedelta(weeks=8)
 #     filtered_df_week = filtered_df_week[
-#         (filtered_df_week['Date'] >= start_4_weeks_ago) &
+#         (filtered_df_week['Date'] >= start_8_weeks_ago) &
 #         (filtered_df_week['Date'] <= end_date_dt)
 #     ]
 
+#     # Group by Year and Week
 #     sales_by_week = filtered_df_week.groupby(['Year', 'Week']).agg({
 #         'Net_Price': 'sum',
 #         'Sent_Date': pd.Series.nunique
 #     }).reset_index()
 
+#     # Sort and keep only last 4 weeks
+#     sales_by_week = sales_by_week.sort_values(['Year', 'Week'])
+#     sales_by_week = sales_by_week.tail(4).reset_index(drop=True)
+
+#     # Add Week Label
 #     sales_by_week['Week Label'] = sales_by_week.apply(
 #         lambda row: f"Week {int(row['Week'])}", axis=1
 #     )
 
+#     # Prepare final table
 #     sales_by_week = sales_by_week[['Week Label', 'Net_Price', 'Sent_Date', 'Year', 'Week']]
 #     sales_by_week.columns = ['Week', 'Sales', 'Orders', 'Year', 'Week_Num']
+
+#     # Recalculate moving average on just those 4 weeks
 #     sales_by_week = sales_by_week.sort_values(['Year', 'Week_Num'])
 #     sales_by_week['Moving_Avg'] = sales_by_week['Sales'].rolling(
 #         window=moving_avg_window, 
 #         min_periods=1
 #     ).mean()
 
+#     # Final formatting
 #     sales_by_week['Sales'] = sales_by_week['Sales'].round(2)
 #     sales_by_week['Moving_Avg'] = sales_by_week['Moving_Avg'].round(2)
 #     sales_by_week = sales_by_week[['Week', 'Sales', 'Orders', 'Moving_Avg']]
@@ -568,13 +383,14 @@ import pandas as pd
 #     sales_by_time['Sales'] = sales_by_time['Sales'].round(2)
 #     sales_by_time['Moving_Avg'] = sales_by_time['Moving_Avg'].round(2)
 
-#     print("i am here in sales_split_utils printing sales_by_week", sales_by_week)
+#     # print("i am here in sales_split_utils printing sales_by_week", sales_by_week)
 
 #     return {
 #         'sales_by_week': sales_by_week,
 #         'sales_by_day': sales_by_day,
 #         'sales_by_time': sales_by_time
 #     }
+
 
 def sales_analysis_tables(df, location_filter='All', start_date=None, end_date=None, categories_filter='All', moving_avg_window=7):
   
@@ -606,6 +422,15 @@ def sales_analysis_tables(df, location_filter='All', start_date=None, end_date=N
             end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
         filtered_df = filtered_df[filtered_df['Date'] <= end_date]
     
+    # If no date range is provided, use the last 4 weeks
+    if start_date is None and end_date is None:
+        end_date_dt = filtered_df['Date'].max()
+        start_date_dt = end_date_dt - timedelta(weeks=4)
+        filtered_df = filtered_df[
+            (filtered_df['Date'] >= start_date_dt) & 
+            (filtered_df['Date'] <= end_date_dt)
+        ]
+    
     # If the dataframe is empty after filtering, return empty tables
     if filtered_df.empty:
         return {
@@ -628,8 +453,8 @@ def sales_analysis_tables(df, location_filter='All', start_date=None, end_date=N
 
     # Trim to 8 weeks to have a buffer for rolling average
     start_8_weeks_ago = end_date_dt - timedelta(weeks=8)
-    filtered_df_week = filtered_df_week[
-        (filtered_df_week['Date'] >= start_8_weeks_ago) &
+    filtered_df_week = filtered_df_week[(
+        filtered_df_week['Date'] >= start_8_weeks_ago) & 
         (filtered_df_week['Date'] <= end_date_dt)
     ]
 
@@ -757,13 +582,12 @@ def sales_analysis_tables(df, location_filter='All', start_date=None, end_date=N
     sales_by_time['Sales'] = sales_by_time['Sales'].round(2)
     sales_by_time['Moving_Avg'] = sales_by_time['Moving_Avg'].round(2)
 
-    # print("i am here in sales_split_utils printing sales_by_week", sales_by_week)
-
     return {
         'sales_by_week': sales_by_week,
         'sales_by_day': sales_by_day,
         'sales_by_time': sales_by_time
     }
+
 
 
 def create_sales_overview_tables(df, location_filter='All', end_date=None, start_date=None):
@@ -1041,93 +865,6 @@ def thirteen_week_category(df, location_filter='All', end_date=None, category_fi
     return {'thirteen_week_category_table': thirteen_week_category_table}
 
 
-
-# def create_sales_by_day_table(df, location_filter='All', end_date=None, categories_filter='All', moving_avg_days=7):
-#     df_copy = df.copy()
-
-
-#     print("----------------------------------------------------------")
-#     print("----------------------------------------------------------")
-#     print("----------------------------------------------------------")
-#     print("i am here in sales_split_utils printing sales by day", end_date)
-#     print("----------------------------------------------------------")
-#     print("----------------------------------------------------------")
-#     print("----------------------------------------------------------")
-#     print("----------------------------------------------------------")
-    
-#     if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
-#         df_copy['Date'] = pd.to_datetime(df_copy['Date'])
-
-#     if end_date is not None and isinstance(end_date, str):
-#         end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-        
-#     elif end_date is None:
-#         end_date = df_copy['Date'].max().date()
-        
-
-#     target_date = end_date if end_date else df_copy['Date'].max().date()
-#     days_since_monday = target_date.weekday()
-#     week_start = target_date - timedelta(days=days_since_monday)
-#     week_end = week_start + timedelta(days=6)
-#     # Only use current week data, no historical data
-#     historical_start = week_start
-
-#     if categories_filter != 'All':
-#         df_copy = df_copy[df_copy['Category'].isin(categories_filter) if isinstance(categories_filter, list) else df_copy['Category'] == categories_filter]
-
-#     if location_filter != 'All':
-#         df_copy = df_copy[df_copy['Location'].isin(location_filter) if isinstance(location_filter, list) else df_copy['Location'] == location_filter]
-
-#     if df_copy.empty:
-#         return pd.DataFrame(columns=['Day_of_Week', 'Date', 'Sales', 'Moving_Avg'])
-
-#     # print("i am here in the function create_sales_by_day_table priting the end date", end_date, "target_date", target_date, "week_start", week_start, "week_end", week_end)
-#     # Get only current week data (no historical data beyond current week)
-#     historical_df = df_copy[(df_copy['Date'].dt.date >= historical_start) & (df_copy['Date'].dt.date <= week_end)].copy()
-
-#     # Create daily sales by summing Net_Price for each date
-#     daily_sales = historical_df.groupby(historical_df['Date'].dt.date)['Net_Price'].sum().reset_index()  # Updated column name
-#     daily_sales.columns = ['Date', 'Sales']  # This creates the 'Sales' column
-
-#     # Create date range for current week only (Monday to Sunday)
-#     full_dates = pd.DataFrame({'Date': pd.date_range(historical_start, week_end)})
-#     full_dates['Date'] = full_dates['Date'].dt.date
-
-#     complete_data = full_dates.merge(daily_sales, on='Date', how='left')
-#     complete_data['Sales'] = complete_data['Sales'].fillna(0)
-    
-#     # Sort by date before calculating moving average
-#     complete_data = complete_data.sort_values('Date').reset_index(drop=True)
-    
-#     # Calculate moving average SPECIFICALLY for the 'Sales' column
-#     # Using only current week data with minimum periods of 1
-#     complete_data['Moving_Avg'] = complete_data['Sales'].rolling(
-#         window=moving_avg_days, 
-#         min_periods=1  # Allow calculation even with fewer days available
-#     ).mean()
-
-#     target_week_data = complete_data[(complete_data['Date'] >= week_start) & (complete_data['Date'] <= week_end)].copy()
-#     target_week_data['Day_of_Week'] = pd.to_datetime(target_week_data['Date']).dt.day_name()
-
-#     # Final dataframe with Sales and its moving average
-#     final_df = target_week_data[['Day_of_Week', 'Date', 'Sales', 'Moving_Avg']]
-#     final_df = final_df.set_index('Day_of_Week').reindex(
-#         ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-#     ).reset_index()
-
-#     final_df['Sales'] = final_df['Sales'].round(2)
-#     final_df['Moving_Avg'] = final_df['Moving_Avg'].round(2)
-    
-#     print("-------------------------------------------------------")
-#     print("i am here in sales split utils printing final_df", final_df)
-#     print("-------------------------------------------------------")
-
-
-#     # # Option 2: More concise - check if all values in both columns are zero
-#     # if final_df[["Sales", "Moving_Avg"]].eq(0.0).all().all():
-#     #     return pd.DataFrame(columns=['Day_of_Week', 'Date', 'Sales', 'Moving_Avg'])
-        
-#     return {'sales_by_day_table': final_df}
 
 
 
