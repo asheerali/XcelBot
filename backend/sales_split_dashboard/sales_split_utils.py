@@ -439,7 +439,7 @@ def create_sales_pivot_tables(df, location_filter='All', start_date=None, end_da
         
         print("------------------------------------------")
         print("------------------------------------------")
-        print("i am here in the sales split sales_analysis_tables printing startdate dt and enddate dt",start_date_dt, 
+        print("i am here in the sales split sales_pivot_tables printing startdate dt and enddate dt",start_date_dt, 
               end_date_dt, "\n")
         print("------------------------------------------")
         print("------------------------------------------")
