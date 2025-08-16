@@ -1,4 +1,4 @@
-// Updated SalesSplitDashboard.tsx - Full Values Display with Decimals Preserved
+// Updated SalesSplitDashboard.tsx - New Layout with Repositioned Graphs
 // IMPORTANT: All decimal values (like 4150.77) are now preserved and displayed as "4,150.77" or "$4,150.77"
 import React from "react";
 import {
@@ -87,9 +87,6 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
   };
 
   // Process Daily Sales data from table8 (Day of Week data) - FULL VALUES
-  // Process Daily Sales data from table8 (Day of Week data) - CONSISTENT DAY ORDER
-  // Process Daily Sales data from table8 (Day of Week data) - FULL VALUES
-  // Process Daily Sales data from table8 (Day of Week data) - FULL VALUES
   const processDailySalesData = () => {
     if (
       !tableData.table8 ||
@@ -144,7 +141,6 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
         parseFloat(String(row.Moving_Avg || 0).replace(/[$,]/g, "")) || 0,
       date: row.Date, // Keep the date for reference
       dayFormatted: row.Day, // add this line
-
     }));
 
     // Sort the data to ensure Monday comes first
@@ -155,81 +151,9 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
     });
   };
 
-  // Enhanced version with both options available
-  const processDailySalesDataWithOptions = (startWithSunday = false) => {
-    if (
-      !tableData.table8 ||
-      !Array.isArray(tableData.table8) ||
-      tableData.table8.length === 0
-    ) {
-      console.log("No table8 data available, using fallback");
-      return tableData.table1.map((row: any) => ({
-        day: `Week ${row.Week}`,
-        sales: parseFloat(
-          row["Grand Total"] ||
-            row[
-              Object.keys(row).find((key) =>
-                key.toLowerCase().includes("total")
-              ) || ""
-            ] ||
-            0
-        ),
-        movingAverage: 0,
-      }));
-    }
-
-    const daysOfWeekMap = {
-      Monday: "Mon",
-      Tuesday: "Tue",
-      Wednesday: "Wed",
-      Thursday: "Thu",
-      Friday: "Fri",
-      Saturday: "Sat",
-      Sunday: "Sun",
-    };
-
-    // Choose day order based on parameter
-    const dayOrder = startWithSunday
-      ? [
-          "Sunday",
-          "Monday",
-          "Tuesday",
-          "Wednesday",
-          "Thursday",
-          "Friday",
-          "Saturday",
-        ]
-      : [
-          "Monday",
-          "Tuesday",
-          "Wednesday",
-          "Thursday",
-          "Friday",
-          "Saturday",
-          "Sunday",
-        ];
-
-    // Process the data and create a map for easy lookup
-    const dataMap = new Map();
-    tableData.table8.forEach((row: any) => {
-      const dayName = row.Day_of_Week;
-      dataMap.set(dayName, {
-        day: daysOfWeekMap[dayName] || dayName,
-        sales: parseFloat(String(row.Sales || 0).replace(/[$,]/g, "")) || 0,
-        movingAverage:
-          parseFloat(String(row.Moving_Avg || 0).replace(/[$,]/g, "")) || 0,
-        date: row.Date,
-      });
-    });
-
-    // Return data in consistent order
-    return dayOrder
-      .filter((day) => dataMap.has(day))
-      .map((day) => dataMap.get(day));
-  };
-
-  // ENHANCED: Process Sales Category Line Chart data from table9 - FULL VALUES
-  const processSalesCategoryData = () => {
+  // NEW: Process Sales Category Bar Chart data from table9 - FULL VALUES
+  // Transform data to have weeks on X-axis and categories as bars
+  const processCategoryBarData = () => {
     if (
       !tableData.table9 ||
       !Array.isArray(tableData.table9) ||
@@ -239,7 +163,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
       return [];
     }
 
-    console.log("Processing table9 data:", tableData.table9);
+    console.log("Processing table9 data for bar chart:", tableData.table9);
 
     // Get all week columns (exclude Category and Grand Total columns)
     const weekColumns = Object.keys(tableData.table9[0] || {}).filter(
@@ -248,7 +172,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
 
     console.log("Available week columns:", weekColumns);
 
-    // Transform data to have weeks as x-axis and categories as separate lines
+    // Transform data to have weeks as x-axis and categories as separate bars
     const weeklyData: any[] = [];
 
     weekColumns.forEach((weekCol) => {
@@ -271,9 +195,13 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
     return weeklyData;
   };
 
-  // ENHANCED: Get categories with better validation
-  const getCategoriesFromTable9 = () => {
-    if (!tableData.table9 || !Array.isArray(tableData.table9)) {
+  // Get available categories from table9 data
+  const getAvailableCategories = () => {
+    if (
+      !tableData.table9 ||
+      !Array.isArray(tableData.table9) ||
+      tableData.table9.length === 0
+    ) {
       return [];
     }
 
@@ -344,7 +272,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
       }));
   };
 
-  // ENHANCED: Calculate moving average for weekly sales data - FULL VALUES
+  // Calculate moving average for weekly sales data - FULL VALUES
   const calculateMovingAverage = (
     data: any[],
     periods: { [key: string]: number } = { "3week": 3, "5week": 5 }
@@ -423,9 +351,32 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
     return colors[index % colors.length];
   };
 
+  // NEW: Render bars for each category in the chart
+  const renderCategoryBars = () => {
+    const availableCategories = getAvailableCategories();
+
+    if (availableCategories.length === 0) {
+      console.log("No categories available to render");
+      return null;
+    }
+
+    console.log("Rendering bars for categories:", availableCategories);
+
+    return availableCategories.map((category: string, index: number) => (
+      <Bar
+        key={category}
+        dataKey={category}
+        fill={getCategoryColor(index)}
+        name={category}
+        barSize={30}
+        radius={[2, 2, 0, 0]}
+      />
+    ));
+  };
+
   // Get processed data
   const dailySalesDataWithMA = processDailySalesWithMovingAverage();
-  const salesCategoryData = processSalesCategoryData();
+  const categoryBarData = processCategoryBarData();
   const categoriesList = processCategoriesList();
   const weeklySalesData = processWeeklySalesData();
 
@@ -437,7 +388,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
 
   console.log("Processed data:", {
     dailySalesDataWithMA,
-    salesCategoryData,
+    categoryBarData,
     categoriesList,
     weeklySalesData: weeklySalesWithMovingAvg,
   });
@@ -531,76 +482,6 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
     </div>
   );
 
-  // ENHANCED: Render lines for sales category chart with better error handling and tooltips
-  const renderCategoryLines = () => {
-    if (salesCategoryData.length === 0) {
-      console.log("No sales category data to render");
-      return null;
-    }
-
-    // Get categories from table9 (excluding Grand Total)
-    const categories = getCategoriesFromTable9();
-
-    console.log("Rendering lines for categories:", categories);
-
-    return categories.map((category: string, index: number) => (
-      <Line
-        key={category}
-        type="monotone"
-        dataKey={category}
-        stroke={getCategoryColor(index)}
-        strokeWidth={3}
-        dot={{ r: 4, strokeWidth: 2, fill: "white" }}
-        activeDot={{
-          r: 6,
-          stroke: getCategoryColor(index),
-          strokeWidth: 2,
-          fill: "white",
-        }}
-        name={category}
-        connectNulls={false} // Don't connect null/undefined values
-      />
-    ));
-  };
-
-  // DEBUGGING: Table9 Debug Component (remove in production)
-  const Table9DebugInfo = () => {
-    if (!tableData.table9) return null;
-
-    return (
-      <div
-        style={{
-          padding: "10px",
-          backgroundColor: "#f0f9ff",
-          borderRadius: "4px",
-          margin: "10px 0",
-          fontSize: "12px",
-          fontFamily: "monospace",
-          border: "1px solid #0ea5e9",
-        }}
-      >
-        <strong>📊 Table9 Debug Info:</strong>
-        <div style={{ marginTop: "8px" }}>
-          <strong>Categories:</strong> {getCategoriesFromTable9().join(", ")}
-        </div>
-        <div>
-          <strong>Weeks:</strong>{" "}
-          {Object.keys(tableData.table9[0] || {})
-            .filter((k) => k.startsWith("Week"))
-            .join(", ")}
-        </div>
-        <details style={{ marginTop: "8px" }}>
-          <summary style={{ cursor: "pointer", fontWeight: "bold" }}>
-            Raw Data (First 2 rows)
-          </summary>
-          <pre style={{ marginTop: "8px", fontSize: "10px" }}>
-            {JSON.stringify(tableData.table9.slice(0, 2), null, 2)}
-          </pre>
-        </details>
-      </div>
-    );
-  };
-
   return (
     <div
       style={{
@@ -620,176 +501,26 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
           variant="h5"
           sx={{ mb: 2, color: "#333", fontWeight: "bold" }}
         >
-          Sales Analysis
+          Sales Analysis (for recent week)
         </Typography>
       )}
 
-      {/* DEBUG: Uncomment to see table9 structure */}
-      {/* <Table9DebugInfo /> */}
-
-      {/* Daily Sales Performance with Moving Average - FULL VALUES */}
-      <div
-        style={{
-          width: "100%",
-          padding: "24px",
-          borderRadius: "12px",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-          backgroundColor: "white",
-          transition: "transform 0.3s ease, box-shadow 0.3s ease",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-        }}
-        className="stat-card"
-      >
-        {/* Chart heading */}
-        <div
-          style={{
-            fontSize: "24px",
-            fontWeight: "bold",
-            marginBottom: "16px",
-            color: "#333",
-            textAlign: "center",
-            width: "100%",
-          }}
-        >
-          Latest Week Sales Performance
-        </div>
-
-        {/* Chart container */}
-        <div
-          style={{
-            height: "350px",
-            width: "100%",
-            marginBottom: "0px",
-          }}
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart
-              data={dailySalesDataWithMA}
-              margin={{
-                top: 20,
-                right: 30,
-                left: 0,
-                bottom: 20,
-              }}
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                vertical={false}
-                stroke="rgba(0,0,0,0.1)"
-              />
-              <XAxis
-                dataKey="day"
-                axisLine={false}
-                tickLine={false}
-                textAnchor="end"
-                height={60}
-                interval={0}
-                tick={{ fontSize: 12 }}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 12 }}
-                tickFormatter={(value) => formatNumber(value)}
-              />
-              <Tooltip
-                content={({ active, payload, label }) => {
-                  if (active && payload && payload.length) {
-                    const data = payload[0].payload;
-                    // Format date for display
-                    const formatDate = (dateStr: string) => {
-                      if (!dateStr) return "";
-                      const date = new Date(dateStr);
-                      return date.toLocaleDateString("en-US", {
-                        weekday: "short",
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      });
-                    };
-
-                    return (
-                      <div
-                        style={{
-                          backgroundColor: "white",
-                          padding: "16px",
-                          border: "2px solid #4D8D8D",
-                          borderRadius: "8px",
-                          boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-                          minWidth: "200px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontWeight: "bold",
-                            marginBottom: "8px",
-                            color: "#333",
-                          }}
-                        >
-                          Day: {label}
-                        </div>
-                        <div
-                          style={{
-                            color: "#555",
-                            marginBottom: "8px",
-                            fontSize: "12px",
-                          }}
-                        >
-                          {/* Date: {data.Day} */}
-                          Date: {data.dayFormatted}
-                          {/* Date: {formatDate(data.date)} */}
-                        </div>
-                        <div style={{ color: "#4D8D8D", marginBottom: "4px" }}>
-                          Sales: {formatCurrency(data.sales)}
-                        </div>
-                        <div style={{ color: "#ff0000" }}>
-                          Moving Avg: {formatCurrency(data.movingAverage)}
-                        </div>
-                      </div>
-                    );
-                  }
-                  return null;
-                }}
-              />
-              <Legend wrapperStyle={{ paddingTop: "20px" }} />
-              <Bar
-                dataKey="sales"
-                fill={bars_color}
-                barSize={50}
-                radius={[4, 4, 0, 0]}
-                animationDuration={1500}
-                name="Daily Sales"
-              />
-              {/* Moving Average Line (red color) */}
-              <Line
-                type="monotone"
-                dataKey="movingAverage"
-                stroke="#ff0000"
-                strokeWidth={3}
-                dot={{ r: 4, fill: "#ff0000", strokeWidth: 2 }}
-                activeDot={{ r: 6, fill: "#ff0000", strokeWidth: 2 }}
-                name="Moving Average"
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Second row - Category Performance Trends and Summary side by side */}
+      {/* ROW 1: Latest Week Sales Performance (65%) + Category Performance Summary (35%) */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
-        {/* ENHANCED: Sales Category Line Chart from Table9 - FULL VALUES */}
+        {/* Latest Week Sales Performance - 65% width */}
         <div
           style={{
-            width: "calc(60% - 12px)",
+            width: "calc(65% - 12px)",
             minWidth: "400px",
             flexGrow: 1,
-            padding: "20px",
+            padding: "24px",
             borderRadius: "12px",
             boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
             backgroundColor: "white",
             transition: "transform 0.3s ease, box-shadow 0.3s ease",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
           }}
           className="stat-card"
         >
@@ -801,143 +532,126 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
               marginBottom: "16px",
               color: "#333",
               textAlign: "center",
+              width: "100%",
             }}
           >
-            Category Performance Trends
+            Latest Week Sales Performance
           </div>
 
-          {/* ENHANCED: Data validation and debug info */}
+          {/* Chart container */}
           <div
             style={{
-              fontSize: "12px",
-              color: "#666",
-              marginBottom: "10px",
-              textAlign: "center",
+              height: "420px",
+              width: "100%",
+              marginBottom: "0px",
             }}
           >
-            Showing {salesCategoryData.length} weeks •{" "}
-            {getCategoriesFromTable9().length} categories
-          </div>
-
-          <div
-            style={{
-              height: "500px",
-              marginBottom: "10px",
-            }}
-          >
-            {salesCategoryData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={salesCategoryData}
-                  margin={{ top: 20, right: 20, left: 10, bottom: -10 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    opacity={0.2}
-                  />
-                  <XAxis
-                    dataKey="week"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#666", fontSize: 12 }}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(value) => formatNumber(value)}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "rgba(255,255,255,0.95)",
-                      borderRadius: "8px",
-                      boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-                      border: "none",
-                      minWidth: "250px",
-                    }}
-                    content={({ active, payload, label }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div
-                            style={{
-                              backgroundColor: "white",
-                              padding: "16px",
-                              border: "2px solid #4D8D8D",
-                              borderRadius: "8px",
-                              boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-                              minWidth: "200px",
-                            }}
-                          >
-                            <div
-                              style={{
-                                fontWeight: "bold",
-                                marginBottom: "8px",
-                                color: "#333",
-                              }}
-                            >
-                              {label}: Category Sales
-                            </div>
-                            {payload.map((entry, index) => (
-                              <div
-                                key={index}
-                                style={{
-                                  color: entry.color,
-                                  marginBottom: "4px",
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                }}
-                              >
-                                <span>{entry.name}:</span>
-                                <span style={{ fontWeight: "bold" }}>
-                                  {formatCurrency(entry.value)}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Legend
-                    layout="horizontal"
-                    verticalAlign="top"
-                    align="center"
-                    wrapperStyle={{ paddingBottom: "10px" }}
-                  />
-                  {renderCategoryLines()}
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  height: "100%",
-                  color: "#666",
-                  fontSize: "16px",
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={dailySalesDataWithMA}
+                margin={{
+                  top: 20,
+                  right: 30,
+                  left: 0,
+                  bottom: 10,
                 }}
               >
-                <div>No category trend data available</div>
-                <div style={{ fontSize: "14px", marginTop: "8px" }}>
-                  Expected table9 structure: Category, Week 14, Week 15, Week
-                  16, Week 17
-                </div>
-              </div>
-            )}
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke="rgba(0,0,0,0.1)"
+                />
+                <XAxis
+                  dataKey="day"
+                  axisLine={false}
+                  tickLine={false}
+                  textAnchor="end"
+                  height={60}
+                  interval={0}
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => formatNumber(value)}
+                />
+                <Tooltip
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div
+                          style={{
+                            backgroundColor: "white",
+                            padding: "16px",
+                            border: "2px solid #4D8D8D",
+                            borderRadius: "8px",
+                            boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+                            minWidth: "200px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontWeight: "bold",
+                              marginBottom: "8px",
+                              color: "#333",
+                            }}
+                          >
+                            Day: {label}
+                          </div>
+                          <div
+                            style={{
+                              color: "#555",
+                              marginBottom: "8px",
+                              fontSize: "12px",
+                            }}
+                          >
+                            Date: {data.dayFormatted}
+                          </div>
+                          <div
+                            style={{ color: "#4D8D8D", marginBottom: "4px" }}
+                          >
+                            Sales: {formatCurrency(data.sales)}
+                          </div>
+                          <div style={{ color: "#ff0000" }}>
+                            Moving Avg: {formatCurrency(data.movingAverage)}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Legend wrapperStyle={{ paddingTop: "10px" }} />
+                <Bar
+                  dataKey="sales"
+                  fill={bars_color}
+                  barSize={50}
+                  radius={[4, 4, 0, 0]}
+                  animationDuration={1500}
+                  name="Daily Sales"
+                />
+                {/* Moving Average Line (red color) */}
+                <Line
+                  type="monotone"
+                  dataKey="movingAverage"
+                  stroke="#ff0000"
+                  strokeWidth={3}
+                  dot={{ r: 4, fill: "#ff0000", strokeWidth: 2 }}
+                  activeDot={{ r: 6, fill: "#ff0000", strokeWidth: 2 }}
+                  name="Moving Average"
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Categories List from Table10 */}
+        {/* Category Performance Summary - 35% width */}
         <div
           style={{
-            width: "calc(40% - 12px)",
-            minWidth: "300px",
+            width: "calc(35% - 12px)",
+            minWidth: "280px",
             flexGrow: 1,
             padding: "24px",
             borderRadius: "12px",
@@ -953,10 +667,164 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
         </div>
       </div>
 
-      {/* Weekly Sales Trend with Multiple Moving Averages - FULL VALUES */}
+      {/* ROW 2: Category Performance by Week - Full Width */}
+      <div
+        style={{
+          width: "100%",
+          padding: "20px",
+          borderRadius: "12px",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+          backgroundColor: "white",
+          transition: "transform 0.3s ease, box-shadow 0.3s ease",
+        }}
+        className="stat-card"
+      >
+        {/* Chart heading */}
+        <div
+          style={{
+            fontSize: "24px",
+            fontWeight: "bold",
+            marginBottom: "16px",
+            color: "#333",
+            textAlign: "center",
+          }}
+        >
+          Category Performance by Week
+        </div>
+
+        {/* Data validation and debug info */}
+        <div
+          style={{
+            fontSize: "12px",
+            color: "#666",
+            marginBottom: "10px",
+            textAlign: "center",
+          }}
+        >
+          Showing {getAvailableCategories().length} categories •{" "}
+          {categoryBarData.length} weeks
+        </div>
+
+        <div
+          style={{
+            height: "420px",
+            marginBottom: "10px",
+          }}
+        >
+          {categoryBarData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={categoryBarData}
+                margin={{ top: 20, right: 20, left: 10, bottom: 1}}
+                barCategoryGap="20%"
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  opacity={0.2}
+                />
+                <XAxis
+                  dataKey="week"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#666", fontSize: 12 }}
+                  textAnchor="middle"
+                  height={60}
+                  interval={0}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => formatNumber(value)}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "rgba(255,255,255,0.95)",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                    border: "none",
+                    minWidth: "250px",
+                  }}
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div
+                          style={{
+                            backgroundColor: "white",
+                            padding: "16px",
+                            border: "2px solid #4D8D8D",
+                            borderRadius: "8px",
+                            boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+                            minWidth: "200px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontWeight: "bold",
+                              marginBottom: "8px",
+                              color: "#333",
+                            }}
+                          >
+                            {label}: Weekly Sales by Category
+                          </div>
+                          {payload.map((entry, index) => (
+                            <div
+                              key={index}
+                              style={{
+                                color: entry.color,
+                                marginBottom: "4px",
+                                display: "flex",
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              <span>{entry.name}:</span>
+                              <span style={{ fontWeight: "bold" }}>
+                                {formatCurrency(entry.value)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Legend
+                  layout="horizontal"
+                  verticalAlign="top"
+                  align="center"
+                  wrapperStyle={{ paddingBottom: "10px" }}
+                />
+                {renderCategoryBars()}
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "100%",
+                color: "#666",
+                fontSize: "16px",
+              }}
+            >
+              <div>No category data available</div>
+              <div style={{ fontSize: "14px", marginTop: "8px" }}>
+                Expected table9 structure: Category, Week columns, Grand Total
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ROW 3: Weekly Sales Trend - Full Width */}
       {weeklySalesWithMovingAvg.length > 0 && (
         <div
           style={{
+            width: "100%",
             padding: "24px",
             borderRadius: "12px",
             boxShadow: "0 4px 20px rgba(0,0,0,0.08)",

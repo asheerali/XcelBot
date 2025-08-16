@@ -3,7 +3,13 @@ import io
 from typing import Union
 import pandas as pd
 # from pmix_dashboard.pmix_utils import overview_tables, detailed_analysis_tables
-from sales_split_dashboard.sales_split_utils import create_sales_pivot_tables, sales_analysis_tables, create_sales_overview_tables, create_sales_by_day_table, thirteen_week_category
+from sales_split_dashboard.sales_split_utils import (create_sales_pivot_tables, 
+                                                     sales_analysis_tables, 
+                                                    #  create_sales_overview_tables, 
+                                                     create_sales_by_day_table, 
+                                                     thirteen_week_category,
+                                                     category_comparison_func, 
+                                                     sales_by_category_func)
 import numpy as np
 
 def process_sales_split_file(file_data: Union[io.BytesIO, str, pd.DataFrame],location='All', start_date=None, end_date=None, category_filter='All'):
@@ -73,7 +79,7 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str, pd.DataFrame],loc
     
     # print("i am here in sales split processor start_date_str", start_date_str, "end_date_str", end_date_str, "current date", current_date)
     
-    sales_overview_analysis = create_sales_overview_tables(df, location_filter='All', start_date=start_date, end_date=end_date)
+    # sales_overview_analysis = create_sales_overview_tables(df, location_filter='All', start_date=start_date, end_date=end_date)
 
     analysis = sales_analysis_tables(df, location_filter=location, start_date=start_date, end_date=end_date, categories_filter=category_filter)
 
@@ -93,14 +99,18 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str, pd.DataFrame],loc
     sales_by_day_table = sales_by_day['sales_by_day_table']
 
     # print("sales_by_day_table i am here in sales split processor", "\n", sales_by_day_table.head())
-    
+    sales_by_category_table = sales_by_category_func(df, location_filter='All', start_date=start_date, end_date=end_date)
+    category_comparison_table = category_comparison_func(df, location_filter='All', start_date=start_date, end_date=end_date)
+
+    print("i am here in the sales split processor printing sales_by_category_table", sales_by_category_table)
+
     salesByWeek = analysis['sales_by_week']
     salesByDayOfWeek = analysis['sales_by_day']
-    salesByTimeOfDay = analysis['sales_by_time'] #value
-     
-    # sales_by_day_table = sales_overview_analysis['sales_by_day_table'] 
-    sales_by_category_table = sales_overview_analysis['sales_by_category_table']
-    category_comparison_table = sales_overview_analysis['category_comparison_table']
+    salesByTimeOfDay = analysis['sales_by_time']
+
+    # # sales_by_day_table = sales_overview_analysis['sales_by_day_table'] 
+    # sales_by_category_table = sales_overview_analysis['sales_by_category_table']
+    # category_comparison_table = sales_overview_analysis['category_comparison_table']
     # thirteen_week_category_table = sales_overview_analysis['thirteen_week_category_table']
     
     

@@ -1,4 +1,4 @@
-// // Updated SalesSplitDashboard.tsx - Full Values Display with Decimals Preserved
+// // Updated SalesSplitDashboard.tsx - Bar Chart for Category Performance Trends
 // // IMPORTANT: All decimal values (like 4150.77) are now preserved and displayed as "4,150.77" or "$4,150.77"
 // import React from "react";
 // import {
@@ -87,9 +87,6 @@
 //   };
 
 //   // Process Daily Sales data from table8 (Day of Week data) - FULL VALUES
-//   // Process Daily Sales data from table8 (Day of Week data) - CONSISTENT DAY ORDER
-//   // Process Daily Sales data from table8 (Day of Week data) - FULL VALUES
-//   // Process Daily Sales data from table8 (Day of Week data) - FULL VALUES
 //   const processDailySalesData = () => {
 //     if (
 //       !tableData.table8 ||
@@ -144,7 +141,6 @@
 //         parseFloat(String(row.Moving_Avg || 0).replace(/[$,]/g, "")) || 0,
 //       date: row.Date, // Keep the date for reference
 //       dayFormatted: row.Day, // add this line
-
 //     }));
 
 //     // Sort the data to ensure Monday comes first
@@ -155,81 +151,9 @@
 //     });
 //   };
 
-//   // Enhanced version with both options available
-//   const processDailySalesDataWithOptions = (startWithSunday = false) => {
-//     if (
-//       !tableData.table8 ||
-//       !Array.isArray(tableData.table8) ||
-//       tableData.table8.length === 0
-//     ) {
-//       console.log("No table8 data available, using fallback");
-//       return tableData.table1.map((row: any) => ({
-//         day: `Week ${row.Week}`,
-//         sales: parseFloat(
-//           row["Grand Total"] ||
-//             row[
-//               Object.keys(row).find((key) =>
-//                 key.toLowerCase().includes("total")
-//               ) || ""
-//             ] ||
-//             0
-//         ),
-//         movingAverage: 0,
-//       }));
-//     }
-
-//     const daysOfWeekMap = {
-//       Monday: "Mon",
-//       Tuesday: "Tue",
-//       Wednesday: "Wed",
-//       Thursday: "Thu",
-//       Friday: "Fri",
-//       Saturday: "Sat",
-//       Sunday: "Sun",
-//     };
-
-//     // Choose day order based on parameter
-//     const dayOrder = startWithSunday
-//       ? [
-//           "Sunday",
-//           "Monday",
-//           "Tuesday",
-//           "Wednesday",
-//           "Thursday",
-//           "Friday",
-//           "Saturday",
-//         ]
-//       : [
-//           "Monday",
-//           "Tuesday",
-//           "Wednesday",
-//           "Thursday",
-//           "Friday",
-//           "Saturday",
-//           "Sunday",
-//         ];
-
-//     // Process the data and create a map for easy lookup
-//     const dataMap = new Map();
-//     tableData.table8.forEach((row: any) => {
-//       const dayName = row.Day_of_Week;
-//       dataMap.set(dayName, {
-//         day: daysOfWeekMap[dayName] || dayName,
-//         sales: parseFloat(String(row.Sales || 0).replace(/[$,]/g, "")) || 0,
-//         movingAverage:
-//           parseFloat(String(row.Moving_Avg || 0).replace(/[$,]/g, "")) || 0,
-//         date: row.Date,
-//       });
-//     });
-
-//     // Return data in consistent order
-//     return dayOrder
-//       .filter((day) => dataMap.has(day))
-//       .map((day) => dataMap.get(day));
-//   };
-
-//   // ENHANCED: Process Sales Category Line Chart data from table9 - FULL VALUES
-//   const processSalesCategoryData = () => {
+//   // NEW: Process Sales Category Bar Chart data from table9 - FULL VALUES
+//   // Transform data to have weeks on X-axis and categories as bars
+//   const processCategoryBarData = () => {
 //     if (
 //       !tableData.table9 ||
 //       !Array.isArray(tableData.table9) ||
@@ -239,7 +163,7 @@
 //       return [];
 //     }
 
-//     console.log("Processing table9 data:", tableData.table9);
+//     console.log("Processing table9 data for bar chart:", tableData.table9);
 
 //     // Get all week columns (exclude Category and Grand Total columns)
 //     const weekColumns = Object.keys(tableData.table9[0] || {}).filter(
@@ -248,7 +172,7 @@
 
 //     console.log("Available week columns:", weekColumns);
 
-//     // Transform data to have weeks as x-axis and categories as separate lines
+//     // Transform data to have weeks as x-axis and categories as separate bars
 //     const weeklyData: any[] = [];
 
 //     weekColumns.forEach((weekCol) => {
@@ -271,9 +195,13 @@
 //     return weeklyData;
 //   };
 
-//   // ENHANCED: Get categories with better validation
-//   const getCategoriesFromTable9 = () => {
-//     if (!tableData.table9 || !Array.isArray(tableData.table9)) {
+//   // Get available categories from table9 data
+//   const getAvailableCategories = () => {
+//     if (
+//       !tableData.table9 ||
+//       !Array.isArray(tableData.table9) ||
+//       tableData.table9.length === 0
+//     ) {
 //       return [];
 //     }
 
@@ -344,7 +272,7 @@
 //       }));
 //   };
 
-//   // ENHANCED: Calculate moving average for weekly sales data - FULL VALUES
+//   // Calculate moving average for weekly sales data - FULL VALUES
 //   const calculateMovingAverage = (
 //     data: any[],
 //     periods: { [key: string]: number } = { "3week": 3, "5week": 5 }
@@ -423,9 +351,32 @@
 //     return colors[index % colors.length];
 //   };
 
+//   // NEW: Render bars for each category in the chart
+//   const renderCategoryBars = () => {
+//     const availableCategories = getAvailableCategories();
+
+//     if (availableCategories.length === 0) {
+//       console.log("No categories available to render");
+//       return null;
+//     }
+
+//     console.log("Rendering bars for categories:", availableCategories);
+
+//     return availableCategories.map((category: string, index: number) => (
+//       <Bar
+//         key={category}
+//         dataKey={category}
+//         fill={getCategoryColor(index)}
+//         name={category}
+//         barSize={30}
+//         radius={[2, 2, 0, 0]}
+//       />
+//     ));
+//   };
+
 //   // Get processed data
 //   const dailySalesDataWithMA = processDailySalesWithMovingAverage();
-//   const salesCategoryData = processSalesCategoryData();
+//   const categoryBarData = processCategoryBarData();
 //   const categoriesList = processCategoriesList();
 //   const weeklySalesData = processWeeklySalesData();
 
@@ -437,7 +388,7 @@
 
 //   console.log("Processed data:", {
 //     dailySalesDataWithMA,
-//     salesCategoryData,
+//     categoryBarData,
 //     categoriesList,
 //     weeklySalesData: weeklySalesWithMovingAvg,
 //   });
@@ -531,76 +482,6 @@
 //     </div>
 //   );
 
-//   // ENHANCED: Render lines for sales category chart with better error handling and tooltips
-//   const renderCategoryLines = () => {
-//     if (salesCategoryData.length === 0) {
-//       console.log("No sales category data to render");
-//       return null;
-//     }
-
-//     // Get categories from table9 (excluding Grand Total)
-//     const categories = getCategoriesFromTable9();
-
-//     console.log("Rendering lines for categories:", categories);
-
-//     return categories.map((category: string, index: number) => (
-//       <Line
-//         key={category}
-//         type="monotone"
-//         dataKey={category}
-//         stroke={getCategoryColor(index)}
-//         strokeWidth={3}
-//         dot={{ r: 4, strokeWidth: 2, fill: "white" }}
-//         activeDot={{
-//           r: 6,
-//           stroke: getCategoryColor(index),
-//           strokeWidth: 2,
-//           fill: "white",
-//         }}
-//         name={category}
-//         connectNulls={false} // Don't connect null/undefined values
-//       />
-//     ));
-//   };
-
-//   // DEBUGGING: Table9 Debug Component (remove in production)
-//   const Table9DebugInfo = () => {
-//     if (!tableData.table9) return null;
-
-//     return (
-//       <div
-//         style={{
-//           padding: "10px",
-//           backgroundColor: "#f0f9ff",
-//           borderRadius: "4px",
-//           margin: "10px 0",
-//           fontSize: "12px",
-//           fontFamily: "monospace",
-//           border: "1px solid #0ea5e9",
-//         }}
-//       >
-//         <strong>📊 Table9 Debug Info:</strong>
-//         <div style={{ marginTop: "8px" }}>
-//           <strong>Categories:</strong> {getCategoriesFromTable9().join(", ")}
-//         </div>
-//         <div>
-//           <strong>Weeks:</strong>{" "}
-//           {Object.keys(tableData.table9[0] || {})
-//             .filter((k) => k.startsWith("Week"))
-//             .join(", ")}
-//         </div>
-//         <details style={{ marginTop: "8px" }}>
-//           <summary style={{ cursor: "pointer", fontWeight: "bold" }}>
-//             Raw Data (First 2 rows)
-//           </summary>
-//           <pre style={{ marginTop: "8px", fontSize: "10px" }}>
-//             {JSON.stringify(tableData.table9.slice(0, 2), null, 2)}
-//           </pre>
-//         </details>
-//       </div>
-//     );
-//   };
-
 //   return (
 //     <div
 //       style={{
@@ -623,9 +504,6 @@
 //           Sales Analysis (for recent week)
 //         </Typography>
 //       )}
-
-//       {/* DEBUG: Uncomment to see table9 structure */}
-//       {/* <Table9DebugInfo /> */}
 
 //       {/* Daily Sales Performance with Moving Average - FULL VALUES */}
 //       <div
@@ -698,18 +576,6 @@
 //                 content={({ active, payload, label }) => {
 //                   if (active && payload && payload.length) {
 //                     const data = payload[0].payload;
-//                     // Format date for display
-//                     const formatDate = (dateStr: string) => {
-//                       if (!dateStr) return "";
-//                       const date = new Date(dateStr);
-//                       return date.toLocaleDateString("en-US", {
-//                         weekday: "short",
-//                         year: "numeric",
-//                         month: "short",
-//                         day: "numeric",
-//                       });
-//                     };
-
 //                     return (
 //                       <div
 //                         style={{
@@ -737,9 +603,7 @@
 //                             fontSize: "12px",
 //                           }}
 //                         >
-//                           {/* Date: {data.Day} */}
 //                           Date: {data.dayFormatted}
-//                           {/* Date: {formatDate(data.date)} */}
 //                         </div>
 //                         <div style={{ color: "#4D8D8D", marginBottom: "4px" }}>
 //                           Sales: {formatCurrency(data.sales)}
@@ -777,9 +641,9 @@
 //         </div>
 //       </div>
 
-//       {/* Second row - Category Performance Trends and Summary side by side */}
+//       {/* Second row - Category Performance Bar Chart and Summary side by side */}
 //       <div style={{ display: "flex", flexWrap: "wrap", gap: "24px" }}>
-//         {/* ENHANCED: Sales Category Line Chart from Table9 - FULL VALUES */}
+//         {/* NEW: Sales Category Bar Chart from Table9 - FULL VALUES */}
 //         <div
 //           style={{
 //             width: "calc(60% - 12px)",
@@ -803,10 +667,10 @@
 //               textAlign: "center",
 //             }}
 //           >
-//             Category Performance Trends
+//             Category Performance by Week
 //           </div>
 
-//           {/* ENHANCED: Data validation and debug info */}
+//           {/* Data validation and debug info */}
 //           <div
 //             style={{
 //               fontSize: "12px",
@@ -815,8 +679,8 @@
 //               textAlign: "center",
 //             }}
 //           >
-//             Showing {salesCategoryData.length} weeks •{" "}
-//             {getCategoriesFromTable9().length} categories
+//             Showing {getAvailableCategories().length} categories •{" "}
+//             {categoryBarData.length} weeks
 //           </div>
 
 //           <div
@@ -825,11 +689,12 @@
 //               marginBottom: "10px",
 //             }}
 //           >
-//             {salesCategoryData.length > 0 ? (
+//             {categoryBarData.length > 0 ? (
 //               <ResponsiveContainer width="100%" height="100%">
-//                 <LineChart
-//                   data={salesCategoryData}
-//                   margin={{ top: 20, right: 20, left: 10, bottom: -10 }}
+//                 <BarChart
+//                   data={categoryBarData}
+//                   margin={{ top: 20, right: 20, left: 10, bottom: 60 }}
+//                   barCategoryGap="20%"
 //                 >
 //                   <CartesianGrid
 //                     strokeDasharray="3 3"
@@ -841,8 +706,9 @@
 //                     axisLine={false}
 //                     tickLine={false}
 //                     tick={{ fill: "#666", fontSize: 12 }}
-//                     textAnchor="end"
+//                     textAnchor="middle"
 //                     height={60}
+//                     interval={0}
 //                   />
 //                   <YAxis
 //                     axisLine={false}
@@ -878,7 +744,7 @@
 //                                 color: "#333",
 //                               }}
 //                             >
-//                               {label}: Category Sales
+//                               {label}: Weekly Sales by Category
 //                             </div>
 //                             {payload.map((entry, index) => (
 //                               <div
@@ -908,8 +774,8 @@
 //                     align="center"
 //                     wrapperStyle={{ paddingBottom: "10px" }}
 //                   />
-//                   {renderCategoryLines()}
-//                 </LineChart>
+//                   {renderCategoryBars()}
+//                 </BarChart>
 //               </ResponsiveContainer>
 //             ) : (
 //               <div
@@ -923,10 +789,9 @@
 //                   fontSize: "16px",
 //                 }}
 //               >
-//                 <div>No category trend data available</div>
+//                 <div>No category data available</div>
 //                 <div style={{ fontSize: "14px", marginTop: "8px" }}>
-//                   Expected table9 structure: Category, Week 14, Week 15, Week
-//                   16, Week 17
+//                   Expected table9 structure: Category, Week columns, Grand Total
 //                 </div>
 //               </div>
 //             )}
@@ -953,7 +818,7 @@
 //         </div>
 //       </div>
 
-//       {/* Weekly Sales Trend with Multiple Moving Averages - FULL VALUES */}
+//       {/* Third row - Weekly Sales Trend with Multiple Moving Averages - FULL VALUES */}
 //       {weeklySalesWithMovingAvg.length > 0 && (
 //         <div
 //           style={{
