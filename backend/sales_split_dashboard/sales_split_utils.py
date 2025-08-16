@@ -434,8 +434,9 @@ def create_sales_pivot_tables(df, location_filter='All', start_date=None, end_da
         # Calculate the next Sunday
         end_date_dt = current_date + timedelta(days=days_to_next_sunday)
         print(f"Next Sunday: {end_date_dt}")
-
-        start_date_dt = end_date_dt - timedelta(weeks=4)
+        
+        start_date_dt = (end_date_dt - timedelta(weeks=4)) +  timedelta(days=1)
+        # start_date_dt = start_date_dt +  timedelta(days=1)
         
         print("------------------------------------------")
         print("------------------------------------------")
@@ -851,7 +852,9 @@ def sales_analysis_tables(df, location_filter='All', start_date=None, end_date=N
         end_date_dt = current_date + timedelta(days=days_to_next_sunday)
         print(f"Next Sunday: {end_date_dt}")
 
-        start_date_dt = end_date_dt - timedelta(weeks=4)
+        # start_date_dt = end_date_dt - timedelta(weeks=4)
+        start_date_dt = (end_date_dt - timedelta(weeks=4)) +  timedelta(days=1)
+   
         
         print("------------------------------------------")
         print("------------------------------------------")
