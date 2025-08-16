@@ -6,6 +6,158 @@ from models.sales_pmix import SalesPMix
 from typing import List, Tuple
 
 
+# def check_and_filter_duplicates_sales_pmix(
+#     db: Session, 
+#     df_clean: pd.DataFrame, 
+#     company_id: int
+# ) -> Tuple[pd.DataFrame, int, int]:
+#     """
+#     Check for duplicate records and filter them out before database insertion.
+    
+#     Args:
+#         db: Database session
+#         df_clean: Cleaned DataFrame to check for duplicates
+#         company_id: Company ID for filtering
+    
+#     Returns:
+#         Tuple of (filtered_dataframe, new_records_count, duplicates_count)
+#     """
+    
+#     if df_clean.empty:
+#         return df_clean, 0, 0
+    
+#     print(f"Starting duplicate check for {len(df_clean)} records...")
+    
+#     # Define the columns that make up a unique record
+#     # You can adjust these based on your business logic
+#     unique_identifier_columns = [
+#         'Sent_Date', 'Order_Date', 'Net_Price', 'Location', 
+#         'Qty', 'Menu_Item', 'Order_Id'
+#     ]
+    
+#     # Get the date range from the new data to optimize the query
+#     min_sent_date = df_clean['Sent_Date'].min()
+#     max_sent_date = df_clean['Sent_Date'].max()
+    
+#     print(f"Checking for duplicates in date range: {min_sent_date} to {max_sent_date}")
+    
+#     try:
+#         # Query existing records from database using SQLAlchemy ORM
+#         # This is more efficient than loading all records
+#         existing_records_query = db.query(SalesPMix).filter(
+#             and_(
+#                 SalesPMix.company_id == company_id,
+#                 or_(
+#                     and_(
+#                         SalesPMix.Sent_Date >= min_sent_date,
+#                         SalesPMix.Sent_Date <= max_sent_date
+#                     ),
+#                     and_(
+#                         SalesPMix.Order_Date >= min_sent_date.strftime('%m-%d-%Y') if min_sent_date else None,
+#                         SalesPMix.Order_Date <= max_sent_date.strftime('%m-%d-%Y') if max_sent_date else None
+#                     )
+#                 )
+#             )
+#         )
+        
+#         # Convert to DataFrame for easier comparison
+#         existing_records = []
+#         for record in existing_records_query:
+#             record_dict = {}
+#             for col in unique_identifier_columns:
+#                 record_dict[col] = getattr(record, col, None)
+#             existing_records.append(record_dict)
+        
+#         existing_df = pd.DataFrame(existing_records)
+#         print(f"Found {len(existing_df)} existing records in database for comparison")
+        
+#         if existing_df.empty:
+#             print("No existing records found. All records will be inserted.")
+#             return df_clean, len(df_clean), 0
+        
+#         # Normalize data types for comparison
+#         df_comparison = df_clean.copy()
+        
+#         # Handle datetime columns
+#         for col in ['Sent_Date']:
+#             if col in existing_df.columns and col in df_comparison.columns:
+#                 existing_df[col] = pd.to_datetime(existing_df[col], errors='coerce')
+#                 df_comparison[col] = pd.to_datetime(df_comparison[col], errors='coerce')
+        
+#         # Handle string date columns
+#         for col in ['Order_Date']:
+#             if col in existing_df.columns and col in df_comparison.columns:
+#                 existing_df[col] = existing_df[col].astype(str).replace('None', '').replace('nan', '')
+#                 df_comparison[col] = df_comparison[col].astype(str).replace('None', '').replace('nan', '')
+        
+#         # Handle numeric columns
+#         for col in ['Net_Price', 'Qty', 'Order_Id']:
+#             if col in existing_df.columns and col in df_comparison.columns:
+#                 existing_df[col] = pd.to_numeric(existing_df[col], errors='coerce').fillna(0)
+#                 df_comparison[col] = pd.to_numeric(df_comparison[col], errors='coerce').fillna(0)
+        
+#         # Handle string columns
+#         for col in ['Location', 'Menu_Item']:
+#             if col in existing_df.columns and col in df_comparison.columns:
+#                 existing_df[col] = existing_df[col].astype(str).fillna('').str.strip()
+#                 df_comparison[col] = df_comparison[col].astype(str).fillna('').str.strip()
+        
+#         # Create composite keys for comparison
+#         def create_composite_key(row, columns):
+#             """Create a composite key from specified columns"""
+#             key_parts = []
+#             for col in columns:
+#                 if col in row.index:
+#                     val = row[col]
+#                     if pd.isna(val) or val is None:
+#                         key_parts.append('NULL')
+#                     else:
+#                         key_parts.append(str(val))
+#                 else:
+#                     key_parts.append('NULL')
+#             return '|'.join(key_parts)
+        
+#         # Create composite keys
+#         existing_df['composite_key'] = existing_df.apply(
+#             lambda row: create_composite_key(row, unique_identifier_columns), axis=1
+#         )
+        
+#         df_comparison['composite_key'] = df_comparison.apply(
+#             lambda row: create_composite_key(row, unique_identifier_columns), axis=1
+#         )
+        
+#         # Find duplicates
+#         existing_keys = set(existing_df['composite_key'].tolist())
+#         duplicate_mask = df_comparison['composite_key'].isin(existing_keys)
+        
+#         duplicates_count = duplicate_mask.sum()
+#         new_records_count = len(df_comparison) - duplicates_count
+        
+#         print(f"Duplicate analysis complete:")
+#         print(f"  - Total records in upload: {len(df_comparison)}")
+#         print(f"  - Duplicate records found: {duplicates_count}")
+#         print(f"  - New records to insert: {new_records_count}")
+        
+#         if duplicates_count > 0:
+#             print("Sample duplicate records:")
+#             duplicate_samples = df_comparison[duplicate_mask][unique_identifier_columns].head(3)
+#             print(duplicate_samples.to_string())
+        
+#         # Filter out duplicates
+#         df_filtered = df_comparison[~duplicate_mask].copy()
+        
+#         # Remove the temporary composite_key column
+#         if 'composite_key' in df_filtered.columns:
+#             df_filtered = df_filtered.drop('composite_key', axis=1)
+        
+#         return df_filtered, new_records_count, duplicates_count
+        
+#     except Exception as e:
+#         print(f"Error during duplicate check: {str(e)}")
+#         print("Proceeding without duplicate check...")
+#         return df_clean, len(df_clean), 0
+
+
 def check_and_filter_duplicates_sales_pmix(
     db: Session, 
     df_clean: pd.DataFrame, 
@@ -29,7 +181,6 @@ def check_and_filter_duplicates_sales_pmix(
     print(f"Starting duplicate check for {len(df_clean)} records...")
     
     # Define the columns that make up a unique record
-    # You can adjust these based on your business logic
     unique_identifier_columns = [
         'Sent_Date', 'Order_Date', 'Net_Price', 'Location', 
         'Qty', 'Menu_Item', 'Order_Id'
@@ -43,7 +194,6 @@ def check_and_filter_duplicates_sales_pmix(
     
     try:
         # Query existing records from database using SQLAlchemy ORM
-        # This is more efficient than loading all records
         existing_records_query = db.query(SalesPMix).filter(
             and_(
                 SalesPMix.company_id == company_id,
@@ -75,42 +225,67 @@ def check_and_filter_duplicates_sales_pmix(
             print("No existing records found. All records will be inserted.")
             return df_clean, len(df_clean), 0
         
-        # Normalize data types for comparison
+        # Normalize data types for comparison - CREATE A COPY TO AVOID MODIFYING ORIGINAL
         df_comparison = df_clean.copy()
+        existing_df_normalized = existing_df.copy()
+        
+        # ===== IMPROVED DATA TYPE NORMALIZATION =====
         
         # Handle datetime columns
         for col in ['Sent_Date']:
-            if col in existing_df.columns and col in df_comparison.columns:
-                existing_df[col] = pd.to_datetime(existing_df[col], errors='coerce')
+            if col in existing_df_normalized.columns and col in df_comparison.columns:
+                existing_df_normalized[col] = pd.to_datetime(existing_df_normalized[col], errors='coerce')
                 df_comparison[col] = pd.to_datetime(df_comparison[col], errors='coerce')
         
         # Handle string date columns
         for col in ['Order_Date']:
-            if col in existing_df.columns and col in df_comparison.columns:
-                existing_df[col] = existing_df[col].astype(str).replace('None', '').replace('nan', '')
+            if col in existing_df_normalized.columns and col in df_comparison.columns:
+                existing_df_normalized[col] = existing_df_normalized[col].astype(str).replace('None', '').replace('nan', '')
                 df_comparison[col] = df_comparison[col].astype(str).replace('None', '').replace('nan', '')
         
-        # Handle numeric columns
-        for col in ['Net_Price', 'Qty', 'Order_Id']:
-            if col in existing_df.columns and col in df_comparison.columns:
-                existing_df[col] = pd.to_numeric(existing_df[col], errors='coerce').fillna(0)
+        # Handle numeric columns with special attention to large integers (like Order_Id)
+        for col in ['Net_Price', 'Qty']:
+            if col in existing_df_normalized.columns and col in df_comparison.columns:
+                existing_df_normalized[col] = pd.to_numeric(existing_df_normalized[col], errors='coerce').fillna(0)
                 df_comparison[col] = pd.to_numeric(df_comparison[col], errors='coerce').fillna(0)
+        
+        # Special handling for Order_Id to ensure consistency between CSV and Excel
+        for col in ['Order_Id']:
+            if col in existing_df_normalized.columns and col in df_comparison.columns:
+                # Convert to numeric first, then to int64 to handle large numbers consistently
+                existing_df_normalized[col] = pd.to_numeric(existing_df_normalized[col], errors='coerce').fillna(0).astype('int64')
+                df_comparison[col] = pd.to_numeric(df_comparison[col], errors='coerce').fillna(0).astype('int64')
         
         # Handle string columns
         for col in ['Location', 'Menu_Item']:
-            if col in existing_df.columns and col in df_comparison.columns:
-                existing_df[col] = existing_df[col].astype(str).fillna('').str.strip()
-                df_comparison[col] = df_comparison[col].astype(str).fillna('').str.strip()
+            if col in existing_df_normalized.columns and col in df_comparison.columns:
+                existing_df_normalized[col] = existing_df_normalized[col].astype(str).fillna('').str.strip().str.lower()
+                df_comparison[col] = df_comparison[col].astype(str).fillna('').str.strip().str.lower()
         
         # Create composite keys for comparison
         def create_composite_key(row, columns):
-            """Create a composite key from specified columns"""
+            """Create a composite key from specified columns with improved normalization"""
             key_parts = []
             for col in columns:
                 if col in row.index:
                     val = row[col]
                     if pd.isna(val) or val is None:
                         key_parts.append('NULL')
+                    elif col == 'Order_Id':
+                        # Special handling for Order_Id to ensure consistent string representation
+                        key_parts.append(str(int(val)) if pd.notna(val) else 'NULL')
+                    elif col in ['Location', 'Menu_Item']:
+                        # Ensure string columns are consistently formatted
+                        key_parts.append(str(val).strip().lower())
+                    elif col in ['Net_Price', 'Qty']:
+                        # Format numeric values consistently
+                        key_parts.append(f"{float(val):.2f}" if pd.notna(val) else 'NULL')
+                    elif col in ['Sent_Date']:
+                        # Format datetime consistently
+                        if pd.notna(val):
+                            key_parts.append(val.strftime('%Y-%m-%d %H:%M:%S'))
+                        else:
+                            key_parts.append('NULL')
                     else:
                         key_parts.append(str(val))
                 else:
@@ -118,7 +293,7 @@ def check_and_filter_duplicates_sales_pmix(
             return '|'.join(key_parts)
         
         # Create composite keys
-        existing_df['composite_key'] = existing_df.apply(
+        existing_df_normalized['composite_key'] = existing_df_normalized.apply(
             lambda row: create_composite_key(row, unique_identifier_columns), axis=1
         )
         
@@ -126,8 +301,14 @@ def check_and_filter_duplicates_sales_pmix(
             lambda row: create_composite_key(row, unique_identifier_columns), axis=1
         )
         
+        # Debug: Print sample keys for comparison
+        print("Sample existing keys:")
+        print(existing_df_normalized['composite_key'].head(3).tolist())
+        print("Sample new keys:")
+        print(df_comparison['composite_key'].head(3).tolist())
+        
         # Find duplicates
-        existing_keys = set(existing_df['composite_key'].tolist())
+        existing_keys = set(existing_df_normalized['composite_key'].tolist())
         duplicate_mask = df_comparison['composite_key'].isin(existing_keys)
         
         duplicates_count = duplicate_mask.sum()
@@ -142,13 +323,13 @@ def check_and_filter_duplicates_sales_pmix(
             print("Sample duplicate records:")
             duplicate_samples = df_comparison[duplicate_mask][unique_identifier_columns].head(3)
             print(duplicate_samples.to_string())
+            
+            # Debug: Show the duplicate keys
+            print("Sample duplicate composite keys:")
+            print(df_comparison[duplicate_mask]['composite_key'].head(3).tolist())
         
-        # Filter out duplicates
-        df_filtered = df_comparison[~duplicate_mask].copy()
-        
-        # Remove the temporary composite_key column
-        if 'composite_key' in df_filtered.columns:
-            df_filtered = df_filtered.drop('composite_key', axis=1)
+        # Filter out duplicates from the ORIGINAL dataframe (not the comparison copy)
+        df_filtered = df_clean[~duplicate_mask].copy()
         
         return df_filtered, new_records_count, duplicates_count
         
@@ -368,9 +549,192 @@ async def upload_excel(
 
         # excel_data = io.BytesIO(file_content)
 
+        # if request.dashboard == "Sales Split and Product Mix" or request.dashboard == "Product Mix" or request.dashboard == "Sales Split":
+        #     # Process the dashboard data using the separate module
+        #             # Read file depending on type
+        #     if file_type == "csv":
+        #         # Try multiple encodings for CSV files
+        #         csv_string = None
+        #         encodings_to_try = ['utf-8', 'windows-1252', 'latin-1', 'iso-8859-1', 'cp1252']
+                
+        #         for encoding in encodings_to_try:
+        #             try:
+        #                 csv_string = file_content.decode(encoding)
+        #                 print(f"✅ Successfully decoded CSV with {encoding} encoding")
+        #                 break
+        #             except UnicodeDecodeError:
+        #                 print(f"❌ Failed to decode with {encoding}, trying next...")
+        #                 continue
+                
+        #         if csv_string is None:
+        #             raise ValueError("Could not decode CSV file with any supported encoding")
+                
+        #         excel_data = io.StringIO(csv_string)
+        #         df = pd.read_csv(excel_data)
+        #     else:   
+        #         excel_data = io.BytesIO(file_content)
+        #         df = pd.read_excel(excel_data)
+        #         # df = pd.read_excel(excel_data)
+                
+        #     df.columns = df.columns.str.strip()
+            
+        #     # Strip whitespace from column names
+        #     df.columns = df.columns.str.strip()
+
+        #     print("---------------------------------------------------------")
+        #     df["Location"] = df["Location"].str.lower()
+        #     print("i am here printing the locations df columns:", df["Location"])
+            
+        #     # === Fill & Type Conversion ===
+        #     int_cols = ['Qty']
+        #     bool_cols = ['Void?', 'Deferred', 'Tax Exempt']
+        #     float_cols = ['Net Price']
+        #     date_cols = ['Sent Date']
+        #     text_cols = ['Location', 'Dining Option']
+        #     exclude_cols = [
+        #         'Location', 'Order Id', 'Sent Date', 'Order Date', 'Check Id', 'Server', 'Table',
+        #         'Dining Area', 'Service', 'Dining Option', 'Item Selection Id', 'Item Id',
+        #         'Master Id', 'SKU', 'PLU', 'Menu Item', 'Menu Subgroup(s)', 'Menu Group',
+        #         'Menu', 'Sales Category', 'Tax Inclusion Option', 'Dining Option Tax', 'Tab Name'
+        #     ]
+
+        #     df[int_cols] = df[int_cols].fillna(0).astype(int)
+        #     df[bool_cols] = df[bool_cols].fillna(False).astype(bool)
+        #     df[float_cols] = df[float_cols].fillna(0.0)
+        #     df[text_cols] = df[text_cols].fillna('')
+        #     df[exclude_cols] = df[exclude_cols].fillna('')
+
+        #     fill_cols = [col for col in df.columns if col not in exclude_cols + int_cols + bool_cols + float_cols]
+        #     df[fill_cols] = df[fill_cols].fillna(0)
+
+        #     for col in date_cols:
+        #         df[col] = pd.to_datetime(df[col], errors='coerce')
+
+        #     df["Order Date"] = pd.to_datetime(df["Order Date"], dayfirst=False)
+        #     df['Date'] = df['Order Date'].dt.date
+        #     df["Order Date"] = df["Order Date"].dt.strftime('%m-%d-%Y')
+
+        #     df['Date'] = df['Sent Date'].dt.date
+        #     df['Time'] = df['Sent Date'].dt.time
+        #     df['Day'] = df['Sent Date'].dt.day_name()
+        #     df['Week'] = df['Sent Date'].dt.isocalendar().week
+        #     df['Month'] = df['Sent Date'].dt.month_name()
+        #     df['Quarter'] = df['Sent Date'].dt.quarter
+        #     df['Year'] = df['Sent Date'].dt.year
+
+        #     # === Dining Option Mapping ===
+        #     in_house = ["Kiosk - Dine In", "Kiosk - Take Out", "Take Out - Cashier", "Take Out  - Cashier",
+        #                 "Pick Up - Phone", "Inkind - Take Out", "Dine In", "Take Out"]
+        #     one_p = ["Delivery - Phone", "ChowNow: Pick Up", "Lunchbox Delivery", "Lunchbox Pick Up",
+        #             "ChowNow: Delivery", "Online Ordering - Takeout"]
+        #     dd = ["DoorDash Pick Up", "DoorDash Self-Delivery", "DoorDash - Takeout", "DoorDash - Delivery",
+        #         "DoorDash - Pick Up", "DoorDash - Self-Delivery"]
+        #     catering = ["EZ Cater - Pick Up", "LB Catering Delivery", "Catering Delivery - Phone",
+        #                 "LB Catering Pick Up", "Ez Cater - Delivery", "Catering Pick Up - Phone",
+        #                 "CaterCow - Delivery", "Fooda Pick up", "Sharebite - Pick Up"]
+        #     gh = ["Grubhub Pick Up", "Grubhub Self - Delivery", "Grubhub - Takeout", "Grubhub - Delivery",
+        #         "Grubhub - Pick Up", "Grubhub - Self-Delivery"]
+        #     ub = ["UberEats Pick Up", "UberEats Self-Delivery", "UberEats - Takeout", "UberEats - Delivery",
+        #         "UberEats - Pick Up", "UberEats - Self-Delivery", "Uber Eats - Delivery", "Uber Eats - Takeout",
+        #         "Uber Eats - Pick Up", "Uber Eats - Self-Delivery"]
+
+        #     conditions = [
+        #         df["Dining Option"].isin(in_house),
+        #         df["Dining Option"].isin(one_p),
+        #         df["Dining Option"].isin(dd),
+        #         df["Dining Option"].isin(catering),
+        #         df["Dining Option"].isin(gh),
+        #         df["Dining Option"].isin(ub)
+        #     ]
+        #     choices = ["In-House", "1P", "DD", "Catering", "GH", "UB"]
+        #     df["Category"] = np.select(conditions, choices, default="Others")
+            
+
+
+        #     df = df.rename(columns={
+        #         'Order Id': 'Order_Id',
+        #         'Order #': 'Order_number',
+        #         'Sent Date': 'Sent_Date',
+        #         'Order Date': 'Order_Date',
+        #         'Check Id': 'Check_Id',
+        #         'Dining Area': 'Dining_Area',
+        #         'Dining Option': 'Dining_Option',
+        #         'Item Selection Id': 'Item_Selection_Id',
+        #         'Item Id': 'Item_Id',
+        #         'Master Id': 'Master_Id',
+        #         'Menu Item': 'Menu_Item',
+        #         'Menu Subgroup(s)': 'Menu_Subgroups',
+        #         'Menu Group': 'Menu_Group',
+        #         'Sales Category': 'Sales_Category',
+        #         'Gross Price': 'Gross_Price',
+        #         'Net Price': 'Net_Price',
+        #         'Avg Price': 'Avg_Price',
+        #         'Void?': 'Void',
+        #         'Tax Exempt': 'Tax_Exempt',
+        #         'Tax Inclusion Option': 'Tax_Inclusion_Option',
+        #         'Dining Option Tax': 'Dining_Option_Tax',
+        #         'Tab Name': 'Tab_Name',
+        #         # add any other necessary renames...
+        #     })
+            
+        #     if 'Avg_Price' not in df.columns:  # Updated column name
+        #         df['Avg_Price'] = df['Net_Price'] / df['Qty']  # Updated column names
+                
+                
+        #     # print("i am here in excel upload printing the columns of the dataframe", df.columns, "\n", df.dtypes , "\n", df.head())
+        #     print("i am here in excel upload printing the filename dashboard and company id and df head", file_name, request.dashboard, request.company_id, "\n", df.head())
+            
+            
+            
+        #     result = process_dashboard_data(request, df1= df, df2 = None, file_name = file_name, company_id = request.company_id)
+
+
         if request.dashboard == "Sales Split and Product Mix" or request.dashboard == "Product Mix" or request.dashboard == "Sales Split":
-            # Process the dashboard data using the separate module
-                    # Read file depending on type
+        #     # Process the dashboard data using the separate module
+        #     # Read file depending on type
+        #     if file_type == "csv":
+        #         # Try multiple encodings for CSV files
+        #         csv_string = None
+        #         encodings_to_try = ['utf-8', 'windows-1252', 'latin-1', 'iso-8859-1', 'cp1252']
+                
+        #         for encoding in encodings_to_try:
+        #             try:
+        #                 csv_string = file_content.decode(encoding)
+        #                 print(f"✅ Successfully decoded CSV with {encoding} encoding")
+        #                 break
+        #             except UnicodeDecodeError:
+        #                 print(f"❌ Failed to decode with {encoding}, trying next...")
+        #                 continue
+                
+        #         if csv_string is None:
+        #             raise ValueError("Could not decode CSV file with any supported encoding")
+                
+        #         excel_data = io.StringIO(csv_string)
+        #         df = pd.read_csv(excel_data)
+        #     else:   
+        #         excel_data = io.BytesIO(file_content)
+        #         df = pd.read_excel(excel_data)
+            
+        #     # Strip whitespace from column names
+        #     df.columns = df.columns.str.strip()
+
+        #     print("---------------------------------------------------------")
+        #     df["Location"] = df["Location"].str.lower()
+        #     print("Location values:", df["Location"].head())
+            
+        #     # === Handle missing Avg Price column BEFORE any other processing ===
+        #     if 'Avg Price' not in df.columns:
+        #         print("Avg Price column not found - calculating from Net Price and Qty")
+        #         # Calculate using original column names (before renaming)
+        #         df['Avg Price'] = df['Net Price'] / df['Qty']
+        #         df['Avg Price'] = df['Avg Price'].replace([float('inf'), -float('inf')], 0)  # Handle division by zero
+        #         df['Avg Price'] = df['Avg Price'].fillna(0)
+        #     else:
+        #         print("Avg Price column found in data")
+            
+
+            # Replace your CSV processing section with this improved version:
+
             if file_type == "csv":
                 # Try multiple encodings for CSV files
                 csv_string = None
@@ -389,25 +753,63 @@ async def upload_excel(
                     raise ValueError("Could not decode CSV file with any supported encoding")
                 
                 excel_data = io.StringIO(csv_string)
-                df = pd.read_csv(excel_data)
+                
+                # READ CSV WITH SPECIFIC DTYPE SPECIFICATIONS TO HANDLE LARGE NUMBERS
+                # This prevents scientific notation issues with Order IDs
+                dtype_spec = {
+                    'Order Id': str,  # Force Order Id to be read as string
+                    'Check Id': str,  # Force Check Id to be read as string
+                    'Item Selection Id': str,
+                    'Item Id': str,
+                    'Master Id': str,
+                    'Order #': str
+                }
+                
+                try:
+                    df = pd.read_csv(excel_data, dtype=dtype_spec)
+                except Exception as csv_error:
+                    print(f"Error reading CSV with dtype specifications: {csv_error}")
+                    # Fallback to reading without dtype specifications
+                    excel_data = io.StringIO(csv_string)
+                    df = pd.read_csv(excel_data)
+                    
+                    # Convert problematic columns after reading
+                    large_number_cols = ['Order Id', 'Check Id', 'Item Selection Id', 'Item Id', 'Master Id']
+                    for col in large_number_cols:
+                        if col in df.columns:
+                            # Convert scientific notation to proper integers
+                            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype('int64')
             else:   
                 excel_data = io.BytesIO(file_content)
                 df = pd.read_excel(excel_data)
-                # df = pd.read_excel(excel_data)
-                
-            df.columns = df.columns.str.strip()
-            
+
             # Strip whitespace from column names
             df.columns = df.columns.str.strip()
 
             print("---------------------------------------------------------")
             df["Location"] = df["Location"].str.lower()
-            print("i am here printing the locations df columns:", df["Location"])
-            
+            print("Location values:", df["Location"].head())
+
+            # === IMPORTANT: Convert Order Id to consistent format for both CSV and Excel ===
+            if 'Order Id' in df.columns:
+                # Ensure Order Id is consistently formatted as integer
+                df['Order Id'] = pd.to_numeric(df['Order Id'], errors='coerce').fillna(0).astype('int64')
+                print(f"Order Id sample values after conversion: {df['Order Id'].head().tolist()}")
+
+            # === Handle missing Avg Price column BEFORE any other processing ===
+            if 'Avg Price' not in df.columns:
+                print("Avg Price column not found - calculating from Net Price and Qty")
+                # Calculate using original column names (before renaming)
+                df['Avg Price'] = df['Net Price'] / df['Qty']
+                df['Avg Price'] = df['Avg Price'].replace([float('inf'), -float('inf')], 0)  # Handle division by zero
+                df['Avg Price'] = df['Avg Price'].fillna(0)
+            else:
+                print("Avg Price column found in data")
+
             # === Fill & Type Conversion ===
             int_cols = ['Qty']
             bool_cols = ['Void?', 'Deferred', 'Tax Exempt']
-            float_cols = ['Net Price']
+            float_cols = ['Net Price', 'Avg Price']  # Include Avg Price in float columns
             date_cols = ['Sent Date']
             text_cols = ['Location', 'Dining Option']
             exclude_cols = [
@@ -417,6 +819,7 @@ async def upload_excel(
                 'Menu', 'Sales Category', 'Tax Inclusion Option', 'Dining Option Tax', 'Tab Name'
             ]
 
+            # Apply type conversions
             df[int_cols] = df[int_cols].fillna(0).astype(int)
             df[bool_cols] = df[bool_cols].fillna(False).astype(bool)
             df[float_cols] = df[float_cols].fillna(0.0)
@@ -429,6 +832,7 @@ async def upload_excel(
             for col in date_cols:
                 df[col] = pd.to_datetime(df[col], errors='coerce')
 
+            # Date processing
             df["Order Date"] = pd.to_datetime(df["Order Date"], dayfirst=False)
             df['Date'] = df['Order Date'].dt.date
             df["Order Date"] = df["Order Date"].dt.strftime('%m-%d-%Y')
@@ -467,9 +871,8 @@ async def upload_excel(
             ]
             choices = ["In-House", "1P", "DD", "Catering", "GH", "UB"]
             df["Category"] = np.select(conditions, choices, default="Others")
-            
 
-
+            # === Column Renaming ===
             df = df.rename(columns={
                 'Order Id': 'Order_Id',
                 'Order #': 'Order_number',
@@ -487,25 +890,24 @@ async def upload_excel(
                 'Sales Category': 'Sales_Category',
                 'Gross Price': 'Gross_Price',
                 'Net Price': 'Net_Price',
-                'Avg Price': 'Avg_Price',
+                'Avg Price': 'Avg_Price',  # This column now exists for both CSV and Excel
                 'Void?': 'Void',
                 'Tax Exempt': 'Tax_Exempt',
                 'Tax Inclusion Option': 'Tax_Inclusion_Option',
                 'Dining Option Tax': 'Dining_Option_Tax',
                 'Tab Name': 'Tab_Name',
-                # add any other necessary renames...
             })
             
-            if 'Avg_Price' not in df.columns:  # Updated column name
-                df['Avg_Price'] = df['Net_Price'] / df['Qty']  # Updated column names
-                
-                
-            # print("i am here in excel upload printing the columns of the dataframe", df.columns, "\n", df.dtypes , "\n", df.head())
-            print("i am here in excel upload printing the filename dashboard and company id and df head", file_name, request.dashboard, request.company_id, "\n", df.head())
+            # Remove the old Avg_Price calculation since we now handle it before renaming
+            # The following lines should be REMOVED from your code:
+            # if 'Avg_Price' not in df.columns:
+            #     df['Avg_Price'] = df['Net_Price'] / df['Qty']
             
+            print("DataFrame processing completed successfully")
+            print(f"Columns: {list(df.columns)}")
+            print(f"Shape: {df.shape}")
             
-            
-            result = process_dashboard_data(request, df1= df, df2 = None, file_name = file_name, company_id = request.company_id)
+            result = process_dashboard_data(request, df1=df, df2=None, file_name=file_name, company_id=request.company_id)
 
 
         elif request.dashboard in ["Financials and Sales Wide", "Financials", "Sales Wide", "Companywide"]:
