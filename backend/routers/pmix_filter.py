@@ -80,6 +80,31 @@ async def filter_pmix_data(
             end_date_pd = pd.to_datetime(end_date_original)
             print(f"Converted end_date to pandas datetime: {end_date_pd}")
         
+        
+            # Add one day
+            # start_date_plus_one = start_date_pd + timedelta(days=1)
+            end_date_plus_one = end_date_pd + timedelta(days=1) if end_date_pd else None
+            print(f"End date plus one day: {end_date_plus_one}")
+            end_date_pd = end_date_plus_one if end_date_plus_one else None
+
+            days_to_add = 6 - end_date_pd.weekday()
+            end_date_pd = end_date_pd + pd.Timedelta(days=days_to_add)
+            print(f"end date end of the week: {end_date_pd}")
+            
+            # monday_this_week = end_date_pd - pd.Timedelta(days=end_date_pd.weekday())
+
+            # start_date_pd = monday_this_week - pd.Timedelta(weeks=1)
+            
+                    
+            # Get the most recent after the end_date
+            # last_sunday = sunday_of_week - pd.Timedelta(days=(end_date_pd.weekday() + 1))
+
+            # Monday of that week
+            start_date_pd = end_date_pd - pd.Timedelta(days=91)
+
+            print(f"Start date pd: {start_date_pd} (Day: {start_date_pd.day}, Month: {start_date_pd.month})")
+            
+            
         # Process server filter
         raw_servers = request.servers
         if raw_servers in [None, '', []] or not raw_servers:
@@ -311,6 +336,8 @@ async def filter_pmix_data(
             print("i am here in pmix_filter.py checking the category_filter", category_filter, "and the request", request)
             
             print(" i am here in pmix_filter.py before calling process_pmix_file with DataFrame")
+                # Date becomes python date objects
+            df['Date'] = df['Sent_Date'].dt.date
             # Process the data using existing pmix processor
             # NOTE: You may need to modify process_pmix_file to accept DataFrame or pickle file
             (net_sales, 

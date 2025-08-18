@@ -1,6 +1,174 @@
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+import calendar
+
+
+def _to_date(d):
+    if d is None:
+        return None
+    if isinstance(d, str):
+        return datetime.strptime(d, "%Y-%m-%d").date()
+    if isinstance(d, pd.Timestamp):
+        return d.date()
+    return d  # assume date or datetime.date
+
+def days_between(start_date, end_date, inclusive=False):
+    """Return the number of days between two dates.
+    If inclusive is True, counts both endpoints."""
+    sd = _to_date(start_date)
+    ed = _to_date(end_date)
+    if sd is None or ed is None:
+        return None
+    diff = (ed - sd).days
+    return diff + 1 if inclusive else diff
+
+# def period_label_from_diff(diff_days, start_date=None, end_date=None):
+#     """
+#     Convert a day difference to a period label.
+#     diff_days is exclusive. The function adds 1 to get inclusive days.
+#     If start_date and end_date are provided, it can detect an exact calendar month.
+
+#     Examples:
+#     diff_days=0 -> '1 day sales'
+#     diff_days=2 -> '3 day sales'
+#     diff_days=6 -> '7 day sales' but mapped to '1 week sales'
+#     diff_days=13 -> '2 weeks sales'
+#     diff_days=90 -> '13 weeks sales'
+#     Exact calendar month span -> '1 month sales'
+#     30 or 31 days not matching a calendar month -> '30 day sales' or '31 day sales'
+#     """
+
+#     # Inclusive span
+#     n_days = diff_days + 1
+
+#     sd = _to_date(start_date)
+#     ed = _to_date(end_date)
+
+#     # Try to detect exact calendar month if dates provided
+#     def _is_exact_one_calendar_month(sd, ed):
+#         if sd is None or ed is None:
+#             return False
+#         # Move sd to the same day next month, then step back one day to get the month length
+#         y, m = sd.year, sd.month
+#         if m == 12:
+#             next_y, next_m = y + 1, 1
+#         else:
+#             next_y, next_m = y, m + 1
+#         # Last day of sd's month
+#         last_day = calendar.monthrange(y, m)[1]
+#         # Expected end date if the span is exactly that month
+#         expected_ed = date(y, m, last_day)
+#         return sd.day == 1 and ed == expected_ed
+
+#     # Year mapping
+#     if n_days in (365, 366):
+#         return "1 Year(s) Sales"
+
+#     # Week mappings
+#     if n_days % 7 == 0:
+#         weeks = n_days // 7
+#         if weeks == 1:
+#             return "1 Week(s) Sales"
+#         if weeks == 13:
+#             return "13 Week(s) Sales"
+#         return f"{weeks} Week(s) Sales"
+
+#     # Exact calendar month detection
+#     if _is_exact_one_calendar_month(sd, ed):
+#         return "1 Month(s) Sales"
+
+#     # 30 or 31 day special cases
+#     if n_days in (30, 31):
+#         return f"{n_days} Day(s) Sales"
+
+#     # Default day-based labels
+#     if n_days == 1:
+#         return "1 day sales"
+#     return f"{n_days} Day(s) Sales"
+
+
+
+def _whole_calendar_months(sd, ed):
+    """
+    Return the number of whole calendar months between sd and ed
+    if the range covers full months, else 0.
+    Requirement: sd is the first of a month and ed is the last day of the final month.
+    """
+    sd = _to_date(sd)
+    ed = _to_date(ed)
+    if sd is None or ed is None:
+        return 0
+    if sd.day != 1:
+        return 0
+
+    # Walk month by month from sd to ed
+    count = 0
+    cur = date(sd.year, sd.month, 1)
+    while True:
+        last_day = calendar.monthrange(cur.year, cur.month)[1]
+        block_end = date(cur.year, cur.month, last_day)
+        if ed < block_end:
+            return 0
+        count += 1
+        if ed == block_end:
+            return count
+        # move to the first of next month
+        if cur.month == 12:
+            cur = date(cur.year + 1, 1, 1)
+        else:
+            cur = date(cur.year, cur.month + 1, 1)
+
+def period_label_from_diff(diff_days, start_date=None, end_date=None):
+    """
+    diff_days is exclusive. The function adds 1 to get inclusive days.
+    Detects year, whole calendar months (1, 2, 3, ...), weeks, 30 or 31 days, then falls back to N Day(s).
+    """
+    n_days = diff_days + 1
+    sd = _to_date(start_date)
+    ed = _to_date(end_date)
+
+    # Year mapping first
+    if n_days in (365, 366):
+        return "1 Year(s) Sales"
+
+    # Whole calendar months next
+    m_count = _whole_calendar_months(sd, ed)
+    if m_count >= 1:
+        if m_count == 1:
+            return "1 Month(s) Sales"
+        return f"{m_count} Month(s) Sales"
+
+    # Weeks mapping
+    if n_days % 7 == 0:
+        weeks = n_days // 7
+        if weeks == 1:
+            return "1 Week(s) Sales"
+        if weeks == 13:
+            return "13 Week(s) Sales"
+        return f"{weeks} Week(s) Sales"
+
+    # 30 or 31 day special cases
+    if n_days in (30, 31):
+        return f"{n_days} Day(s) Sales"
+
+    # Default day-based labels
+    if n_days == 1:
+        return "1 Day(s) Sales"
+    return f"{n_days} Day(s) Sales"
+
+
+# Apply +/ and -/ formatting
+def _format_percent_change(val):
+    try:
+        if val > 100:
+            return "+/"
+        if val < -100:
+            return "-/"
+    except TypeError:
+        pass
+    return val
+
 
 
 def overview_tables(df, location_filter='All', order_date_filter=None, server_filter='All', dining_option_filter='All', category_filter='All', start_date=None, end_date=None  ):
@@ -151,11 +319,11 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     unique_orders = filtered_df['Order_Id'].nunique()  # Updated column name
     orders_change = round(change_filtered_df['Order_Id'].nunique(), 2) - unique_orders / unique_orders  if unique_orders != 0 else 0  # Updated column name
     
-    print("----------------------------------------------------")
-    print("----------------------------------------------------")
-    print("\n", "i am here in the pmix utils printing the unique orders", unique_orders,"filtered_df['Order_Id'].nunique()", filtered_df['Order_Id'].nunique())
-    print("----------------------------------------------------")
-    print("----------------------------------------------------")
+    # print("----------------------------------------------------")
+    # print("----------------------------------------------------")
+    # print("\n", "i am here in the pmix utils printing the unique orders", unique_orders,"filtered_df['Order_Id'].nunique()", filtered_df['Order_Id'].nunique())
+    # print("----------------------------------------------------")
+    # print("----------------------------------------------------")
     
     qty_sold = filtered_df['Qty'].sum() 
     qty_sold_change = round(change_filtered_df['Qty'].sum(), 2) - qty_sold / qty_sold  if qty_sold != 0 else 0
@@ -842,6 +1010,200 @@ def create_sales_by_category_tables(df, location_filter='All', start_date=None, 
 
 
 
+# def category_comparison_function(df, location_filter='All', start_date=None, end_date=None, category_filter='All', server_filter='All'):
+#     df_copy = df.copy()
+
+#     # Apply filters
+#     if location_filter != 'All':
+#         df_copy = df_copy[df_copy['Location'].isin(location_filter)] if isinstance(location_filter, list) else df_copy[df_copy['Location'] == location_filter]
+#     if server_filter != 'All':
+#         df_copy = df_copy[df_copy['Server'].isin(server_filter)] if isinstance(server_filter, list) else df_copy[df_copy['Server'] == server_filter]
+#     if category_filter != 'All':
+#         df_copy = df_copy[df_copy['Category'].isin(category_filter)] if isinstance(category_filter, list) else df_copy[df_copy['Category'] == category_filter]
+
+
+#     # Determine the current date based on end_date or calculate next Sunday
+#     if end_date and start_date is not None:
+#         if isinstance(end_date, str):
+#             current_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+#         else:
+#             current_date = end_date
+#     else:
+#         current_date = datetime.now().date()
+#         days_to_next_sunday = (6 - current_date.weekday()) % 7 or 7
+#         current_date += timedelta(days=days_to_next_sunday)
+
+#     # Calculate the current 4-week window
+#     week_start_of_end_date = current_date - timedelta(days=current_date.weekday())
+#     week_end = week_start_of_end_date + timedelta(days=6)
+
+#     # Current period
+#     start_date = week_start_of_end_date
+#     end_date_final = week_end
+
+#     # Previous 4-week period
+#     previous_end_date = start_date - timedelta(days=1)
+#     previous_start_date = start_date - timedelta(weeks=1)
+
+
+#     print("-----------------------------------")
+#     print("-----------------------------------")
+#     print("i am here in the pmix utils printing the ", "start_date", start_date, "end_date_final", end_date_final)
+#     print("previous_start_date", previous_start_date, "previous_end_date", previous_end_date)
+#     print("-----------------------------------")
+#     print("-----------------------------------")
+
+
+#     # Filter dataframes
+#     filtered_df = df_copy[
+#         (df_copy['Date'] >= start_date) &
+#         (df_copy['Date'] <= end_date_final)
+#     ].copy()
+#     print("i am here in the filtered_df if statement", filtered_df)
+
+#     previous_df = df_copy[
+#         (df_copy['Date'] >= previous_start_date) &
+#         (df_copy['Date'] <= previous_end_date)
+#     ].copy()
+    
+#     print("i am here in the previous_start_date if statement", previous_df)
+
+
+#     if filtered_df.empty:
+#         return {'category_comparison_table': pd.DataFrame()}
+
+#     current_sales = filtered_df.groupby('Sales_Category')['Net_Price'].sum().reset_index()
+#     current_sales.columns = ['Sales Category', 'Current_4_Weeks_Sales']
+
+#     if not previous_df.empty:
+#         previous_sales = previous_df.groupby('Sales_Category')['Net_Price'].sum().reset_index()
+#         previous_sales.columns = ['Sales Category', 'Previous_4_Weeks_Sales']
+#     else:
+#         previous_sales = pd.DataFrame({'Sales Category': current_sales['Sales Category'], 'Previous_4_Weeks_Sales': 0})
+
+#     category_comparison_table = pd.merge(current_sales, previous_sales, on='Sales Category', how='outer').fillna(0)
+#     category_comparison_table['Percent_Change'] = category_comparison_table.apply(
+#         lambda row: ((row['Current_4_Weeks_Sales'] - row['Previous_4_Weeks_Sales']) / row['Previous_4_Weeks_Sales'] * 100)
+#         if row['Previous_4_Weeks_Sales'] != 0 else 0,
+#         axis=1
+#     )
+
+#     category_comparison_table['Current_4_Weeks_Sales'] = category_comparison_table['Current_4_Weeks_Sales'].round(2)
+#     category_comparison_table['Previous_4_Weeks_Sales'] = category_comparison_table['Previous_4_Weeks_Sales'].round(2)
+#     category_comparison_table['Percent_Change'] = category_comparison_table['Percent_Change'].round(2)
+
+#     category_comparison_table.columns = ['Sales Category', 'day_Saler', 'Previous_Sales', 'Percent_Change']
+#     category_comparison_table = category_comparison_table.sort_values('day_Saler', ascending=False).reset_index(drop=True)
+
+#     return {'category_comparison_table': category_comparison_table}
+
+
+
+
+
+
+
+# def category_comparison_function(df, location_filter='All', start_date=None, end_date=None, category_filter='All', server_filter='All'):
+#     df_copy = df.copy()
+
+#     # Apply filters
+#     if location_filter != 'All':
+#         df_copy = df_copy[df_copy['Location'].isin(location_filter)] if isinstance(location_filter, list) else df_copy[df_copy['Location'] == location_filter]
+#     if server_filter != 'All':
+#         df_copy = df_copy[df_copy['Server'].isin(server_filter)] if isinstance(server_filter, list) else df_copy[df_copy['Server'] == server_filter]
+#     if category_filter != 'All':
+#         df_copy = df_copy[df_copy['Category'].isin(category_filter)] if isinstance(category_filter, list) else df_copy[df_copy['Category'] == category_filter]
+
+#     # Branch 1: both dates provided, use them directly and compute day span
+#     if start_date is not None and end_date is not None:
+#         sd = _to_date(start_date)
+#         ed = _to_date(end_date)
+#         if sd > ed:
+#             sd, ed = ed, sd  # swap to be safe
+#         diff_days = days_between(sd, ed, inclusive=False)
+#         print(f"Days difference between provided start_date {sd} and end_date {ed}: {diff_days}")
+
+#         start_date = sd
+#         end_date_final = ed
+
+#         # Previous period with the same length as the current period
+#         period_len_inclusive = days_between(sd, ed, inclusive=True)
+#         previous_end_date = start_date - timedelta(days=1)
+#         previous_start_date = start_date - timedelta(days=period_len_inclusive)
+
+#     else:
+#         current_date = datetime.now().date()
+#         days_to_next_sunday = (6 - current_date.weekday()) % 7 or 7
+#         current_date += timedelta(days=days_to_next_sunday)
+
+#         # Current week window
+#         week_start_of_end_date = current_date - timedelta(days=current_date.weekday())
+#         week_end = week_start_of_end_date + timedelta(days=6)
+
+#         # Current period
+#         start_date = week_start_of_end_date
+#         end_date_final = week_end
+
+#         # Previous week
+#         previous_end_date = start_date - timedelta(days=1)
+#         previous_start_date = start_date - timedelta(weeks=1)
+
+#     print("-----------------------------------")
+#     print("-----------------------------------")
+#     print("i am here in the pmix utils printing the ", "start_date", start_date, "end_date_final", end_date_final)
+#     print("previous_start_date", previous_start_date, "previous_end_date", previous_end_date)
+#     print("-----------------------------------")
+#     print("-----------------------------------")
+
+#     label = period_label_from_diff(diff_days, start_date, end_date_final)
+    
+#     print("i am here in the pmix utils printing the label ", label)
+#     print("-----------------------------------")
+#     print("-----------------------------------")
+
+#     # Filter dataframes
+#     filtered_df = df_copy[
+#         (df_copy['Date'] >= start_date) &
+#         (df_copy['Date'] <= end_date_final)
+#     ].copy()
+#     # print("i am here in the filtered_df if statement", filtered_df)
+
+#     previous_df = df_copy[
+#         (df_copy['Date'] >= previous_start_date) &
+#         (df_copy['Date'] <= previous_end_date)
+#     ].copy()
+#     # print("i am here in the previous_start_date if statement", previous_df)
+
+#     if filtered_df.empty:
+#         return {'category_comparison_table': pd.DataFrame()}
+
+#     current_sales = filtered_df.groupby('Sales_Category')['Net_Price'].sum().reset_index()
+#     current_sales.columns = ['Sales Category', 'Current_4_Weeks_Sales']
+
+#     if not previous_df.empty:
+#         previous_sales = previous_df.groupby('Sales_Category')['Net_Price'].sum().reset_index()
+#         previous_sales.columns = ['Sales Category', 'Previous_4_Weeks_Sales']
+#     else:
+#         previous_sales = pd.DataFrame({'Sales Category': current_sales['Sales Category'], 'Previous_4_Weeks_Sales': 0})
+
+#     category_comparison_table = pd.merge(current_sales, previous_sales, on='Sales Category', how='outer').fillna(0)
+#     category_comparison_table['Percent_Change'] = category_comparison_table.apply(
+#         lambda row: ((row['Current_4_Weeks_Sales'] - row['Previous_4_Weeks_Sales']) / row['Previous_4_Weeks_Sales'] * 100)
+#         if row['Previous_4_Weeks_Sales'] != 0 else 0,
+#         axis=1
+#     )
+
+#     category_comparison_table['Current_4_Weeks_Sales'] = category_comparison_table['Current_4_Weeks_Sales'].round(2)
+#     category_comparison_table['Previous_4_Weeks_Sales'] = category_comparison_table['Previous_4_Weeks_Sales'].round(2)
+#     category_comparison_table['Percent_Change'] = category_comparison_table['Percent_Change'].round(2)
+
+#     category_comparison_table.columns = ['Sales Category', label, 'Previous_Sales', 'Percent_Change']
+#     category_comparison_table = category_comparison_table.sort_values(label, ascending=False).reset_index(drop=True)
+
+#     return {'category_comparison_table': category_comparison_table}
+
+
+
 def category_comparison_function(df, location_filter='All', start_date=None, end_date=None, category_filter='All', server_filter='All'):
     df_copy = df.copy()
 
@@ -853,85 +1215,42 @@ def category_comparison_function(df, location_filter='All', start_date=None, end
     if category_filter != 'All':
         df_copy = df_copy[df_copy['Category'].isin(category_filter)] if isinstance(category_filter, list) else df_copy[df_copy['Category'] == category_filter]
 
+    # Branch 1: both dates provided, use them directly and compute day span
+    if start_date is not None and end_date is not None:
+        sd = _to_date(start_date)
+        ed = _to_date(end_date)
+        if sd > ed:
+            sd, ed = ed, sd  # swap to be safe
+        diff_days = days_between(sd, ed, inclusive=False)
+        print(f"Days difference between provided start_date {sd} and end_date {ed}: {diff_days}")
 
-    # if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
-    #     df_copy['Date'] = pd.to_datetime(df_copy['Date'])
+        start_date = sd
+        end_date_final = ed
 
-    # if start_date is not None and isinstance(start_date, str):
-    #     start_date = pd.to_datetime(start_date)
-    # if end_date is not None and isinstance(end_date, str):
-    #     end_date = pd.to_datetime(end_date)
-    # else:
-    #     end_date = df_copy['Date'].max()
+        # Previous period with the same length as the current period
+        period_len_inclusive = days_between(sd, ed, inclusive=True)
+        previous_end_date = start_date - timedelta(days=1)
+        previous_start_date = start_date - timedelta(days=period_len_inclusive)
 
-    # # Periods
-    # if start_date is not None:
-    #     previous_end_date = start_date - pd.Timedelta(days=1)
-    #     previous_start_date = start_date - pd.Timedelta(days=28)
-    # else:
-    #     previous_start_date = previous_end_date = None
-
-
-
-
-    # # Determine the end date
-    # if end_date is not None:
-    #     if isinstance(end_date, str):
-    #         current_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-    #     else:
-    #         current_date = end_date
-    # else:
-    #     current_date = datetime.now().date()
-    #     days_to_next_sunday = (6 - current_date.weekday()) % 7
-    #     if days_to_next_sunday == 0:
-    #         days_to_next_sunday = 7
-    #     current_date = current_date + timedelta(days=days_to_next_sunday)
-    #     if hasattr(current_date, 'date'):
-    #         current_date = current_date.date()
-
-    
-    # # Week window for the given end date
-    # days_since_monday = current_date.weekday()
-    # week_start_of_end_date = current_date - pd.Timedelta(days=days_since_monday)
-    # week_end = week_start_of_end_date + pd.Timedelta(days=6)
-
-    # # Current 4-week period
-    # start_date = week_start_of_end_date
-    # end_date_final = week_end
-
-    # # Previous 4-week period
-    # previous_end_date = start_date - pd.Timedelta(days=1)
-    # previous_start_date = start_date - pd.Timedelta(weeks=4)
-
-
-    # # Ensure 'Date' column is datetime
-    # if not pd.api.types.is_datetime64_any_dtype(df_copy['Date']):
-    #     df_copy['Date'] = pd.to_datetime(df_copy['Date'])
-
-
-    # Determine the current date based on end_date or calculate next Sunday
-    if end_date is not None:
-        if isinstance(end_date, str):
-            current_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-        else:
-            current_date = end_date
     else:
         current_date = datetime.now().date()
         days_to_next_sunday = (6 - current_date.weekday()) % 7 or 7
         current_date += timedelta(days=days_to_next_sunday)
 
-    # Calculate the current 4-week window
-    week_start_of_end_date = current_date - timedelta(days=current_date.weekday())
-    week_end = week_start_of_end_date + timedelta(days=6)
+        # Current week window
+        week_start_of_end_date = current_date - timedelta(days=current_date.weekday())
+        week_end = week_start_of_end_date + timedelta(days=6)
 
-    # Current period
-    start_date = week_start_of_end_date
-    end_date_final = week_end
+        # Current period
+        start_date = week_start_of_end_date
+        end_date_final = week_end
 
-    # Previous 4-week period
-    previous_end_date = start_date - timedelta(days=1)
-    previous_start_date = start_date - timedelta(weeks=4)
+        # Previous week
+        previous_end_date = start_date - timedelta(days=1)
+        previous_start_date = start_date - timedelta(weeks=1)
 
+        # Compute diff_days for label generation
+        diff_days = days_between(start_date, end_date_final, inclusive=False)
 
     print("-----------------------------------")
     print("-----------------------------------")
@@ -940,19 +1259,21 @@ def category_comparison_function(df, location_filter='All', start_date=None, end
     print("-----------------------------------")
     print("-----------------------------------")
 
+    label = period_label_from_diff(diff_days, start_date, end_date_final)
+    print("i am here in the pmix utils printing the label ", label)
+    print("-----------------------------------")
+    print("-----------------------------------")
 
+    # Filter dataframes
+    filtered_df = df_copy[
+        (df_copy['Date'] >= start_date) &
+        (df_copy['Date'] <= end_date_final)
+    ].copy()
 
-    filtered_df = df_copy.copy()
-    if start_date is not None:
-        filtered_df = filtered_df[filtered_df['Date'] >= start_date]
-    if end_date is not None:
-        filtered_df = filtered_df[filtered_df['Date'] <= end_date_final]
-
-    previous_df = df_copy.copy()
-    if previous_start_date is not None and previous_end_date is not None:
-        previous_df = previous_df[(previous_df['Date'] >= previous_start_date) & (previous_df['Date'] <= previous_end_date)]
-    else:
-        previous_df = pd.DataFrame()
+    previous_df = df_copy[
+        (df_copy['Date'] >= previous_start_date) &
+        (df_copy['Date'] <= previous_end_date)
+    ].copy()
 
     if filtered_df.empty:
         return {'category_comparison_table': pd.DataFrame()}
@@ -967,18 +1288,27 @@ def category_comparison_function(df, location_filter='All', start_date=None, end
         previous_sales = pd.DataFrame({'Sales Category': current_sales['Sales Category'], 'Previous_4_Weeks_Sales': 0})
 
     category_comparison_table = pd.merge(current_sales, previous_sales, on='Sales Category', how='outer').fillna(0)
+
+    # Compute percent change numerically
     category_comparison_table['Percent_Change'] = category_comparison_table.apply(
         lambda row: ((row['Current_4_Weeks_Sales'] - row['Previous_4_Weeks_Sales']) / row['Previous_4_Weeks_Sales'] * 100)
         if row['Previous_4_Weeks_Sales'] != 0 else 0,
         axis=1
     )
 
+    # Round numeric values
     category_comparison_table['Current_4_Weeks_Sales'] = category_comparison_table['Current_4_Weeks_Sales'].round(2)
     category_comparison_table['Previous_4_Weeks_Sales'] = category_comparison_table['Previous_4_Weeks_Sales'].round(2)
     category_comparison_table['Percent_Change'] = category_comparison_table['Percent_Change'].round(2)
 
-    category_comparison_table.columns = ['Sales Category', 'day_Saler', 'Previous_Sales', 'Percent_Change']
-    category_comparison_table = category_comparison_table.sort_values('day_Saler', ascending=False).reset_index(drop=True)
+    # Rename columns
+    category_comparison_table.columns = ['Sales Category', label, 'Previous_Sales', 'Percent_Change']
+
+
+    category_comparison_table['Percent_Change'] = category_comparison_table['Percent_Change'].apply(_format_percent_change)
+
+    # Sort by current-period sales descending
+    category_comparison_table = category_comparison_table.sort_values(label, ascending=False).reset_index(drop=True)
 
     return {'category_comparison_table': category_comparison_table}
 
