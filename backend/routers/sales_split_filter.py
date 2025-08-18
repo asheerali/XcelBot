@@ -350,7 +350,7 @@ async def filter_excel_data(
             "table6": salesByDayOfWeek.to_dict(orient='records'),
             "table7": salesByTimeOfDay.to_dict(orient='records'),
             "table8": sales_by_day_table.to_dict(orient='records'),
-            "table9": sales_by_category_table.to_dict(orient='records'),
+            "table9": sales_by_category_table.to_dict(orient='records'), #it is category_performance_by_week
             "table10": category_comparison_table.to_dict(orient='records'),
             "table11": thirteen_week_category_table.to_dict(orient='records'),
             "locations": locations,

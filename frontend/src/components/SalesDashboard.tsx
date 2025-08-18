@@ -304,6 +304,27 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
           >
             {changeFormatted.text}
           </span>
+          {/* <span
+            style={{
+              color: changeFormatted.color,
+              fontSize: "12px",
+              fontWeight: "600",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+            }}
+          >
+            {changeFormatted.text}
+            <span
+              style={{
+                fontSize: "9px",
+                color: "#999",
+                marginTop: "2px",
+              }}
+            >
+              (label1234)
+            </span>
+          </span> */}
         </div>
       </div>
     );

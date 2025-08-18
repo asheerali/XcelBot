@@ -182,10 +182,24 @@ const MenuItemsTable = ({ table12 = [] }) => {
                     wordWrap: "break-word",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "4px",
+                    }}
+                  >
                     <span>Difference_Sales</span>
+
                     <div style={{ fontSize: "10px", color: "#666" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "2px",
+                        }}
+                      >
                         <span style={{ color: "#2e7d32" }}>▲</span>
                         <span>+</span>
                         <span style={{ color: "#d32f2f" }}>▼</span>
@@ -242,13 +256,16 @@ const MenuItemsTable = ({ table12 = [] }) => {
                 </tr>
               ) : (
                 tableData.map((row, index) => {
-                  const differenceStyle = getDifferenceStyle(row.differenceSales);
-                  
+                  const differenceStyle = getDifferenceStyle(
+                    row.differenceSales
+                  );
+
                   return (
                     <tr
                       key={index}
                       style={{
-                        backgroundColor: index % 2 === 0 ? "#ffffff" : "#f9f9f9",
+                        backgroundColor:
+                          index % 2 === 0 ? "#ffffff" : "#f9f9f9",
                         transition: "background-color 0.2s ease",
                       }}
                       onMouseEnter={(e) => {
@@ -306,20 +323,37 @@ const MenuItemsTable = ({ table12 = [] }) => {
                           borderRadius: "4px",
                         }}
                       >
-                        <div style={{ 
-                          display: "flex", 
-                          alignItems: "center", 
-                          justifyContent: "center", 
-                          gap: "4px" 
-                        }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "4px",
+                          }}
+                        >
                           {parseFloat(row.differenceSales) > 0 && (
-                            <span style={{ fontSize: "12px", color: differenceStyle.color }}>▲</span>
+                            <span
+                              style={{
+                                fontSize: "12px",
+                                color: differenceStyle.color,
+                              }}
+                            >
+                              ▲
+                            </span>
                           )}
                           {parseFloat(row.differenceSales) < 0 && (
-                            <span style={{ fontSize: "12px", color: differenceStyle.color }}>▼</span>
+                            <span
+                              style={{
+                                fontSize: "12px",
+                                color: differenceStyle.color,
+                              }}
+                            >
+                              ▼
+                            </span>
                           )}
                           <span>
-                            {differenceStyle.prefix}{Math.abs(row.differenceSales).toFixed(2)}
+                            {differenceStyle.prefix}
+                            {Math.abs(row.differenceSales).toFixed(2)}
                           </span>
                         </div>
                       </td>
@@ -387,13 +421,21 @@ const MenuItemsTable = ({ table12 = [] }) => {
             <span>Showing {tableData.length} items</span>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <span style={{ fontSize: "12px" }}>Legend:</span>
-              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "4px" }}
+              >
                 <span style={{ color: "#2e7d32", fontSize: "12px" }}>▲</span>
-                <span style={{ color: "#2e7d32", fontSize: "12px" }}>Positive</span>
+                <span style={{ color: "#2e7d32", fontSize: "12px" }}>
+                  Positive
+                </span>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "4px" }}
+              >
                 <span style={{ color: "#d32f2f", fontSize: "12px" }}>▼</span>
-                <span style={{ color: "#d32f2f", fontSize: "12px" }}>Negative</span>
+                <span style={{ color: "#d32f2f", fontSize: "12px" }}>
+                  Negative
+                </span>
               </div>
             </div>
           </div>

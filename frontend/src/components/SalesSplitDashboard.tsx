@@ -463,7 +463,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                 fontWeight: "400",
               }}
             >
-              Last 4 Weeks: {entry.lastWeeksSales}
+              Previous Sales: {entry.lastWeeksSales}
             </div>
             <div
               style={{
@@ -474,7 +474,7 @@ const SalesSplitDashboard: React.FC<SalesSplitDashboardProps> = ({
                   : "#2e7d32",
               }}
             >
-              {entry.percentChange} | This Week: {entry.thisWeeksSales}
+              {entry.percentChange} | Sales: {entry.thisWeeksSales}
             </div>
           </div>
         </div>
