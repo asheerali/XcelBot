@@ -2,7 +2,11 @@ import pandas as pd
 import numpy as np
 import io
 from typing import Union
-from pmix_dashboard.pmix_utils import overview_tables, detailed_analysis_tables, create_sales_by_category_tables, create_top_vs_bottom_comparison
+from pmix_dashboard.pmix_utils import (overview_tables, 
+                                       detailed_analysis_tables, 
+                                       create_sales_by_category_tables, 
+                                       create_top_vs_bottom_comparison,
+                                       category_comparison_function)
 
 
 def process_pmix_file(file_data: Union[io.BytesIO, str],start_date=None, end_date=None , location_filter='All', server_filter='All', category_filter='All',  menu_item_filter='All'):
@@ -87,9 +91,18 @@ def process_pmix_file(file_data: Union[io.BytesIO, str],start_date=None, end_dat
     p3 = create_sales_by_category_tables(df, location_filter=location_filter, start_date=start_date, end_date=end_date, category_filter=category_filter , server_filter=server_filter)
     
     sales_by_category_tables_df = p3['sales_by_category_table']
-    category_comparison_table_df = p3['category_comparison_table']
     sales_by_category_by_day_table_df = p3['sales_by_category_by_day_table']
 
+    p4 = category_comparison_function(df, location_filter=location_filter, start_date=start_date, end_date=end_date, category_filter=category_filter , server_filter=server_filter)
+
+    category_comparison_table_df = p4['category_comparison_table']
+
+    print("---------------------------------------------------")
+    print("---------------------------------------------------")
+    print("category comparison table",category_comparison_table_df )
+    print("---------------------------------------------------")
+    print("---------------------------------------------------")
+    
     top_vs_bottom_comparison_df  = create_top_vs_bottom_comparison(df, location_filter=location_filter, start_date=start_date, end_date=end_date, category_filter=category_filter , server_filter=server_filter)
 
     # print("i am here in pmix_processor.py printing the sales_by_category_by_day_table_df", sales_by_category_by_day_table_df)
@@ -104,7 +117,12 @@ def process_pmix_file(file_data: Union[io.BytesIO, str],start_date=None, end_dat
             qty_sold_change, average_order_value_change,
             average_items_per_order_change, unique_orders_change, 
             total_quantity_change, sales_by_category_tables_df, 
-            category_comparison_table_df, sales_by_category_by_day_table_df, 
+            
+            
+            category_comparison_table_df, 
+            
+            
+            sales_by_category_by_day_table_df, 
             top_vs_bottom_comparison_df,
             avg_orders_value_correct, avg_orders_value_change_correct)
     

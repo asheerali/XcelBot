@@ -102,7 +102,7 @@ def process_sales_split_file(file_data: Union[io.BytesIO, str, pd.DataFrame],loc
     sales_by_category_table = sales_by_category_func(df, location_filter='All', start_date=start_date, end_date=end_date)
     category_comparison_table = category_comparison_func(df, location_filter='All', start_date=start_date, end_date=end_date)
 
-    print("i am here in the sales split processor printing sales_by_category_table", sales_by_category_table)
+    # print("i am here in the sales split processor printing sales_by_category_table", sales_by_category_table)
 
     salesByWeek = analysis['sales_by_week']
     salesByDayOfWeek = analysis['sales_by_day']

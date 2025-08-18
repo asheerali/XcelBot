@@ -79,9 +79,7 @@ interface ProductMixData {
   }>;
   table11?: Array<{
     "Sales Category": string;
-    This_4_Weeks_Sales: number;
-    Last_4_Weeks_Sales: number;
-    Percent_Change: number;
+    [key: string]: any; // This allows for dynamic column names
   }>;
   table12?: Array<{
     "Sales Category": string;
@@ -677,8 +675,75 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
     );
   };
 
-  // UPDATED: Get categories data using ONLY table11 - showing exact table11 fields
+  // UPDATED: Function to dynamically detect column names from table11
+  const getColumnNames = () => {
+    if (!data?.table11 || data.table11.length === 0) {
+      return {
+        currentPeriodColumn: "This_4_Weeks_Sales", // fallback
+        lastPeriodColumn: "Last_4_Weeks_Sales", // fallback
+        currentPeriodLabel: "This 4 Weeks Sales", // fallback display
+        lastPeriodLabel: "Last 4 Weeks Sales", // fallback display
+      };
+    }
+
+    // Get the first item to check available columns
+    const firstItem = data.table11[0];
+    const columns = Object.keys(firstItem);
+
+    console.log("Available columns in table11:", columns);
+
+    // Find columns that likely contain sales data (exclude Sales Category and Percent_Change)
+    const salesColumns = columns.filter(
+      (col) =>
+        col !== "Sales Category" &&
+        col !== "Percent_Change" &&
+        !col.toLowerCase().includes("percent") &&
+        !col.toLowerCase().includes("change")
+    );
+
+    console.log("Detected sales columns:", salesColumns);
+
+    // Simply take the first two sales columns as they appear, no pattern matching
+    const currentPeriodColumn = salesColumns[0] || "This_4_Weeks_Sales";
+    const lastPeriodColumn = salesColumns[1] || "Last_4_Weeks_Sales";
+
+    console.log(`🔍 Column Detection Results:`);
+    console.log(`   First Sales Column: "${currentPeriodColumn}"`);
+    console.log(`   Second Sales Column: "${lastPeriodColumn}"`);
+
+    // Create display labels by cleaning up the column names
+    const createDisplayLabel = (columnName) => {
+      return columnName
+        .replace(/_/g, " ") // Replace underscores with spaces
+        .replace(/([A-Z])/g, " $1") // Add space before capital letters
+        .replace(/\s+/g, " ") // Replace multiple spaces with single space
+        .trim()
+        .split(" ")
+        .map(
+          (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        )
+        .join(" ");
+    };
+
+    const currentPeriodLabel = createDisplayLabel(currentPeriodColumn);
+    const lastPeriodLabel = createDisplayLabel(lastPeriodColumn);
+
+    console.log(`📝 Display Labels:`);
+    console.log(`   First Column Label: "${currentPeriodLabel}"`);
+    console.log(`   Second Column Label: "${lastPeriodLabel}"`);
+
+    return {
+      currentPeriodColumn,
+      lastPeriodColumn,
+      currentPeriodLabel,
+      lastPeriodLabel,
+    };
+  };
+
+  // UPDATED: Get categories data using ONLY table11 - showing exact table11 fields with dynamic column names
   const getCategoriesData = () => {
+    const columnInfo = getColumnNames();
+
     // PRIORITY: Use ONLY table11 data (no fallbacks to table10 or table13)
     const table11Categories = (data?.table11 || [])
       .filter(
@@ -689,7 +754,8 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
       )
       .sort(
         (a, b) =>
-          (b["This_4_Weeks_Sales"] || 0) - (a["This_4_Weeks_Sales"] || 0)
+          (b[columnInfo.currentPeriodColumn] || 0) -
+          (a[columnInfo.currentPeriodColumn] || 0)
       );
 
     // Generate colors for all categories
@@ -721,33 +787,35 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
 
     const colors = generateColors(table11Categories.length);
 
-    // UPDATED: Return table11 data with exact field mappings
+    // UPDATED: Return table11 data with dynamic field mappings
     return table11Categories.map((category, index) => {
-      // Extract exact table11 fields
+      // Extract exact table11 fields using dynamic column names
       const salesCategory = category["Sales Category"] || "";
-      const this4WeeksSales = category["This_4_Weeks_Sales"] || 0;
-      const last4WeeksSales = category["Last_4_Weeks_Sales"] || 0;
+      const currentPeriodSales = category[columnInfo.currentPeriodColumn] || 0;
+      const lastPeriodSales = category[columnInfo.lastPeriodColumn] || 0;
       const percentChange = category["Percent_Change"] || 0;
 
       return {
         // Keep all original table11 fields
         ...category,
 
-        // Add convenience fields for display
+        // Add convenience fields for display with dynamic column info
         salesCategory,
-        this4WeeksSales,
-        last4WeeksSales,
+        currentPeriodSales,
+        lastPeriodSales,
         percentChange,
         color: colors[index],
+        columnInfo, // Include column info for display labels
 
         // Calculate additional metrics
-        salesDifference: this4WeeksSales - last4WeeksSales,
+        salesDifference: currentPeriodSales - lastPeriodSales,
         isIncrease: percentChange >= 0,
       };
     });
   };
 
   const categoriesData = getCategoriesData();
+  const columnInfo = getColumnNames();
 
   return (
     <div
@@ -885,7 +953,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
         </div>
       )}
 
-      {/* UPDATED: Sales Categories Performance section - showing table11 fields */}
+      {/* UPDATED: Sales Categories Performance section - showing table11 fields with dynamic column names */}
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
         <div
           style={{
@@ -901,7 +969,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
           Sales Categories Performance
         </div>
 
-        {/* Show table11 categories with same UI as image but table11 field names */}
+        {/* Show table11 categories with dynamic column names */}
         {categoriesData.length === 0 ? (
           <div
             style={{
@@ -914,8 +982,7 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
             }}
           >
             No table11 data available. Please ensure your backend is providing
-            table11 with Sales Category, This_4_Weeks_Sales, Last_4_Weeks_Sales,
-            and Percent_Change fields.
+            table11 with Sales Category and sales data columns.
           </div>
         ) : (
           Array.from(
@@ -970,8 +1037,8 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
                           {category["Sales Category"]}
                         </div>
                         <div style={{ fontSize: "13px", color: "#666" }}>
-                          Last 4 Weeks Sales: $
-                          {category["Last_4_Weeks_Sales"].toLocaleString()}
+                          {columnInfo.lastPeriodLabel}: $
+                          {category.lastPeriodSales.toLocaleString()}
                         </div>
                       </div>
                       <div style={{ textAlign: "right" }}>
@@ -1003,8 +1070,8 @@ const SalesDashboard: React.FC<SalesDashboardProps> = ({ productMixData }) => {
                             color: "#333",
                           }}
                         >
-                          This 4 Weeks Sales: $
-                          {category["This_4_Weeks_Sales"].toLocaleString()}
+                          {columnInfo.currentPeriodLabel}: $
+                          {category.currentPeriodSales.toLocaleString()}
                         </div>
                       </div>
                     </div>

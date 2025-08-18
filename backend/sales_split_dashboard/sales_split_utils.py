@@ -1234,11 +1234,11 @@ def sales_by_category_func(df, location_filter='All', end_date=None, start_date=
     # start_date_str = start_date.strftime('%Y-%m-%d')
     # end_date_str = end_date_final.strftime('%Y-%m-%d')
     
-    print("------------------------------------------------")
-    print("------------------------------------------------")
-    print("i am here in the sales_by_category_function printing the previous dates", start_date, end_date_final)
-    print("------------------------------------------------")
-    print("------------------------------------------------")
+    # print("------------------------------------------------")
+    # print("------------------------------------------------")
+    # print("i am here in the sales_by_category_function printing the previous dates", start_date, end_date_final)
+    # print("------------------------------------------------")
+    # print("------------------------------------------------")
     
     # Apply location filter
     if location_filter != 'All':
