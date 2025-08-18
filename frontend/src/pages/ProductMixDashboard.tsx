@@ -1744,8 +1744,67 @@ export default function ProductMixDashboard() {
 
   //   setIsDateRangeOpen(false);
   // };
+  // // Apply date range with Redux integration
+  // const applyDateRange = () => {
+  //   const formattedStartDate = format(selectedRange.startDate, "MM/dd/yyyy");
+  //   const formattedEndDate = format(selectedRange.endDate, "MM/dd/yyyy");
+
+  //   console.log("📅 ProductMix: Setting date range with Redux integration:", {
+  //     startDate: formattedStartDate,
+  //     endDate: formattedEndDate,
+  //   });
+
+  //   // Update local state for display
+  //   setLocalStartDate(formattedStartDate);
+  //   setLocalEndDate(formattedEndDate);
+
+  //   // Update Redux date range state
+  //   const reduxStartDate = convertDisplayDateToRedux(formattedStartDate);
+  //   const reduxEndDate = convertDisplayDateToRedux(formattedEndDate);
+
+  //   console.log("📅 ProductMix: Storing in Redux:", {
+  //     reduxStartDate,
+  //     reduxEndDate,
+  //   });
+
+  //   reduxDispatch(
+  //     setProductMixDashboardDateRange({
+  //       startDate: selectedRange.startDate,
+  //       endDate: selectedRange.endDate,
+  //     })
+  //   );
+
+  //   // Update existing Redux state for persistence (backward compatibility)
+  //   dispatch(
+  //     updateProductMixFilters({
+  //       startDate: formattedStartDate,
+  //       endDate: formattedEndDate,
+  //       dateRangeType: "Custom Date Range",
+  //     })
+  //   );
+
+  //   setIsDateRangeOpen(false);
+
+  //   // Force trigger auto-filter after a short delay to ensure state has updated
+  //   setTimeout(() => {
+  //     if (
+  //       hasMinimumFilters(
+  //         selectedCompany,
+  //         displaySelectedLocations.length > 0
+  //           ? displaySelectedLocations
+  //           : localSelectedLocations
+  //       )
+  //     ) {
+  //       console.log(
+  //         "📅 ProductMix: Force triggering auto-filter after date range selection"
+  //       );
+  //       triggerAutoFilter();
+  //     }
+  //   }, 100);
+  // };
+
   // Apply date range with Redux integration
-  const applyDateRange = () => {
+  const applyDateRange = useCallback(() => {
     const formattedStartDate = format(selectedRange.startDate, "MM/dd/yyyy");
     const formattedEndDate = format(selectedRange.endDate, "MM/dd/yyyy");
 
@@ -1787,24 +1846,227 @@ export default function ProductMixDashboard() {
 
     // Force trigger auto-filter after a short delay to ensure state has updated
     setTimeout(() => {
-      if (
-        hasMinimumFilters(
-          selectedCompany,
-          displaySelectedLocations.length > 0
-            ? displaySelectedLocations
-            : localSelectedLocations
-        )
-      ) {
+      const effectiveSelectedLocations =
+        availableLocations.length > 0
+          ? displaySelectedLocations
+          : localSelectedLocations;
+
+      if (hasMinimumFilters(selectedCompany, effectiveSelectedLocations)) {
         console.log(
           "📅 ProductMix: Force triggering auto-filter after date range selection"
         );
-        triggerAutoFilter();
+
+        // Call triggerAutoFilter directly with current state
+        const currentCompany = selectedCompany;
+        const currentCategories = selectedCategories;
+        const currentServers = selectedServers;
+        const currentMenuItems = selectedMenuItems;
+
+        console.log("📅 Triggering with current filters:", {
+          company: currentCompany,
+          locations: effectiveSelectedLocations,
+          startDate: formattedStartDate,
+          endDate: formattedEndDate,
+          categories: currentCategories,
+          servers: currentServers,
+          menuItems: currentMenuItems,
+        });
+
+        // Manually trigger the auto-filter
+        setIsAutoFiltering(true);
+
+        (async () => {
+          try {
+            // Format dates correctly for API (convert MM/dd/yyyy to yyyy-MM-dd)
+            let apiFormattedStartDate: string | null = null;
+            let apiFormattedEndDate: string | null = null;
+
+            if (formattedStartDate) {
+              const dateParts = formattedStartDate.split("/");
+              if (dateParts.length === 3) {
+                apiFormattedStartDate = `${
+                  dateParts[2]
+                }-${dateParts[0].padStart(2, "0")}-${dateParts[1].padStart(
+                  2,
+                  "0"
+                )}`;
+              }
+            }
+
+            if (formattedEndDate) {
+              const dateParts = formattedEndDate.split("/");
+              if (dateParts.length === 3) {
+                apiFormattedEndDate = `${dateParts[2]}-${dateParts[0].padStart(
+                  2,
+                  "0"
+                )}-${dateParts[1].padStart(2, "0")}`;
+              }
+            }
+
+            // Prepare the request payload
+            const payload = {
+              fileName: currentProductMixFile?.fileName || "",
+              locations: effectiveSelectedLocations,
+              location:
+                effectiveSelectedLocations.length === 1
+                  ? effectiveSelectedLocations[0]
+                  : null,
+              startDate: apiFormattedStartDate,
+              endDate: apiFormattedEndDate,
+              servers: currentServers,
+              categories: currentCategories,
+              menuItems: currentMenuItems,
+              dashboard: "Product Mix",
+              company_id: currentCompany,
+            };
+
+            console.log(
+              "🚀 Sending Product Mix filter request after date range:",
+              payload
+            );
+
+            // Make API call
+            const response = await axios.post(
+              PRODUCT_MIX_FILTER_API_URL,
+              payload
+            );
+
+            if (response.data) {
+              // Apply formatting to the response data
+              const formattedResponseData = enhanceDataWithFormatting(
+                response.data
+              );
+
+              // Extract categories from the filtered data
+              const extractedCategories =
+                formattedResponseData.categories || currentCategories;
+
+              // Create enhanced data with filter metadata
+              const enhancedData = {
+                ...formattedResponseData,
+                categories: extractedCategories,
+                company_id: currentCompany,
+                filterApplied: true,
+                filterTimestamp: new Date().toISOString(),
+                appliedFilters: {
+                  company_id: currentCompany,
+                  company_name: selectedCompanyName,
+                  locations: effectiveSelectedLocations,
+                  location:
+                    effectiveSelectedLocations.length === 1
+                      ? effectiveSelectedLocations[0]
+                      : `${effectiveSelectedLocations.length} locations`,
+                  startDate: formattedStartDate,
+                  endDate: formattedEndDate,
+                  servers: currentServers,
+                  categories: currentCategories,
+                  menuItems: currentMenuItems,
+                },
+              };
+
+              // Update data for all selected locations
+              effectiveSelectedLocations.forEach((location) => {
+                dispatch(
+                  addProductMixData({
+                    location: location,
+                    data: enhancedData,
+                    fileName: currentProductMixFile?.fileName || "Unknown",
+                    fileContent: currentProductMixFile?.fileContent || "",
+                    company_id: currentCompany,
+                  })
+                );
+              });
+
+              // Update Redux filters
+              dispatch(
+                updateProductMixFilters({
+                  company_id: currentCompany,
+                  locations: effectiveSelectedLocations,
+                  location:
+                    effectiveSelectedLocations.length === 1
+                      ? effectiveSelectedLocations[0]
+                      : effectiveSelectedLocations.join(","),
+                  startDate: formattedStartDate,
+                  endDate: formattedEndDate,
+                  servers: currentServers.join(","),
+                  categories: currentCategories.join(","),
+                  menuItems: currentMenuItems.join(","),
+                  selectedCategories: currentCategories,
+                  dateRangeType: "Custom Date Range",
+                })
+              );
+
+              // Update data version to force re-renders
+              setDataVersion((prev) => prev + 1);
+              setDataUpdated(true);
+
+              // Force re-selection of current location
+              if (effectiveSelectedLocations.length > 0) {
+                dispatch(
+                  selectProductMixLocation(effectiveSelectedLocations[0])
+                );
+              }
+
+              console.log("✅ Date range filter applied successfully!");
+            } else {
+              throw new Error("Invalid response data from filter API");
+            }
+          } catch (error) {
+            console.error("❌ Date range filter error:", error);
+            setFilterError("Error applying date range filter");
+          } finally {
+            setIsAutoFiltering(false);
+          }
+        })();
+      } else {
+        console.warn(
+          "⚠️ Cannot trigger auto-filter: minimum requirements not met"
+        );
       }
-    }, 100);
-  };
+    }, 200);
+  }, [
+    selectedRange,
+    reduxDispatch,
+    dispatch,
+    selectedCompany,
+    availableLocations.length,
+    displaySelectedLocations,
+    localSelectedLocations,
+    selectedCategories,
+    selectedServers,
+    selectedMenuItems,
+    hasMinimumFilters,
+    currentProductMixFile,
+    selectedCompanyName,
+    convertDisplayDateToRedux,
+    enhanceDataWithFormatting,
+  ]);
+
+  // // Clear date range with Redux integration
+  // const clearDateRange = () => {
+  //   console.log(
+  //     "🧹 ProductMix: Clearing date range from Redux and local state"
+  //   );
+
+  //   // Clear local state
+  //   setLocalStartDate("");
+  //   setLocalEndDate("");
+
+  //   // Clear Redux state
+  //   reduxDispatch(clearProductMixDashboardDateRange());
+
+  //   // Clear existing Redux filters (backward compatibility)
+  //   dispatch(
+  //     updateProductMixFilters({
+  //       startDate: "",
+  //       endDate: "",
+  //       dateRangeType: "",
+  //     })
+  //   );
+  // };
 
   // Clear date range with Redux integration
-  const clearDateRange = () => {
+  const clearDateRange = useCallback(() => {
     console.log(
       "🧹 ProductMix: Clearing date range from Redux and local state"
     );
@@ -1824,7 +2086,178 @@ export default function ProductMixDashboard() {
         dateRangeType: "",
       })
     );
-  };
+
+    // Force trigger auto-filter after clearing dates
+    setTimeout(() => {
+      const effectiveSelectedLocations =
+        availableLocations.length > 0
+          ? displaySelectedLocations
+          : localSelectedLocations;
+
+      if (hasMinimumFilters(selectedCompany, effectiveSelectedLocations)) {
+        console.log(
+          "🧹 ProductMix: Force triggering auto-filter after clearing date range"
+        );
+
+        // Call auto-filter with cleared dates
+        const currentCompany = selectedCompany;
+        const currentCategories = selectedCategories;
+        const currentServers = selectedServers;
+        const currentMenuItems = selectedMenuItems;
+
+        console.log("🧹 Triggering with cleared dates:", {
+          company: currentCompany,
+          locations: effectiveSelectedLocations,
+          startDate: "", // Cleared
+          endDate: "", // Cleared
+          categories: currentCategories,
+          servers: currentServers,
+          menuItems: currentMenuItems,
+        });
+
+        // Manually trigger the auto-filter with cleared dates
+        setIsAutoFiltering(true);
+
+        (async () => {
+          try {
+            // Prepare the request payload with no dates
+            const payload = {
+              fileName: currentProductMixFile?.fileName || "",
+              locations: effectiveSelectedLocations,
+              location:
+                effectiveSelectedLocations.length === 1
+                  ? effectiveSelectedLocations[0]
+                  : null,
+              startDate: null, // Explicitly set to null
+              endDate: null, // Explicitly set to null
+              servers: currentServers,
+              categories: currentCategories,
+              menuItems: currentMenuItems,
+              dashboard: "Product Mix",
+              company_id: currentCompany,
+            };
+
+            console.log(
+              "🚀 Sending Product Mix filter request after clearing date range:",
+              payload
+            );
+
+            // Make API call
+            const response = await axios.post(
+              PRODUCT_MIX_FILTER_API_URL,
+              payload
+            );
+
+            if (response.data) {
+              // Apply formatting to the response data
+              const formattedResponseData = enhanceDataWithFormatting(
+                response.data
+              );
+
+              // Extract categories from the filtered data
+              const extractedCategories =
+                formattedResponseData.categories || currentCategories;
+
+              // Create enhanced data with filter metadata
+              const enhancedData = {
+                ...formattedResponseData,
+                categories: extractedCategories,
+                company_id: currentCompany,
+                filterApplied: true,
+                filterTimestamp: new Date().toISOString(),
+                appliedFilters: {
+                  company_id: currentCompany,
+                  company_name: selectedCompanyName,
+                  locations: effectiveSelectedLocations,
+                  location:
+                    effectiveSelectedLocations.length === 1
+                      ? effectiveSelectedLocations[0]
+                      : `${effectiveSelectedLocations.length} locations`,
+                  startDate: "", // Cleared
+                  endDate: "", // Cleared
+                  servers: currentServers,
+                  categories: currentCategories,
+                  menuItems: currentMenuItems,
+                },
+              };
+
+              // Update data for all selected locations
+              effectiveSelectedLocations.forEach((location) => {
+                dispatch(
+                  addProductMixData({
+                    location: location,
+                    data: enhancedData,
+                    fileName: currentProductMixFile?.fileName || "Unknown",
+                    fileContent: currentProductMixFile?.fileContent || "",
+                    company_id: currentCompany,
+                  })
+                );
+              });
+
+              // Update Redux filters with cleared dates
+              dispatch(
+                updateProductMixFilters({
+                  company_id: currentCompany,
+                  locations: effectiveSelectedLocations,
+                  location:
+                    effectiveSelectedLocations.length === 1
+                      ? effectiveSelectedLocations[0]
+                      : effectiveSelectedLocations.join(","),
+                  startDate: "", // Cleared
+                  endDate: "", // Cleared
+                  servers: currentServers.join(","),
+                  categories: currentCategories.join(","),
+                  menuItems: currentMenuItems.join(","),
+                  selectedCategories: currentCategories,
+                  dateRangeType: "", // Cleared
+                })
+              );
+
+              // Update data version to force re-renders
+              setDataVersion((prev) => prev + 1);
+              setDataUpdated(true);
+
+              // Force re-selection of current location
+              if (effectiveSelectedLocations.length > 0) {
+                dispatch(
+                  selectProductMixLocation(effectiveSelectedLocations[0])
+                );
+              }
+
+              console.log(
+                "✅ Date range cleared and filter applied successfully!"
+              );
+            } else {
+              throw new Error("Invalid response data from filter API");
+            }
+          } catch (error) {
+            console.error("❌ Clear date range filter error:", error);
+            setFilterError("Error applying filter after clearing date range");
+          } finally {
+            setIsAutoFiltering(false);
+          }
+        })();
+      } else {
+        console.warn(
+          "⚠️ Cannot trigger auto-filter: minimum requirements not met"
+        );
+      }
+    }, 200);
+  }, [
+    reduxDispatch,
+    dispatch,
+    selectedCompany,
+    availableLocations.length,
+    displaySelectedLocations,
+    localSelectedLocations,
+    selectedCategories,
+    selectedServers,
+    selectedMenuItems,
+    hasMinimumFilters,
+    currentProductMixFile,
+    selectedCompanyName,
+    enhanceDataWithFormatting,
+  ]);
 
   // Format display date
   const formatDisplayDate = (dateStr: string) => {
@@ -3062,7 +3495,7 @@ export default function ProductMixDashboard() {
         <DialogActions>
           <Button onClick={() => setIsDateRangeOpen(false)}>Cancel</Button>
           <Button onClick={applyDateRange} variant="contained" color="primary">
-            Set Date Range
+            clearDateRange Set Date Range
           </Button>
         </DialogActions>
       </Dialog>
