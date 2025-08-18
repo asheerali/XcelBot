@@ -886,6 +886,17 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
+// // Custom MultiSelect component with search functionality
+// interface MultiSelectProps {
+//   id: string;
+//   label: string;
+//   options: string[];
+//   value: string[];
+//   onChange: (value: string[]) => void;
+//   icon?: React.ReactNode;
+//   placeholder?: string;
+// }
+
 // Custom MultiSelect component with search functionality
 interface MultiSelectProps {
   id: string;
@@ -895,9 +906,9 @@ interface MultiSelectProps {
   onChange: (value: string[]) => void;
   icon?: React.ReactNode;
   placeholder?: string;
+  showApplyButton?: boolean; // ADD THIS
+  onApply?: (value: string[]) => void; // ADD THIS
 }
-
-
 
 const MultiSelect: React.FC<MultiSelectProps> = ({
   id,
@@ -907,10 +918,18 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   onChange,
   icon,
   placeholder,
+  showApplyButton = false, // ADD THIS
+  onApply, // ADD THIS
 }) => {
   const [searchText, setSearchText] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [tempValue, setTempValue] = useState<string[]>(value); // ADD THIS
+
+  // ADD THIS: Update temp value when value prop changes
+  useEffect(() => {
+    setTempValue(value);
+  }, [value]);
 
   const filteredOptions = options.filter((option) =>
     option.toLowerCase().includes(searchText.toLowerCase())
@@ -925,21 +944,80 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
     setIsOpen(false);
     setAnchorEl(null);
     setSearchText("");
+    // ADD THIS: Reset temp value if apply mode and user cancels
+    if (showApplyButton) {
+      setTempValue(value);
+    }
   };
 
   const handleSelect = (option: string) => {
-    const newValue = value.includes(option)
-      ? value.filter((item) => item !== option)
-      : [...value, option];
-    onChange(newValue);
+    if (showApplyButton) {
+      // ADD THIS: Update temp value in apply mode
+      const newTempValue = tempValue.includes(option)
+        ? tempValue.filter((item) => item !== option)
+        : [...tempValue, option];
+      setTempValue(newTempValue);
+    } else {
+      // Original behavior for immediate mode
+      const newValue = value.includes(option)
+        ? value.filter((item) => item !== option)
+        : [...value, option];
+      onChange(newValue);
+    }
   };
 
   const handleSelectAll = () => {
-    if (value.length === options.length) {
-      onChange([]);
+    if (showApplyButton) {
+      // ADD THIS: Update temp value in apply mode
+      if (tempValue.length === options.length) {
+        setTempValue([]);
+      } else {
+        setTempValue([...options]);
+      }
     } else {
-      onChange([...options]);
+      // Original behavior for immediate mode
+      if (value.length === options.length) {
+        onChange([]);
+      } else {
+        onChange([...options]);
+      }
     }
+  };
+
+  // // ADD THIS: Handle apply button click
+  // const handleApply = () => {
+  //   if (onApply) {
+  //     onApply(tempValue);
+  //   }
+  //   onChange(tempValue);
+  //   setIsOpen(false);
+  //   setAnchorEl(null);
+  //   setSearchText("");
+  // };
+
+  // ADD THIS: Handle apply button click
+  const handleApply = () => {
+    console.log("🔧 MultiSelect handleApply called");
+    console.log("🔧 Current tempValue:", tempValue);
+    console.log("🔧 Current value (applied):", value);
+    console.log("🔧 onApply function exists?", !!onApply);
+    console.log("🔧 onApply function:", onApply);
+
+    if (onApply) {
+      console.log("🔧 Calling onApply with:", tempValue);
+      onApply(tempValue);
+    }
+    onChange(tempValue);
+    setIsOpen(false);
+    setAnchorEl(null);
+    setSearchText("");
+
+    console.log("🔧 handleApply completed");
+  };
+  // ADD THIS: Handle cancel button click
+  const handleCancel = () => {
+    setTempValue(value);
+    handleClose();
   };
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
@@ -947,6 +1025,10 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
       handleClose();
     }
   };
+
+  // ADD THIS: Determine which value to display and use for checking
+  const displayValue = showApplyButton ? tempValue : value;
+  const currentValue = showApplyButton ? value : value; // Always show applied value in the button
 
   return (
     <Box sx={{ position: "relative", width: "100%" }}>
@@ -987,13 +1069,13 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
             textOverflow: "ellipsis",
           }}
         >
-          {value.length === 0 && (
+          {currentValue.length === 0 && (
             <Typography color="text.secondary" variant="body2" noWrap>
               {placeholder || "Select options"}
             </Typography>
           )}
 
-          {value.length > 0 && (
+          {currentValue.length > 0 && (
             <Box
               sx={{
                 display: "flex",
@@ -1002,16 +1084,22 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
                 overflow: "hidden",
               }}
             >
-              {value.length <= 2 ? (
-                value.map((item) => (
+              {currentValue.length <= 2 ? (
+                currentValue.map((item) => (
                   <Chip
                     key={item}
                     label={item}
                     size="small"
-                    onDelete={(e) => {
-                      e.stopPropagation();
-                      onChange(value.filter((val) => val !== item));
-                    }}
+                    onDelete={
+                      showApplyButton
+                        ? undefined
+                        : (e) => {
+                            e.stopPropagation();
+                            onChange(
+                              currentValue.filter((val) => val !== item)
+                            );
+                          }
+                    }
                     onClick={(e) => e.stopPropagation()}
                     sx={{ maxWidth: "120px" }}
                   />
@@ -1019,17 +1107,25 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
               ) : (
                 <>
                   <Chip
-                    label={value[0]}
+                    label={currentValue[0]}
                     size="small"
-                    onDelete={(e) => {
-                      e.stopPropagation();
-                      onChange(value.filter((val) => val !== value[0]));
-                    }}
+                    onDelete={
+                      showApplyButton
+                        ? undefined
+                        : (e) => {
+                            e.stopPropagation();
+                            onChange(
+                              currentValue.filter(
+                                (val) => val !== currentValue[0]
+                              )
+                            );
+                          }
+                    }
                     onClick={(e) => e.stopPropagation()}
                     sx={{ maxWidth: "120px" }}
                   />
                   <Chip
-                    label={`+${value.length - 1} more`}
+                    label={`+${currentValue.length - 1} more`}
                     size="small"
                     onClick={(e) => e.stopPropagation()}
                   />
@@ -1094,8 +1190,8 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
         PaperProps={{
           style: {
             width: anchorEl ? anchorEl.clientWidth : undefined,
-            maxHeight: 300,
-            overflow: "auto",
+            maxHeight: showApplyButton ? 400 : 300, // CHANGE THIS
+            overflow: "visible", // CHANGE THIS
           },
         }}
       >
@@ -1122,28 +1218,67 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
         <Box sx={{ p: 1 }}>
           <MenuItem dense onClick={handleSelectAll}>
             <Checkbox
-              checked={value.length === options.length}
-              indeterminate={value.length > 0 && value.length < options.length}
+              checked={displayValue.length === options.length}
+              indeterminate={
+                displayValue.length > 0 && displayValue.length < options.length
+              }
               size="small"
             />
             <ListItemText primary="Select All" />
           </MenuItem>
         </Box>
         <Divider />
-        <MenuList>
-          {filteredOptions.length === 0 ? (
-            <MenuItem disabled>
-              <ListItemText primary="No options found" />
-            </MenuItem>
-          ) : (
-            filteredOptions.map((option) => (
-              <MenuItem key={option} dense onClick={() => handleSelect(option)}>
-                <Checkbox checked={value.includes(option)} size="small" />
-                <ListItemText primary={option} />
+        <Box sx={{ maxHeight: 200, overflow: "auto" }}>
+          {" "}
+          {/* ADD THIS BOX */}
+          <MenuList>
+            {filteredOptions.length === 0 ? (
+              <MenuItem disabled>
+                <ListItemText primary="No options found" />
               </MenuItem>
-            ))
-          )}
-        </MenuList>
+            ) : (
+              filteredOptions.map((option) => (
+                <MenuItem
+                  key={option}
+                  dense
+                  onClick={() => handleSelect(option)}
+                >
+                  <Checkbox
+                    checked={displayValue.includes(option)}
+                    size="small"
+                  />
+                  <ListItemText primary={option} />
+                </MenuItem>
+              ))
+            )}
+          </MenuList>
+        </Box>
+
+        {/* ADD THIS ENTIRE SECTION: Apply/Cancel buttons for apply mode */}
+        {showApplyButton && (
+          <>
+            <Divider />
+            <Box
+              sx={{ p: 1, display: "flex", gap: 1, justifyContent: "flex-end" }}
+            >
+              <Button
+                size="small"
+                onClick={handleCancel}
+                sx={{ minWidth: "60px" }}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="small"
+                variant="contained"
+                onClick={handleApply}
+                sx={{ minWidth: "60px" }}
+              >
+                Apply
+              </Button>
+            </Box>
+          </>
+        )}
       </Popover>
     </Box>
   );
@@ -2568,6 +2703,428 @@ export default function ProductMixDashboard() {
     dispatch,
   ]);
 
+  const handleCategoryApply = useCallback(
+    async (newValue: string[]) => {
+      console.log("🍽️ ProductMix: handleCategoryApply STARTED with:", newValue);
+
+      // Update the state
+      setSelectedCategories(newValue);
+      dispatch(updateProductMixFilters({ category: newValue.join(",") }));
+
+      // Get current filter values
+      const effectiveSelectedLocations =
+        availableLocations.length > 0
+          ? displaySelectedLocations
+          : localSelectedLocations;
+
+      if (!hasMinimumFilters(selectedCompany, effectiveSelectedLocations)) {
+        console.warn(
+          "🍽️ Cannot apply category filter: minimum requirements not met"
+        );
+        return;
+      }
+
+      console.log(
+        "🍽️ ProductMix: Manually triggering category filter API call"
+      );
+      setIsAutoFiltering(true);
+      setFilterError("");
+      setDataUpdated(false);
+
+      try {
+        // Format dates correctly for API (convert MM/dd/yyyy to yyyy-MM-dd)
+        let apiFormattedStartDate: string | null = null;
+        let apiFormattedEndDate: string | null = null;
+
+        if (localStartDate) {
+          const dateParts = localStartDate.split("/");
+          if (dateParts.length === 3) {
+            apiFormattedStartDate = `${dateParts[2]}-${dateParts[0].padStart(
+              2,
+              "0"
+            )}-${dateParts[1].padStart(2, "0")}`;
+          }
+        }
+
+        if (localEndDate) {
+          const dateParts = localEndDate.split("/");
+          if (dateParts.length === 3) {
+            apiFormattedEndDate = `${dateParts[2]}-${dateParts[0].padStart(
+              2,
+              "0"
+            )}-${dateParts[1].padStart(2, "0")}`;
+          }
+        }
+
+        // Prepare the request payload with new categories
+        const payload = {
+          fileName: currentProductMixFile?.fileName || "",
+          locations: effectiveSelectedLocations,
+          location:
+            effectiveSelectedLocations.length === 1
+              ? effectiveSelectedLocations[0]
+              : null,
+          startDate: apiFormattedStartDate,
+          endDate: apiFormattedEndDate,
+          servers: selectedServers,
+          categories: newValue, // Use the new categories directly
+          menuItems: selectedMenuItems,
+          dashboard: "Product Mix",
+          company_id: selectedCompany,
+        };
+
+        console.log(
+          "🚀 Sending Product Mix filter request with new categories:",
+          payload
+        );
+
+        // Make API call
+        const response = await axios.post(PRODUCT_MIX_FILTER_API_URL, payload);
+
+        if (response.data) {
+          // Apply formatting to the response data
+          const formattedResponseData = enhanceDataWithFormatting(
+            response.data
+          );
+
+          // Extract categories from the filtered data
+          const extractedCategories =
+            formattedResponseData.categories || newValue;
+
+          // Create enhanced data with filter metadata
+          const enhancedData = {
+            ...formattedResponseData,
+            categories: extractedCategories,
+            company_id: selectedCompany,
+            filterApplied: true,
+            filterTimestamp: new Date().toISOString(),
+            appliedFilters: {
+              company_id: selectedCompany,
+              company_name: selectedCompanyName,
+              locations: effectiveSelectedLocations,
+              location:
+                effectiveSelectedLocations.length === 1
+                  ? effectiveSelectedLocations[0]
+                  : `${effectiveSelectedLocations.length} locations`,
+              startDate: localStartDate,
+              endDate: localEndDate,
+              servers: selectedServers,
+              categories: newValue, // Use new categories
+              menuItems: selectedMenuItems,
+            },
+          };
+
+          console.log("📊 Enhanced data with new categories:", enhancedData);
+
+          // Update data for all selected locations
+          effectiveSelectedLocations.forEach((location) => {
+            dispatch(
+              addProductMixData({
+                location: location,
+                data: enhancedData,
+                fileName: currentProductMixFile?.fileName || "Unknown",
+                fileContent: currentProductMixFile?.fileContent || "",
+                company_id: selectedCompany,
+              })
+            );
+          });
+
+          // Update Redux filters
+          dispatch(
+            updateProductMixFilters({
+              company_id: selectedCompany,
+              locations: effectiveSelectedLocations,
+              location:
+                effectiveSelectedLocations.length === 1
+                  ? effectiveSelectedLocations[0]
+                  : effectiveSelectedLocations.join(","),
+              startDate: localStartDate,
+              endDate: localEndDate,
+              servers: selectedServers.join(","),
+              categories: newValue.join(","), // Use new categories
+              menuItems: selectedMenuItems.join(","),
+              selectedCategories: newValue, // Use new categories
+              dateRangeType:
+                localStartDate && localEndDate ? "Custom Date Range" : "",
+            })
+          );
+
+          // Update data version to force re-renders
+          setDataVersion((prev) => prev + 1);
+          setDataUpdated(true);
+
+          // Force re-selection of current location
+          if (effectiveSelectedLocations.length > 0) {
+            dispatch(selectProductMixLocation(effectiveSelectedLocations[0]));
+          }
+
+          // Update previous filters reference with new categories
+          previousFiltersRef.current = {
+            company: selectedCompany,
+            locations: [...effectiveSelectedLocations],
+            startDate: localStartDate,
+            endDate: localEndDate,
+            categories: [...newValue], // Use new categories
+            servers: [...selectedServers],
+            menuItems: [...selectedMenuItems],
+          };
+
+          console.log("✅ Category filter applied successfully!");
+          setFilterError("");
+        } else {
+          throw new Error("Invalid response data from filter API");
+        }
+      } catch (error) {
+        console.error("❌ Category filter error:", error);
+
+        let errorMessage = "Error applying category filter";
+        if (axios.isAxiosError(error)) {
+          if (error.response) {
+            const detail = error.response.data?.detail;
+            errorMessage = `Server error: ${detail || error.response.status}`;
+          } else if (error.request) {
+            errorMessage =
+              "Cannot connect to server. Please check your connection and server status.";
+          }
+        }
+
+        setFilterError(errorMessage);
+        setDataUpdated(false);
+      } finally {
+        setIsAutoFiltering(false);
+      }
+
+      console.log("🍽️ ProductMix: handleCategoryApply COMPLETED");
+    },
+    [
+      availableLocations.length,
+      displaySelectedLocations,
+      localSelectedLocations,
+      hasMinimumFilters,
+      selectedCompany,
+      localStartDate,
+      localEndDate,
+      selectedServers,
+      selectedMenuItems,
+      currentProductMixFile,
+      selectedCompanyName,
+      dispatch,
+      enhanceDataWithFormatting,
+    ]
+  );
+
+  const handleServerApply = useCallback(
+    async (newValue: string[]) => {
+      console.log("👨‍💼 ProductMix: handleServerApply STARTED with:", newValue);
+
+      // Update the state
+      setSelectedServers(newValue);
+      dispatch(updateProductMixFilters({ server: newValue.join(",") }));
+
+      // Get current filter values
+      const effectiveSelectedLocations =
+        availableLocations.length > 0
+          ? displaySelectedLocations
+          : localSelectedLocations;
+
+      if (!hasMinimumFilters(selectedCompany, effectiveSelectedLocations)) {
+        console.warn(
+          "👨‍💼 Cannot apply server filter: minimum requirements not met"
+        );
+        return;
+      }
+
+      console.log("👨‍💼 ProductMix: Manually triggering server filter API call");
+      setIsAutoFiltering(true);
+      setFilterError("");
+      setDataUpdated(false);
+
+      try {
+        // Format dates correctly for API (convert MM/dd/yyyy to yyyy-MM-dd)
+        let apiFormattedStartDate: string | null = null;
+        let apiFormattedEndDate: string | null = null;
+
+        if (localStartDate) {
+          const dateParts = localStartDate.split("/");
+          if (dateParts.length === 3) {
+            apiFormattedStartDate = `${dateParts[2]}-${dateParts[0].padStart(
+              2,
+              "0"
+            )}-${dateParts[1].padStart(2, "0")}`;
+          }
+        }
+
+        if (localEndDate) {
+          const dateParts = localEndDate.split("/");
+          if (dateParts.length === 3) {
+            apiFormattedEndDate = `${dateParts[2]}-${dateParts[0].padStart(
+              2,
+              "0"
+            )}-${dateParts[1].padStart(2, "0")}`;
+          }
+        }
+
+        // Prepare the request payload with new servers
+        const payload = {
+          fileName: currentProductMixFile?.fileName || "",
+          locations: effectiveSelectedLocations,
+          location:
+            effectiveSelectedLocations.length === 1
+              ? effectiveSelectedLocations[0]
+              : null,
+          startDate: apiFormattedStartDate,
+          endDate: apiFormattedEndDate,
+          servers: newValue, // Use the new servers directly
+          categories: selectedCategories,
+          menuItems: selectedMenuItems,
+          dashboard: "Product Mix",
+          company_id: selectedCompany,
+        };
+
+        console.log(
+          "🚀 Sending Product Mix filter request with new servers:",
+          payload
+        );
+
+        // Make API call
+        const response = await axios.post(PRODUCT_MIX_FILTER_API_URL, payload);
+
+        if (response.data) {
+          // Apply formatting to the response data
+          const formattedResponseData = enhanceDataWithFormatting(
+            response.data
+          );
+
+          // Extract categories from the filtered data
+          const extractedCategories =
+            formattedResponseData.categories || selectedCategories;
+
+          // Create enhanced data with filter metadata
+          const enhancedData = {
+            ...formattedResponseData,
+            categories: extractedCategories,
+            company_id: selectedCompany,
+            filterApplied: true,
+            filterTimestamp: new Date().toISOString(),
+            appliedFilters: {
+              company_id: selectedCompany,
+              company_name: selectedCompanyName,
+              locations: effectiveSelectedLocations,
+              location:
+                effectiveSelectedLocations.length === 1
+                  ? effectiveSelectedLocations[0]
+                  : `${effectiveSelectedLocations.length} locations`,
+              startDate: localStartDate,
+              endDate: localEndDate,
+              servers: newValue, // Use new servers
+              categories: selectedCategories,
+              menuItems: selectedMenuItems,
+            },
+          };
+
+          console.log("📊 Enhanced data with new servers:", enhancedData);
+
+          // Update data for all selected locations
+          effectiveSelectedLocations.forEach((location) => {
+            dispatch(
+              addProductMixData({
+                location: location,
+                data: enhancedData,
+                fileName: currentProductMixFile?.fileName || "Unknown",
+                fileContent: currentProductMixFile?.fileContent || "",
+                company_id: selectedCompany,
+              })
+            );
+          });
+
+          // Update Redux filters
+          dispatch(
+            updateProductMixFilters({
+              company_id: selectedCompany,
+              locations: effectiveSelectedLocations,
+              location:
+                effectiveSelectedLocations.length === 1
+                  ? effectiveSelectedLocations[0]
+                  : effectiveSelectedLocations.join(","),
+              startDate: localStartDate,
+              endDate: localEndDate,
+              servers: newValue.join(","), // Use new servers
+              categories: selectedCategories.join(","),
+              menuItems: selectedMenuItems.join(","),
+              selectedCategories: selectedCategories,
+              dateRangeType:
+                localStartDate && localEndDate ? "Custom Date Range" : "",
+            })
+          );
+
+          // Update data version to force re-renders
+          setDataVersion((prev) => prev + 1);
+          setDataUpdated(true);
+
+          // Force re-selection of current location
+          if (effectiveSelectedLocations.length > 0) {
+            dispatch(selectProductMixLocation(effectiveSelectedLocations[0]));
+          }
+
+          // Update previous filters reference with new servers
+          previousFiltersRef.current = {
+            company: selectedCompany,
+            locations: [...effectiveSelectedLocations],
+            startDate: localStartDate,
+            endDate: localEndDate,
+            categories: [...selectedCategories],
+            servers: [...newValue], // Use new servers
+            menuItems: [...selectedMenuItems],
+          };
+
+          console.log("✅ Server filter applied successfully!");
+          setFilterError("");
+        } else {
+          throw new Error("Invalid response data from filter API");
+        }
+      } catch (error) {
+        console.error("❌ Server filter error:", error);
+
+        let errorMessage = "Error applying server filter";
+        if (axios.isAxiosError(error)) {
+          if (error.response) {
+            const detail = error.response.data?.detail;
+            errorMessage = `Server error: ${detail || error.response.status}`;
+          } else if (error.request) {
+            errorMessage =
+              "Cannot connect to server. Please check your connection and server status.";
+          }
+        }
+
+        setFilterError(errorMessage);
+        setDataUpdated(false);
+      } finally {
+        setIsAutoFiltering(false);
+      }
+
+      console.log("👨‍💼 ProductMix: handleServerApply COMPLETED");
+    },
+    [
+      availableLocations.length,
+      displaySelectedLocations,
+      localSelectedLocations,
+      hasMinimumFilters,
+      selectedCompany,
+      localStartDate,
+      localEndDate,
+      selectedCategories,
+      selectedMenuItems,
+      currentProductMixFile,
+      selectedCompanyName,
+      dispatch,
+      enhanceDataWithFormatting,
+    ]
+  );
+
+  const handleServerClear = useCallback(() => {
+    console.log("🧹 ProductMix: Clearing servers");
+    handleServerApply([]);
+  }, [handleServerApply]);
   // // Debounced auto-filter function
   // const debouncedAutoFilter = useCallback(() => {
   //   if (timeoutRef.current) {
@@ -3103,6 +3660,7 @@ export default function ProductMixDashboard() {
             {renderDateRangeFilter()}
 
             {/* Category filter */}
+
             <Grid item {...gridSizes}>
               <MultiSelect
                 id="category-select"
@@ -3110,11 +3668,15 @@ export default function ProductMixDashboard() {
                 options={categories}
                 value={selectedCategories}
                 onChange={handleCategoryChange}
+                onApply={handleCategoryApply}
+                showApplyButton={true}
                 icon={<FastfoodIcon />}
                 placeholder="Select dining options"
               />
             </Grid>
 
+            {/* Server filter - conditional based on tab */}
+            {/* Server filter - conditional based on tab */}
             {/* Server filter - conditional based on tab */}
             <Grid item {...gridSizes}>
               {tabValue === 0 ? (
@@ -3124,6 +3686,8 @@ export default function ProductMixDashboard() {
                   options={servers}
                   value={selectedServers}
                   onChange={handleServerChange}
+                  onApply={handleServerApply}
+                  showApplyButton={true}
                   icon={<PersonIcon />}
                   placeholder="Select servers (optional)"
                 />
@@ -3215,7 +3779,6 @@ export default function ProductMixDashboard() {
                     onDelete={clearDateRange}
                   />
                 )}
-
                 {tabValue === 0 && selectedServers.length > 0 && (
                   <Chip
                     label={
@@ -3227,10 +3790,9 @@ export default function ProductMixDashboard() {
                     variant="outlined"
                     size="small"
                     icon={<PersonIcon />}
-                    onDelete={() => setSelectedServers([])}
+                    onDelete={handleServerClear}
                   />
                 )}
-
                 {tabValue === 1 && selectedMenuItems.length > 0 && (
                   <Chip
                     label={
@@ -3257,7 +3819,7 @@ export default function ProductMixDashboard() {
                     variant="outlined"
                     size="small"
                     icon={<FastfoodIcon />}
-                    onDelete={() => setSelectedCategories([])}
+                    onDelete={() => handleCategoryApply([])}
                   />
                 )}
               </Box>
@@ -3497,7 +4059,7 @@ export default function ProductMixDashboard() {
         <DialogActions>
           <Button onClick={() => setIsDateRangeOpen(false)}>Cancel</Button>
           <Button onClick={applyDateRange} variant="contained" color="primary">
-            clearDateRange Set Date Range
+            Set Date Range
           </Button>
         </DialogActions>
       </Dialog>
