@@ -274,9 +274,15 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
         'orders_change': round(orders_change, 2),
         # "qty_sold_change": qty_sold_change
         'qty_sold_change': round(qty_sold_change, 2),
-        "avg_orders_value_correct": net_sales_round / unique_orders,
+        "avg_orders_value_correct": 
+            # net_sales_round / unique_orders
+            (
+    0.0 if pd.isna(net_sales_round) or pd.isna(unique_orders) or unique_orders == 0
+    else net_sales_round / unique_orders
+)
+            ,
         "avg_orders_value_change_correct" : (
-    0 if pd.isna(net_sales_change) or pd.isna(orders_change) or orders_change == 0
+    0.0 if pd.isna(net_sales_change) or pd.isna(orders_change) or orders_change == 0
     else net_sales_change / orders_change
 )
     }
@@ -706,7 +712,10 @@ def category_comparison_function(df, location_filter='All', start_date=None, end
     ].copy()
 
     if filtered_df.empty:
-        return {'category_comparison_table': pd.DataFrame()}
+        # return {'category_comparison_table': pd.DataFrame()}
+        return pd.DataFrame(columns=['Rank', 'Top_10_Items', 'T_Sales', 'T_Quantity',
+                             'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])
+
 
     current_sales = filtered_df.groupby('Sales_Category')['Net_Price'].sum().reset_index()
     current_sales.columns = ['Sales Category', 'Current_4_Weeks_Sales']
@@ -815,7 +824,11 @@ def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, 
     ].copy()
 
     if filtered_df.empty:
-        return {'category_comparison_table': pd.DataFrame()}
+        # return {'category_comparison_table': pd.DataFrame()}
+        return pd.DataFrame(columns=['Rank', 'Top_10_Items', 'T_Sales', 'T_Quantity',
+                             'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])
+
+
 
     current_items = filtered_df.groupby(item_column).agg({
         quantity_column: 'sum',
@@ -896,7 +909,17 @@ def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, 
     ].reset_index(drop=True)
     comparison_table['Rank'] = range(1, len(comparison_table) + 1)
 
+
+    print("--------------------------")
+    print("--------------------------")
+    print(type(comparison_table))  # It should print: <class 'pandas.core.frame.DataFrame'>
+    print("--------------------------")
+    print("--------------------------")
+    
+
     return comparison_table
+
+    # return {'category_comparison_table': comparison_table}  # if returning a dictionary
 
 
 
