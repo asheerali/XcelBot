@@ -93,21 +93,35 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     
     # Create a change dataframe for comparison (e.g., previous day or week)
         
+    # if filtered_df.empty:
+    #     return {
+    #         'net_sales': 0,
+    #         'orders': 0,
+    #         'qty_sold':0,
+    #         'sales_by_category': pd.DataFrame(columns=['Category', 'Percentage', 'Sales']),
+    #         'sales_by_menu_group': pd.DataFrame(columns=['Menu Group', 'Sales']),
+    #         'sales_by_server': pd.DataFrame(columns=['Server', 'Sales']),
+    #         'top_selling_items': pd.DataFrame(columns=['Item', 'Server', 'Quantity', 'Sales']),
+    #         "net_sales_change":0 ,
+    #         "orders_change": 0,
+    #         "qty_sold_change": 0
+    #     }
+
     if filtered_df.empty:
         return {
             'net_sales': 0,
             'orders': 0,
-            'qty_sold':0,
+            'qty_sold': 0,
             'sales_by_category': pd.DataFrame(columns=['Category', 'Percentage', 'Sales']),
             'sales_by_menu_group': pd.DataFrame(columns=['Menu Group', 'Sales']),
             'sales_by_server': pd.DataFrame(columns=['Server', 'Sales']),
             'top_selling_items': pd.DataFrame(columns=['Item', 'Server', 'Quantity', 'Sales']),
-            "net_sales_change":0 ,
-            "orders_change": 0,
-            "qty_sold_change": 0
+            'net_sales_change': 0,
+            'orders_change': 0,
+            'qty_sold_change': 0,
+            'avg_orders_value_correct': 0.0,
+            'avg_orders_value_change_correct': 0.0
         }
-
-    
     change_filtered_df = df.copy()
         
     # Ensure Date column is datetime type for change_filtered_df too
@@ -259,8 +273,35 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
     
     net_sales_round =  round(net_sales, 2)
     # Return all tables in a dictionary
+#     return {
+#         # 'net_sales': net_sales,
+#         'net_sales': net_sales_round,
+#         'orders': unique_orders,
+#         'qty_sold': qty_sold,
+#         'sales_by_category': sales_by_category,
+#         'sales_by_menu_group': sales_by_menu_group,
+#         'sales_by_server': sales_by_server,
+#         'top_selling_items': top_selling_items,
+#         # "net_sales_change": net_sales_change,
+#         'net_sales_change': round(net_sales_change, 2),
+#         "orders_change": orders_change,
+#         'orders_change': round(orders_change, 2),
+#         # "qty_sold_change": qty_sold_change
+#         'qty_sold_change': round(qty_sold_change, 2),
+#         "avg_orders_value_correct": 
+#             # net_sales_round / unique_orders
+#             (
+#     0.0 if pd.isna(net_sales_round) or pd.isna(unique_orders) or unique_orders == 0
+#     else net_sales_round / unique_orders
+# )
+#             ,
+#         "avg_orders_value_change_correct" : (
+#     0.0 if pd.isna(net_sales_change) or pd.isna(orders_change) or orders_change == 0
+#     else net_sales_change / orders_change
+# )
+#     }
+# Return all tables in a dictionary
     return {
-        # 'net_sales': net_sales,
         'net_sales': net_sales_round,
         'orders': unique_orders,
         'qty_sold': qty_sold,
@@ -268,27 +309,18 @@ def overview_tables(df, location_filter='All', order_date_filter=None, server_fi
         'sales_by_menu_group': sales_by_menu_group,
         'sales_by_server': sales_by_server,
         'top_selling_items': top_selling_items,
-        # "net_sales_change": net_sales_change,
         'net_sales_change': round(net_sales_change, 2),
-        "orders_change": orders_change,
-        'orders_change': round(orders_change, 2),
-        # "qty_sold_change": qty_sold_change
+        'orders_change': round(orders_change, 2),  # ← FIXED: Removed duplicate
         'qty_sold_change': round(qty_sold_change, 2),
-        "avg_orders_value_correct": 
-            # net_sales_round / unique_orders
-            (
-    0.0 if pd.isna(net_sales_round) or pd.isna(unique_orders) or unique_orders == 0
-    else net_sales_round / unique_orders
-)
-            ,
-        "avg_orders_value_change_correct" : (
-    0.0 if pd.isna(net_sales_change) or pd.isna(orders_change) or orders_change == 0
-    else net_sales_change / orders_change
-)
+        "avg_orders_value_correct": (
+            0.0 if pd.isna(net_sales_round) or pd.isna(unique_orders) or unique_orders == 0
+            else net_sales_round / unique_orders
+        ),
+        "avg_orders_value_change_correct": (
+            0.0 if pd.isna(net_sales_change) or pd.isna(orders_change) or orders_change == 0
+            else net_sales_change / orders_change
+        )
     }
-
-
-
 
 def detailed_analysis_tables(df, location_filter='All', dining_option_filter='All', menu_item_filter='All', category_filter='All', start_date=None, end_date=None):
     """
@@ -712,9 +744,9 @@ def category_comparison_function(df, location_filter='All', start_date=None, end
     ].copy()
 
     if filtered_df.empty:
-        # return {'category_comparison_table': pd.DataFrame()}
-        return pd.DataFrame(columns=['Rank', 'Top_10_Items', 'T_Sales', 'T_Quantity',
-                             'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])
+        return {'category_comparison_table': pd.DataFrame()}
+        # return pd.DataFrame(columns=['Rank', 'Top_10_Items', 'T_Sales', 'T_Quantity',
+        #                      'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])
 
 
     current_sales = filtered_df.groupby('Sales_Category')['Net_Price'].sum().reset_index()
@@ -754,6 +786,178 @@ def category_comparison_function(df, location_filter='All', start_date=None, end
 
 
 
+# def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, end_date=None, category_filter='All', server_filter='All'):
+#     """
+#     Create a comparison table of top 10 vs bottom 10 items by sales.
+#     Difference_Sales shows percentage change for top 10 items vs previous period.
+#     If change > +100 shows '+/', if change < -100 shows '-/'.
+#     """
+#     df_copy = df.copy()
+
+#     if location_filter != 'All':
+#         if isinstance(location_filter, list):
+#             df_copy = df_copy[df_copy['Location'].isin(location_filter)]
+#         else:
+#             df_copy = df_copy[df_copy['Location'] == location_filter]
+
+#     if category_filter != 'All':
+#         if isinstance(category_filter, list):
+#             df_copy = df_copy[df_copy['Category'].isin(category_filter)]
+#         else:
+#             df_copy = df_copy[df_copy['Category'] == category_filter]
+
+#     if server_filter != 'All':
+#         if isinstance(server_filter, list):
+#             df_copy = df_copy[df_copy['Server'].isin(server_filter)]
+#         else:
+#             df_copy = df_copy[df_copy['Server'] == server_filter]
+
+#     item_column = 'Menu_Item'
+#     quantity_column = 'Qty'
+#     sales_column = 'Net_Price'
+
+#     if start_date is not None and end_date is not None:
+#         sd = _to_date(start_date)
+#         ed = _to_date(end_date)
+#         if sd > ed:
+#             sd, ed = ed, sd
+#         diff_days = days_between(sd, ed, inclusive=False)
+
+#         start_date = sd
+#         end_date_final = ed
+
+#         period_len_inclusive = days_between(sd, ed, inclusive=True)
+#         previous_end_date = start_date - timedelta(days=1)
+#         previous_start_date = start_date - timedelta(days=period_len_inclusive)
+#     else:
+#         current_date = datetime.now().date()
+#         days_to_next_sunday = (6 - current_date.weekday()) % 7 or 7
+#         current_date += timedelta(days=days_to_next_sunday)
+
+#         week_start_of_end_date = current_date - timedelta(days=current_date.weekday())
+#         week_end = week_start_of_end_date + timedelta(days=6)
+
+#         start_date = week_start_of_end_date
+#         end_date_final = week_end
+
+#         previous_end_date = start_date - timedelta(days=1)
+#         previous_start_date = start_date - timedelta(weeks=1)
+
+#         diff_days = days_between(start_date, end_date_final, inclusive=False)
+
+#     filtered_df = df_copy[
+#         (df_copy['Date'] >= start_date) &
+#         (df_copy['Date'] <= end_date_final)
+#     ].copy()
+
+#     previous_df = df_copy[
+#         (df_copy['Date'] >= previous_start_date) &
+#         (df_copy['Date'] <= previous_end_date)
+#     ].copy()
+
+#     if filtered_df.empty:
+#         return {'category_comparison_table':pd.DataFrame(columns=['Rank', 'Top_10_Items', 'T_Sales', 'T_Quantity',
+#         'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])}
+#         # return pd.DataFrame(columns=['Rank', 'Top_10_Items', 'T_Sales', 'T_Quantity',
+#         #                      'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])
+
+
+
+#     current_items = filtered_df.groupby(item_column).agg({
+#         quantity_column: 'sum',
+#         sales_column: 'sum'
+#     }).reset_index()
+
+#     current_items.columns = ['Item', 'Quantity', 'Sales']
+#     current_items['Sales'] = current_items['Sales'].round(2)
+#     current_items['Quantity'] = current_items['Quantity'].round(0).astype(int)
+#     current_items = current_items[current_items['Sales'] > 0]
+
+#     if current_items.empty:
+#         # return pd.DataFrame(columns=['Rank', 'Top_10_Items', 'T_Sales', 'T_Quantity',
+#         #                              'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])
+#         return {'category_comparison_table':pd.DataFrame(columns=['Rank', 'Top_10_Items', 'T_Sales', 'T_Quantity',
+#         'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])}
+
+#     top_items = current_items.sort_values('Sales', ascending=False).head(10).reset_index(drop=True)
+
+#     if len(current_items) >= 10:
+#         bottom_items = current_items.sort_values('Sales', ascending=True).head(10).reset_index(drop=True)
+#     else:
+#         bottom_count = max(1, len(current_items) // 2)
+#         bottom_items = current_items.sort_values('Sales', ascending=True).head(bottom_count).reset_index(drop=True)
+
+#     if not previous_df.empty and (
+#         (start_date is not None and end_date is not None) or
+#         (start_date is None and end_date is None)
+#     ):
+#         previous_items = previous_df.groupby(item_column).agg({
+#             sales_column: 'sum'
+#         }).reset_index()
+#         previous_items.columns = ['Item', 'Previous_Sales']
+#         previous_items['Previous_Sales'] = previous_items['Previous_Sales'].round(2)
+
+#         top_items_with_previous = top_items.merge(
+#             previous_items[['Item', 'Previous_Sales']],
+#             on='Item',
+#             how='left'
+#         )
+#         top_items_with_previous['Previous_Sales'] = top_items_with_previous['Previous_Sales'].fillna(0)
+
+#         prev = top_items_with_previous['Previous_Sales']
+#         curr = top_items_with_previous['Sales']
+
+#         pct_change = np.where(
+#             (prev == 0) & (curr == 0),
+#             0.0,
+#             np.where(
+#                 (prev == 0) & (curr > 0),
+#                 100.0,
+#                 ((curr - prev) / prev) * 100.0
+#             )
+#         )
+
+#         # Apply custom formatting
+#         top_items_difference = [_format_percent_change(round(v, 2)) for v in pct_change]
+#     else:
+#         top_items_difference = [0.0] * len(top_items)
+
+#     max_rows = max(len(top_items), len(bottom_items), 10)
+#     comparison_table = pd.DataFrame()
+#     comparison_table['Rank'] = range(1, max_rows + 1)
+
+#     def pad_list(original_list, target_length, fill_value):
+#         return list(original_list) + [fill_value] * (target_length - len(original_list))
+
+#     comparison_table['Top_10_Items'] = pad_list(top_items['Item'].values, max_rows, '')
+#     comparison_table['T_Sales'] = pad_list(top_items['Sales'].values, max_rows, 0.0)
+#     comparison_table['T_Quantity'] = pad_list(top_items['Quantity'].values, max_rows, 0)
+
+#     comparison_table['Bottom_10_Items'] = pad_list(bottom_items['Item'].values, max_rows, '')
+#     comparison_table['B_Sales'] = pad_list(bottom_items['Sales'].values, max_rows, 0.0)
+#     comparison_table['B_Quantity'] = pad_list(bottom_items['Quantity'].values, max_rows, 0)
+
+#     comparison_table['Difference_Sales'] = pad_list(top_items_difference, max_rows, 0.0)
+
+#     comparison_table = comparison_table[
+#         (comparison_table['Top_10_Items'] != '') | (comparison_table['Bottom_10_Items'] != '')
+#     ].reset_index(drop=True)
+#     comparison_table['Rank'] = range(1, len(comparison_table) + 1)
+
+
+#     print("--------------------------")
+#     print("--------------------------")
+#     print(type(comparison_table))  # It should print: <class 'pandas.core.frame.DataFrame'>
+#     print("--------------------------")
+#     print("--------------------------")
+    
+
+#     return comparison_table
+
+#     # return {'category_comparison_table': comparison_table}  # if returning a dictionary
+
+
+
 def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, end_date=None, category_filter='All', server_filter='All'):
     """
     Create a comparison table of top 10 vs bottom 10 items by sales.
@@ -761,6 +965,14 @@ def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, 
     If change > +100 shows '+/', if change < -100 shows '-/'.
     """
     df_copy = df.copy()
+    
+    print("---------------------------")
+    print("---------------------------")
+    print("i am here in the pmix utils printing the ", "location_filter", location_filter, "category_filter", category_filter, "server_filter", server_filter)
+    print("start_date", start_date, "end_date", end_date)
+    print("i am here in the pmix utils printing the ", "df_copy", df_copy)
+    print("---------------------------")
+    print("---------------------------")
 
     if location_filter != 'All':
         if isinstance(location_filter, list):
@@ -813,6 +1025,14 @@ def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, 
 
         diff_days = days_between(start_date, end_date_final, inclusive=False)
 
+        
+    print("---------------------------")
+    print("---------------------------")
+    print("i am here in the pmix utils printing the ", "start_date", start_date, "end_date_final", end_date_final)
+    print("previous_start_date", previous_start_date, "previous_end_date", previous_end_date)
+    print("i am here in the pmix utils printing the ", "df_copy", df_copy)
+    print("---------------------------")
+    print("---------------------------")
     filtered_df = df_copy[
         (df_copy['Date'] >= start_date) &
         (df_copy['Date'] <= end_date_final)
@@ -823,12 +1043,10 @@ def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, 
         (df_copy['Date'] <= previous_end_date)
     ].copy()
 
+    # FIXED: Return DataFrame directly for empty case
     if filtered_df.empty:
-        # return {'category_comparison_table': pd.DataFrame()}
         return pd.DataFrame(columns=['Rank', 'Top_10_Items', 'T_Sales', 'T_Quantity',
                              'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])
-
-
 
     current_items = filtered_df.groupby(item_column).agg({
         quantity_column: 'sum',
@@ -840,9 +1058,10 @@ def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, 
     current_items['Quantity'] = current_items['Quantity'].round(0).astype(int)
     current_items = current_items[current_items['Sales'] > 0]
 
+    # FIXED: Return DataFrame directly for empty case
     if current_items.empty:
         return pd.DataFrame(columns=['Rank', 'Top_10_Items', 'T_Sales', 'T_Quantity',
-                                     'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])
+                             'Bottom_10_Items', 'B_Sales', 'B_Quantity', 'Difference_Sales'])
 
     top_items = current_items.sort_values('Sales', ascending=False).head(10).reset_index(drop=True)
 
@@ -909,17 +1128,6 @@ def create_top_vs_bottom_comparison(df, location_filter='All', start_date=None, 
     ].reset_index(drop=True)
     comparison_table['Rank'] = range(1, len(comparison_table) + 1)
 
-
-    print("--------------------------")
-    print("--------------------------")
-    print(type(comparison_table))  # It should print: <class 'pandas.core.frame.DataFrame'>
-    print("--------------------------")
-    print("--------------------------")
-    
-
+    # FIXED: Return DataFrame directly (consistent with other functions)
     return comparison_table
-
-    # return {'category_comparison_table': comparison_table}  # if returning a dictionary
-
-
 

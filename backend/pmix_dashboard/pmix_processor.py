@@ -96,7 +96,7 @@ def process_pmix_file(file_data: Union[io.BytesIO, str],start_date=None, end_dat
     p4 = category_comparison_function(df, location_filter=location_filter, start_date=start_date, end_date=end_date, category_filter=category_filter , server_filter=server_filter)
 
     # category_comparison_table_df = p4['category_comparison_table']
-    category_comparison_table_df = p4
+    category_comparison_table_df = p4["category_comparison_table"]
 
 
     
