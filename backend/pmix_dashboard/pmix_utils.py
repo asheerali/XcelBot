@@ -609,7 +609,11 @@ def create_sales_by_category_tables(df, location_filter='All', start_date=None, 
     if end_date is not None and isinstance(end_date, str):
         end_date = pd.to_datetime(end_date)
     else:
-        end_date = df_copy['Date'].max()
+        # current_date = datetime.now().date()
+        current_date = datetime.now()
+        end_date = current_date
+        # end_date = df_copy['Date'].max()
+        
 
     # Apply filters
     if location_filter != 'All':
@@ -668,7 +672,6 @@ def create_sales_by_category_tables(df, location_filter='All', start_date=None, 
         'sales_by_category_table': sales_by_category_table,
         'sales_by_category_by_day_table': sales_by_category_by_day_table
     }
-
 
 
 
