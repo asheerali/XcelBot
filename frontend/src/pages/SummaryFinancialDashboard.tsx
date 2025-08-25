@@ -18,7 +18,7 @@ import {
 } from "../store/slices/dateRangeSlice";
 
 import { API_URL_Local } from "../constants";
-
+import apiClient from "../api/axiosConfig";
 // FIXED: Enhanced timezone-safe date conversion utilities
 const createTimezoneNeutralDate = (dateString) => {
   if (!dateString || typeof dateString !== 'string') return null;
@@ -140,25 +140,36 @@ const SummaryFinancialDashboard = () => {
 
   // Fetch company and location data from API
   useEffect(() => {
-    const fetchCompanyLocationData = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`${API_URL_Local}/company-locations/all`);
+   const fetchCompanyLocationData = async () => {
+  try {
+    setLoading(true);
+    const response = await apiClient.get("/company-locations/all");
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+    if (!Array.isArray(response.data)) {
+      throw new Error("Invalid response format: expected array of companies");
+    }
 
-        const data = await response.json();
-        setCompanyLocationData(data);
-        setError(null);
-      } catch (err) {
-        setError(`Failed to fetch company data: ${err.message}`);
-        console.error("Error fetching company data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const validCompanies = response.data.filter((company) => {
+      return (
+        company.company_id &&
+        company.company_name &&
+        Array.isArray(company.locations)
+      );
+    });
+
+    if (validCompanies.length === 0) {
+      throw new Error("No valid companies found in response");
+    }
+    
+    setCompanyLocationData(validCompanies); // ✅ Fixed: use validCompanies
+    setError(null);
+  } catch (err) {
+    setError(`Failed to fetch company data: ${err.message}`);
+    console.error("Error fetching company data:", err);
+  } finally {
+    setLoading(false);
+  }
+};
 
     fetchCompanyLocationData();
   }, []);

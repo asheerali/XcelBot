@@ -38,7 +38,7 @@ import {
   Clear as ClearIcon,
   Schedule as ScheduleIcon,
 } from "@mui/icons-material";
-
+import apiClient from "../api/axiosConfig";
 // Import Redux hooks and selectors
 import { useAppDispatch, useAppSelector } from "../typedHooks";
 import {
@@ -376,20 +376,38 @@ const StoreSummaryProduction = () => {
   }, [reduxDateRange, hasReduxDateRange]);
 
   // Fetch companies data for display names
-  useEffect(() => {
-    const fetchCompanies = async () => {
-      try {
-        const response = await fetch(`${API_URL_Local}/company-locations/all`);
-        if (response.ok) {
-          const data: Company[] = await response.json();
-          setCompaniesData(data);
-        }
-      } catch (err) {
-        console.error("Error fetching companies:", err);
+ // Add this import at the top of your file
+
+
+// Fetch companies data for display names
+useEffect(() => {
+  const fetchCompanies = async () => {
+    try {
+      const response = await apiClient.get("/company-locations/all");
+      
+      if (!Array.isArray(response.data)) {
+        throw new Error("Invalid response format: expected array of companies");
       }
-    };
-    fetchCompanies();
-  }, []);
+
+      const validCompanies = response.data.filter((company: Company) => {
+        return (
+          company.company_id &&
+          company.company_name &&
+          Array.isArray(company.locations)
+        );
+      });
+
+      if (validCompanies.length === 0) {
+        throw new Error("No valid companies found in response");
+      }
+
+      setCompaniesData(validCompanies);
+    } catch (err) {
+      console.error("Error fetching companies:", err);
+    }
+  };
+  fetchCompanies();
+}, []);
 
   // NEW: Auto-fetch data whenever company, location, or date range changes
   useEffect(() => {

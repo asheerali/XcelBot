@@ -41,7 +41,7 @@ import DateRangeSelector from "../components/DateRangeSelector";
 
 // Import API base URL from constants
 import { API_URL_Local } from "../constants";
-
+import apiClient from "../api/axiosConfig";
 // Import Redux hooks and actions (for companies, locations, and date range)
 import { useAppDispatch, useAppSelector } from "../typedHooks";
 import {
@@ -1132,31 +1132,41 @@ const AnalyticsDashboard = () => {
   ]);
 
   // Fetch company-location data from API
-  const fetchCompanyLocationData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+ // Import apiClient at the top of your file
 
-      const response = await fetch(`${API_URL_Local}/company-locations/all`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+// Fetch company-location data from API
+const fetchCompanyLocationData = async () => {
+  try {
+    setLoading(true);
+    setError(null);
 
-      const data = await response.json();
-      setCompanyLocationData(data);
-    } catch (err) {
-      console.error("Error fetching company-location data:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    const response = await apiClient.get("/company-locations/all");
+
+    if (!Array.isArray(response.data)) {
+      throw new Error("Invalid response format: expected array of companies");
     }
-  };
+
+    const validCompanies = response.data.filter((company) => {
+      return (
+        company.company_id &&
+        company.company_name &&
+        Array.isArray(company.locations)
+      );
+    });
+
+    if (validCompanies.length === 0) {
+      throw new Error("No valid companies found in response");
+    }
+
+    setCompanyLocationData(validCompanies);
+  } catch (err) {
+    console.error("Error fetching company-location data:", err);
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Load initial data on component mount
   useEffect(() => {

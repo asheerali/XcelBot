@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { API_URL_Local } from '../constants';
-
+import apiClient from "../api/axiosConfig";
 // Filter option interface
 interface FilterOption {
   value: string;
@@ -63,34 +63,49 @@ const FiltersOrderIQ: React.FC<FiltersOrderIQProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   // Fetch companies and locations data
-  useEffect(() => {
-    const fetchCompaniesAndLocations = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const response = await fetch(`${API_URL_Local}/company-locations/all`);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data: Company[] = await response.json();
-        setCompanies(data);
-        
-        // Don't set any locations initially - wait for company selection
-        setAvailableLocations([]);
-        
-      } catch (err) {
-        console.error('Error fetching companies and locations:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch data');
-      } finally {
-        setLoading(false);
-      }
-    };
+ // Add this import at the top of your file
 
-    fetchCompaniesAndLocations();
-  }, []);
+
+// Fetch companies and locations data
+useEffect(() => {
+  const fetchCompaniesAndLocations = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await apiClient.get("/company-locations/all");
+      
+      if (!Array.isArray(response.data)) {
+        throw new Error("Invalid response format: expected array of companies");
+      }
+
+      const validCompanies = response.data.filter((company: Company) => {
+        return (
+          company.company_id &&
+          company.company_name &&
+          Array.isArray(company.locations)
+        );
+      });
+
+      if (validCompanies.length === 0) {
+        throw new Error("No valid companies found in response");
+      }
+      
+      setCompanies(validCompanies);
+      
+      // Don't set any locations initially - wait for company selection
+      setAvailableLocations([]);
+      
+    } catch (err) {
+      console.error('Error fetching companies and locations:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchCompaniesAndLocations();
+}, []);
 
   // Update available locations when companies are selected
   useEffect(() => {
