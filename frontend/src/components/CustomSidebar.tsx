@@ -281,48 +281,62 @@ const CustomSidebar = ({ onSignOut }) => {
   };
 
   // Fetch companies and locations data using apiClient
-  useEffect(() => {
-    const fetchCompaniesAndLocations = async () => {
-      setLoading(true);
-      try {
-        const response = await apiClient.get('/company-locations/all');
-        
-        if (response.data) {
-          setCompanies(response.data);
-        } else {
-          console.error('No data received from company-locations API');
-        }
-      } catch (error) {
-        console.error('Error fetching companies and locations:', error);
-        
-        // Handle different types of errors
-        if (error.response) {
-          // Server responded with error status
-          const status = error.response.status;
-          if (status === 401) {
-            console.error('Unauthorized: Invalid or expired token');
-            // Optionally redirect to login
-            // navigate('/sign-in');
-          } else if (status === 403) {
-            console.error('Forbidden: Insufficient permissions');
-          } else {
-            console.error(`Server error: ${status}`);
-          }
-        } else if (error.request) {
-          // Request was made but no response received
-          console.error('No response from server. Check if backend is running.');
-        } else {
-          // Something else happened
-          console.error('Request setup error:', error.message);
-        }
-      } finally {
-        setLoading(false);
+ useEffect(() => {
+  const fetchCompaniesAndLocations = async () => {
+    setLoading(true);
+    try {
+      const response = await apiClient.get('/company-locations/all');
+      
+      if (response.data) {
+        setCompanies(response.data);
+      } else {
+        console.error('No data received from company-locations API');
       }
-    };
+    } catch (error) {
+      console.error('Error fetching companies and locations:', error);
+      
+      // Handle different types of errors
+      if (error.response) {
+        // Server responded with error status
+        const status = error.response.status;
+        if (status === 401) {
+          console.error('Unauthorized: Invalid or expired token');
+          // Optionally redirect to login
+          // navigate('/sign-in');
+        } else if (status === 403) {
+          console.error('Forbidden: Insufficient permissions');
+        } else {
+          console.error(`Server error: ${status}`);
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        console.error('No response from server. Check if backend is running.');
+      } else {
+        // Something else happened
+        console.error('Request setup error:', error.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Define the event handler function
+  const handleDataChange = () => {
+    console.log('Company data changed - refetching sidebar data...');
     fetchCompaniesAndLocations();
-  }, []);
+  };
 
+  // Initial fetch on component mount
+  fetchCompaniesAndLocations();
+  
+  // Add event listener for company data changes
+  window.addEventListener('company-data-changed', handleDataChange);
+  
+  // Cleanup function to remove event listener on unmount
+  return () => {
+    window.removeEventListener('company-data-changed', handleDataChange);
+  };
+}, []);
   // NEW: Auto-initialize first company and location if Redux is empty (ONLY on first load)
   useEffect(() => {
     if (

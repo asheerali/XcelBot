@@ -815,6 +815,7 @@ const CompanyLocationManager: React.FC = () => {
         ")"
       );
       await deleteCompany(company_id);
+      window.dispatchEvent(new CustomEvent('company-data-changed'));
     }
   };
 
@@ -842,7 +843,7 @@ const CompanyLocationManager: React.FC = () => {
       } else if (dialogMode === "edit" && selectedCompany) {
         await updateCompany(selectedCompany.id, companyForm);
       }
-
+       window.dispatchEvent(new CustomEvent('company-data-changed'));
       setDialogOpen(false);
       resetForms();
     } catch (error) {
@@ -898,6 +899,7 @@ const CompanyLocationManager: React.FC = () => {
       )
     ) {
       await deleteLocation(locationId);
+      window.dispatchEvent(new CustomEvent('company-data-changed'));
     }
   };
 
@@ -934,7 +936,7 @@ const CompanyLocationManager: React.FC = () => {
       } else if (dialogMode === "edit" && selectedLocation) {
         await updateLocation(selectedLocation.id, locationForm);
       }
-
+      window.dispatchEvent(new CustomEvent('company-data-changed'));
       setDialogOpen(false);
       resetForms();
     } catch (error) {
