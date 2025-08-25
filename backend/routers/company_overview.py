@@ -618,7 +618,7 @@ def get_user_details(db: Session = Depends(get_db),
 @router.get("/user-details-dummy/{user_id}")
 def get_user_details(user_id: int,
                     db: Session = Depends(get_db),
-                    #  current_user: User = Depends(get_current_active_user)
+                    # current_user: User = Depends(get_current_active_user)
                     ):
     # print("Current User_id:", current_user.id)
     # print("Current User Role:", current_user.role.name if current_user.role else "No Role")
