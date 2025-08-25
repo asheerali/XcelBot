@@ -72,8 +72,8 @@
 #                 if getattr(user_permission, "d3", False): permissions_list.append("finance")
 #                 if getattr(user_permission, "d4", False): permissions_list.append("sales_wide")
 #                 if getattr(user_permission, "d5", False): permissions_list.append("user_management")
-#                 if getattr(user_permission, "d6", False): permissions_list.append("location_management")
-#                 if getattr(user_permission, "d7", False): permissions_list.append("reporting")
+#                 if getattr(user_permission, "d6", False): permissions_list.append("inventory")iq")
+#                 if getattr(user_permission, "d7", False): permissions_list.append("order_flow")
 
 #             users_payload.append({
 #                 "id": user.id,
@@ -271,9 +271,9 @@ def get_company_overview(db: Session = Depends(get_db),
                 if getattr(user_permission, "d2", False): permissions_list.append("product_mix")
                 if getattr(user_permission, "d3", False): permissions_list.append("finance")
                 if getattr(user_permission, "d4", False): permissions_list.append("sales_wide")
-                if getattr(user_permission, "d5", False): permissions_list.append("user_management")
-                if getattr(user_permission, "d6", False): permissions_list.append("location_management")
-                if getattr(user_permission, "d7", False): permissions_list.append("reporting")
+                if getattr(user_permission, "d5", False): permissions_list.append("orderiq")
+                if getattr(user_permission, "d6", False): permissions_list.append("inventoryiq")
+                if getattr(user_permission, "d7", False): permissions_list.append("order_flow")
 
             users_payload.append({
                 "id": user.id,
@@ -335,7 +335,7 @@ def get_company_overview(db: Session = Depends(get_db),
     # print("Current User_id:", current_user.id)
     # print("Current User Role:", current_user.role.name if current_user.role else "No Role")
 
-    current_user = db.query(User).filter(User.id == 1).first()
+    current_user = db.query(User).filter(User.id == 1)
     # Get user role name
     # user_role = current_user.role.name.lower() if current_user.role else None
     
@@ -456,9 +456,9 @@ def get_company_overview(db: Session = Depends(get_db),
                 if getattr(user_permission, "d2", False): permissions_list.append("product_mix")
                 if getattr(user_permission, "d3", False): permissions_list.append("finance")
                 if getattr(user_permission, "d4", False): permissions_list.append("sales_wide")
-                if getattr(user_permission, "d5", False): permissions_list.append("user_management")
-                if getattr(user_permission, "d6", False): permissions_list.append("location_management")
-                if getattr(user_permission, "d7", False): permissions_list.append("reporting")
+                if getattr(user_permission, "d5", False): permissions_list.append("orderiq")
+                if getattr(user_permission, "d6", False): permissions_list.append("inventoryiq")
+                if getattr(user_permission, "d7", False): permissions_list.append("order_flow")
 
             users_payload.append({
                 "id": user.id,
