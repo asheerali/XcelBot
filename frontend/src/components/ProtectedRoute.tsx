@@ -7,7 +7,7 @@ import apiClient from '../api/axiosConfig';
 // Route permission mapping - same as in CustomSidebar
 const ROUTE_PERMISSIONS = {
   // INSIGHTiQ routes
-  '/upload-excel': null, // Visible to all
+  '/upload-excel': 'ADMIN_ONLY', // Changed from null to ADMIN_ONLY
   '/manage-reports': 'sales_split',
   '/Productmix': 'product_mix',
   '/Financials': 'finance',
@@ -21,15 +21,15 @@ const ROUTE_PERMISSIONS = {
   '/SummaryFinancialDashboard': 'orderiq',
   '/Reports': 'orderiq',
   
-  // Always accessible routes
+  // Always accessible routes (but still require active user)
   '/Payments': null,
-  '/FileManagement': null,
+  '/FileManagement': 'ADMIN_ONLY', // Changed from null to ADMIN_ONLY
   '/HelpCenter': null,
   '/CompanyLocationManager': null,
   '/profile-info': null,
   
-  // Add other routes as needed
-  '/': null, // Home/Dashboard
+  // Public routes
+  '/': null,
   '/dashboard': null,
   '/sign-in': null,
   '/sign-out': null,
@@ -45,13 +45,24 @@ const ProtectedRoute = ({ children }) => {
 
   // Helper function to check if user has permission - same logic as CustomSidebar
   const hasPermission = (permission) => {
-    // Admin and superuser have access to everything
-    if (userRole === 'Admin' || userRole === 'Superuser') {
-      return true;
-    }
-    // Check if user has specific permission
-    return userPermissions.includes(permission);
-  };
+  // Check if user is active first
+  if (!userDetails?.isActive) {
+    return false; // Inactive users have no permissions
+  }
+
+  // Admin and superuser have access to everything (when active)
+  if (userRole === 'Admin' || userRole === 'Superuser') {
+    return true;
+  }
+
+  // Check for admin-only pages
+  if (permission === 'ADMIN_ONLY') {
+    return userRole === 'Admin' || userRole === 'Superuser';
+  }
+
+  // Check if user has specific permission
+  return userPermissions.includes(permission);
+};
 
   // Fetch user details and permissions
   useEffect(() => {
@@ -145,7 +156,7 @@ const ProtectedRoute = ({ children }) => {
   }
 
   // Check if user has required permission
-  if (!hasPermission(requiredPermission)) {
+  if (!hasPermission(requiredPermission) && !userDetails.isActive ) {
     return (
       <Container maxWidth="sm" sx={{ mt: 8 }}>
         <Paper sx={{ p: 4, textAlign: 'center', bgcolor: '#fff3e0' }}>
@@ -169,13 +180,13 @@ const ProtectedRoute = ({ children }) => {
             >
               Go Back
             </Button>
-            <Button 
+            {/* <Button 
               variant="contained" 
               startIcon={<HomeIcon />}
-              onClick={() => window.location.href = '/'}
+              onClick={() => window.location.href = '/profile-info'}
             >
               Go to Dashboard
-            </Button>
+            </Button> */}
           </Box>
         </Paper>
       </Container>

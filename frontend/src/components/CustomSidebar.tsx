@@ -145,14 +145,26 @@ const CustomSidebar = ({ onSignOut }) => {
   const appName = "KPI360";
 
   // Helper function to check if user has permission
-  const hasPermission = (permission) => {
-    // Admin and superuser have access to everything
-    if (userRole === 'Admin' || userRole === 'Superuser') {
-      return true;
-    }
-    // Check if user has specific permission
-    return userPermissions.includes(permission);
-  };
+  // Helper function to check if user has permission
+const hasPermission = (permission) => {
+  // Check if user is active first
+  if (!userDetails?.isActive) {
+    return false; // Inactive users see nothing
+  }
+
+  // Admin and superuser have access to everything (when active)
+  if (userRole === 'Admin' || userRole === 'Superuser') {
+    return true;
+  }
+
+  // Check for admin-only permissions
+  if (permission === 'ADMIN_ONLY') {
+    return userRole === 'Admin' || userRole === 'Superuser';
+  }
+
+  // Check if user has specific permission
+  return userPermissions.includes(permission);
+};
 
   // INSIGHTIQ dropdown items with permissions mapping
   const insightiqItems = [
