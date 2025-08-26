@@ -46,6 +46,7 @@ import SummaryFinancialDashboard from "./pages/SummaryFinancialDashboard";
 import OrderIQDashboard from "./pages/OrderIQDashboard"; // Import the OrderIQDashboard component
 import StoreSummaryProduction from "./pages/StoreSummaryProduction"; // Import the StoreSummaryProduction component
 import Reports from "./pages/Reports";
+import ProfileInfoPage from "./components/ProfileInfoPage";
 const router = createBrowserRouter([
   {
     path: "/sign-in",
@@ -77,6 +78,10 @@ const router = createBrowserRouter([
           {
             path: "",
             Component: () => <Navigate to="/manage-reports" replace />,
+          },
+          {
+            path: "profile-info",
+            Component: ProfileInfoPage,
           },
           {
             path: "manage-reports",

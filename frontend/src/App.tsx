@@ -1,25 +1,20 @@
 // App.tsx
 import * as React from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { CssBaseline, Box } from "@mui/material";
 import { PersistGate } from 'redux-persist/integration/react';
-import logoMidPng from "./assets/icon/IQ_logo.svg"; // Adjust the path as necessary
-import { Session } from "@toolpad/core/AppProvider"; // Keep this for Session type
+import logoMidPng from "./assets/icon/IQ_logo.svg";
+import { Session } from "@toolpad/core/AppProvider";
 import { SessionContext } from "./SessionContext";
 import * as agentService from "./services/agentService";
 import * as productService from "./services/productService";
 import * as customerService from "./services/customerService";
 import * as orderService from "./services/orderService";
-import FileManagementPage from "./pages/FileManagementPage"; // adjust path
 
-
-// Import CustomSidebar
+// Import CustomSidebar and ProtectedRoute
 import CustomSidebar from "./components/CustomSidebar";
-
-// Import your specific icons - kept for reference only
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import NewspaperIcon from "@mui/icons-material/Newspaper";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // Import persistor
 import { persistor } from "./store";
@@ -118,8 +113,9 @@ const Logo = () => <img src={logoMidPng} alt="Logo" height="30" />;
 
 export default function App() {
   const [session, setSession] = React.useState<Session | null>(null);
-  const [loading, setLoading] = React.useState(true); // Add loading state
+  const [loading, setLoading] = React.useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const sessionContextValue = React.useMemo(
     () => ({ session, setSession }),
@@ -146,13 +142,19 @@ export default function App() {
         navigate("/sign-in");
       }
     } else {
-      navigate("/sign-in");
+      // Only navigate to sign-in if not already there
+      if (location.pathname !== "/sign-in") {
+        navigate("/sign-in");
+      }
     }
 
-    setLoading(false); // add loading state at top
-  }, [navigate]);
+    setLoading(false);
+  }, [navigate, location.pathname]);
 
-  if (loading) return null; // Prevent flash/reload issue
+  if (loading) return null;
+
+  // Don't show sidebar on sign-in page
+  const showSidebar = location.pathname !== '/sign-in';
 
   return (
     <SessionContext.Provider value={sessionContextValue}>
@@ -160,13 +162,26 @@ export default function App() {
         <CssBaseline />
         <PersistGate loading={null} persistor={persistor}>
           <Box sx={{ display: "flex", height: "100vh" }}>
-            <CustomSidebar
-              logo={<Logo />}
-              title="INSIGHTiQ"
-              onSignOut={signOut} 
-            />
-            <Box component="main" sx={{ flexGrow: 1, p: 3, overflow: "auto" }}>
-              <Outlet />
+            {showSidebar && (
+              <CustomSidebar
+                logo={<Logo />}
+                title="KPI360"
+                onSignOut={signOut}
+              />
+            )}
+            <Box 
+              component="main" 
+              sx={{ 
+                flexGrow: 1, 
+                p: showSidebar ? 3 : 0,
+                overflow: "auto",
+                backgroundColor: showSidebar ? '#f5f5f5' : 'inherit'
+              }}
+            >
+              {/* Wrap Outlet with ProtectedRoute for permission checking */}
+              <ProtectedRoute>
+                <Outlet />
+              </ProtectedRoute>
             </Box>
           </Box>
         </PersistGate>
