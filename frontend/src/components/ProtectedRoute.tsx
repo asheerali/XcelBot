@@ -7,7 +7,7 @@ import apiClient from '../api/axiosConfig';
 // Route permission mapping - same as in CustomSidebar
 const ROUTE_PERMISSIONS = {
   // INSIGHTiQ routes
-  '/upload-excel': 'ADMIN_ONLY', // Changed from null to ADMIN_ONLY
+  '/upload-excel': 'excel_upload', //
   '/manage-reports': 'sales_split',
   '/Productmix': 'product_mix',
   '/Financials': 'finance',
