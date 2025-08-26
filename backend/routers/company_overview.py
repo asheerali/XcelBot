@@ -951,3 +951,5 @@ def get_user_details(user_id: int,
         })
 
     return users_payload
+
+

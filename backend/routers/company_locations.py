@@ -19,26 +19,26 @@ def create_company_location(data: CompanyLocationCreate, db: Session = Depends(g
 def get_all_company_locations(db: Session = Depends(get_db)):
     return cl_crud.get_company_locations(db)
 
-@router.get("/all", response_model=list[CompanyWithLocations])
-def get_companies_with_locations(db: Session = Depends(get_db)):
-    """Get all companies with their associated locations in nested format"""
-    return cl_crud.get_companies_with_locations(db)
-
-
-
 # @router.get("/all", response_model=list[CompanyWithLocations])
-# def get_companies_with_locations(
-#     db: Session = Depends(get_db),
-#     current_user: User = Depends(get_current_active_user)
-# ):
-#     """
-#     Get companies with their associated locations in nested format.
-#     Access control applied based on user role:
-#     - Superuser: All companies and locations
-#     - Admin: Companies they're associated with and all locations for those companies  
-#     - Manager/User: Their own company and only assigned locations
-#     """
-#     return cl_crud.get_companies_with_locations(db, current_user)
+# def get_companies_with_locations(db: Session = Depends(get_db)):
+#     """Get all companies with their associated locations in nested format"""
+#     return cl_crud.get_companies_with_locations(db)
+
+
+
+@router.get("/all", response_model=list[CompanyWithLocations])
+def get_companies_with_locations(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Get companies with their associated locations in nested format.
+    Access control applied based on user role:
+    - Superuser: All companies and locations
+    - Admin: Companies they're associated with and all locations for those companies  
+    - Manager/User: Their own company and only assigned locations
+    """
+    return cl_crud.get_companies_with_locations_auth(db, current_user)
 
 
 @router.get("/{record_id}", response_model=CompanyLocation)
