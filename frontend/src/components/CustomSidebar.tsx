@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import FolderIcon from "@mui/icons-material/Folder";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
 import {
   Box,
@@ -86,7 +87,7 @@ const CustomLogo = ({ size = 32, isMobile = false }) => (
       boxShadow: `0 4px 20px ${alpha("#667eea", 0.3)}`,
       position: "relative",
       overflow: "hidden",
-      flexShrink: 0, // Prevent shrinking
+      flexShrink: 0,
     }}
   >
     <DashboardIcon
@@ -123,7 +124,13 @@ const CustomSidebar = ({ onSignOut }) => {
   const [availableLocations, setAvailableLocations] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // NEW: State to track if we've already auto-initialized and user interactions
+  // User permissions state
+  const [userDetails, setUserDetails] = useState(null);
+  const [userPermissions, setUserPermissions] = useState([]);
+  const [userRole, setUserRole] = useState('');
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
+
+  // State to track if we've already auto-initialized and user interactions
   const [hasInitialized, setHasInitialized] = useState(false);
   const [userHasInteracted, setUserHasInteracted] = useState(false);
 
@@ -137,46 +144,61 @@ const CustomSidebar = ({ onSignOut }) => {
   // Define your app name here
   const appName = "KPI360";
 
-  // INSIGHTIQ dropdown items with multiple title options for different screen sizes
+  // Helper function to check if user has permission
+  const hasPermission = (permission) => {
+    // Admin and superuser have access to everything
+    if (userRole === 'Admin' || userRole === 'Superuser') {
+      return true;
+    }
+    // Check if user has specific permission
+    return userPermissions.includes(permission);
+  };
+
+  // INSIGHTIQ dropdown items with permissions mapping
   const insightiqItems = [
     { 
       title: "Upload Excel", 
       shortTitle: "Upload",
       compactTitle: "Upload",
       path: "/upload-excel", 
-      icon: <UploadFileIcon /> 
+      icon: <UploadFileIcon />,
+      permission: null // Visible to all
     },
     { 
       title: "Sales Split", 
       shortTitle: "Sales",
       compactTitle: "Sales",
       path: "/manage-reports", 
-      icon: <PieChartIcon /> 
+      icon: <PieChartIcon />,
+      permission: "sales_split"
     },
     { 
       title: "Product Mix", 
       shortTitle: "Products",
       compactTitle: "Products",
       path: "/Productmix", 
-      icon: <RestaurantIcon /> 
+      icon: <RestaurantIcon />,
+      permission: "product_mix"
     },
     { 
       title: "Financials", 
       shortTitle: "Finance",
       compactTitle: "Finance",
       path: "/Financials", 
-      icon: <AttachMoneyIcon /> 
+      icon: <AttachMoneyIcon />,
+      permission: "finance"
     },
     { 
       title: "Companywide Sales", 
       shortTitle: "Company Sales",
       compactTitle: "Sales",
       path: "/Saleswide", 
-      icon: <ShowChartIcon /> 
+      icon: <ShowChartIcon />,
+      permission: "sales_wide"
     },
   ];
 
-  // OrderIQ dropdown items with multiple title options
+  // OrderIQ dropdown items with permissions
   const orderiqItems = [
     {
       title: "Analytics Dashboard",
@@ -184,13 +206,15 @@ const CustomSidebar = ({ onSignOut }) => {
       compactTitle: "Analytics",
       path: "/AnalyticsDashboard",
       icon: <PieChartIcon />,
+      permission: "orderiq"
     },
     { 
       title: "Master File", 
       shortTitle: "Master",
       compactTitle: "Master",
       path: "/MasterFile", 
-      icon: <InventoryIcon /> 
+      icon: <InventoryIcon />,
+      permission: "orderiq"
     },
     {
       title: "Store Orders",
@@ -198,6 +222,7 @@ const CustomSidebar = ({ onSignOut }) => {
       compactTitle: "Orders",
       path: "/OrderIQDashboard",
       icon: <DashboardIcon />,
+      permission: "orderiq"
     },
     {
       title: "Store Summary",
@@ -205,6 +230,7 @@ const CustomSidebar = ({ onSignOut }) => {
       compactTitle: "Store",
       path: "/StoreSummaryProduction",
       icon: <FactoryIcon />,
+      permission: "orderiq"
     },
     {
       title: "Financial Summary",
@@ -212,6 +238,7 @@ const CustomSidebar = ({ onSignOut }) => {
       compactTitle: "Finance",
       path: "/SummaryFinancialDashboard",
       icon: <TrendingUpIcon />,
+      permission: "orderiq"
     },
      {
       title: "Reports",
@@ -219,42 +246,67 @@ const CustomSidebar = ({ onSignOut }) => {
       compactTitle: "Reports",
       path: "/Reports",
       icon: <PieChartIcon />,
+      permission: "orderiq"
     },
   ];
 
-  // Other navigation items with multiple title options
+  // Other navigation items - these are visible to all users
   const navItems = [
-    
     { 
       title: "Payments", 
       shortTitle: "Payments",
       compactTitle: "Pay",
       path: "/Payments", 
-      icon: <PaymentIcon /> 
+      icon: <PaymentIcon />,
+      permission: null // Visible to all
     },
     {
-  title: "File Management",
-  shortTitle: "Files",
-  compactTitle: "Files",
-  path: "/FileManagement",
-  icon: <FolderIcon />
-},
+      title: "File Management",
+      shortTitle: "Files",
+      compactTitle: "Files",
+      path: "/FileManagement",
+      icon: <FolderIcon />,
+      permission: null // Visible to all
+    },
     { 
       title: "Help Center", 
       shortTitle: "Help",
       compactTitle: "Help",
       path: "/HelpCenter", 
-      icon: <HelpIcon /> 
+      icon: <HelpIcon />,
+      permission: null // Visible to all
     },
-    
     {
       title: "Company",
       shortTitle: "Company",
       compactTitle: "Co.",
       path: "/CompanyLocationManager",
       icon: <BusinessIcon />,
+      permission: null // Visible to all
     },
   ];
+  // Filter items based on permissions
+  const visibleInsightiqItems = useMemo(() => {
+    return insightiqItems.filter(item => 
+      !item.permission || hasPermission(item.permission)
+    );
+  }, [userPermissions, userRole]);
+
+  const visibleOrderiqItems = useMemo(() => {
+    return orderiqItems.filter(item => 
+      !item.permission || hasPermission(item.permission)
+    );
+  }, [userPermissions, userRole]);
+
+  const visibleNavItems = useMemo(() => {
+    return navItems.filter(item => 
+      !item.permission || hasPermission(item.permission)
+    );
+  }, [userPermissions, userRole]);
+
+  // Check if dropdown sections should be visible
+  const showInsightiqSection = visibleInsightiqItems.length > 0;
+  const showOrderiqSection = visibleOrderiqItems.length > 0;
 
   // Responsive font sizes - optimized for mobile
   const getFontSizes = () => ({
@@ -280,64 +332,95 @@ const CustomSidebar = ({ onSignOut }) => {
     return item.title;
   };
 
-  // Fetch companies and locations data using apiClient
- useEffect(() => {
-  const fetchCompaniesAndLocations = async () => {
-    setLoading(true);
-    try {
-      const response = await apiClient.get('/company-locations/all');
-      
-      if (response.data) {
-        setCompanies(response.data);
-      } else {
-        console.error('No data received from company-locations API');
-      }
-    } catch (error) {
-      console.error('Error fetching companies and locations:', error);
-      
-      // Handle different types of errors
-      if (error.response) {
-        // Server responded with error status
-        const status = error.response.status;
-        if (status === 401) {
-          console.error('Unauthorized: Invalid or expired token');
-          // Optionally redirect to login
-          // navigate('/sign-in');
-        } else if (status === 403) {
-          console.error('Forbidden: Insufficient permissions');
+  // Fetch user details and permissions
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      setPermissionsLoading(true);
+      try {
+        const response = await apiClient.get('/company-overview/user-details');
+        
+        if (response.data && response.data.length > 0) {
+          const userData = response.data[0]; // Assuming single user response
+          setUserDetails(userData);
+          setUserPermissions(userData.permissions || []);
+          setUserRole(userData.role || '');
+          
+          console.log('User details loaded:', {
+            name: userData.name,
+            role: userData.role,
+            permissions: userData.permissions
+          });
         } else {
-          console.error(`Server error: ${status}`);
+          console.error('No user data received from user-details API');
         }
-      } else if (error.request) {
-        // Request was made but no response received
-        console.error('No response from server. Check if backend is running.');
-      } else {
-        // Something else happened
-        console.error('Request setup error:', error.message);
+      } catch (error) {
+        console.error('Error fetching user details:', error);
+        
+        // Handle different types of errors
+        if (error.response) {
+          const status = error.response.status;
+          if (status === 401) {
+            console.error('Unauthorized: Invalid or expired token');
+          } else if (status === 403) {
+            console.error('Forbidden: Insufficient permissions');
+          } else {
+            console.error(`Server error: ${status}`);
+          }
+        } else if (error.request) {
+          console.error('No response from server. Check if backend is running.');
+        } else {
+          console.error('Request setup error:', error.message);
+        }
+      } finally {
+        setPermissionsLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  // Define the event handler function
-  const handleDataChange = () => {
-    console.log('Company data changed - refetching sidebar data...');
+    fetchUserDetails();
+  }, []);
+
+  // Fetch companies and locations data using apiClient
+  useEffect(() => {
+    const fetchCompaniesAndLocations = async () => {
+      setLoading(true);
+      try {
+        const response = await apiClient.get('/company-locations/all');
+        
+        if (response.data) {
+          setCompanies(response.data);
+        } else {
+          console.error('No data received from company-locations API');
+        }
+      } catch (error) {
+        console.error('Error fetching companies and locations:', error);
+        
+        // Handle different types of errors
+        if (error.response) {
+          // Server responded with error status
+          const status = error.response.status;
+          if (status === 401) {
+            console.error('Unauthorized: Invalid or expired token');
+          } else if (status === 403) {
+            console.error('Forbidden: Insufficient permissions');
+          } else {
+            console.error(`Server error: ${status}`);
+          }
+        } else if (error.request) {
+          // Request was made but no response received
+          console.error('No response from server. Check if backend is running.');
+        } else {
+          // Something else happened
+          console.error('Request setup error:', error.message);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchCompaniesAndLocations();
-  };
-
-  // Initial fetch on component mount
-  fetchCompaniesAndLocations();
-  
-  // Add event listener for company data changes
-  window.addEventListener('company-data-changed', handleDataChange);
-  
-  // Cleanup function to remove event listener on unmount
-  return () => {
-    window.removeEventListener('company-data-changed', handleDataChange);
-  };
-}, []);
-  // NEW: Auto-initialize first company and location if Redux is empty (ONLY on first load)
+  }, []);
+   
+  // Auto-initialize first company and location if Redux is empty (ONLY on first load)
   useEffect(() => {
     if (
       !hasInitialized && 
@@ -467,12 +550,12 @@ const CustomSidebar = ({ onSignOut }) => {
   }, [dispatch]);
 
   // Check if any INSIGHTIQ item is currently selected
-  const isInsightiqSelected = insightiqItems.some(
+  const isInsightiqSelected = visibleInsightiqItems.some(
     (item) => location.pathname === item.path
   );
 
   // Check if any OrderIQ item is currently selected
-  const isOrderiqSelected = orderiqItems.some(
+  const isOrderiqSelected = visibleOrderiqItems.some(
     (item) => location.pathname === item.path
   );
 
@@ -492,7 +575,6 @@ const CustomSidebar = ({ onSignOut }) => {
   const handleOrderiqToggle = () => {
     setOrderiqOpen(!orderiqOpen);
   };
-
   const renderNavItems = (items, isSubItem = false) =>
     items.map((item) => {
       const isSelected = location.pathname === item.path;
@@ -857,8 +939,6 @@ const CustomSidebar = ({ onSignOut }) => {
               ))}
             </Select>
           </FormControl>
-          
-          {/* No action buttons needed for single select */}
         </Box>
 
         {/* Location Dropdown - MULTIPLE SELECT */}
@@ -1056,6 +1136,22 @@ const CustomSidebar = ({ onSignOut }) => {
     );
   };
 
+  // Show loading state while permissions are being fetched
+  if (permissionsLoading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        height: '100vh',
+        background: gradientBackground,
+        color: '#ffffff'
+      }}>
+        <Typography>Loading permissions...</Typography>
+      </Box>
+    );
+  }
+
   const drawerContent = (
     <>
       {/* Header Section */}
@@ -1150,8 +1246,8 @@ const CustomSidebar = ({ onSignOut }) => {
         overflowY: isMobile ? "visible" : "auto",
         maxHeight: isMobile ? "none" : "calc(100vh - 200px)",
       }}>
-        {/* INSIGHTIQ Dropdown */}
-        {renderDropdownButton(
+        {/* INSIGHTIQ Dropdown - Only show if user has permissions */}
+        {showInsightiqSection && renderDropdownButton(
           "INSIGHTiQ",
           "INSIGHTiQ",
           "IQ",
@@ -1161,15 +1257,17 @@ const CustomSidebar = ({ onSignOut }) => {
           <AssessmentIcon />
         )}
 
-        {/* INSIGHTIQ Sub-items */}
-        <Collapse in={insightiqOpen && (open || isMobile)} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            {renderNavItems(insightiqItems, true)}
-          </List>
-        </Collapse>
+        {/* INSIGHTIQ Sub-items - Only show visible items */}
+        {showInsightiqSection && (
+          <Collapse in={insightiqOpen && (open || isMobile)} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding>
+              {renderNavItems(visibleInsightiqItems, true)}
+            </List>
+          </Collapse>
+        )}
 
-        {/* OrderIQ Dropdown */}
-        {renderDropdownButton(
+        {/* OrderIQ Dropdown - Only show if user has permissions */}
+        {showOrderiqSection && renderDropdownButton(
           "ORDERiQ",
           "ORDERiQ",
           "OQ",
@@ -1179,22 +1277,92 @@ const CustomSidebar = ({ onSignOut }) => {
           <ShoppingCartIcon />
         )}
 
-        {/* OrderIQ Sub-items */}
-        <Collapse in={orderiqOpen && (open || isMobile)} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            {renderNavItems(orderiqItems, true)}
-          </List>
-        </Collapse>
+        {/* OrderIQ Sub-items - Only show visible items */}
+        {showOrderiqSection && (
+          <Collapse in={orderiqOpen && (open || isMobile)} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding>
+              {renderNavItems(visibleOrderiqItems, true)}
+            </List>
+          </Collapse>
+        )}
 
-        {/* Other Navigation Items */}
-        {renderNavItems(navItems)}
+        {/* Other Navigation Items - These are visible to all users */}
+        {renderNavItems(visibleNavItems)}
       </List>
 
       {/* Divider */}
       <Divider sx={{ borderColor: alpha("#ffffff", 0.3), mx: 0.5 }} />
 
-      {/* Sign Out Section */}
+      {/* User Profile and Sign Out Section */}
       <Box sx={{ p: 1 }}>
+        {/* User Profile Link */}
+        <ListItem disablePadding>
+          <ListItemButton
+            component={Link}
+            to="/profile-info"
+            onClick={handleItemClick}
+            selected={location.pathname === "/profile-info"}
+            sx={{
+              minHeight: isMobile ? 48 : (isSmallScreen ? 44 : 48),
+              justifyContent: (open || isMobile) ? "initial" : "center",
+              px: isMobile ? 2 : (isSmallScreen ? 1.5 : 2.5),
+              mx: 0,
+              mb: 0.5,
+              borderRadius: "10px",
+              transition: theme.transitions.create(["background-color"], {
+                duration: 300,
+                easing: theme.transitions.easing.easeInOut,
+              }),
+              "&:hover": {
+                backgroundColor: alpha("#ffffff", 0.08),
+              },
+              "&.Mui-selected": {
+                backgroundColor: alpha("#ffffff", 0.12),
+                "&:hover": {
+                  backgroundColor: alpha("#ffffff", 0.2),
+                },
+              },
+            }}
+          >
+            <Tooltip
+              title={(open || isMobile) ? "" : "Profile"}
+              placement="right"
+              arrow
+              disableHoverListener={isMobile}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  mr: (open || isMobile) ? (isMobile ? 1.5 : (isSmallScreen ? 1.5 : 2)) : "auto",
+                  justifyContent: "center",
+                  color: "#e0e0e0",
+                  transition: "color 0.3s ease",
+                  fontSize: isMobile ? "1.4rem" : (isSmallScreen ? "1.2rem" : "1.5rem"),
+                }}
+              >
+                <AccountCircleIcon />
+              </ListItemIcon>
+            </Tooltip>
+            <ListItemText
+              primary="Profile"
+              sx={{
+                transition: "opacity 0.3s ease",
+                opacity: (open || isMobile) ? 1 : 0,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                "& .MuiTypography-root": {
+                  fontWeight: 400,
+                  color: "#f0f0f0",
+                  fontSize: fontSizes.mainNav,
+                  lineHeight: 1.2,
+                },
+              }}
+            />
+          </ListItemButton>
+        </ListItem>
+
+        {/* Sign Out Button */}
         {onSignOut && (
           <ListItem disablePadding>
             <ListItemButton
