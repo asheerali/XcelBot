@@ -28,6 +28,7 @@ type UserRecord = {
   assignedLocations?: { location_id: number; company_id: number; location_name: string }[] | null;
   isActive?: boolean | null;
   companyId?: number | null;
+  companyName?: string | null;
   createdAt?: string | null;
 };
 
@@ -87,6 +88,7 @@ const ProfileInfoPage: React.FC = () => {
         assignedLocations: Array.isArray(u.assignedLocations) ? u.assignedLocations : [],
         isActive: typeof u.isActive === "boolean" ? u.isActive : null,
         companyId: typeof u.companyId === "number" ? u.companyId : null,
+        companyName: typeof u.companyName === "string" ? u.companyName : null,
         createdAt: u.createdAt ?? null,
       });
     } catch (e: any) {
@@ -279,7 +281,7 @@ const ProfileInfoPage: React.FC = () => {
               <strong>User ID:</strong> {user.id}
             </Typography>
             <Typography variant="body2" color="textSecondary">
-              <strong>Company ID:</strong> {user.companyId ?? "Not available"}
+              <strong>Company Name:</strong> {user.companyName ?? "Not available"}
             </Typography>
             <Typography variant="body2" color="textSecondary">
               <strong>Created at:</strong> {formatDate(user.createdAt)}
