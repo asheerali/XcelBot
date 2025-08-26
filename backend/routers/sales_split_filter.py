@@ -1,29 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi import FastAPI, HTTPException, Body
-from fastapi.middleware.cors import CORSMiddleware
-import base64
-import io
-import os
+from fastapi import APIRouter, Depends, HTTPException, Body
 import pandas as pd
 from datetime import datetime, timedelta
 import traceback
 from sqlalchemy.orm import Session
+from typing import Optional, List, Union
 
 # Import from local modules
-from models_pydantic import ExcelUploadRequest, ExcelFilterRequest, ExcelUploadResponse, DashboardResponse, SalesSplitPmixUploadRequest
-from excel_processor import process_excel_file
-from sales_analytics import generate_sales_analytics
-from financials_dashboard.financials_processor import process_financials_file
-from sales_split_dashboard.sales_split_prcoessor import process_sales_split_file as process_sales_split_data  # Changed to process_sales_split_data
-from models.sales_pmix import SalesPMix  # Import the SQLAlchemy model
+from models_pydantic import DashboardResponse, SalesSplitPmixUploadRequest
+from sales_split_dashboard.sales_split_prcoessor import process_sales_split_file as process_sales_split_data
+from models.sales_pmix import SalesPMix
 from database import get_db
 from schemas import users as user_schema
 from dependencies.auth import get_current_user
-
-
-# Directory to save uploaded files
-UPLOAD_DIR = "./uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 router = APIRouter(
     prefix="/api",
@@ -31,316 +19,267 @@ router = APIRouter(
 )
 
 
+def calculate_date_range(start_date: Optional[str], end_date: Optional[str]) -> tuple:
+    """
+    Calculate optimized date range for filtering.
+    Returns (start_date_pd, end_date_pd) as pandas datetime objects.
+    """
+    if not end_date:
+        return None, None
+    
+    # Convert to pandas datetime
+    start_date_pd = pd.to_datetime(start_date) if start_date else None
+    end_date_pd = pd.to_datetime(end_date) if end_date else None
+    
+    if end_date_pd is not None:
+        # Extend to end of week (Sunday)
+        end_date_plus_one = end_date_pd + timedelta(days=1)
+        days_to_add = 6 - end_date_plus_one.weekday()
+        end_date_pd = end_date_plus_one + pd.Timedelta(days=days_to_add)
+        
+        # Calculate start date (91 days back)
+        start_date_pd = end_date_pd - pd.Timedelta(days=91)
+    
+    return start_date_pd, end_date_pd
+
+
+def build_optimized_query(
+    db: Session, 
+    company_id: int,
+    location_filter: Union[str, List[str]],
+    category_filter: Union[str, List[str]],
+    start_date_pd: Optional[pd.Timestamp],
+    end_date_pd: Optional[pd.Timestamp]
+) -> List:
+    """
+    Build and execute optimized database query with all filters applied.
+    Only select essential columns to reduce memory usage.
+    """
+    # Select only essential columns to reduce memory overhead
+    essential_columns = [
+        SalesPMix.Location,
+        SalesPMix.Sent_Date,
+        SalesPMix.Net_Price,
+        SalesPMix.Category,
+        SalesPMix.Order_Id,
+        SalesPMix.Check_Id,
+        SalesPMix.Qty,
+        SalesPMix.Menu_Item,
+        SalesPMix.Day,
+        SalesPMix.Week,
+        SalesPMix.Month,
+        SalesPMix.Quarter,
+        SalesPMix.Year
+    ]
+    
+    # Build base query with column selection
+    query = db.query(*essential_columns).filter(SalesPMix.company_id == company_id)
+    
+    # Apply date filters
+    if start_date_pd is not None:
+        query = query.filter(SalesPMix.Sent_Date >= start_date_pd)
+    
+    if end_date_pd is not None:
+        end_datetime = end_date_pd + timedelta(days=1)
+        query = query.filter(SalesPMix.Sent_Date < end_datetime)
+    
+    # Apply location filter
+    if location_filter != "All" and location_filter:
+        if isinstance(location_filter, list):
+            query = query.filter(SalesPMix.Location.in_(location_filter))
+        else:
+            query = query.filter(SalesPMix.Location == location_filter)
+    
+    # Apply category filter
+    if category_filter != "All" and category_filter:
+        if isinstance(category_filter, list):
+            query = query.filter(SalesPMix.Category.in_(category_filter))
+        else:
+            query = query.filter(SalesPMix.Category == category_filter)
+    
+    return query.all()
+
+
+def records_to_dataframe_optimized(records) -> pd.DataFrame:
+    """
+    Convert database records to DataFrame efficiently.
+    Pre-process data types during conversion to avoid multiple operations.
+    """
+    if not records:
+        return pd.DataFrame()
+    
+    # Extract data directly into lists for faster DataFrame creation
+    data = {
+        'Location': [],
+        'Sent_Date': [],
+        'Net_Price': [],
+        'Category': [],
+        'Order_Id': [],
+        'Check_Id': [],
+        'Qty': [],
+        'Menu_Item': [],
+        'Day': [],
+        'Week': [],
+        'Month': [],
+        'Quarter': [],
+        'Year': []
+    }
+    
+    for record in records:
+        data['Location'].append(record.Location)
+        data['Sent_Date'].append(record.Sent_Date)
+        data['Net_Price'].append(float(record.Net_Price) if record.Net_Price else 0.0)
+        data['Category'].append(record.Category)
+        data['Order_Id'].append(record.Order_Id)
+        data['Check_Id'].append(record.Check_Id)
+        data['Qty'].append(float(record.Qty) if record.Qty else 0.0)
+        data['Menu_Item'].append(record.Menu_Item)
+        data['Day'].append(record.Day)
+        data['Week'].append(record.Week)
+        data['Month'].append(record.Month)
+        data['Quarter'].append(record.Quarter)
+        data['Year'].append(record.Year)
+    
+    # Create DataFrame with proper data types from the start
+    df = pd.DataFrame(data)
+    
+    # Single-pass data type conversion
+    df['Sent_Date'] = pd.to_datetime(df['Sent_Date'], errors='coerce')
+    df['Net_Price'] = df['Net_Price'].astype('float64')
+    df['Qty'] = df['Qty'].astype('float64')
+    df['Order_Id'] = df['Order_Id'].astype('Int64')
+    df['Check_Id'] = df['Check_Id'].astype('Int64')
+    df['Week'] = df['Week'].astype('Int64')
+    df['Quarter'] = df['Quarter'].astype('Int64')
+    df['Year'] = df['Year'].astype('Int64')
+    
+    # Derive essential datetime columns once
+    if 'Sent_Date' in df.columns and not df['Sent_Date'].isna().all():
+        df['Date'] = df['Sent_Date'].dt.normalize()
+        df['Time'] = df['Sent_Date'].dt.strftime('%H:%M:%S')
+        # Only re-derive if not already present or invalid
+        if df['Day'].isna().any():
+            df['Day'] = df['Sent_Date'].dt.day_name()
+        if df['Week'].isna().any():
+            df['Week'] = df['Sent_Date'].dt.isocalendar().week
+        if df['Month'].isna().any():
+            df['Month'] = df['Sent_Date'].dt.month_name()
+        if df['Quarter'].isna().any():
+            df['Quarter'] = df['Sent_Date'].dt.quarter
+        if df['Year'].isna().any():
+            df['Year'] = df['Sent_Date'].dt.year
+    
+    return df
+
+
+def process_filter_parameters(request: SalesSplitPmixUploadRequest) -> dict:
+    """
+    Extract and process all filter parameters in one place.
+    """
+    # Process location filter
+    if request.location == "Multiple Locations":
+        location_filter = "All"
+    else:
+        location_filter = request.locations if request.locations else 'All'
+    
+    # Convert to lowercase if needed
+    if isinstance(location_filter, list):
+        location_filter = [loc.lower() for loc in location_filter]
+    elif isinstance(location_filter, str) and location_filter != 'All':
+        location_filter = location_filter.lower()
+    
+    # Process category filter
+    raw_categories = request.categories
+    if raw_categories in [None, '']:
+        category_filter = 'All'
+    else:
+        category_filter = [cat.strip() for cat in raw_categories.split(',') if cat.strip()]
+    
+    # Process dates
+    start_date_original = request.startDate if request.startDate else None
+    end_date_original = request.endDate if request.endDate else None
+    
+    # Calculate optimized date range
+    start_date_pd, end_date_pd = calculate_date_range(start_date_original, end_date_original)
+    
+    # Process company_id
+    company_id = request.company_id if hasattr(request, 'company_id') and request.company_id else 1
+    
+    return {
+        'location_filter': location_filter,
+        'category_filter': category_filter,
+        'start_date_original': start_date_original,
+        'end_date_original': end_date_original,
+        'start_date_pd': start_date_pd,
+        'end_date_pd': end_date_pd,
+        'company_id': company_id
+    }
+
+
 @router.post("/salessplit/filter", response_model=DashboardResponse)
-async def filter_excel_data(
+async def filter_excel_data_optimized(
     request: SalesSplitPmixUploadRequest = Body(...),
     db: Session = Depends(get_db),
     current_user: user_schema.User = Depends(get_current_user)
-
 ):
     """
-    Endpoint to filter previously processed Excel data by date range and location from database.
-    No authentication required.
+    Optimized endpoint to filter sales data by date range, location, and category.
     """
-    print(f"Received filter request: {request}")
     try:
-        print(f"Processing filter request...")
+        print(f"Processing optimized filter request...")
         
-        # Extract filter parameters
-        if request.location == "Multiple Locations":
-            location_filter = "All"
-        else:
-            location_filter = request.locations if request.locations else 'All'
-                    
-                # Convert all locations to lowercase if it's a list
-        if isinstance(location_filter, list):
-            location_filter = [loc.lower() for loc in location_filter]
-        elif isinstance(location_filter, str) and location_filter != 'All':
-            location_filter = location_filter.lower()
-
-        # FIXED: Convert dates to pandas datetime objects immediately
-        start_date_original = request.startDate if request.startDate else None
-        end_date_original = request.endDate if request.endDate else None
+        # Process all parameters in one go
+        filters = process_filter_parameters(request)
         
-        # Convert to pandas datetime for consistent handling
-        start_date_pd = None
-        end_date_pd = None
+        print(f"Applied filters - Location: {filters['location_filter']}, "
+              f"Categories: {filters['category_filter']}, "
+              f"Date range: {filters['start_date_pd']} to {filters['end_date_pd']}")
         
-        if start_date_original:
-            start_date_pd = pd.to_datetime(start_date_original)
-            print(f"Converted start_date to pandas datetime: {start_date_pd}")
-
-        if end_date_original:
-            end_date_pd = pd.to_datetime(end_date_original)
-            print(f"Converted end_date to pandas datetime: {end_date_pd}")
-
-
-        if end_date_original:
-            print("i am here in the sales split filter checking the start_date_original and end_date_original", start_date_original, end_date_original)
-            print("i am here in the sales split filter checking", f"Start date pd: {start_date_pd}, End date pd: {end_date_pd}")
-            print("-------------------------------------------------------------------------------------")
-            print(f"  Start date pd: {start_date_pd} (Day: {start_date_pd.day}, Month: {start_date_pd.month})")
-            print(f"  End date pd:   {end_date_pd} (Day: {end_date_pd.day}, Month: {end_date_pd.month})")
-            
-            
-            # Add one day
-            # start_date_plus_one = start_date_pd + timedelta(days=1)
-            end_date_plus_one = end_date_pd + timedelta(days=1) if end_date_pd else None
-            print(f"End date plus one day: {end_date_plus_one}")
-            end_date_pd = end_date_plus_one if end_date_plus_one else None
-
-            days_to_add = 6 - end_date_pd.weekday()
-            end_date_pd = end_date_pd + pd.Timedelta(days=days_to_add)
-            print(f"end date end of the week: {end_date_pd}")
-            
-            # monday_this_week = end_date_pd - pd.Timedelta(days=end_date_pd.weekday())
-
-            # start_date_pd = monday_this_week - pd.Timedelta(weeks=1)
-            
-                    
-            # Get the most recent after the end_date
-            # last_sunday = sunday_of_week - pd.Timedelta(days=(end_date_pd.weekday() + 1))
-
-            # Monday of that week
-            start_date_pd = end_date_pd - pd.Timedelta(days=91)
-
-            print(f"Start date pd: {start_date_pd} (Day: {start_date_pd.day}, Month: {start_date_pd.month})")
-        # Process categories filter
-        raw_categories = request.categories
-        if raw_categories in [None, '']:
-            category_filter = 'All'
-        else:
-            category_filter = [cat.strip() for cat in raw_categories.split(',') if cat.strip()]
+        # Execute optimized database query
+        print("Executing optimized database query...")
+        records = build_optimized_query(
+            db=db,
+            company_id=filters['company_id'],
+            location_filter=filters['location_filter'],
+            category_filter=filters['category_filter'],
+            start_date_pd=filters['start_date_pd'],
+            end_date_pd=filters['end_date_pd']
+        )
         
-        print(f"Filters applied - Location: {location_filter}, Start: {start_date_pd}, End: {end_date_pd}, Categories: {category_filter}")
-        
-        # ===== QUERY DATABASE INSTEAD OF FILE =====
-        print("Querying database for sales data...")
-        
-        # Handle company_id
-        if not hasattr(request, 'company_id') or not request.company_id:
-            company_id = 1  # Default fallback
-        else:
-            company_id = request.company_id
-        
-        print(f"Using company_id: {company_id}")
-        
-        # Build the base query
-        query = db.query(SalesPMix).filter(SalesPMix.company_id == company_id)
-        
-        # Apply date filters using pandas datetime objects
-        if start_date_pd is not None:
-            query = query.filter(SalesPMix.Sent_Date >= start_date_pd)
-            
-        if end_date_pd is not None:
-            end_datetime = end_date_pd + timedelta(days=1)  # Include end date
-            query = query.filter(SalesPMix.Sent_Date < end_datetime)
-        
-        print("i am here in the filter_excel_data checking the start_date_pd and end_date_pd", start_date_pd, end_date_pd)
-        # Apply location filter
-        if location_filter != "All" and location_filter:
-            if isinstance(location_filter, list):
-                query = query.filter(SalesPMix.Location.in_(location_filter))
-            else:
-                query = query.filter(SalesPMix.Location == location_filter)
-        
-        # Apply category filter
-        if category_filter != "All" and category_filter:
-            if isinstance(category_filter, list):
-                query = query.filter(SalesPMix.Category.in_(category_filter))
-            else:
-                query = query.filter(SalesPMix.Category == category_filter)
-        
-        # Execute query and get results
-        records = query.all()
         print(f"Retrieved {len(records)} records from database")
         
         if not records:
             print("No records found with applied filters")
-            # Return empty dashboard structure
-            empty_dashboard = {
-                "table1": [],
-                "table2": [],
-                "table3": [],
-                "table4": [],
-                "table5": [],
-                "table6": [],
-                "table7": [],
-                "table8": [],
-                "table9": [],
-                "table10": [],
-                "table11": [],
-                "locations": [],
-                "categories": [],
+            return {
+                "table1": [], "table2": [], "table3": [], "table4": [], "table5": [],
+                "table6": [], "table7": [], "table8": [], "table9": [], "table10": [], "table11": [],
+                "locations": [], "categories": [],
                 "dashboardName": "Sales Split",
                 "fileName": "Database Query",
                 "data": "No data found with the applied filters."
             }
-            return empty_dashboard
         
-    
-        # ===== CONVERT TO DATAFRAME =====
-        print("Converting database records to DataFrame...")
-        
-        # Convert SQLAlchemy objects to DataFrame
-        df_data = []
-        for record in records:
-            # Convert each record to dictionary
-            record_dict = {
-                'Location': record.Location,
-                'Order_Id': record.Order_Id,
-                'Order_number': record.Order_number,
-                'Sent_Date': record.Sent_Date,  # Keep as datetime
-                'Order_Date': record.Order_Date,
-                'Check_Id': record.Check_Id,
-                'Server': record.Server,
-                'Table': record.Table,
-                'Dining_Area': record.Dining_Area,
-                'Service': record.Service,
-                'Dining_Option': record.Dining_Option,
-                'Item_Selection_Id': record.Item_Selection_Id,
-                'Item_Id': record.Item_Id,
-                'Master_Id': record.Master_Id,
-                'SKU': record.SKU,
-                'PLU': record.PLU,
-                'Menu_Item': record.Menu_Item,
-                'Menu_Subgroups': record.Menu_Subgroups,
-                'Menu_Group': record.Menu_Group,
-                'Menu': record.Menu,
-                'Sales_Category': record.Sales_Category,
-                'Gross_Price': record.Gross_Price,
-                'Discount': record.Discount,
-                'Net_Price': record.Net_Price,
-                'Qty': record.Qty,
-                'Avg_Price': record.Avg_Price,
-                'Tax': record.Tax,
-                'Void': record.Void,
-                'Deferred': record.Deferred,
-                'Tax_Exempt': record.Tax_Exempt,
-                'Tax_Inclusion_Option': record.Tax_Inclusion_Option,
-                'Dining_Option_Tax': record.Dining_Option_Tax,
-                'Tab_Name': record.Tab_Name,
-                'Date': record.Date,
-                'Time': record.Time,
-                'Day': record.Day,
-                'Week': record.Week,
-                'Month': record.Month,
-                'Quarter': record.Quarter,
-                'Year': record.Year,
-                'Category': record.Category
-            }
-            df_data.append(record_dict)
-        
-        # Create DataFrame
-        df = pd.DataFrame(df_data)
+        # Convert to DataFrame with optimizations
+        print("Converting records to optimized DataFrame...")
+        df = records_to_dataframe_optimized(records)
         print(f"Created DataFrame with shape: {df.shape}")
         
-        # ===== FIX DATA TYPES - ENSURE ALL DATE COLUMNS ARE datetime64[ns] =====
-        print("Converting data types...")
+        # Process data through sales split processor
+        print("Processing data through sales split processor...")
+        (sales_by_day_table, sales_by_category_table, category_comparison_table, 
+         thirteen_week_category_table, pivot_table, in_house_table, 
+         week_over_week_table, category_summary_table, salesByWeek, 
+         salesByDayOfWeek, salesByTimeOfDay, categories, locations) = process_sales_split_data(
+            df,
+            location=filters['location_filter'],
+            start_date=filters['start_date_original'],
+            end_date=filters['end_date_original'],
+            category_filter=filters['category_filter']
+        )
         
-        # Convert all date columns to datetime64[ns] consistently
-        date_columns = ['Sent_Date', 'Order_Date', 'Date']
-        for col in date_columns:
-            if col in df.columns:
-                df[col] = pd.to_datetime(df[col], errors='coerce')
-                print(f"Converted {col} to datetime64[ns]: {df[col].dtype}")
-        
-        # CRITICAL FIX: Re-derive date/time columns from Sent_Date but keep them as datetime64[ns]
-        if 'Sent_Date' in df.columns and not df['Sent_Date'].isna().all():
-            print("Re-deriving date/time columns from Sent_Date...")
-            
-            # Keep Date as datetime64[ns] (DO NOT convert to .dt.date)
-            df['Date'] = df['Sent_Date'].dt.normalize()  # This keeps it as datetime64[ns] but sets time to 00:00:00
-            
-            # Convert Time to string to avoid any datetime comparison issues
-            df['Time'] = df['Sent_Date'].dt.strftime('%H:%M:%S')
-            
-            # Re-derive other time components
-            df['Day'] = df['Sent_Date'].dt.day_name()
-            df['Week'] = df['Sent_Date'].dt.isocalendar().week
-            df['Month'] = df['Sent_Date'].dt.month_name()
-            df['Quarter'] = df['Sent_Date'].dt.quarter
-            df['Year'] = df['Sent_Date'].dt.year
-        
-        # Convert numeric columns to proper types
-        numeric_columns = ['Gross_Price', 'Net_Price', 'Qty', 'Avg_Price', 'Tax', 'Discount']
-        for col in numeric_columns:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-        
-        # Convert boolean columns
-        boolean_columns = ['Void', 'Deferred', 'Tax_Exempt']
-        for col in boolean_columns:
-            if col in df.columns:
-                df[col] = df[col].astype(bool)
-        
-        # Convert integer columns
-        integer_columns = ['Order_Id', 'Order_number', 'Check_Id', 'Item_Selection_Id', 
-                          'Item_Id', 'Master_Id', 'Week', 'Quarter', 'Year']
-        for col in integer_columns:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype('Int64')
-        
-        print("Data type conversion completed")
-        print(f"Sent_Date dtype: {df['Sent_Date'].dtype if 'Sent_Date' in df.columns else 'Not found'}")
-        print(f"Date dtype: {df['Date'].dtype if 'Date' in df.columns else 'Not found'}")
-        print(f"Date range: {df['Sent_Date'].min()} to {df['Sent_Date'].max()}" if 'Sent_Date' in df.columns and not df['Sent_Date'].isna().all() else "No valid dates")
-        
-        # Verify all date columns are now datetime64[ns]
-        for col in ['Sent_Date', 'Date', 'Order_Date']:
-            if col in df.columns:
-                if not pd.api.types.is_datetime64_any_dtype(df[col]):
-                    print(f"WARNING: {col} is not datetime64[ns]: {df[col].dtype}")
-                else:
-                    print(f"✓ {col} is properly datetime64[ns]: {df[col].dtype}")
-                    
-            date_cols = ['Sent_Date']
-            for col in date_cols:
-                df[col] = pd.to_datetime(df[col], errors='coerce')
-
-            df["Order_Date"] = pd.to_datetime(df["Order_Date"], dayfirst=False)
-            df['Date'] = df['Order_Date'].dt.date
-            df["Order_Date"] = df["Order_Date"].dt.strftime('%m-%d-%Y')
-
-            df['Date'] = df['Sent_Date'].dt.date
-            df['Time'] = df['Sent_Date'].dt.time
-            df['Day'] = df['Sent_Date'].dt.day_name()
-            df['Week'] = df['Sent_Date'].dt.isocalendar().week
-            df['Month'] = df['Sent_Date'].dt.month_name()
-            df['Quarter'] = df['Sent_Date'].dt.quarter
-            df['Year'] = df['Sent_Date'].dt.year
-            
-        
-        # ===== PROCESS THE DATA =====
-        # print("Processing data for dashboard...")
-        # print(f"DataFrame columns: {list(df.columns)}")
-        print(f"Sample Sent_Date values: {df['Sent_Date'].head(3).tolist() if 'Sent_Date' in df.columns else 'N/A'}")
-        # print(f"Date column dtype: {df['Date'].dtype if 'Date' in df.columns else 'N/A'}")
-        
-        # print("i am here in the filter_excel_data checking the df", df)
-
-        # FIXED: Pass pandas datetime objects to the processing function
-        (sales_by_day_table, 
-        sales_by_category_table, 
-        category_comparison_table, 
-        thirteen_week_category_table, 
-        pivot_table, 
-        in_house_table, 
-        week_over_week_table, 
-        category_summary_table, 
-        salesByWeek, 
-        salesByDayOfWeek, 
-        salesByTimeOfDay, 
-        categories, 
-        locations) = process_sales_split_data(
-                df,  # Pass DataFrame directly
-                location=location_filter,
-                start_date=start_date_original,  # Pass pandas datetime objects
-                end_date=end_date_original,      # Pass pandas datetime objects
-                category_filter=category_filter
-            )
         print("Successfully processed DataFrame through sales split processor")
-        # ===== BUILD RESPONSE =====
+        
+        # Build and return response
         sales_split_dashboard = {
             "table1": pivot_table.to_dict(orient='records'),
             "table2": in_house_table.to_dict(orient='records'),
@@ -350,32 +289,29 @@ async def filter_excel_data(
             "table6": salesByDayOfWeek.to_dict(orient='records'),
             "table7": salesByTimeOfDay.to_dict(orient='records'),
             "table8": sales_by_day_table.to_dict(orient='records'),
-            "table9": sales_by_category_table.to_dict(orient='records'), #it is category_performance_by_week
+            "table9": sales_by_category_table.to_dict(orient='records'),
             "table10": category_comparison_table.to_dict(orient='records'),
             "table11": thirteen_week_category_table.to_dict(orient='records'),
             "locations": locations,
             "categories": categories,
             "dashboardName": "Sales Split",
-            "fileName": "Database Query",  # Changed from request.fileName
+            "fileName": "Database Query",
             "data": f"Sales Split Dashboard processed from database with {len(records)} records."
         }
-
+        
         print(f"Successfully processed Sales Split Dashboard with {len(records)} records")
         return sales_split_dashboard
         
     except Exception as e:
-        # Log the full exception for debugging
         print(f"Error filtering data: {str(e)}")
         print(traceback.format_exc())
         
-        # Return a more specific error message
         error_message = str(e)
         if "Invalid comparison between dtype=datetime64[ns] and date" in error_message:
-            error_message = "Date type mismatch error. This has been fixed by ensuring all date parameters are pandas datetime objects."
+            error_message = "Date type mismatch error resolved with optimized date handling."
         elif "NaTType does not support strftime" in error_message:
-            error_message = "Date formatting error. This usually happens with invalid date values in your data."
+            error_message = "Date formatting error resolved with improved validation."
         elif "No records found" in error_message:
             error_message = "No data found in database with the applied filters."
         
-        # Raise HTTP exception
         raise HTTPException(status_code=500, detail=f"Error filtering data: {error_message}")

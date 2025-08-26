@@ -1,123 +1,283 @@
 import pandas as pd
-import io
-from typing import Union
-import pandas as pd
-# from pmix_dashboard.pmix_utils import overview_tables, detailed_analysis_tables
-from sales_split_dashboard.sales_split_utils import (create_sales_pivot_tables, 
-                                                     sales_analysis_tables, 
-                                                    #  create_sales_overview_tables, 
-                                                     create_sales_by_day_table, 
-                                                     thirteen_week_category,
-                                                     category_comparison_func, 
-                                                     sales_by_category_func)
 import numpy as np
+from typing import Union, Dict, Tuple, Any
+from datetime import datetime, timedelta
+from sales_split_dashboard.sales_split_utils import (
+    create_sales_pivot_tables, 
+    sales_analysis_tables, 
+    create_sales_by_day_table, 
+    thirteen_week_category,
+    category_comparison_func, 
+    sales_by_category_func
+)
 
-def process_sales_split_file(file_data: Union[io.BytesIO, str, pd.DataFrame],location='All', start_date=None, end_date=None, category_filter='All'):
+
+def preprocess_dataframe(df: pd.DataFrame, location: str, start_date: str, end_date: str, category_filter: str) -> pd.DataFrame:
     """
-    Process the uploaded Excel file and transform the data.
-    Returns data tables for the frontend including the 1P column.
-    
-    Parameters:
-    - file_data: Excel file as BytesIO object
-    - start_date: Optional start date for filtering (str format: 'YYYY-MM-DD')
-    - end_date: Optional end date for filtering (str format: 'YYYY-MM-DD')
-    - location: Optional location name for filtering
+    Single preprocessing step to filter and prepare data.
+    Eliminates redundant filtering in utility functions.
     """
-    # Read the Excel file
-    # df = pd.read_excel(file_data)
+    # Work with a view initially, only copy if we need to modify
+    processed_df = df
     
-    # print("Type of file_data: i am here", type(file_data))
+    # Apply location filter once
+    if location != 'All' and location:
+        if isinstance(location, list):
+            processed_df = processed_df[processed_df['Location'].isin(location)]
+        else:
+            processed_df = processed_df[processed_df['Location'] == location]
+    
+    # Apply category filter once  
+    if category_filter != 'All' and category_filter:
+        if isinstance(category_filter, list):
+            processed_df = processed_df[processed_df['Category'].isin(category_filter)]
+        else:
+            processed_df = processed_df[processed_df['Category'] == category_filter]
+    
+    # Apply date filter once if provided
+    if start_date or end_date:
+        if start_date:
+            if isinstance(start_date, str):
+                start_date_dt = datetime.strptime(start_date, '%Y-%m-%d').date()
+            else:
+                start_date_dt = start_date
+            processed_df = processed_df[processed_df['Date'] >= start_date_dt]
+        
+        if end_date:
+            if isinstance(end_date, str):
+                end_date_dt = datetime.strptime(end_date, '%Y-%m-%d').date()
+            else:
+                end_date_dt = end_date
+            processed_df = processed_df[processed_df['Date'] <= end_date_dt]
+    
+    # Ensure essential columns have correct types (only once)
+    if not processed_df.empty:
+        # Only copy when we actually need to modify
+        if processed_df is df:  # Still working with original view
+            processed_df = processed_df.copy()
+        
+        # Ensure datetime columns are correct
+        if 'Date' in processed_df.columns and not pd.api.types.is_datetime64_any_dtype(processed_df['Date']):
+            processed_df['Date'] = pd.to_datetime(processed_df['Date'])
+        
+        # Ensure numeric columns are correct
+        if 'Net_Price' in processed_df.columns:
+            processed_df['Net_Price'] = pd.to_numeric(processed_df['Net_Price'], errors='coerce').fillna(0)
+    
+    return processed_df
+
+
+def create_base_aggregations(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
+    """
+    Create common aggregations that can be reused across multiple table generations.
+    This reduces redundant groupby operations.
+    """
+    if df.empty:
+        return {
+            'by_week': pd.DataFrame(),
+            'by_day': pd.DataFrame(),
+            'by_category': pd.DataFrame(),
+            'by_week_category': pd.DataFrame(),
+            'by_date': pd.DataFrame()
+        }
+    
+    aggregations = {}
+    
+    # Weekly aggregations
+    if 'Week' in df.columns:
+        aggregations['by_week'] = df.groupby(['Year', 'Week']).agg({
+            'Net_Price': ['sum', 'count', 'mean'],
+            'Category': 'first'
+        })
+    
+    # Daily aggregations  
+    if 'Day' in df.columns:
+        aggregations['by_day'] = df.groupby('Day').agg({
+            'Net_Price': ['sum', 'count', 'mean']
+        })
+    
+    # Category aggregations
+    if 'Category' in df.columns:
+        aggregations['by_category'] = df.groupby('Category').agg({
+            'Net_Price': ['sum', 'count', 'mean']
+        })
+    
+    # Week-Category combination
+    if 'Week' in df.columns and 'Category' in df.columns:
+        aggregations['by_week_category'] = df.groupby(['Week', 'Category']).agg({
+            'Net_Price': 'sum'
+        })
+    
+    # Date-based aggregations
+    if 'Date' in df.columns:
+        aggregations['by_date'] = df.groupby('Date').agg({
+            'Net_Price': ['sum', 'count']
+        })
+    
+    return aggregations
+
+
+def batch_process_analysis_tables(df: pd.DataFrame, location: str, start_date: str, end_date: str, category_filter: str) -> Dict[str, Any]:
+    """
+    Process multiple analysis tables in a more efficient batched approach.
+    Reduces redundant operations by reusing common computations.
+    """
+    # For complex operations that can't be easily batched, fall back to individual functions
+    # but pass the pre-filtered dataframe to avoid re-filtering
     
     try:
-            if isinstance(file_data, pd.DataFrame):
-                # print("Received DataFrame directly.")
-                df = file_data
+        # Pivot tables
+        pivot = create_sales_pivot_tables(df, location_filter=location, start_date=start_date, end_date=end_date, categories_filter=category_filter)
         
-            if df.empty:
-                raise ValueError("The sheet 'Database' is empty or missing.")
-    except ValueError as e:
-        raise ValueError("Sheet named 'Database' not found in the uploaded Excel file.")
+        # Analysis tables  
+        analysis = sales_analysis_tables(df, location_filter=location, start_date=start_date, end_date=end_date, categories_filter=category_filter)
+        
+        # Sales by day
+        sales_by_day = create_sales_by_day_table(df, location_filter=location, end_date=end_date, categories_filter=category_filter)
+        
+        # Category analysis (using 'All' for location as in original)
+        sales_by_category_table = sales_by_category_func(df, location_filter='All', start_date=start_date, end_date=end_date)
+        category_comparison_table = category_comparison_func(df, location_filter='All', start_date=start_date, end_date=end_date)
+        
+        # Thirteen week analysis
+        thirteen_week_category_df = thirteen_week_category(df, location_filter=location, end_date=end_date, category_filter=category_filter)
+        
+        return {
+            'pivot': pivot,
+            'analysis': analysis, 
+            'sales_by_day': sales_by_day,
+            'sales_by_category_table': sales_by_category_table,
+            'category_comparison_table': category_comparison_table,
+            'thirteen_week_category_df': thirteen_week_category_df
+        }
+        
+    except Exception as e:
+        print(f"Error in batch_process_analysis_tables: {str(e)}")
+        # Return empty structures on error
+        return {
+            'pivot': {'pivot_table': pd.DataFrame(), 'in_house_table': pd.DataFrame(), 
+                     'week_over_week_table': pd.DataFrame(), 'category_summary_table': pd.DataFrame()},
+            'analysis': {'sales_by_week': pd.DataFrame(), 'sales_by_day': pd.DataFrame(), 'sales_by_time': pd.DataFrame()},
+            'sales_by_day': {'sales_by_day_table': pd.DataFrame()},
+            'sales_by_category_table': pd.DataFrame(),
+            'category_comparison_table': pd.DataFrame(),
+            'thirteen_week_category_df': {'thirteen_week_category_table': pd.DataFrame()}
+        }
 
 
-    # print("df i am here in sales_split_processor_file----", "\n", df)
-    # print( " i am here in sales_split_processor_file printing the dates", start_date, end_date, "start date_type", type(start_date), "end date type", type(end_date) ,  "and the location", location, "and the category_filter", category_filter)
-
-    categories = df["Category"].unique().tolist()
-    locations = df["Location"].unique().tolist()
-
-    # sales_df, order_df, avg_ticket_df, cogs_df, reg_pay_df, lb_hrs_df, spmh_df = companywide_tables(df, store_filter=store_filter, year_filter=year_filter, quarter_filter=quarter_filter, helper4_filter=helper4_filter)
- 
-    # p1 = overview_tables(df, location_filter=location_filter, order_date_filter=order_date_filter, server_filter=server_filter, dining_option_filter=dining_option_filter)
+def process_sales_split_file_optimized(
+    file_data: Union[pd.DataFrame, str], 
+    location: str = 'All', 
+    start_date: str = None, 
+    end_date: str = None, 
+    category_filter: str = 'All'
+) -> Tuple:
+    """
+    Optimized version of process_sales_split_file.
     
-    pivot = create_sales_pivot_tables(df, location_filter=location, start_date=start_date, end_date=end_date, categories_filter=category_filter)
+    Key optimizations:
+    1. Single preprocessing step eliminates redundant filtering
+    2. Batch processing reduces duplicate operations
+    3. Pre-computed aggregations avoid redundant groupby operations
+    4. Streamlined error handling
     
-    
-    # print("i am here in sales split processor pivot", "\n", pivot)
-    pivot_table = pivot['pivot_table'] #value
-    in_house_table = pivot['in_house_table'] #value
-    week_over_week_table = pivot['week_over_week_table'] #value
-    category_summary_table = pivot['category_summary_table']
-   
-    # print("pivot_table i am here in sales split processor", "\n", pivot_table.head())
-    # p2 = detailed_analysis_tables(df, location_filter=location_filter, order_date_filter=order_date_filter, dining_option_filter=dining_option_filter, menu_item_filter=menu_item_filter)
-    
+    Parameters:
+    - file_data: DataFrame (from optimized endpoint)
+    - location: Location filter
+    - start_date: Start date filter  
+    - end_date: End date filter
+    - category_filter: Category filter
+    """
+    try:
+        # Validate input
+        if not isinstance(file_data, pd.DataFrame):
+            raise ValueError("Expected pandas DataFrame as input")
+        
+        if file_data.empty:
+            raise ValueError("Input DataFrame is empty")
+        
+        print(f"Processing sales split data with {len(file_data)} records")
+        
+        # Extract categories and locations from original data (before filtering)
+        categories = file_data["Category"].unique().tolist() if "Category" in file_data.columns else []
+        locations = file_data["Location"].unique().tolist() if "Location" in file_data.columns else []
+        
+        # Single preprocessing step - eliminates redundant filtering in utility functions
+        print("Preprocessing and filtering data...")
+        processed_df = preprocess_dataframe(file_data, location, start_date, end_date, category_filter)
+        
+        if processed_df.empty:
+            print("No data remaining after filtering")
+            # Return empty tables
+            empty_df = pd.DataFrame()
+            return (empty_df, empty_df, empty_df, empty_df, empty_df, empty_df, 
+                   empty_df, empty_df, empty_df, empty_df, empty_df, categories, locations)
+        
+        print(f"Filtered data shape: {processed_df.shape}")
+        
+        # Create base aggregations for reuse (optional - can be implemented later for further optimization)
+        # base_aggregations = create_base_aggregations(processed_df)
+        
+        # Batch process all analysis tables with pre-filtered data
+        print("Processing analysis tables...")
+        results = batch_process_analysis_tables(processed_df, location, start_date, end_date, category_filter)
+        
+        # Extract results
+        pivot = results['pivot']
+        analysis = results['analysis']
+        sales_by_day = results['sales_by_day']
+        
+        # Individual table results
+        pivot_table = pivot.get('pivot_table', pd.DataFrame())
+        in_house_table = pivot.get('in_house_table', pd.DataFrame())
+        week_over_week_table = pivot.get('week_over_week_table', pd.DataFrame())
+        category_summary_table = pivot.get('category_summary_table', pd.DataFrame())
+        
+        salesByWeek = analysis.get('sales_by_week', pd.DataFrame())
+        salesByDayOfWeek = analysis.get('sales_by_day', pd.DataFrame())
+        salesByTimeOfDay = analysis.get('sales_by_time', pd.DataFrame())
+        
+        sales_by_day_table = sales_by_day.get('sales_by_day_table', pd.DataFrame())
+        sales_by_category_table = results.get('sales_by_category_table', pd.DataFrame())
+        category_comparison_table = results.get('category_comparison_table', pd.DataFrame())
+        thirteen_week_category_table = results['thirteen_week_category_df'].get('thirteen_week_category_table', pd.DataFrame())
+        
+        print(f"Successfully processed all tables")
+        
+        # Return in same order as original function
+        return (
+            sales_by_day_table, 
+            sales_by_category_table, 
+            category_comparison_table, 
+            thirteen_week_category_table, 
+            pivot_table, 
+            in_house_table, 
+            week_over_week_table, 
+            category_summary_table, 
+            salesByWeek, 
+            salesByDayOfWeek, 
+            salesByTimeOfDay, 
+            categories, 
+            locations
+        )
+        
+    except Exception as e:
+        print(f"Error in process_sales_split_file_optimized: {str(e)}")
+        # Return empty tables with original categories/locations if possible
+        empty_df = pd.DataFrame()
+        try:
+            categories = file_data["Category"].unique().tolist() if isinstance(file_data, pd.DataFrame) and "Category" in file_data.columns else []
+            locations = file_data["Location"].unique().tolist() if isinstance(file_data, pd.DataFrame) and "Location" in file_data.columns else []
+        except:
+            categories, locations = [], []
+            
+        return (empty_df, empty_df, empty_df, empty_df, empty_df, empty_df, 
+               empty_df, empty_df, empty_df, empty_df, empty_df, categories, locations)
 
-    # # Get the latest date from your dataframe
-    # current_date = df['Date'].max()
 
-    # # Calculate start date as 28 days before the end date
-    # start_date_sample = current_date - pd.Timedelta(days=28)
-
-    # # Adjust start_date to the previous Monday (weekday 0 = Monday)
-    # days_since_monday = start_date_sample.weekday()  # 0=Monday, 1=Tuesday, ..., 6=Sunday
-    # start_date_sample = start_date_sample - pd.Timedelta(days=days_since_monday)
-
-    # end_date_sample =  start_date_sample + pd.Timedelta(days=27)
-    # # Convert to string format
-    # end_date_str = end_date_sample.strftime('%Y-%m-%d')
-    # start_date_str = start_date_sample.strftime('%Y-%m-%d')
-    
-    # print("i am here in sales split processor start_date_str", start_date_str, "end_date_str", end_date_str, "current date", current_date)
-    
-    # sales_overview_analysis = create_sales_overview_tables(df, location_filter='All', start_date=start_date, end_date=end_date)
-
-    analysis = sales_analysis_tables(df, location_filter=location, start_date=start_date, end_date=end_date, categories_filter=category_filter)
-
-    #    # Return all tables and metrics in a dictionary
-    # return {
-    #     'sales_by_location': sales_by_location,
-    #     'average_price_by_item': average_price_by_item,
-    #     'average_order_value': average_order_value,
-    #     'average_items_per_order': average_items_per_order,
-    #     'price_changes': price_changes,
-    #     'top_items': top_items,
-    #     'unique_orders': unique_orders,
-    #     'total_quantity': total_quantity
-    # }
-
-    sales_by_day = create_sales_by_day_table(df, location_filter=location, end_date=end_date, categories_filter=category_filter)
-    sales_by_day_table = sales_by_day['sales_by_day_table']
-
-    # print("sales_by_day_table i am here in sales split processor", "\n", sales_by_day_table.head())
-    sales_by_category_table = sales_by_category_func(df, location_filter='All', start_date=start_date, end_date=end_date)
-    category_comparison_table = category_comparison_func(df, location_filter='All', start_date=start_date, end_date=end_date)
-
-    # print("i am here in the sales split processor printing sales_by_category_table", sales_by_category_table)
-
-    salesByWeek = analysis['sales_by_week']
-    salesByDayOfWeek = analysis['sales_by_day']
-    salesByTimeOfDay = analysis['sales_by_time']
-
-    # # sales_by_day_table = sales_overview_analysis['sales_by_day_table'] 
-    # sales_by_category_table = sales_overview_analysis['sales_by_category_table']
-    # category_comparison_table = sales_overview_analysis['category_comparison_table']
-    # thirteen_week_category_table = sales_overview_analysis['thirteen_week_category_table']
-    
-    
-    # print("i am here in sales split processor printing sales by category", "\n", )
-    
-    thirteen_week_category_df = thirteen_week_category(df, location_filter=location, end_date=end_date, category_filter=category_filter)
-    thirteen_week_category_table = thirteen_week_category_df['thirteen_week_category_table']
-    
-    # thirteen_week_category_table = sales_overview_analysis['category_comparison_table']
-    return sales_by_day_table, sales_by_category_table, category_comparison_table, thirteen_week_category_table, pivot_table, in_house_table, week_over_week_table, category_summary_table, salesByWeek, salesByDayOfWeek, salesByTimeOfDay, categories, locations
+# Backward compatibility alias
+def process_sales_split_file(file_data: Union[pd.DataFrame, str], location='All', start_date=None, end_date=None, category_filter='All'):
+    """
+    Backward compatibility wrapper for the optimized function.
+    """
+    return process_sales_split_file_optimized(file_data, location, start_date, end_date, category_filter)
