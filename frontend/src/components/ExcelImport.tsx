@@ -352,45 +352,53 @@ export function ExcelImport() {
   });
 
   // Fetch company-locations data on component mount
-  React.useEffect(() => {
-    const fetchCompanyLocations = async () => {
-      setCompaniesLoading(true);
-      setCompaniesError("");
+ // Replace the existing useEffect that fetches companies and locations data
+React.useEffect(() => {
+  const fetchCompaniesAndLocations = async () => {
+    setLoading(true);
+    try {
+      const response = await apiClient.get('/company-locations/all');
       
-      try {
-        console.log('🏢 Fetching company-locations from:', COMPANY_LOCATIONS_API_URL);
-        const response = await axios.get(COMPANY_LOCATIONS_API_URL);
-        
+      if (response.data) {
         console.log('📥 Company-locations response:', response.data);
-        setCompanies(response.data || []);
+        setCompanies(response.data);
         
         // Auto-select the first company if there's only one and none is selected
         if (response.data && response.data.length === 1 && selectedCompanies.length === 0) {
-          reduxDispatch(setSelectedCompanies([response.data[0].company_id.toString()]));
+          dispatch(setSelectedCompanies([response.data[0].company_id.toString()]));
           console.log('🎯 Auto-selected single company:', response.data[0]);
         }
-        
-      } catch (error) {
-        console.error('❌ Error fetching company-locations:', error);
-        
-        let errorMessage = "Error loading companies and locations";
-        if (axios.isAxiosError(error)) {
-          if (error.response) {
-            errorMessage = `Server error: ${error.response.status}`;
-          } else if (error.request) {
-            errorMessage = 'Cannot connect to company-locations API. Please check server status.';
-          }
-        }
-        
-        setCompaniesError(errorMessage);
-      } finally {
-        setCompaniesLoading(false);
+      } else {
+        console.error('No data received from company-locations API');
       }
-    };
+    } catch (error) {
+      console.error('Error fetching companies and locations:', error);
+      
+      // Handle different types of errors
+      if (error.response) {
+        // Server responded with error status
+        const status = error.response.status;
+        if (status === 401) {
+          console.error('Unauthorized: Invalid or expired token');
+        } else if (status === 403) {
+          console.error('Forbidden: Insufficient permissions');
+        } else {
+          console.error(`Server error: ${status}`);
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        console.error('No response from server. Check if backend is running.');
+      } else {
+        // Something else happened
+        console.error('Request setup error:', error.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchCompanyLocations();
-  }, [selectedCompanies.length, reduxDispatch]);
-
+  fetchCompaniesAndLocations();
+}, [selectedCompanies.length, dispatch]);
   // Auto-select first location when company changes and has only one location
   React.useEffect(() => {
     if (selectedCompany && availableLocations.length === 1 && selectedLocations.length === 0) {

@@ -44,7 +44,7 @@ import {
 } from "@mui/material";
 import axios from "axios";
 import { format } from "date-fns";
-
+import apiClient from '../api/axiosConfig';
 // Icons
 import FilterListIcon from "@mui/icons-material/FilterList";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -1561,63 +1561,66 @@ export default function ProductMixDashboard() {
   }, [currentProductMixData, currentProductMixLocation, dataVersion]);
 
   // Fetch company-locations data on component mount
-  useEffect(() => {
-    const fetchCompanyLocations = async () => {
-      setCompaniesLoading(true);
-      setCompaniesError("");
+ // Updated useEffect for ProductMix component - using apiClient instead of axios
+// Remove this line: const COMPANY_LOCATIONS_API_URL = API_URL_Local + "/company-locations/all";
 
-      try {
-        console.log(
-          "🏢 ProductMix: Fetching company-locations from:",
-          COMPANY_LOCATIONS_API_URL
-        );
-        const response = await axios.get(COMPANY_LOCATIONS_API_URL);
-
-        console.log(
-          "📥 ProductMix: Company-locations response:",
-          response.data
-        );
-        setCompanies(response.data || []);
-
+useEffect(() => {
+  const fetchCompanyLocations = async () => {
+    setCompaniesLoading(true);
+    setCompaniesError("");
+    try {
+      console.log("🏢 ProductMix: Fetching company-locations from apiClient");
+      const response = await apiClient.get('/company-locations/all');
+      
+      if (response.data) {
+        console.log("📥 ProductMix: Company-locations response:", response.data);
+        setCompanies(response.data);
+        
         // Auto-select the first company if there's only one and none is selected
-        if (
-          response.data &&
-          response.data.length === 1 &&
-          selectedCompanies.length === 0
-        ) {
-          reduxDispatch(
-            setSelectedCompanies([response.data[0].company_id.toString()])
-          );
-          console.log(
-            "🎯 ProductMix: Auto-selected single company:",
-            response.data[0]
-          );
+        if (response.data.length === 1 && selectedCompanies.length === 0) {
+          reduxDispatch(setSelectedCompanies([response.data[0].company_id.toString()]));
+          console.log("🎯 ProductMix: Auto-selected single company:", response.data[0]);
         }
-      } catch (error) {
-        console.error(
-          "❌ ProductMix: Error fetching company-locations:",
-          error
-        );
-
-        let errorMessage = "Error loading companies and locations";
-        if (axios.isAxiosError(error)) {
-          if (error.response) {
-            errorMessage = `Server error: ${error.response.status}`;
-          } else if (error.request) {
-            errorMessage =
-              "Cannot connect to company-locations API. Please check server status.";
-          }
-        }
-
-        setCompaniesError(errorMessage);
-      } finally {
-        setCompaniesLoading(false);
+      } else {
+        console.error('ProductMix: No data received from company-locations API');
+        setCompaniesError("No company-location data received");
       }
-    };
+    } catch (error) {
+      console.error("❌ ProductMix: Error fetching company-locations:", error);
+      let errorMessage = "Error loading companies and locations";
+      
+      // Handle different types of errors
+      if (error.response) {
+        // Server responded with error status
+        const status = error.response.status;
+        if (status === 401) {
+          console.error('ProductMix: Unauthorized - Invalid or expired token');
+          errorMessage = "Unauthorized access. Please sign in again.";
+        } else if (status === 403) {
+          console.error('ProductMix: Forbidden - Insufficient permissions');
+          errorMessage = "Access denied. Insufficient permissions.";
+        } else {
+          console.error(`ProductMix: Server error - ${status}`);
+          errorMessage = `Server error: ${status}`;
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        console.error('ProductMix: No response from server. Check if backend is running.');
+        errorMessage = 'Cannot connect to company-locations API. Please check server status.';
+      } else {
+        // Something else happened
+        console.error('ProductMix: Request setup error:', error.message);
+        errorMessage = 'Request setup error occurred';
+      }
+      
+      setCompaniesError(errorMessage);
+    } finally {
+      setCompaniesLoading(false);
+    }
+  };
 
-    fetchCompanyLocations();
-  }, [selectedCompanies.length, reduxDispatch]);
-
+  fetchCompanyLocations();
+}, [selectedCompanies.length, reduxDispatch]);
   // Auto-select first location when company changes and has only one location
   useEffect(() => {
     if (

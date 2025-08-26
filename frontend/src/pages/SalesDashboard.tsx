@@ -58,7 +58,7 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import CloseIcon from "@mui/icons-material/Close";
 import SearchIcon from "@mui/icons-material/Search";
 import BusinessIcon from "@mui/icons-material/Business";
-
+import apiClient from '../api/axiosConfig';
 // Components
 import FinancialTablesComponent from "../components/FinancialTablesComponent";
 import DateRangeSelector from "../components/DateRangeSelector";
@@ -921,63 +921,66 @@ export default function SalesDashboard() {
   });
 
   // Fetch companies with locations on component mount
-  useEffect(() => {
-    const fetchCompaniesWithLocations = async () => {
-      setCompaniesLoading(true);
-      setCompaniesError("");
+// Updated useEffect for SalesDashboard component - using apiClient instead of axios
+// Remove this line: const COMPANY_LOCATIONS_API_URL = `${API_URL_Local}/company-locations/all`;
 
-      try {
-        console.log(
-          "🏢 SalesDashboard: Fetching companies with locations from:",
-          COMPANY_LOCATIONS_API_URL
-        );
-        const response = await axios.get(COMPANY_LOCATIONS_API_URL);
-
-        console.log(
-          "📥 SalesDashboard: Companies with locations response:",
-          response.data
-        );
-        setCompanies(response.data || []);
-
+useEffect(() => {
+  const fetchCompaniesWithLocations = async () => {
+    setCompaniesLoading(true);
+    setCompaniesError("");
+    try {
+      console.log("🏢 SalesDashboard: Fetching companies with locations from apiClient");
+      const response = await apiClient.get('/company-locations/all');
+      
+      if (response.data) {
+        console.log("📥 SalesDashboard: Companies with locations response:", response.data);
+        setCompanies(response.data);
+        
         // Auto-select the first company if there's only one and none selected
-        if (
-          response.data &&
-          response.data.length === 1 &&
-          selectedCompanies.length === 0
-        ) {
-          reduxDispatch(
-            setSelectedCompanies([response.data[0].company_id.toString()])
-          );
-          console.log(
-            "🎯 SalesDashboard: Auto-selected single company:",
-            response.data[0]
-          );
+        if (response.data.length === 1 && selectedCompanies.length === 0) {
+          reduxDispatch(setSelectedCompanies([response.data[0].company_id.toString()]));
+          console.log("🎯 SalesDashboard: Auto-selected single company:", response.data[0]);
         }
-      } catch (error) {
-        console.error(
-          "❌ SalesDashboard: Error fetching companies with locations:",
-          error
-        );
-
-        let errorMessage = "Error loading companies and locations";
-        if (axios.isAxiosError(error)) {
-          if (error.response) {
-            errorMessage = `Server error: ${error.response.status}`;
-          } else if (error.request) {
-            errorMessage =
-              "Cannot connect to companies API. Please check server status.";
-          }
-        }
-
-        setCompaniesError(errorMessage);
-      } finally {
-        setCompaniesLoading(false);
+      } else {
+        console.error('SalesDashboard: No data received from company-locations API');
+        setCompaniesError("No company-location data received");
       }
-    };
+    } catch (error) {
+      console.error("❌ SalesDashboard: Error fetching companies with locations:", error);
+      let errorMessage = "Error loading companies and locations";
+      
+      // Handle different types of errors
+      if (error.response) {
+        // Server responded with error status
+        const status = error.response.status;
+        if (status === 401) {
+          console.error('SalesDashboard: Unauthorized - Invalid or expired token');
+          errorMessage = "Unauthorized access. Please sign in again.";
+        } else if (status === 403) {
+          console.error('SalesDashboard: Forbidden - Insufficient permissions');
+          errorMessage = "Access denied. Insufficient permissions.";
+        } else {
+          console.error(`SalesDashboard: Server error - ${status}`);
+          errorMessage = `Server error: ${status}`;
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        console.error('SalesDashboard: No response from server. Check if backend is running.');
+        errorMessage = 'Cannot connect to companies API. Please check server status.';
+      } else {
+        // Something else happened
+        console.error('SalesDashboard: Request setup error:', error.message);
+        errorMessage = 'Request setup error occurred';
+      }
+      
+      setCompaniesError(errorMessage);
+    } finally {
+      setCompaniesLoading(false);
+    }
+  };
 
-    fetchCompaniesWithLocations();
-  }, [selectedCompanies.length, reduxDispatch]);
-
+  fetchCompaniesWithLocations();
+}, [selectedCompanies.length, reduxDispatch]);
   // Sync selectedCompany with Redux currentCompanyId if it exists
   useEffect(() => {
     if (currentCompanyId && selectedCompanies.length === 0) {

@@ -61,7 +61,7 @@ import OrdersChart from '../components/graphs/OrdersChart';
 import AvgTicketChart from '../components/graphs/AvgTicketChart';
 import DateRangeSelector from '../components/DateRangeSelector';
 import ComprehensiveFinancialDashboard from '../components/ComprehensiveFinancialDashboard';
-
+import apiClient from "../api/axiosConfig";
 // Import Redux hooks and actions
 import { useAppDispatch, useAppSelector } from '../typedHooks';
 import { 
@@ -955,20 +955,23 @@ export function Financials() {
   }, [hasDateRange, startDate, endDate]);
 
   // NEW: Fetch company-locations on component mount
-  useEffect(() => {
-    const fetchCompanyLocations = async () => {
-      setCompaniesLoading(true);
-      setCompaniesError("");
+// Updated useEffect for Financials component - using apiClient instead of axios
+// Remove this line: const COMPANY_LOCATIONS_API_URL = `${API_URL_Local}/company-locations/all`;
+
+useEffect(() => {
+  const fetchCompanyLocations = async () => {
+    setCompaniesLoading(true);
+    setCompaniesError("");
+    try {
+      console.log('🏢 Financials: Fetching company-locations from apiClient');
+      const response = await apiClient.get('/company-locations/all');
       
-      try {
-        console.log('🏢 Financials: Fetching company-locations from:', COMPANY_LOCATIONS_API_URL);
-        const response = await axios.get(COMPANY_LOCATIONS_API_URL);
-        
+      if (response.data) {
         console.log('📥 Financials: Company-locations response:', response.data);
-        setCompanyLocations(response.data || []);
+        setCompanyLocations(response.data);
         
         // Auto-select single company/location when only one available
-        if (response.data && response.data.length === 1) {
+        if (response.data.length === 1) {
           const singleCompany = response.data[0];
           console.log('🎯 Auto-selecting company:', singleCompany.company_name, 'ID:', singleCompany.company_id);
           dispatch(setSelectedCompanies([String(singleCompany.company_id)]));
@@ -977,30 +980,48 @@ export function Financials() {
             console.log('🎯 Auto-selecting location:', singleCompany.locations[0].location_name, 'ID:', singleCompany.locations[0].location_id);
             dispatch(setSelectedLocations([String(singleCompany.locations[0].location_id)]));
           }
-          
           console.log('🎯 Financials: Auto-selected single company and location');
         }
-        
-      } catch (error) {
-        console.error('❌ Financials: Error fetching company-locations:', error);
-        
-        let errorMessage = "Error loading company-location data";
-        if (axios.isAxiosError(error)) {
-          if (error.response) {
-            errorMessage = `Server error: ${error.response.status}`;
-          } else if (error.request) {
-            errorMessage = 'Cannot connect to company-locations API. Please check server status.';
-          }
-        }
-        
-        setCompaniesError(errorMessage);
-      } finally {
-        setCompaniesLoading(false);
+      } else {
+        console.error('Financials: No data received from company-locations API');
+        setCompaniesError("No company-location data received");
       }
-    };
+    } catch (error) {
+      console.error('❌ Financials: Error fetching company-locations:', error);
+      let errorMessage = "Error loading company-location data";
+      
+      // Handle different types of errors
+      if (error.response) {
+        // Server responded with error status
+        const status = error.response.status;
+        if (status === 401) {
+          console.error('Financials: Unauthorized - Invalid or expired token');
+          errorMessage = "Unauthorized access. Please sign in again.";
+        } else if (status === 403) {
+          console.error('Financials: Forbidden - Insufficient permissions');
+          errorMessage = "Access denied. Insufficient permissions.";
+        } else {
+          console.error(`Financials: Server error - ${status}`);
+          errorMessage = `Server error: ${status}`;
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        console.error('Financials: No response from server. Check if backend is running.');
+        errorMessage = 'Cannot connect to company-locations API. Please check server status.';
+      } else {
+        // Something else happened
+        console.error('Financials: Request setup error:', error.message);
+        errorMessage = 'Request setup error occurred';
+      }
+      
+      setCompaniesError(errorMessage);
+    } finally {
+      setCompaniesLoading(false);
+    }
+  };
 
-    fetchCompanyLocations();
-  }, [dispatch]);
+  fetchCompanyLocations();
+}, [dispatch]);
 
   // ✅ FIXED: Proper change detection with array copies - NOW INCLUDES REDUX DATE RANGE
   const checkForChanges = React.useCallback(() => {
