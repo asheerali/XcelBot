@@ -160,6 +160,7 @@ type DialogMode = "add" | "edit" | "view" | null;
 type EntityType = "company" | "location" | "user";
 
 // Simplified Permissions - only 5 permissions as requested
+// Simplified Permissions - now with 6 permissions including Excel uploads
 const AVAILABLE_PERMISSIONS: Permission[] = [
   {
     id: "sales_split",
@@ -185,6 +186,11 @@ const AVAILABLE_PERMISSIONS: Permission[] = [
     id: "orderiq",
     name: "ORDERIQ",
     description: "Access ORDERIQ system",
+  },
+  {
+    id: "excel_upload",
+    name: "Excel Upload",
+    description: "Upload and manage Excel files",
   },
 ];
 
