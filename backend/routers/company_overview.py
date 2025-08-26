@@ -513,6 +513,107 @@ def get_company_overview(db: Session = Depends(get_db),
     return response
 
 
+# @router.get("/user-details")
+# def get_user_details(db: Session = Depends(get_db),
+#                      current_user: User = Depends(get_current_active_user)
+#                     ):
+#     print("Current User_id:", current_user.id)
+#     print("Current User Role:", current_user.role.name if current_user.role else "No Role")
+
+#     # No need for additional query - current_user is already loaded from dependency
+#     if not current_user:
+#         raise HTTPException(status_code=404, detail="User not found")
+    
+#     # Get user role name
+#     user_role = current_user.role.name.lower() if current_user.role else None
+    
+#     # Determine which users the current user can access
+#     accessible_users = []
+    
+#     if user_role == "superuser":
+#         # Superuser can only see their own details
+#         accessible_users = [current_user]
+#         print("Superuser access: Own details only")
+        
+#     elif user_role == "admin":
+#         # Admin can see users in companies they are associated with
+#         user_companies = db.query(UserCompany).filter(UserCompany.user_id == current_user.id).all()
+#         company_ids = [uc.company_id for uc in user_companies]
+        
+#         if company_ids:
+#             accessible_users = db.query(User).filter(User.company_id.in_(company_ids)).all()
+#         else:
+#             accessible_users = [current_user]  # If no companies assigned, show only self
+        
+#         print(f"Admin access: Users in companies {company_ids}")
+        
+#     elif user_role in ["manager", "user"]:
+#         # Manager/User can only see themselves
+#         accessible_users = [current_user]
+#         print(f"Manager/User access: Own details only")
+        
+#     else:
+#         # Unknown role or no role - deny access
+#         raise HTTPException(status_code=403, detail="Access denied: Invalid user role")
+    
+#     if not accessible_users:
+#         return []
+    
+#     # Get permissions for all accessible users
+#     user_ids = [user.id for user in accessible_users]
+#     permissions_map = {
+#         p.user_id: p for p in db.query(Permission).filter(Permission.user_id.in_(user_ids)).all()
+#     }
+
+#     users_payload = []
+#     for user in accessible_users:
+#         user_permission = permissions_map.get(user.id)
+
+#         # Get assigned locations for the user (if needed for display)
+#         user_location_entries = db.query(Store.id, Store.company_id, Store.name).join(
+#             CompanyLocation, Store.id == CompanyLocation.location_id
+#         ).join(
+#             UserCompanyCompanyLocation, CompanyLocation.id == UserCompanyCompanyLocation.company_location_id
+#         ).filter(
+#             UserCompanyCompanyLocation.user_id == user.id
+#         ).all()
+
+#         assigned_locations = [
+#             {
+#                 "location_id": loc_id,
+#                 "company_id": comp_id,
+#                 "location_name": loc_name
+#             }
+#             for loc_id, comp_id, loc_name in user_location_entries
+#         ]
+
+#         # Build permissions list
+#         permissions_list = []
+#         if user_permission:
+#             if getattr(user_permission, "upload_excel", False): permissions_list.append("excel_upload")
+#             if getattr(user_permission, "d1", False): permissions_list.append("sales_split")
+#             if getattr(user_permission, "d2", False): permissions_list.append("product_mix")
+#             if getattr(user_permission, "d3", False): permissions_list.append("finance")
+#             if getattr(user_permission, "d4", False): permissions_list.append("sales_wide")
+#             if getattr(user_permission, "d5", False): permissions_list.append("orderiq")
+#             if getattr(user_permission, "d6", False): permissions_list.append("inventoryiq")
+#             if getattr(user_permission, "d7", False): permissions_list.append("order_flow")
+
+#         users_payload.append({
+#             "id": user.id,
+#             "name": f"{user.first_name} {user.last_name}".strip(),
+#             "email": user.email,
+#             "phone_number": user.phone_number or "",
+#             "role": user.role.name.capitalize() if user.role else "Unknown",
+#             "permissions": permissions_list,
+#             "assignedLocations": assigned_locations,
+#             "isActive": user.isActive,
+#             "companyId": user.company_id,
+#             "createdAt": user.created_at or None
+#         })
+
+#     return users_payload
+
 @router.get("/user-details")
 def get_user_details(db: Session = Depends(get_db),
                      current_user: User = Depends(get_current_active_user)
@@ -565,6 +666,13 @@ def get_user_details(db: Session = Depends(get_db),
         p.user_id: p for p in db.query(Permission).filter(Permission.user_id.in_(user_ids)).all()
     }
 
+    # Get company information for all accessible users
+    company_ids = list(set([user.company_id for user in accessible_users if user.company_id]))
+    companies_map = {}
+    if company_ids:
+        companies = db.query(Company).filter(Company.id.in_(company_ids)).all()
+        companies_map = {company.id: company for company in companies}
+
     users_payload = []
     for user in accessible_users:
         user_permission = permissions_map.get(user.id)
@@ -599,6 +707,11 @@ def get_user_details(db: Session = Depends(get_db),
             if getattr(user_permission, "d6", False): permissions_list.append("inventoryiq")
             if getattr(user_permission, "d7", False): permissions_list.append("order_flow")
 
+        # Get company name
+        company_name = None
+        if user.company_id and user.company_id in companies_map:
+            company_name = companies_map[user.company_id].name
+
         users_payload.append({
             "id": user.id,
             "name": f"{user.first_name} {user.last_name}".strip(),
@@ -609,11 +722,11 @@ def get_user_details(db: Session = Depends(get_db),
             "assignedLocations": assigned_locations,
             "isActive": user.isActive,
             "companyId": user.company_id,
+            "companyName": company_name,
             "createdAt": user.created_at or None
         })
 
     return users_payload
-
 
 # @router.get("/user-details-dummy/{user_id}")
 # def get_user_details(user_id: int,
