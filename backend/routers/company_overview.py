@@ -607,7 +607,7 @@ def get_user_details(db: Session = Depends(get_db),
             "role": user.role.name.capitalize() if user.role else "Unknown",
             "permissions": permissions_list,
             "assignedLocations": assigned_locations,
-            "isActive": user.is_active if hasattr(user, "is_active") else True,
+            "isActive": user.isActive,
             "companyId": user.company_id,
             "createdAt": user.created_at or None
         })
@@ -701,9 +701,9 @@ def get_user_details(user_id: int,
             if getattr(user_permission, "d2", False): permissions_list.append("product_mix")
             if getattr(user_permission, "d3", False): permissions_list.append("finance")
             if getattr(user_permission, "d4", False): permissions_list.append("sales_wide")
-            if getattr(user_permission, "d5", False): permissions_list.append("user_management")
-            if getattr(user_permission, "d6", False): permissions_list.append("location_management")
-            if getattr(user_permission, "d7", False): permissions_list.append("reporting")
+            if getattr(user_permission, "d5", False): permissions_list.append("orderiq")
+            if getattr(user_permission, "d6", False): permissions_list.append("inventoryiq")
+            if getattr(user_permission, "d7", False): permissions_list.append("order_flow")
 
         users_payload.append({
             "id": user.id,
@@ -713,7 +713,7 @@ def get_user_details(user_id: int,
             "role": user.role.name.capitalize() if user.role else "Unknown",
             "permissions": permissions_list,
             "assignedLocations": assigned_locations,
-            "isActive": user.is_active if hasattr(user, "is_active") else True,
+            "isActive": user.isActive,
             "companyId": user.company_id,
             "createdAt": user.created_at or None
         })
