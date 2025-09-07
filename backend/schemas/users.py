@@ -1,3 +1,4 @@
+# schemas/users.py
 from pydantic import BaseModel, EmailStr
 from enum import Enum
 from datetime import datetime
