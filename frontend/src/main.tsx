@@ -26,6 +26,7 @@ import { Faq } from "./pages/Faq";
 import { ContactUs } from "./pages/ContactUs";
 import { ContactTeam } from "./pages/ContactTeam";
 import PaymentPage from "./pages/PaymentPage";
+import Payment from "./pages/Payment"; // Import the new Payment component
 import UserPermissions from "./pages/UserPermissions";
 import Financials from "./pages/Financials";
 import SalesDashboard from "./pages/SalesDashboard";
@@ -160,6 +161,9 @@ const router = createBrowserRouter([
             path: "Payments",
             Component: PaymentPage,
           },
+          {path: "Payment", // New route for Payment component
+            Component: Payment, // Assuming PaymentPage is the correct component
+            },
           {
             path: "UserPermissions",
             Component: UserPermissions,

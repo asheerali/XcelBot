@@ -1,45 +1,49 @@
-import React, { useEffect, useState } from "react";
+import * as React from "react";
+import { Box, Typography, CircularProgress } from "@mui/material";
+import {
+  STRIPE_PUBLISHABLE_KEY,
+  STRIPE_PRICING_TABLE_ID,
+  loadStripePricingTableScript,
+} from "../constants";
 
-// If you are on Next.js App Router, uncomment the next line
-// "use client";
+export default function PaymentPage() {
+  const [ready, setReady] = React.useState(false);
 
-const PRICING_TABLE_ID = "prctbl_1S4QtD0uvF7V2VeBoDT6iyhv";
-
-// Prefer pulling the publishable key from env vars
-// Vite example:  import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY
-// Next.js example: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-const PUBLISHABLE_KEY =
-  import.meta?.env?.VITE_STRIPE_PUBLISHABLE_KEY ||
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
-  "pk_test_51S4QHu0uvF7V2VeBIJOMzBjIXPGxySNzasQD3rPFJFX5XCvfuAo3CD3WEIQFmskCXIfYY96jSC2g5QCxblh45Sum009T3Xdf2A";
-
-const Payment: React.FC = () => {
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const id = "stripe-pricing-table-js";
-    if (!document.getElementById(id)) {
-      const script = document.createElement("script");
-      script.id = id;
-      script.async = true;
-      script.src = "https://js.stripe.com/v3/pricing-table.js";
-      script.onload = () => setReady(true);
-      document.head.appendChild(script);
-    } else {
-      setReady(true);
-    }
+  React.useEffect(() => {
+    let active = true;
+    loadStripePricingTableScript()
+      .then(() => {
+        if (active) setReady(true);
+      })
+      .catch(() => {
+        if (active) setReady(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (
-    <div style={{ maxWidth: 920, margin: "0 auto", padding: "2rem 1rem" }}>
+    <Box sx={{ p: 2 }}>
+      <Typography variant="h5" gutterBottom>
+        Plans
+      </Typography>
+
+      {!ready && <CircularProgress />}
+
       {ready && (
         <stripe-pricing-table
-          pricing-table-id={PRICING_TABLE_ID}
-          publishable-key={PUBLISHABLE_KEY}
-        />
-      )}
-    </div>
-  );
-};
+          pricing-table-id={STRIPE_PRICING_TABLE_ID}
+          publishable-key={STRIPE_PUBLISHABLE_KEY}
 
-export default Payment;
+        />
+        //  <stripe-pricing-table
+        //   pricing-table-id={STRIPE_PRICING_TABLE_ID}
+        //   publishable-key={STRIPE_PUBLISHABLE_KEY}
+        //   customer-email={session?.user?.email}
+        //   client-reference-id={session?.user?.id}
+        // />
+      )}
+    </Box>
+  );
+}

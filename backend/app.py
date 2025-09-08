@@ -10,7 +10,10 @@ from requests import Session
 from models import locations
 from routers import locations
 from database import engine, SessionLocal
-from routers import excel_upload, sales_split_filter, health, companywide_filter, pmix_filter, financials_filter, master_upload, masterfile
+from routers import (excel_upload, sales_split_filter, health, 
+                     companywide_filter, pmix_filter, financials_filter, 
+                     master_upload, masterfile, stripe_billing
+                     )
 
 # Import from local modules
 from models import (users,user_company_companylocation ,
@@ -85,6 +88,7 @@ async def restart_scheduler():
         return {"error": str(e)}
 
 # Include routers
+app.include_router(stripe_billing.router)
 app.include_router(excel_upload.router)
 app.include_router(sales_split_filter.router)
 app.include_router(pmix_filter.router)
