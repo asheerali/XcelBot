@@ -119,7 +119,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import os
 import json
 from dotenv import load_dotenv
-
+from fastapi import FastAPI, Request, HTTPException
 # Load environment variables from .env
 load_dotenv()
 
@@ -162,9 +162,10 @@ async def stripe_webhook(request: Request):
 
     return JSONResponse({"received": True}, status_code=200)
 
-async def handle_payment_success(event):
+async def handle_payment_success(event,request: Request):
     invoice = event["data"]["object"]
-    
+    user_data = request.state.user_data
+    print(f"User Data from Request State: {user_data}")
     print("=== INVOICE PAYMENT SUCCESS ===")
     print("=== FULL EVENT STRUCTURE ===")
     print(json.dumps(event, indent=2, default=str))

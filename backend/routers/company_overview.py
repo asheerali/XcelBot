@@ -498,6 +498,7 @@ def get_user_details(db: Session = Depends(get_db),
     return users_payload
 
 
+
 @router.get("/user-details-dummy/{user_id}")
 def get_user_details(user_id: int,
                     db: Session = Depends(get_db),

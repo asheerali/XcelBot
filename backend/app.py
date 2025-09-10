@@ -5,6 +5,9 @@ import os
 from datetime import datetime, timedelta
 import logging
 import atexit
+from fastapi import FastAPI, Request, HTTPException
+from pydantic import BaseModel
+from typing import Optional
 
 from requests import Session
 from models import locations
@@ -70,6 +73,37 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 @app.get("/")
 async def root():
     return {"message": "Welcome to the Excel Processing API! with cidc"}
+
+@app.middleware("http")
+async def add_user_data_to_request_state(request: Request, call_next):
+    # Simulate user data storage, for example:
+    user_data = {"id": 1, "name": "John Doe", "email": "john.doe@example.com"}
+    
+    # Store user data in the request state globally for this request
+    request.state.user_data = user_data
+
+    # Pass the request to the next handler (continue processing the request)
+    response = await call_next(request)
+    
+    return response
+
+# Pydantic model for testing
+class UserData(BaseModel):
+    id: int
+    name: str
+    email: str
+
+# Endpoint to fetch the stored user da
+@app.get("/test-user-data", response_model=UserData)
+async def get_user_data(request: Request):
+    # Retrieve user data from request state (middleware)
+    user_data = request.state.user_data
+    
+    if not user_data:
+        raise HTTPException(status_code=404, detail="User data not found")
+    
+    # Return the user data stored in request state
+    return user_data
 
 # Add scheduler status endpoint for debugging
 @app.get("/scheduler/status")
