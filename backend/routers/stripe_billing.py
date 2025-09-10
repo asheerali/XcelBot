@@ -148,9 +148,10 @@ async def stripe_webhook(request: Request):
     event_type = event["type"]
     try:
         if event_type == "invoice.payment_succeeded":
-            await handle_payment_success(event)
+            await handle_payment_success(event, request)
         elif event_type == "customer.subscription.created":
-            await handle_subscription_created(event)
+            print("Handling subscription created event")
+            await handle_subscription_created(event, request)
         elif event_type == "customer.subscription.updated":
             await handle_subscription_updated(event)
         elif event_type == "customer.subscription.deleted":
@@ -191,9 +192,10 @@ async def handle_payment_success(event,request: Request):
         except Exception as e:
             print(f"Could not retrieve customer: {e}")
 
-async def handle_subscription_created(event):
+async def handle_subscription_created(event, request: Request):
     subscription = event["data"]["object"]
-    
+    user_data = request.state.user_data
+    print(f"User Data from Request State: {user_data}")
     print("=== SUBSCRIPTION CREATED ===")
     print("=== FULL EVENT STRUCTURE ===")
     print(json.dumps(event, indent=2, default=str))
