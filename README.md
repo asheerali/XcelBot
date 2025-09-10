@@ -11,3 +11,11 @@ Frontend main components
 ExcelImport.tsx - Main component with file upload logic
 FilterSection.tsx - Filter controls for date and location
 TableDisplay.tsx - Table rendering with different view modes
+
+
+for the stripesetup:
+download strip cli 
+in cmd:
+stripe login
+stripe listen --forward-to http://localhost:8000/billing/webhook
+then put the  webhook signing secret in constansts.tsx
