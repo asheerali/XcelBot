@@ -5,6 +5,7 @@ from datetime import datetime
 from passlib.hash import bcrypt
 from fastapi import HTTPException
 
+from models.company_locations import CompanyLocation
 from models.permissions import Permission
 from models import users as user_model
 from schemas import users as user_schema
@@ -71,13 +72,33 @@ def create_user(db: Session, user: user_schema.UserCreate, background_tasks=None
         )
         create_user_company(db, user_company_data)
 
+    # if user.assigned_location:
+    #     for location_id in user.assigned_location:
+    #         create_user_location_mapping(db, UserCompanyCompanyLocationCreate(
+    #             user_id=db_user.id,
+    #             company_location_id=location_id
+    #         ))
+            
     if user.assigned_location:
-        for location_id in user.assigned_location:
+        for store_location_id in user.assigned_location:
+            # Get the corresponding company_location.id
+            company_location = db.query(CompanyLocation).filter(
+                CompanyLocation.location_id == store_location_id,
+                CompanyLocation.company_id == db_user.company_id
+            ).first()
+
+            if not company_location:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No company_location mapping found for store ID {store_location_id}"
+                )
+
+            # Now use company_location.id (not store.id)
             create_user_location_mapping(db, UserCompanyCompanyLocationCreate(
                 user_id=db_user.id,
-                company_location_id=location_id
+                company_location_id=company_location.id
             ))
-            
+
     
     # Create user permissions
     PERMISSION_MAP = {
@@ -216,15 +237,40 @@ def update_user(db: Session, user_id: int, user: user_schema.UserCreate):
     db.commit()
     db.refresh(db_user)
 
-    # ✅ Update location mappings if provided
-    if user.assigned_location is not None:
-        delete_user_location_mappings(db, db_user.id)
-        for location_id in user.assigned_location:
-            create_user_location_mapping(db, UserCompanyCompanyLocationCreate(
-                user_id=db_user.id,
-                company_location_id=location_id
-            ))
+    # # ✅ Update location mappings if provided
+    # if user.assigned_location is not None:
+    #     delete_user_location_mappings(db, db_user.id)
+    #     for location_id in user.assigned_location:
+    #         create_user_location_mapping(db, UserCompanyCompanyLocationCreate(
+    #             user_id=db_user.id,
+    #             company_location_id=location_id
+    #         ))
 
+
+    if user.assigned_location is not None:
+        # Always delete existing mappings
+        delete_user_location_mappings(db, db_user.id)
+
+        # If the list is not empty, add the new ones
+        if user.assigned_location:
+            for store_location_id in user.assigned_location:
+                company_location = db.query(CompanyLocation).filter(
+                    CompanyLocation.location_id == store_location_id,
+                    CompanyLocation.company_id == db_user.company_id
+                ).first()
+
+                if not company_location:
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"No company_location mapping found for store ID {store_location_id}"
+                    )
+
+                create_user_location_mapping(db, UserCompanyCompanyLocationCreate(
+                    user_id=db_user.id,
+                    company_location_id=company_location.id
+                ))
+
+    
     # ✅ Update permissions if provided
     if user.permissions is not None:
         PERMISSION_MAP = {
