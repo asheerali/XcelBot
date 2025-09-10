@@ -300,7 +300,14 @@ def signin(credentials: SignInInput, db: Session = Depends(get_db)):
 
     # Print user role when they sign in
     print(f"User {user.email} signed in with role: {user.role}")
-
+    global current_user_data_billing
+    current_user_data_billing = {
+        "id": user.id,
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+    }
+    print("Current user data set for global access:", current_user_data_billing)
     # Generate token
     token = create_access_token(data={"sub": user.email},
                                  expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))

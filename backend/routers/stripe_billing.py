@@ -119,6 +119,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import os
 import json
 from dotenv import load_dotenv
+current_user_data_billing  = None  # Use the same name as in auth.py
 
 # Load environment variables from .env
 load_dotenv()
@@ -164,7 +165,8 @@ async def stripe_webhook(request: Request):
 
 async def handle_payment_success(event):
     invoice = event["data"]["object"]
-    
+        
+
     print("=== INVOICE PAYMENT SUCCESS ===")
     print("=== FULL EVENT STRUCTURE ===")
     print(json.dumps(event, indent=2, default=str))
@@ -192,7 +194,11 @@ async def handle_payment_success(event):
 
 async def handle_subscription_created(event):
     subscription = event["data"]["object"]
+        # Access the global user data
+    global current_user_data_billing
+    user_data = current_user_data_billing
     
+    print(f"Processing payment for user: {user_data}")
     print("=== SUBSCRIPTION CREATED ===")
     print("=== FULL EVENT STRUCTURE ===")
     print(json.dumps(event, indent=2, default=str))
