@@ -278,7 +278,7 @@ const hasPermission = (permission) => {
       compactTitle: "Files",
       path: "/FileManagement",
       icon: <FolderIcon />,
-      permission: null // Visible to all
+      permission: 'excel_upload' // Visible to all
     },
     { 
       title: "Help Center", 

@@ -12,7 +12,9 @@ const ROUTE_PERMISSIONS = {
   '/Productmix': 'product_mix',
   '/Financials': 'finance',
   '/Saleswide': 'sales_wide',
+  '/FileManagement': 'excel_upload',
   
+
   // ORDERiQ routes
   '/AnalyticsDashboard': 'orderiq',
   '/MasterFile': 'orderiq',
@@ -23,7 +25,7 @@ const ROUTE_PERMISSIONS = {
   
   // Always accessible routes (but still require active user)
   '/Payments': null,
-  '/FileManagement': 'ADMIN_ONLY',
+  
   '/HelpCenter': null,
   '/CompanyLocationManager': null,
   '/profile-info': null,
