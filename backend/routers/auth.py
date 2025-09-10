@@ -290,6 +290,7 @@ def signup(user_data: UserCreate, db: Session = Depends(get_db)):
 #         "dashboard_data": dashboard_data
 #     }
 
+global current_user_data_billing
 
 # Then update your signin endpoint
 @router.post("/signin", response_model=SignInResponse)  # Change this line
@@ -301,6 +302,15 @@ def signin(credentials: SignInInput, db: Session = Depends(get_db)):
     # Print user role when they sign in
     print(f"User {user.email} signed in with role: {user.role}")
 
+    # Add these lines to save user globally
+    current_user_data_billing = {
+        "id": user.id,
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+    }
+    
+    print("Current user data for billing:", current_user_data_billing)
     # Generate token
     token = create_access_token(data={"sub": user.email},
                                  expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
