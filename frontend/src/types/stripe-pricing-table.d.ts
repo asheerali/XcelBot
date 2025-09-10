@@ -1,4 +1,5 @@
 // TypeScript support for the Stripe custom element
+// stripe-pricing-table.d.ts
 
 declare namespace JSX {
   interface IntrinsicElements {

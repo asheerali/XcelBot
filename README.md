@@ -19,3 +19,6 @@ in cmd:
 stripe login
 stripe listen --forward-to http://localhost:8000/billing/webhook
 then put the  webhook signing secret in constansts.tsx
+
+Share this link on your site or send directly to your customers (it is in the product catalog pricing tables)
+https://billing.stripe.com/p/login/test_fZuaEP2V1fg1ewJeUsdEs00

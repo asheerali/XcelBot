@@ -35,14 +35,10 @@ export default function PaymentPage() {
         <stripe-pricing-table
           pricing-table-id={STRIPE_PRICING_TABLE_ID}
           publishable-key={STRIPE_PUBLISHABLE_KEY}
-
+          client-reference-id="11"        // Your user ID
+          customer-email="asheerali1997@gmail.com"  // Pre-fills email field
         />
-        //  <stripe-pricing-table
-        //   pricing-table-id={STRIPE_PRICING_TABLE_ID}
-        //   publishable-key={STRIPE_PUBLISHABLE_KEY}
-        //   customer-email={session?.user?.email}
-        //   client-reference-id={session?.user?.id}
-        // />
+
       )}
     </Box>
   );
