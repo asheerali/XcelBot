@@ -2025,9 +2025,9 @@ const OrderIQDashboard = () => {
                                 placeholder="1"
                                 size="small"
                                 inputProps={{
-                                  min: 0.01,
+                                  min: 0,
                                   max: 999,
-                                  step: 0.25,
+                                  step: 0.5,
                                   style: { textAlign: "center" },
                                   "data-item-id": item.id,
                                 }}
