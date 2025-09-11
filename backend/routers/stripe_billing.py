@@ -45,7 +45,7 @@ async def stripe_webhook(request: Request):
             await handle_subscription_deleted(event)
         # Add this to your main webhook function
         elif event_type == "checkout.session.completed":
-            print("===  Starting the checkout.session.completed handler ===")
+            # print("===  Starting the checkout.session.completed handler ===")
             await handle_checkout_completed(event)
 
         else:
@@ -64,10 +64,10 @@ async def handle_checkout_completed(event):
     customer_email = session.get('customer_email')      # This should be "user@email.com"
     subscription_id = session.get('subscription')
     
-    print(f"🔔 CHECKOUT COMPLETED:")
-    print(f"   User ID: {user_id}")
-    print(f"   Email: {customer_email}")
-    print(f"   Subscription: {subscription_id}")
+    # print(f"🔔 CHECKOUT COMPLETED:")
+    # print(f"   User ID: {user_id}")
+    # print(f"   Email: {customer_email}")
+    # print(f"   Subscription: {subscription_id}")
     
     # Store this info for later use in subscription events
     if subscription_id and user_id:
@@ -83,30 +83,32 @@ async def handle_payment_success(event):
     invoice = event["data"]["object"]
         
 
-    print("=== INVOICE PAYMENT SUCCESS ===")
-    print("=== FULL EVENT STRUCTURE ===")
-    print(json.dumps(event, indent=2, default=str))
+    # print("=== INVOICE PAYMENT SUCCESS ===")
+    # print("=== FULL EVENT STRUCTURE ===")
+    # print(json.dumps(event, indent=2, default=str))
     
-    print("=== INVOICE METADATA ===")
-    print(json.dumps(invoice.get('metadata', {}), indent=4))
+    # print("=== INVOICE METADATA ===")
+    # print(json.dumps(invoice.get('metadata', {}), indent=4))
     
     # Check subscription metadata if this is a subscription invoice
     if 'subscription' in invoice and invoice['subscription']:
         try:
             subscription = stripe.Subscription.retrieve(invoice['subscription'])
-            print("=== SUBSCRIPTION METADATA (from invoice) ===")
-            print(json.dumps(subscription.get('metadata', {}), indent=4))
+            # print("=== SUBSCRIPTION METADATA (from invoice) ===")
+            # print(json.dumps(subscription.get('metadata', {}), indent=4))
         except Exception as e:
-            print(f"Could not retrieve subscription: {e}")
+            # print(f"Could not retrieve subscription: {e}")
+            pass
     
     # Check customer metadata
     if 'customer' in invoice and invoice['customer']:
         try:
             customer = stripe.Customer.retrieve(invoice['customer'])
-            print("=== CUSTOMER METADATA ===")
-            print(json.dumps(customer.get('metadata', {}), indent=4))
+            # print("=== CUSTOMER METADATA ===")
+            # print(json.dumps(customer.get('metadata', {}), indent=4))
         except Exception as e:
-            print(f"Could not retrieve customer: {e}")
+            # print(f"Could not retrieve customer: {e}")
+            pass
 
 async def handle_subscription_created(event):
     subscription = event["data"]["object"]
@@ -122,12 +124,13 @@ async def handle_subscription_created(event):
                   customer.get('metadata', {}).get('client_reference_id') or \
                   'No user ID found'
         
-        print(f"🔔 SUBSCRIPTION CREATED FOR:")
-        print(f"   User ID: {user_id}")
-        print(f"   Email: {customer_email}")
-        print("=" * 50)
+        # print(f"🔔 SUBSCRIPTION CREATED FOR:")
+        # print(f"   User ID: {user_id}")
+        # print(f"   Email: {customer_email}")
+        # print("=" * 50)
     except Exception as e:
-        print(f"Could not extract user info: {e}")
+        # print(f"Could not extract user info: {e}")
+        pass
     
 
 
@@ -152,73 +155,96 @@ async def handle_subscription_created(event):
                     user_id = session.get('client_reference_id')
                     customer_email = session.get('customer_email')
                     
-                    print(f"🔔 SUBSCRIPTION CREATED FOR:")
-                    print(f"   User ID: {user_id}")
-                    print(f"   Email: {customer_email}")
-                    print("=" * 50)
+                    # print(f"🔔 SUBSCRIPTION CREATED FOR:")
+                    # print(f"   User ID: {user_id}")
+                    # print(f"   Email: {customer_email}")
+                    # print("=" * 50)
                 else:
-                    print("No checkout session found")
+                    # print("No checkout session found")
+                    pass
             else:
-                print("No payment intent in invoice")
+                # print("No payment intent in invoice")
+                pass
         else:
-            print("No latest_invoice in subscription")
+            # print("No latest_invoice in subscription")
+            pass
             
     except Exception as e:
-        print(f"Could not extract user info: {e}")
+        # print(f"Could not extract user info: {e}")
+        pass
     
 
 
 
-    print("=== SUBSCRIPTION CREATED ===")
-    print("=== FULL EVENT STRUCTURE ===")
-    print(json.dumps(event, indent=2, default=str))
+    # print("=== SUBSCRIPTION CREATED ===")
+    # print("=== FULL EVENT STRUCTURE ===")
+    # print(json.dumps(event, indent=2, default=str))
     
-    print("=== SUBSCRIPTION METADATA ===")
-    print(json.dumps(subscription.get('metadata', {}), indent=4))
+    # print("=== SUBSCRIPTION METADATA ===")
+    # print(json.dumps(subscription.get('metadata', {}), indent=4))
     
     # Check customer metadata
     if 'customer' in subscription and subscription['customer']:
         try:
             customer = stripe.Customer.retrieve(subscription['customer'])
-            print("=== CUSTOMER METADATA ===")
-            print(json.dumps(customer.get('metadata', {}), indent=4))
+            # print("=== CUSTOMER METADATA ===")
+            # print(json.dumps(customer.get('metadata', {}), indent=4))
         except Exception as e:
-            print(f"Could not retrieve customer: {e}")
+            # print(f"Could not retrieve customer: {e}")
+            pass
 
 async def handle_subscription_updated(event):
     subscription = event["data"]["object"]
     
-    print("=== SUBSCRIPTION UPDATED ===")
-    print("=== FULL EVENT STRUCTURE ===")
-    print(json.dumps(event, indent=2, default=str))
+    # print("=== SUBSCRIPTION UPDATED ===")
+    # print("=== FULL EVENT STRUCTURE ===")
+    # print(json.dumps(event, indent=2, default=str))
     
-    print("=== UPDATED SUBSCRIPTION METADATA ===")
-    print(json.dumps(subscription.get('metadata', {}), indent=4))
+    # print("=== UPDATED SUBSCRIPTION METADATA ===")
+    # print(json.dumps(subscription.get('metadata', {}), indent=4))
     
     # Check customer metadata
     if 'customer' in subscription and subscription['customer']:
         try:
             customer = stripe.Customer.retrieve(subscription['customer'])
-            print("=== CUSTOMER METADATA ===")
-            print(json.dumps(customer.get('metadata', {}), indent=4))
+            # print("=== CUSTOMER METADATA ===")
+            # print(json.dumps(customer.get('metadata', {}), indent=4))
         except Exception as e:
-            print(f"Could not retrieve customer: {e}")
+            # print(f"Could not retrieve customer: {e}")
+            pass
 
-async def handle_subscription_deleted(event):
+async def handle_subscription_deleted(event, webhook_data):
     subscription = event["data"]["object"]
     
-    print("=== SUBSCRIPTION DELETED ===")
-    print("=== FULL EVENT STRUCTURE ===")
-    print(json.dumps(event, indent=2, default=str))
+    # Extract subscription data
+    webhook_data['stripe_subscription_id'] = subscription.get('id')
+    webhook_data['stripe_customer_id'] = subscription.get('customer')
+    webhook_data['status'] = subscription.get('status')
+    webhook_data['start_date'] = subscription.get('start_date')
+    webhook_data['cancel_at_period_end'] = subscription.get('cancel_at_period_end')
+    webhook_data['user_id'] = subscription.get('metadata', {}).get('user_id')
     
-    print("=== DELETED SUBSCRIPTION METADATA ===")
-    print(json.dumps(subscription.get('metadata', {}), indent=4))
+    # Get plan info from subscription items
+    items = subscription.get('items', {}).get('data', [])
+    if items:
+        item = items[0]
+        webhook_data['plan_id'] = item.get('price', {}).get('id') or item.get('plan', {}).get('id')
+        webhook_data['quantity'] = item.get('quantity')
+        webhook_data['current_period_end'] = item.get('current_period_end')
+    
+    # print("=== SUBSCRIPTION DELETED ===")
+    # print("=== FULL EVENT STRUCTURE ===")
+    # print(json.dumps(event, indent=2, default=str))
+    
+    # print("=== DELETED SUBSCRIPTION METADATA ===")
+    # print(json.dumps(subscription.get('metadata', {}), indent=4))
     
     # Check customer metadata
     if 'customer' in subscription and subscription['customer']:
         try:
             customer = stripe.Customer.retrieve(subscription['customer'])
-            print("=== CUSTOMER METADATA ===")
-            print(json.dumps(customer.get('metadata', {}), indent=4))
+            # print("=== CUSTOMER METADATA ===")
+            # print(json.dumps(customer.get('metadata', {}), indent=4))
         except Exception as e:
-            print(f"Could not retrieve customer: {e}")
+            # print(f"Could not retrieve customer: {e}")
+            pass
