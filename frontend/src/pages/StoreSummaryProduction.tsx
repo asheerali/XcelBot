@@ -315,11 +315,26 @@ const StoreSummaryProduction = () => {
   // Email Scheduler state
   const [emailSchedulerOpen, setEmailSchedulerOpen] = useState(false);
 
-  // Local state for print/email dialogs
+  const [printOptions, setPrintOptions] = useState({
+    pageLayout: "single",
+    pageSize: "A4",
+    orientation: "portrait",
+    customWidth: 210, // Default A4 width in mm
+    customHeight: 297, // Default A4 height in mm
+  });
+
+  // // Local state for print/email dialogs
+  // const [printDialog, setPrintDialog] = useState({
+  //   open: false,
+  //   order: null,
+  //   type: "print",
+  // });
+
   const [printDialog, setPrintDialog] = useState({
     open: false,
     order: null,
     type: "print",
+    showOptions: false, // Add this flag
   });
   const [emailDialog, setEmailDialog] = useState({
     open: false,
@@ -376,38 +391,39 @@ const StoreSummaryProduction = () => {
   }, [reduxDateRange, hasReduxDateRange]);
 
   // Fetch companies data for display names
- // Add this import at the top of your file
+  // Add this import at the top of your file
 
+  // Fetch companies data for display names
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const response = await apiClient.get("/company-locations/all");
 
-// Fetch companies data for display names
-useEffect(() => {
-  const fetchCompanies = async () => {
-    try {
-      const response = await apiClient.get("/company-locations/all");
-      
-      if (!Array.isArray(response.data)) {
-        throw new Error("Invalid response format: expected array of companies");
+        if (!Array.isArray(response.data)) {
+          throw new Error(
+            "Invalid response format: expected array of companies"
+          );
+        }
+
+        const validCompanies = response.data.filter((company: Company) => {
+          return (
+            company.company_id &&
+            company.company_name &&
+            Array.isArray(company.locations)
+          );
+        });
+
+        if (validCompanies.length === 0) {
+          throw new Error("No valid companies found in response");
+        }
+
+        setCompaniesData(validCompanies);
+      } catch (err) {
+        console.error("Error fetching companies:", err);
       }
-
-      const validCompanies = response.data.filter((company: Company) => {
-        return (
-          company.company_id &&
-          company.company_name &&
-          Array.isArray(company.locations)
-        );
-      });
-
-      if (validCompanies.length === 0) {
-        throw new Error("No valid companies found in response");
-      }
-
-      setCompaniesData(validCompanies);
-    } catch (err) {
-      console.error("Error fetching companies:", err);
-    }
-  };
-  fetchCompanies();
-}, []);
+    };
+    fetchCompanies();
+  }, []);
 
   // NEW: Auto-fetch data whenever company, location, or date range changes
   useEffect(() => {
@@ -798,8 +814,94 @@ useEffect(() => {
     // Data fetching will be handled by useEffect
   };
 
+  // const handlePrintOrder = (order: OrderData) => {
+  //   setPrintDialog({ open: true, order, type: "print" });
+  // };
+
   const handlePrintOrder = (order: OrderData) => {
-    setPrintDialog({ open: true, order, type: "print" });
+    setPrintDialog({ open: true, order, type: "print", showOptions: true });
+  };
+  // Helper function for CSS styling based on print options
+  const getPageCSS = (
+    pageLayout,
+    pageSize,
+    orientation,
+    customWidth,
+    customHeight
+  ) => {
+    const sizes = {
+      A4: orientation === "landscape" ? "A4 landscape" : "A4 portrait",
+      A3: orientation === "landscape" ? "A3 landscape" : "A3 portrait",
+      Letter:
+        orientation === "landscape" ? "Letter landscape" : "Letter portrait",
+      Custom:
+        orientation === "landscape"
+          ? `${customHeight}mm ${customWidth}mm`
+          : `${customWidth}mm ${customHeight}mm`,
+    };
+
+    const margins = {
+      single: "8mm",
+      double: "15mm",
+      auto: "10mm",
+    };
+
+    const fontSizes = {
+      single: { body: "8px", table: "7px", header: "16px" },
+      double: { body: "10px", table: "9px", header: "18px" },
+      auto: { body: "9px", table: "8px", header: "17px" },
+    };
+
+    const heights = {
+      single: "height: 100vh; overflow: hidden;",
+      double: "height: auto; page-break-after: auto;",
+      auto: "height: auto; page-break-inside: avoid;",
+    };
+
+    return {
+      pageSize: sizes[pageSize],
+      margin: margins[pageLayout],
+      fontSize: fontSizes[pageLayout],
+      height: heights[pageLayout],
+    };
+  };
+
+  // New direct print function (no new window)
+  const printDirectly = (htmlContent) => {
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "absolute";
+    iframe.style.width = "0px";
+    iframe.style.height = "0px";
+    iframe.style.left = "-999px";
+    iframe.style.top = "-999px";
+
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    iframe.onload = () => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 1000);
+    };
+  };
+
+  // Handler for consolidated print
+  const handleConfirmConsolidatedPrint = () => {
+    const printContent = generateConsolidatedReport(printOptions);
+    printDirectly(printContent);
+    setPrintDialog({
+      open: false,
+      order: null,
+      type: "print",
+      showOptions: false,
+    });
   };
 
   const handleEmailOrder = (order: OrderData) => {
@@ -847,17 +949,150 @@ useEffect(() => {
   const handleConfirmPrintEmail = () => {
     const { order, type } = printDialog;
     if (type === "print") {
-      // Generate print content
-      const printContent = generateOrderReport(order);
-      const printWindow = window.open("", "_blank");
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-      printWindow.print();
+      const printContent = generateOrderReport(order, printOptions);
+      printDirectly(printContent);
     }
-    setPrintDialog({ open: false, order: null, type: "print" });
+    setPrintDialog({
+      open: false,
+      order: null,
+      type: "print",
+      showOptions: false,
+    });
   };
+  // const generateOrderReport = (order: OrderData) => {
+  //   const currentDate = new Date().toLocaleString("en-GB", {
+  //     day: "2-digit",
+  //     month: "2-digit",
+  //     year: "numeric",
+  //     hour: "2-digit",
+  //     minute: "2-digit",
+  //     second: "2-digit",
+  //   });
 
-  const generateOrderReport = (order: OrderData) => {
+  //   const dateRangeText = selectedDateRange
+  //     ? `${selectedDateRange.startDate.toLocaleDateString()} to ${selectedDateRange.endDate.toLocaleDateString()}`
+  //     : "All time";
+
+  //   const companyName =
+  //     selectedCompanies.length > 0
+  //       ? getCompanyName(selectedCompanies[0])
+  //       : "Selected Company";
+  //   // UPDATED: Handle multiple locations in report
+  //   const locationText =
+  //     selectedLocations.length > 0 && selectedCompanies.length > 0
+  //       ? getMultipleLocationNames(selectedCompanies[0], selectedLocations)
+  //       : "Selected Locations";
+
+  //   return `
+  //     <!DOCTYPE html>
+  //     <html>
+  //     <head>
+  //       <title>Order Report - Order #${order.order_id}</title>
+  //       <style>
+  //         body {
+  //           font-family: Arial, sans-serif;
+  //           margin: 40px;
+  //           color: #333;
+  //         }
+  //         .header {
+  //           text-align: center;
+  //           margin-bottom: 40px;
+  //         }
+  //         .company-name {
+  //           font-size: 24px;
+  //           font-weight: bold;
+  //           margin-bottom: 5px;
+  //         }
+  //         .location {
+  //           font-size: 16px;
+  //           color: #666;
+  //           margin-bottom: 10px;
+  //         }
+  //         .date-range {
+  //           font-size: 14px;
+  //           color: #888;
+  //           margin-bottom: 30px;
+  //         }
+  //         .order-summary {
+  //           background: #f8f9fa;
+  //           padding: 20px;
+  //           border-radius: 8px;
+  //           margin-bottom: 30px;
+  //         }
+  //         .order-summary div {
+  //           margin-bottom: 8px;
+  //           font-size: 14px;
+  //         }
+  //         .order-summary strong {
+  //           font-weight: 600;
+  //         }
+  //         .footer {
+  //           text-align: center;
+  //           margin-top: 40px;
+  //           font-size: 12px;
+  //           color: #666;
+  //         }
+  //         .summary-box {
+  //           background: #e3f2fd;
+  //           padding: 20px;
+  //           border-radius: 8px;
+  //           margin-bottom: 20px;
+  //         }
+  //         .summary-item {
+  //           display: flex;
+  //           justify-content: space-between;
+  //           margin-bottom: 10px;
+  //           font-size: 16px;
+  //         }
+  //         .summary-value {
+  //           font-weight: bold;
+  //           color: #1976d2;
+  //         }
+  //       </style>
+  //     </head>
+  //     <body>
+  //       <div class="header">
+  //         <div class="company-name">${companyName}</div>
+  //         <div class="location">${locationText}</div>
+  //         <div class="date-range">Report Period: ${dateRangeText}</div>
+  //       </div>
+
+  //       <div class="order-summary">
+  //         <div><strong>Order ID:</strong> ${order.order_id}</div>
+  //         <div>
+  //           <strong>Order Date:</strong>
+  //           ${new Date(order.created_at).toLocaleString("en-US", {
+  //             month: "numeric",
+  //             day: "numeric",
+  //             year: "numeric",
+  //             hour: "2-digit",
+  //             minute: "2-digit",
+  //             hour12: true,
+  //           })}
+  //         </div>
+  //         <div><strong>Items Count:</strong> ${order.items_count}</div>
+  //         <div><strong>Total Quantity:</strong> ${order.total_quantity}</div>
+  //         <div><strong>Total Amount:</strong> ${order.total_amount.toFixed(
+  //           2
+  //         )}</div>
+  //       </div>
+
+  //       <div class="footer">
+  //         Generated on ${currentDate} | ${companyName} Order Management System
+  //       </div>
+  //     </body>
+  //     </html>
+  //   `;
+  // };
+
+  const generateOrderReport = (order, options = printOptions) => {
+    const css = getPageCSS(
+      options.pageLayout,
+      options.pageSize,
+      options.orientation,
+      options.customWidth,
+      options.customHeight
+    );
     const currentDate = new Date().toLocaleString("en-GB", {
       day: "2-digit",
       month: "2-digit",
@@ -875,123 +1110,230 @@ useEffect(() => {
       selectedCompanies.length > 0
         ? getCompanyName(selectedCompanies[0])
         : "Selected Company";
-    // UPDATED: Handle multiple locations in report
+
     const locationText =
       selectedLocations.length > 0 && selectedCompanies.length > 0
         ? getMultipleLocationNames(selectedCompanies[0], selectedLocations)
         : "Selected Locations";
 
     return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Order Report - Order #${order.order_id}</title>
-        <style>
-          body { 
-            font-family: Arial, sans-serif; 
-            margin: 40px; 
-            color: #333;
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Order Report - Order #${order.order_id}</title>
+      <style>
+        @page {
+          size: ${css.pageSize};
+          margin: ${css.margin};
+        }
+        
+        * {
+          box-sizing: border-box;
+        }
+        
+        body { 
+          font-family: Arial, sans-serif; 
+          margin: 0;
+          padding: 0;
+          color: #333;
+          font-size: ${css.fontSize.body};
+          line-height: 1.4;
+          ${css.height}
+        }
+        
+        .page-container {
+          ${
+            options.pageLayout === "single"
+              ? "height: 100vh; display: flex; flex-direction: column; justify-content: space-between;"
+              : ""
           }
-          .header { 
-            text-align: center; 
-            margin-bottom: 40px; 
+          padding: 10px;
+        }
+        
+        .header { 
+          text-align: center; 
+          margin-bottom: ${options.pageLayout === "single" ? "20px" : "30px"};
+          ${options.pageLayout === "single" ? "flex-shrink: 0;" : ""}
+        }
+        
+        .company-name { 
+          font-size: ${css.fontSize.header}; 
+          font-weight: bold; 
+          margin-bottom: 5px; 
+        }
+        
+        .location { 
+          font-size: ${parseInt(css.fontSize.body) + 2}px; 
+          color: #666; 
+          margin-bottom: 5px; 
+        }
+        
+        .date-range { 
+          font-size: ${css.fontSize.body}; 
+          color: #888; 
+          margin-bottom: 15px; 
+        }
+        
+        .content {
+          ${
+            options.pageLayout === "single"
+              ? "flex: 1; display: flex; flex-direction: column; justify-content: center;"
+              : ""
           }
-          .company-name { 
-            font-size: 24px; 
-            font-weight: bold; 
-            margin-bottom: 5px; 
+        }
+        
+        .order-summary { 
+          background: #f8f9fa; 
+          padding: ${options.pageLayout === "double" ? "20px" : "15px"}; 
+          border-radius: 8px; 
+          margin-bottom: 20px;
+          border: 1px solid #dee2e6;
+          ${options.pageLayout === "double" ? "page-break-inside: avoid;" : ""}
+        }
+        
+        .order-summary div { 
+          margin-bottom: ${options.pageLayout === "double" ? "8px" : "6px"}; 
+          font-size: ${parseInt(css.fontSize.body) + 1}px; 
+        }
+        
+        .order-summary strong { 
+          font-weight: 600; 
+          color: #2c3e50;
+        }
+        
+        .summary-box {
+          background: #e3f2fd;
+          padding: ${options.pageLayout === "double" ? "20px" : "15px"};
+          border-radius: 8px;
+          margin-bottom: 15px;
+          border: 1px solid #bbdefb;
+          ${options.pageLayout === "double" ? "page-break-inside: avoid;" : ""}
+        }
+        
+        .summary-item {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 8px;
+          font-size: ${parseInt(css.fontSize.body) + 2}px;
+        }
+        
+        .summary-value {
+          font-weight: bold;
+          color: #1976d2;
+        }
+        
+        .footer { 
+          text-align: center; 
+          font-size: ${parseInt(css.fontSize.body) - 2}px; 
+          color: #666; 
+          ${options.pageLayout === "single" ? "flex-shrink: 0;" : ""}
+          margin-top: 20px;
+          padding-top: 10px;
+          border-top: 1px solid #eee;
+        }
+        
+        @media print {
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
-          .location { 
-            font-size: 16px; 
-            color: #666; 
-            margin-bottom: 10px; 
-          }
-          .date-range { 
-            font-size: 14px; 
-            color: #888; 
-            margin-bottom: 30px; 
-          }
-          .order-summary { 
-            background: #f8f9fa; 
-            padding: 20px; 
-            border-radius: 8px; 
-            margin-bottom: 30px; 
-          }
-          .order-summary div { 
-            margin-bottom: 8px; 
-            font-size: 14px; 
-          }
-          .order-summary strong { 
-            font-weight: 600; 
-          }
-          .footer { 
-            text-align: center; 
-            margin-top: 40px; 
-            font-size: 12px; 
-            color: #666; 
-          }
-          .summary-box {
-            background: #e3f2fd;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-          }
-          .summary-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            font-size: 16px;
-          }
-          .summary-value {
-            font-weight: bold;
-            color: #1976d2;
-          }
-        </style>
-      </head>
-      <body>
+        }
+      </style>
+    </head>
+    <body>
+      <div class="page-container">
         <div class="header">
           <div class="company-name">${companyName}</div>
           <div class="location">${locationText}</div>
           <div class="date-range">Report Period: ${dateRangeText}</div>
         </div>
         
-        <div class="order-summary">
-          <div><strong>Order ID:</strong> ${order.order_id}</div>
-          <div>
-            <strong>Order Date:</strong>
-            ${new Date(order.created_at).toLocaleString("en-US", {
-              month: "numeric",
-              day: "numeric",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            })}
+        <div class="content">
+          <div class="summary-box">
+            <h3 style="margin: 0 0 10px 0; color: #1976d2; font-size: ${
+              parseInt(css.fontSize.header) - 2
+            }px;">Order Summary</h3>
+            <div class="summary-item">
+              <span>Order ID:</span>
+              <span class="summary-value">#${order.order_id}</span>
+            </div>
+            <div class="summary-item">
+              <span>Order Date:</span>
+              <span class="summary-value">${new Date(
+                order.created_at
+              ).toLocaleString("en-US", {
+                month: "numeric",
+                day: "numeric",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              })}</span>
+            </div>
+            <div class="summary-item">
+              <span>Items Count:</span>
+              <span class="summary-value">${order.items_count}</span>
+            </div>
+            <div class="summary-item">
+              <span>Total Quantity:</span>
+              <span class="summary-value">${order.total_quantity}</span>
+            </div>
+            <div class="summary-item">
+              <span>Total Amount:</span>
+              <span class="summary-value">$${order.total_amount.toFixed(
+                2
+              )}</span>
+            </div>
           </div>
-          <div><strong>Items Count:</strong> ${order.items_count}</div>
-          <div><strong>Total Quantity:</strong> ${order.total_quantity}</div>
-          <div><strong>Total Amount:</strong> ${order.total_amount.toFixed(
-            2
-          )}</div>
+          
+          <div class="order-summary">
+            <h4 style="margin: 0 0 10px 0; color: #2c3e50;">Order Details</h4>
+            <div><strong>Order ID:</strong> ${order.order_id}</div>
+            <div>
+              <strong>Order Date:</strong>
+              ${new Date(order.created_at).toLocaleString("en-US", {
+                month: "numeric",
+                day: "numeric",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              })}
+            </div>
+            <div><strong>Items Count:</strong> ${order.items_count}</div>
+            <div><strong>Total Quantity:</strong> ${order.total_quantity}</div>
+            <div><strong>Total Amount:</strong> $${order.total_amount.toFixed(
+              2
+            )}</div>
+          </div>
         </div>
         
         <div class="footer">
           Generated on ${currentDate} | ${companyName} Order Management System
         </div>
-      </body>
-      </html>
-    `;
+      </div>
+    </body>
+    </html>
+  `;
   };
 
   const handlePrintConsolidated = () => {
-    const printContent = generateConsolidatedReport();
-    const printWindow = window.open("", "_blank");
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.print();
+    setPrintDialog({
+      open: true,
+      order: null,
+      type: "consolidated",
+      showOptions: true,
+    });
   };
 
-  const generateConsolidatedReport = () => {
+  const generateConsolidatedReport = (options = printOptions) => {
+    const css = getPageCSS(
+      options.pageLayout,
+      options.pageSize,
+      options.orientation,
+      options.customWidth,
+      options.customHeight
+    );
     const currentDate = new Date().toLocaleString("en-GB", {
       day: "2-digit",
       month: "2-digit",
@@ -1010,193 +1352,297 @@ useEffect(() => {
         ? getCompanyName(selectedCompanies[0])
         : "Selected Company";
 
-    // Generate table HTML
+    // Generate table HTML with responsive sizing
     const generateTableHTML = () => {
       if (consolidatedColumns.length === 0 || consolidatedData.length === 0) {
         return "<p>No data available to display.</p>";
       }
 
-      let tableHTML = `
-        <table>
-          <thead>
-            <tr>
-              ${consolidatedColumns
-                .map(
-                  (column) => `
-                <th class="${
-                  column === "Total Required" ? "total-column" : ""
-                }">${column}</th>
-              `
-                )
-                .join("")}
-            </tr>
-          </thead>
-          <tbody>
-            ${consolidatedData
-              .map(
-                (item) => `
-              <tr>
-                ${consolidatedColumns
-                  .map((column) => {
-                    const value = item[column];
-                    const isTotal = column === "Total Required";
-                    const isNumeric =
-                      typeof value === "number" &&
-                      column !== "Item" &&
-                      column !== "Unit";
-                    const shouldHighlight = isNumeric && value > 0;
+      // Calculate column width based on number of columns
+      const columnWidth = Math.max(
+        8,
+        Math.floor(90 / consolidatedColumns.length)
+      );
 
-                    return `<td class="${isTotal ? "total-column" : ""} ${
-                      shouldHighlight ? "highlight" : ""
-                    }">${value}</td>`;
-                  })
-                  .join("")}
-              </tr>
+      let tableHTML = `
+      <table>
+        <thead>
+          <tr>
+            ${consolidatedColumns
+              .map(
+                (column) => `
+              <th class="${
+                column === "Total Required" ? "total-column" : ""
+              }" style="width: ${columnWidth}%">${column}</th>
             `
               )
               .join("")}
-          </tbody>
-        </table>
-      `;
+          </tr>
+        </thead>
+        <tbody>
+          ${consolidatedData
+            .map(
+              (item) => `
+            <tr>
+              ${consolidatedColumns
+                .map((column) => {
+                  const value = item[column];
+                  const isTotal = column === "Total Required";
+                  const isNumeric =
+                    typeof value === "number" &&
+                    column !== "Item" &&
+                    column !== "Unit";
+                  const shouldHighlight = isNumeric && value > 0;
+
+                  return `<td class="${isTotal ? "total-column" : ""} ${
+                    shouldHighlight ? "highlight" : ""
+                  }">${value}</td>`;
+                })
+                .join("")}
+            </tr>
+          `
+            )
+            .join("")}
+        </tbody>
+      </table>
+    `;
 
       return tableHTML;
     };
 
     return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Consolidated Production Requirements - ${companyName}</title>
-        <style>
-          body { 
-            font-family: Arial, sans-serif; 
-            margin: 40px; 
-            color: #333;
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Consolidated Production Requirements - ${companyName}</title>
+      <style>
+        @page {
+          size: A4 landscape;
+          margin: 10mm;
+        }
+        
+        * {
+          box-sizing: border-box;
+        }
+        
+        body { 
+          font-family: Arial, sans-serif; 
+          margin: 0;
+          padding: 0;
+          color: #333;
+          font-size: 10px;
+          line-height: 1.3;
+          height: 100vh;
+          overflow: hidden;
+        }
+        
+        .page-container {
+          height: 100vh;
+          display: flex;
+          flex-direction: column;
+          padding: 5px;
+        }
+        
+        .header { 
+          text-align: center; 
+          margin-bottom: 15px;
+          flex-shrink: 0;
+        }
+        
+        .company-name { 
+          font-size: 18px; 
+          font-weight: bold; 
+          margin-bottom: 3px; 
+        }
+        
+        .report-title { 
+          font-size: 16px; 
+          font-weight: 600; 
+          margin-bottom: 3px; 
+        }
+        
+        .date-range { 
+          font-size: 11px; 
+          color: #666; 
+          margin-bottom: 10px; 
+        }
+        
+        .content {
+          flex: 1;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+        }
+        
+        .summary-section {
+          background: #f8f9fa;
+          padding: 10px;
+          border-radius: 5px;
+          margin-bottom: 10px;
+          font-size: 9px;
+          flex-shrink: 0;
+          border: 1px solid #dee2e6;
+        }
+        
+        .summary-section h3 {
+          margin: 0 0 8px 0;
+          color: #2c3e50;
+          font-size: 12px;
+        }
+        
+        .date-filter {
+          background: #e3f2fd;
+          padding: 8px;
+          border-radius: 5px;
+          margin-bottom: 10px;
+          border-left: 3px solid #1976d2;
+          font-size: 9px;
+          flex-shrink: 0;
+        }
+        
+        .table-section {
+          flex: 1;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+        }
+        
+        .table-title {
+          font-size: 13px;
+          font-weight: 600;
+          margin-bottom: 8px;
+          color: #2c3e50;
+          flex-shrink: 0;
+        }
+        
+        table { 
+          width: 100%; 
+          border-collapse: collapse; 
+          font-size: 8px;
+          flex: 1;
+          height: 100%;
+        }
+        
+        th, td { 
+          border: 1px solid #ddd; 
+          padding: 3px; 
+          text-align: left; 
+          vertical-align: top;
+        }
+        
+        th { 
+          background-color: #f5f5f5; 
+          font-weight: 600; 
+          font-size: 8px;
+          position: sticky;
+          top: 0;
+        }
+        
+        .total-column { 
+          font-weight: bold; 
+          background-color: #e8f5e8 !important; 
+        }
+        
+        .highlight { 
+          background-color: #fff3cd !important; 
+          font-weight: 600; 
+        }
+        
+        .footer { 
+          text-align: center; 
+          margin-top: 10px; 
+          font-size: 8px; 
+          color: #666; 
+          flex-shrink: 0;
+          padding-top: 5px;
+          border-top: 1px solid #eee;
+        }
+        
+        @media print {
+          @page {
+            size: A4 landscape;
+            margin: 8mm;
           }
-          .header { 
-            text-align: center; 
-            margin-bottom: 40px; 
+          
+          body {
+            font-size: 8px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
-          .company-name { 
-            font-size: 24px; 
-            font-weight: bold; 
-            margin-bottom: 5px; 
+          
+          .page-container {
+            height: 100vh;
+            page-break-inside: avoid;
+            page-break-after: avoid;
           }
-          .report-title { 
-            font-size: 20px; 
-            font-weight: 600; 
-            margin-bottom: 5px; 
+          
+          table {
+            font-size: 7px;
+            page-break-inside: auto;
           }
-          .date-range { 
-            font-size: 14px; 
-            color: #666; 
-            margin-bottom: 30px; 
+          
+          th, td {
+            padding: 2px;
           }
-          table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin-bottom: 20px; 
-            font-size: 12px;
-          }
-          th, td { 
-            border: 1px solid #ddd; 
-            padding: 8px; 
-            text-align: left; 
-          }
-          th { 
-            background-color: #f5f5f5; 
-            font-weight: 600; 
-            font-size: 12px;
-          }
-          .total-column { 
-            font-weight: bold; 
-            background-color: #e8f5e8 !important; 
-          }
-          .footer { 
-            text-align: center; 
-            margin-top: 40px; 
-            font-size: 12px; 
-            color: #666; 
-          }
-          .center { 
-            text-align: center; 
-          }
-          .highlight { 
-            background-color: #fff3cd !important; 
-            font-weight: 600; 
-          }
+          
           .summary-section {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
+            page-break-inside: avoid;
+            font-size: 8px;
           }
-          .summary-section h3 {
-            margin-top: 0;
-            color: #2c3e50;
-          }
+          
           .date-filter {
-            background: #e3f2fd;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 4px solid #1976d2;
+            page-break-inside: avoid;
+            font-size: 8px;
           }
-          .table-section {
-            margin-bottom: 30px;
-          }
-          .table-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 15px;
-            color: #2c3e50;
-          }
-          @media print {
-            body { margin: 20px; }
-            .summary-section { break-inside: avoid; }
-            table { font-size: 10px; }
-            th, td { padding: 6px; }
-          }
-        </style>
-      </head>
-      <body>
+        }
+      </style>
+    </head>
+    <body>
+      <div class="page-container">
         <div class="header">
           <div class="company-name">${companyName}</div>
           <div class="report-title">Consolidated Production Requirements</div>
           <div class="date-range">Total quantities needed for production • ${dateRangeText}</div>
         </div>
         
-        ${
-          selectedDateRange
-            ? `
-        <div class="date-filter">
-          <strong>📅 Date Filter Applied:</strong> This report shows production requirements for the selected period: ${dateRangeText}
-        </div>
-        `
-            : ""
-        }
-        
-        <div class="summary-section">
-          <h3>Production Summary</h3>
-          <p><strong>Total Unique Items:</strong> ${consolidatedData.length}</p>
-          <p><strong>Total Quantity Required:</strong> ${consolidatedData.reduce(
-            (sum, item) => sum + (item["Total Required"] || 0),
-            0
-          )} units</p>
-          <p><strong>Report Period:</strong> ${dateRangeText}</p>
-        </div>
+        <div class="content">
+          ${
+            selectedDateRange
+              ? `
+          <div class="date-filter">
+            <strong>📅 Date Filter Applied:</strong> This report shows production requirements for the selected period: ${dateRangeText}
+          </div>
+          `
+              : ""
+          }
+          
+          <div class="summary-section">
+            <h3>Production Summary</h3>
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+              <span><strong>Total Unique Items:</strong> ${
+                consolidatedData.length
+              }</span>
+              <span><strong>Total Quantity Required:</strong> ${consolidatedData.reduce(
+                (sum, item) => sum + (item["Total Required"] || 0),
+                0
+              )} units</span>
+              <span><strong>Report Period:</strong> ${dateRangeText}</span>
+            </div>
+          </div>
 
-        <div class="table-section">
-          <div class="table-title">Production Requirements by Location</div>
-          ${generateTableHTML()}
+          <div class="table-section">
+            <div class="table-title">Production Requirements by Location</div>
+            ${generateTableHTML()}
+          </div>
         </div>
         
         <div class="footer">
           Generated on ${currentDate} | ${companyName} Production Planning System
         </div>
-      </body>
-      </html>
-    `;
+      </div>
+    </body>
+    </html>
+  `;
   };
 
   // Get date range display text
@@ -1827,12 +2273,18 @@ useEffect(() => {
         )}
 
       {/* Print Dialog */}
+      {/* Enhanced Print Dialog with Options */}
       <Dialog
         open={printDialog.open}
         onClose={() =>
-          setPrintDialog({ open: false, order: null, type: "print" })
+          setPrintDialog({
+            open: false,
+            order: null,
+            type: "print",
+            showOptions: false,
+          })
         }
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
       >
         <DialogTitle>
@@ -1843,10 +2295,19 @@ useEffect(() => {
               justifyContent: "space-between",
             }}
           >
-            <Typography variant="h6">Print Order</Typography>
+            <Typography variant="h6">
+              {printDialog.type === "consolidated"
+                ? "Print Production Report"
+                : "Print Order"}
+            </Typography>
             <IconButton
               onClick={() =>
-                setPrintDialog({ open: false, order: null, type: "print" })
+                setPrintDialog({
+                  open: false,
+                  order: null,
+                  type: "print",
+                  showOptions: false,
+                })
               }
               size="small"
             >
@@ -1854,62 +2315,261 @@ useEffect(() => {
             </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent>
-          {printDialog.order && (
-            <Box>
-              <Typography variant="body1" sx={{ mb: 2 }}>
-                Are you sure you want to print this order?
-              </Typography>
 
-              <Paper
-                variant="outlined"
-                sx={{ p: 2, mb: 2, backgroundColor: "#f8f9fa" }}
-              >
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                  Order Details:
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Order ID:</strong> #{printDialog.order.order_id}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Date:</strong>{" "}
-                  {new Date(printDialog.order.created_at).toLocaleDateString()}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Items:</strong> {printDialog.order.items_count}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Total:</strong> $
-                  {printDialog.order.total_amount.toFixed(2)}
-                </Typography>
-                {selectedDateRange && (
+        <DialogContent>
+          {/* Print Options Section */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+              Print Options
+            </Typography>
+
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {/* Page Layout */}
+              <FormControl fullWidth>
+                <InputLabel>Page Layout</InputLabel>
+                <Select
+                  value={printOptions.pageLayout}
+                  label="Page Layout"
+                  onChange={(e) =>
+                    setPrintOptions((prev) => ({
+                      ...prev,
+                      pageLayout: e.target.value,
+                    }))
+                  }
+                >
+                  <MenuItem value="single">
+                    <Box>
+                      <Typography>Single Page</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Fit everything on one page (smaller fonts)
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="double">
+                    <Box>
+                      <Typography>Multiple Pages</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Allow content to span multiple pages (larger fonts)
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="auto">
+                    <Box>
+                      <Typography>Auto Layout</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Automatically adjust based on content
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                </Select>
+              </FormControl>
+
+              {/* Page Size */}
+              {/* Page Size */}
+              <FormControl fullWidth>
+                <InputLabel>Page Size</InputLabel>
+                <Select
+                  value={printOptions.pageSize}
+                  label="Page Size"
+                  onChange={(e) =>
+                    setPrintOptions((prev) => ({
+                      ...prev,
+                      pageSize: e.target.value,
+                    }))
+                  }
+                >
+                  <MenuItem value="A4">A4 (210 × 297 mm)</MenuItem>
+                  <MenuItem value="A3">A3 (297 × 420 mm)</MenuItem>
+                  <MenuItem value="Letter">Letter (8.5 × 11 in)</MenuItem>
+                  <MenuItem value="Custom">Custom Size</MenuItem>
+                </Select>
+              </FormControl>
+
+              {/* Custom Size Fields - Show only when Custom is selected */}
+              {printOptions.pageSize === "Custom" && (
+                <Box sx={{ display: "flex", gap: 2 }}>
+                  <TextField
+                    label="Width (mm)"
+                    type="number"
+                    value={printOptions.customWidth}
+                    onChange={(e) =>
+                      setPrintOptions((prev) => ({
+                        ...prev,
+                        customWidth: Math.max(
+                          50,
+                          Math.min(500, parseInt(e.target.value) || 210)
+                        ),
+                      }))
+                    }
+                    inputProps={{ min: 50, max: 500 }}
+                    helperText="50-500mm"
+                    fullWidth
+                  />
+                  <TextField
+                    label="Height (mm)"
+                    type="number"
+                    value={printOptions.customHeight}
+                    onChange={(e) =>
+                      setPrintOptions((prev) => ({
+                        ...prev,
+                        customHeight: Math.max(
+                          50,
+                          Math.min(500, parseInt(e.target.value) || 297)
+                        ),
+                      }))
+                    }
+                    inputProps={{ min: 0, max: 500 }}
+                    helperText="50-500mm"
+                    fullWidth
+                  />
+                </Box>
+              )}
+              {/* Orientation */}
+              <FormControl fullWidth>
+                <InputLabel>Orientation</InputLabel>
+                <Select
+                  value={printOptions.orientation}
+                  label="Orientation"
+                  onChange={(e) =>
+                    setPrintOptions((prev) => ({
+                      ...prev,
+                      orientation: e.target.value,
+                    }))
+                  }
+                >
+                  <MenuItem value="portrait">
+                    <Box>
+                      <Typography>Portrait</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Recommended for orders
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="landscape">
+                    <Box>
+                      <Typography>Landscape</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Recommended for wide tables
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+          </Box>
+
+          {/* Order/Report Details */}
+          <Box>
+            <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+              {printDialog.type === "consolidated"
+                ? "Report Details"
+                : "Order Details"}
+            </Typography>
+
+            <Paper
+              variant="outlined"
+              sx={{ p: 2, mb: 2, backgroundColor: "#f8f9fa" }}
+            >
+              {printDialog.type === "consolidated" ? (
+                <Box>
+                  <Typography variant="body2">
+                    <strong>Company:</strong>{" "}
+                    {selectedCompanies.length > 0
+                      ? getCompanyName(selectedCompanies[0])
+                      : "N/A"}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Total Items:</strong> {consolidatedData.length}
+                  </Typography>
                   <Typography variant="body2">
                     <strong>Report Period:</strong> {getDateRangeText()}
                   </Typography>
-                )}
-              </Paper>
+                </Box>
+              ) : printDialog.order ? (
+                <Box>
+                  <Typography variant="body2">
+                    <strong>Order ID:</strong> #{printDialog.order.order_id}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Date:</strong>{" "}
+                    {new Date(
+                      printDialog.order.created_at
+                    ).toLocaleDateString()}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Items:</strong> {printDialog.order.items_count}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Total:</strong> $
+                    {printDialog.order.total_amount.toFixed(2)}
+                  </Typography>
+                  {selectedDateRange && (
+                    <Typography variant="body2">
+                      <strong>Report Period:</strong> {getDateRangeText()}
+                    </Typography>
+                  )}
+                </Box>
+              ) : null}
+            </Paper>
+
+            {/* Print Preview Info */}
+            <Box
+              sx={{ p: 2, backgroundColor: "#e3f2fd", borderRadius: 1, mb: 2 }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                Print Preview:
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                • Layout:{" "}
+                {printOptions.pageLayout === "single"
+                  ? "Single page (compressed)"
+                  : printOptions.pageLayout === "double"
+                  ? "Multiple pages (readable)"
+                  : "Auto-adjust"}
+              </Typography>
+              <br />
+              <Typography variant="caption" color="text.secondary">
+                • Size:{" "}
+                {printOptions.pageSize === "Custom"
+                  ? `${printOptions.customWidth}×${printOptions.customHeight}mm`
+                  : printOptions.pageSize}{" "}
+                {printOptions.orientation}
+              </Typography>
+              <br />
+              <Typography variant="caption" color="text.secondary">
+                • Will print directly without opening new window
+              </Typography>
             </Box>
-          )}
+          </Box>
         </DialogContent>
-        <DialogActions>
+
+        <DialogActions sx={{ p: 3 }}>
           <Button
             onClick={() =>
-              setPrintDialog({ open: false, order: null, type: "print" })
+              setPrintDialog({
+                open: false,
+                order: null,
+                type: "print",
+                showOptions: false,
+              })
             }
             variant="outlined"
           >
             Cancel
           </Button>
           <Button
-            onClick={handleConfirmPrintEmail}
+            onClick={
+              printDialog.type === "consolidated"
+                ? handleConfirmConsolidatedPrint
+                : handleConfirmPrintEmail
+            }
             variant="contained"
             startIcon={<PrintIcon />}
           >
-            Print
+            Print Now
           </Button>
         </DialogActions>
       </Dialog>
-
       {/* Email Dialog */}
       <Dialog
         open={emailDialog.open}

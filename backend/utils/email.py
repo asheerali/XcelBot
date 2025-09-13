@@ -27,6 +27,9 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 
+from models.companies import Company
+
+
 
 async def send_account_email(email: str, username: str, password: str):
     
@@ -2459,7 +2462,98 @@ def send_production(to: Union[str, List[str]], name: str, company_id: int = None
                 return None
 
         # Generate PDF file
-        def create_pdf_file(data, filename):
+        # def create_pdf_file(data, filename):
+        #     if not data or 'data' not in data or not data['data']:
+        #         return None
+            
+        #     try:
+        #         pdf_path = os.path.join(downloads_dir, filename)
+                
+        #         # Create PDF document
+        #         doc = SimpleDocTemplate(pdf_path, pagesize=A4)
+        #         elements = []
+                
+        #         # Get styles
+        #         styles = getSampleStyleSheet()
+        #         title_style = ParagraphStyle(
+        #             'CustomTitle',
+        #             parent=styles['Heading1'],
+        #             fontSize=16,
+        #             spaceAfter=30,
+        #             alignment=1  # Center alignment
+        #         )
+                
+        #         # Add title with update indicator if needed
+        #         title_text = "Consolidated Production Requirements"
+        #         if is_update:
+        #             title_text += " (Updated)"
+        #         title = Paragraph(title_text, title_style)
+        #         elements.append(title)
+        #         elements.append(Spacer(1, 12))
+                
+        #         # Add subtitle
+        #         subtitle = Paragraph("", styles['Normal'])
+        #         elements.append(subtitle)
+        #         elements.append(Spacer(1, 20))
+                
+        #         # Prepare table data with sorted columns
+        #         columns = data.get('columns', list(data['data'][0].keys()) if data['data'] else [])
+        #         table_data = [columns]  # Header row
+                
+        #         # Add data rows with ordered columns
+        #         for item in data['data']:
+        #             row = [str(item.get(col, "")) for col in columns]
+        #             table_data.append(row)
+                
+        #         # Create table
+        #         table = Table(table_data)
+                
+        #         # Define table style
+        #         table_style = [
+        #             # Header row styling
+        #             ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        #             ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        #             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        #             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        #             ('FONTSIZE', (0, 0), (-1, 0), 10),
+        #             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    
+        #             # Data rows styling
+        #             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        #             ('FONTSIZE', (0, 1), (-1, -1), 9),
+        #             ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        #             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        #         ]
+                
+        #         # Highlight total columns and positive values
+        #         for col_idx, col in enumerate(columns):
+        #             if 'total' in col.lower() or 'required' in col.lower():
+        #                 # Green background for total columns
+        #                 table_style.append(('BACKGROUND', (col_idx, 0), (col_idx, -1), colors.lightgreen))
+        #                 table_style.append(('FONTNAME', (col_idx, 1), (col_idx, -1), 'Helvetica-Bold'))
+                
+        #         # Apply alternating row colors
+        #         for row_idx in range(1, len(table_data)):
+        #             if row_idx % 2 == 0:
+        #                 table_style.append(('BACKGROUND', (0, row_idx), (-1, row_idx), colors.beige))
+                
+        #         table.setStyle(TableStyle(table_style))
+        #         elements.append(table)
+                
+        #         # Add footer
+        #         elements.append(Spacer(1, 30))
+        #         footer_text = f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}<br/>KPI360.ai Team"
+        #         footer = Paragraph(footer_text, styles['Normal'])
+        #         elements.append(footer)
+                
+        #         # Build PDF
+        #         doc.build(elements)
+        #         return pdf_path
+        #     except Exception as e:
+        #         print(f"Error creating PDF file: {e}")
+        #         return None
+
+        def create_pdf_file(data, filename, company_name=None, global_time=None):
             if not data or 'data' not in data or not data['data']:
                 return None
             
@@ -2472,25 +2566,71 @@ def send_production(to: Union[str, List[str]], name: str, company_id: int = None
                 
                 # Get styles
                 styles = getSampleStyleSheet()
+                
+                # Company name style
+                company_style = ParagraphStyle(
+                    'CompanyStyle',
+                    parent=styles['Heading1'],
+                    fontSize=20,
+                    spaceAfter=10,
+                    alignment=1,  # Center alignment
+                    textColor=colors.darkblue,
+                    fontName='Helvetica-Bold'
+                )
+                
+                # Title style
                 title_style = ParagraphStyle(
                     'CustomTitle',
                     parent=styles['Heading1'],
                     fontSize=16,
-                    spaceAfter=30,
-                    alignment=1  # Center alignment
+                    spaceAfter=10,
+                    alignment=1,  # Center alignment
+                    fontName='Helvetica-Bold'
                 )
                 
+                # Date/time style
+                datetime_style = ParagraphStyle(
+                    'DateTimeStyle',
+                    parent=styles['Normal'],
+                    fontSize=12,
+                    spaceAfter=20,
+                    alignment=1,  # Center alignment
+                    textColor=colors.grey,
+                    fontName='Helvetica'
+                )
+                
+                # Add company name if provided
+                if company_name:
+                    company_para = Paragraph(company_name, company_style)
+                    elements.append(company_para)
+                
                 # Add title with update indicator if needed
-                title_text = "Consolidated Production Requirements"
+                title_text = "<b>Consolidated Production Requirements</b>"
                 if is_update:
-                    title_text += " (Updated)"
+                    title_text = "<b>Consolidated Production Requirements (Updated)</b>"
                 title = Paragraph(title_text, title_style)
                 elements.append(title)
-                elements.append(Spacer(1, 12))
                 
-                # Add subtitle
-                subtitle = Paragraph("", styles['Normal'])
-                elements.append(subtitle)
+                # Add current date and global time
+                current_date = datetime.now().strftime('%Y-%m-%d')
+                datetime_text = f"Report Date: {current_date}"
+                
+                if global_time:
+                    # Format global time nicely
+                    if isinstance(global_time, datetime):
+                        global_time_str = global_time.strftime('%H:%M:%S')
+                    elif hasattr(global_time, 'time'):  # Handle datetime.time objects
+                        global_time_str = global_time.strftime('%H:%M:%S')
+                    elif isinstance(global_time, str):
+                        global_time_str = global_time
+                    else:
+                        global_time_str = str(global_time)
+                    datetime_text += f" | Global Time: {global_time_str}"
+                
+                datetime_para = Paragraph(datetime_text, datetime_style)
+                elements.append(datetime_para)
+                
+                # Add some space before the table
                 elements.append(Spacer(1, 20))
                 
                 # Prepare table data with sorted columns
@@ -2549,7 +2689,7 @@ def send_production(to: Union[str, List[str]], name: str, company_id: int = None
             except Exception as e:
                 print(f"Error creating PDF file: {e}")
                 return None
-
+        
         # Generate HTML table from the data - DYNAMIC VERSION with sorted columns
         def generate_production_table(data):
             if not data or 'data' not in data or not data['data']:
@@ -2668,7 +2808,20 @@ def send_production(to: Union[str, List[str]], name: str, company_id: int = None
         pdf_filename = f"production_requirements_{timestamp}.pdf"
         
         excel_path = create_excel_file(data, excel_filename)
-        pdf_path = create_pdf_file(data, pdf_filename)
+        
+        # Get company name first (add this before calling the function)
+        company_name = "Your Company Name"  # Replace with actual company name
+        try:
+            company = db.query(Company).filter(Company.id == company_id).first()
+            if company:
+                company_name = company.name  # Adjust field name as needed
+        except Exception as e:
+            print(f"Error getting company name: {e}")
+
+        # Then call the function with all parameters
+        pdf_path = create_pdf_file(data, pdf_filename, company_name, global_time)
+        # pdf_path = create_pdf_file(data, pdf_filename)
+        
         
         production_table = generate_production_table(data)
         
